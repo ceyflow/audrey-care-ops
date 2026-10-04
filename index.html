@@ -436,11 +436,22 @@
   .citypak-live-track .cpl-dot{position:absolute;top:33px;width:9px;height:9px;border-radius:50%;background:var(--border);}
   .citypak-live-track .cpl-dot.start{left:calc(6% - 4.5px);}
   .citypak-live-track .cpl-dot.end{left:calc(94% - 4.5px);background:var(--accent);}
-  .citypak-live-track .cpl-truck{position:absolute;top:19px;left:6%;width:30px;height:20px;margin-left:-15px;color:var(--accent);animation:citypak-truck-drive 3.6s ease-in-out infinite;}
-  .citypak-live-track .cpl-truck svg{width:100%;height:100%;display:block;filter:drop-shadow(0 3px 3px rgba(20,25,20,.22));}
+  .citypak-live-track .cpl-truck{position:absolute;top:19px;left:6%;width:30px;height:20px;margin-left:-15px;color:var(--accent);animation:citypak-truck-drive 4s cubic-bezier(.45,0,.4,1) infinite, citypak-truck-fade 4s linear infinite;}
+  .citypak-live-track .cpl-truck svg{width:100%;height:100%;display:block;filter:drop-shadow(0 3px 3px rgba(20,25,20,.22));animation:citypak-truck-bob .42s ease-in-out infinite;}
   @keyframes citypak-truck-drive{
     0%{left:6%;}
-    88%,100%{left:88%;}
+    90%,100%{left:88%;}
+  }
+  @keyframes citypak-truck-fade{
+    0%{opacity:0;}
+    6%{opacity:1;}
+    86%{opacity:1;}
+    92%{opacity:0;}
+    100%{opacity:0;}
+  }
+  @keyframes citypak-truck-bob{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-1.2px);}
   }
 
   /* ---------------- Recipes / batch timer ---------------- */

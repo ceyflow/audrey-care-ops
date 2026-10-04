@@ -6230,7 +6230,7 @@ function renderCostingProductSheet(product, version){
           <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
-          <td>${admin?`<div class="cst-supplier-box" style="width:170px;border:1px solid var(--border);border-radius:5px;padding:2px 4px;">
+          <td>${admin?`<div class="cst-supplier-box" style="width:210px;border:1px solid var(--border);border-radius:5px;padding:2px 4px;flex-wrap:nowrap;">
             ${costingSupplierTagsHtml(m)}
             ${(m.suppliers||[]).length<2 ? `<input class="cst-supplier-input" autocomplete="off" data-field="supplierInput" data-mat="${m.id}" placeholder="${(m.suppliers||[]).length?'':'Supplier'}">` : ''}
           </div>`:((m.suppliers||[]).join(', ')||'—')}</td>

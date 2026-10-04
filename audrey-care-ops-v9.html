@@ -1888,6 +1888,12 @@ async function loadAll(){
   if(!BACKEND_CONFIGURED){ state.loaded = true; state.backendMissing = true; render(); return; }
   const defaultFor = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : []))))));
   const loadedValues = await Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
+  // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
+  // for that key yet, i.e. the raw load came back null/undefined). That's different from the
+  // key existing but currently not containing the named example — e.g. an admin who deliberately
+  // deleted the seeded "Body Lotion - Hotel Range" recipe. Checking "does it exist right now"
+  // instead of "was this ever saved before" would silently resurrect it on every later refresh.
+  const recipesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('recipes')] == null;
   SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || defaultFor(k); });
   if(!state.branding || !Array.isArray(state.branding.addons)) state.branding = {addons: []};
   if(!state.navOrder || typeof state.navOrder !== 'object' || Array.isArray(state.navOrder)) state.navOrder = {};
@@ -1922,7 +1928,7 @@ async function loadAll(){
     kvSet('complaintPriorities', state.complaintPriorities).catch(e=>console.error('seed complaintPriorities failed', e));
   }
   if(!Array.isArray(state.recipes)) state.recipes = [];
-  if(!state.recipes.some(r=>r.name==='Body Lotion - Hotel Range')){
+  if(recipesNeverSaved && !state.recipes.some(r=>r.name==='Body Lotion - Hotel Range')){
     const mat = (name, percent) => ({id:uid('MAT'), name, percent});
     state.recipes.unshift({
       id: uid('RCP'), name: 'Body Lotion - Hotel Range', description: '',

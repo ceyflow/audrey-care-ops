@@ -295,8 +295,8 @@
   .supplier-tag .tag-remove:hover{color:var(--ink);}
   .cst-supplier-input{border:none;outline:none;background:transparent;font:inherit;flex:1;min-width:50px;padding:2px 2px;color:var(--ink);}
   .row-color-dot{width:16px;height:16px;border-radius:50%;border:none;padding:0;cursor:pointer;flex-shrink:0;}
-  .row-color-trigger{width:15px;height:15px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;padding:0;cursor:pointer;}
-  .row-color-trigger:hover{border-color:var(--muted);}
+  .batch-color-trigger{width:13px;height:13px;border-radius:50%;border:1.5px dashed var(--accent-dark);background:transparent;padding:0;cursor:pointer;display:inline-block;vertical-align:middle;margin-right:5px;flex-shrink:0;}
+  .batch-color-trigger:hover{border-color:var(--ink);}
   .pill-active{background:var(--accent-soft);color:var(--accent-dark);}
   .pill-inactive{background:#F0F0EE;color:var(--muted);}
   .pill-open{background:var(--clay-soft);color:var(--clay);}
@@ -6155,6 +6155,7 @@ function renderCostingPage(){
   if(!state._costingDraft) state._costingDraft = {
     materials: JSON.parse(JSON.stringify(version.materials||[])),
     batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
+    batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
   };
   return renderCostingProductSheet(product, version);
 }
@@ -6302,9 +6303,10 @@ function costingSupplierTagsHtml(m){
 }
 // A small preset palette for tagging a raw material row with a color, so a row stays easy to
 // spot while scrolling sideways through a wide sheet (many batch-size columns). Rather than
-// showing all 7 swatches on every row (too much clutter), each row gets one compact trigger
-// button — click it to pop open a shared little palette near that row to pick from.
-const ROW_COLOR_PALETTE = ['#FCA5A5','#FDBA74','#FDE68A','#86EFAC','#93C5FD','#C4B5FD','#F9A8D4'];
+// showing all 7 swatches at once, each batch size's header gets one compact trigger button —
+// click it to pop open a shared little palette to pick a color for that batch size's whole
+// Amount+Cost column group, so a sheet with several sizes stays easy to track while scrolling.
+const BATCH_COLOR_PALETTE = ['#FCA5A5','#FDBA74','#FDE68A','#86EFAC','#93C5FD','#C4B5FD','#F9A8D4'];
 function renderCostingProductSheet(product, version){
   const admin = isAdmin();
   const draft = state._costingDraft || {materials:[], batchSizes:[]};
@@ -6312,7 +6314,8 @@ function renderCostingProductSheet(product, version){
   const sizes = (draft.batchSizes||[]).slice().sort((a,b)=>a-b);
   const totalPct = materials.reduce((s,m)=>s+(Number(m.percent)||0), 0);
   const totalUnitPrice = materials.reduce((s,m)=>s+(Number(m.costPerKg)||0), 0);
-  const colCount = 5 + (admin?1:0) + sizes.length*2 + (admin?1:0);
+  const colCount = 5 + sizes.length*2 + (admin?1:0);
+  const batchColors = draft.batchColors || {};
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-versions" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
   <div class="toolbar">
@@ -6326,15 +6329,18 @@ function renderCostingProductSheet(product, version){
   <div class="panel" style="overflow-x:auto;">
     <table class="data-table costing-table" style="white-space:nowrap;">
       <thead><tr>
-        ${admin?'<th>Color</th>':''}
         <th>No</th><th>Raw material</th><th>%</th><th>Unit Price (Rs/kg)</th><th>Supplier</th>
-        ${sizes.map(sz=>`<th class="cst-group-bar cst-group-first">Amount ${sz}kg</th><th class="cst-group-bar">Cost ${sz}kg</th>`).join('')}
+        ${sizes.map(sz=>{
+          const col = batchColors[sz] || null;
+          const barStyle = col ? ` style="background:${col}33;border-top:4px solid ${col};"` : '';
+          const trigger = admin ? `<button type="button" class="batch-color-trigger" data-batch-color-trigger="${sz}" title="Set color for ${sz}kg" style="${col?`background:${col};border-color:${col};`:''}"></button>` : '';
+          return `<th class="cst-group-bar cst-group-first"${barStyle}>${trigger}Amount ${sz}kg</th><th class="cst-group-bar"${col?` style="background:${col}33;border-top:4px solid ${col};"`:''}>Cost ${sz}kg</th>`;
+        }).join('')}
         ${admin?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
         ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>`
-        <tr data-mat-row="${m.id}"${m.rowColor?` style="background:${m.rowColor}4D;"`:''}>
-          ${admin?`<td><button type="button" class="row-color-trigger" data-row-color-trigger="${m.id}" title="Set row color" style="${m.rowColor?`background:${m.rowColor};border-color:${m.rowColor};`:''}"></button></td>`:''}
+        <tr data-mat-row="${m.id}">
           <td>${i+1}</td>
           <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
@@ -6346,18 +6352,21 @@ function renderCostingProductSheet(product, version){
           ${sizes.map(sz=>{
             const amt = costingLineAmount(m.percent, sz);
             const cost = amt * (Number(m.costPerKg)||0);
-            return `<td class="cst-amt cst-group-start" data-mat="${m.id}" data-size="${sz}">${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}">Rs. ${cost.toFixed(2)}</td>`;
+            const col = batchColors[sz] || null;
+            const cellStyle = col ? ` style="background:${col}33;"` : '';
+            return `<td class="cst-amt cst-group-start" data-mat="${m.id}" data-size="${sz}"${cellStyle}>${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
           }).join('')}
           ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
         </tr>`).join('')}
       </tbody>
       ${materials.length>0 ? `<tfoot><tr style="font-weight:700;">
-        ${admin?'<td></td>':''}
         <td></td><td>Total</td><td id="cst-total-percent">${totalPct.toFixed(2)}%</td><td id="cst-total-unitprice">Rs. ${totalUnitPrice.toFixed(2)}</td><td></td>
         ${sizes.map(sz=>{
           const amtSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz), 0);
           const costSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz)*(Number(m.costPerKg)||0), 0);
-          return `<td id="cst-total-amt-${sz}" class="cst-group-start">${amtSum.toFixed(3)}</td><td id="cst-total-cost-${sz}">Rs. ${costSum.toFixed(2)}</td>`;
+          const col = batchColors[sz] || null;
+          const cellStyle = col ? ` style="background:${col}33;"` : '';
+          return `<td id="cst-total-amt-${sz}" class="cst-group-start"${cellStyle}>${amtSum.toFixed(3)}</td><td id="cst-total-cost-${sz}"${cellStyle}>Rs. ${costSum.toFixed(2)}</td>`;
         }).join('')}
         ${admin?'<td></td>':''}
       </tr></tfoot>` : ''}
@@ -6367,9 +6376,9 @@ function renderCostingProductSheet(product, version){
   <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
   ` : ''}
   ${admin ? `<div id="costing-supplier-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;"></div>` : ''}
-  ${admin ? `<div id="costing-rowcolor-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;padding:7px;flex-wrap:wrap;gap:5px;width:116px;">
-    ${ROW_COLOR_PALETTE.map(c=>`<button type="button" class="row-color-dot" data-pick-row-color="${c}" style="background:${c};"></button>`).join('')}
-    <button type="button" class="btn-text" data-pick-row-color="" style="display:block;width:100%;margin-top:4px;font-size:11px;text-align:left;">Clear color</button>
+  ${admin ? `<div id="costing-batchcolor-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;padding:7px;flex-wrap:wrap;gap:5px;width:116px;">
+    ${BATCH_COLOR_PALETTE.map(c=>`<button type="button" class="row-color-dot" data-pick-batch-color="${c}" style="background:${c};"></button>`).join('')}
+    <button type="button" class="btn-text" data-pick-batch-color="" style="display:block;width:100%;margin-top:4px;font-size:11px;text-align:left;">Clear color</button>
   </div>` : ''}
   `;
 }
@@ -7801,40 +7810,44 @@ function attachCostingSupplierAutocomplete(){
     hide();
   });
 }
-// One shared color-palette popover for every row's color trigger button, positioned under
-// whichever trigger was clicked — keeps every row's own cell down to a single small button
-// instead of showing all 7 swatches inline on every row.
-let _rowColorDocClickHandler = null;
-function attachCostingRowColorPicker(){
-  const dropdown = document.getElementById('costing-rowcolor-dropdown');
+// One shared color-palette popover for every batch size's color trigger button, positioned
+// under whichever trigger was clicked — keeps each batch size's header down to a single small
+// button instead of showing all 7 swatches inline on every column group.
+let _batchColorDocClickHandler = null;
+function attachCostingBatchColorPicker(){
+  const dropdown = document.getElementById('costing-batchcolor-dropdown');
   if(!dropdown) return;
-  if(_rowColorDocClickHandler) document.removeEventListener('click', _rowColorDocClickHandler);
-  let activeMatId = null;
-  const hide = ()=>{ dropdown.style.display='none'; activeMatId=null; };
-  document.querySelectorAll('[data-row-color-trigger]').forEach(btn=>{
+  if(_batchColorDocClickHandler) document.removeEventListener('click', _batchColorDocClickHandler);
+  let activeSize = null;
+  const hide = ()=>{ dropdown.style.display='none'; activeSize=null; };
+  document.querySelectorAll('[data-batch-color-trigger]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      if(activeMatId===btn.dataset.rowColorTrigger){ hide(); return; }
-      activeMatId = btn.dataset.rowColorTrigger;
+      if(activeSize===btn.dataset.batchColorTrigger){ hide(); return; }
+      activeSize = btn.dataset.batchColorTrigger;
       const r = btn.getBoundingClientRect();
       dropdown.style.left = r.left+'px';
       dropdown.style.top = (r.bottom+4)+'px';
       dropdown.style.display = 'flex';
     });
   });
-  dropdown.querySelectorAll('[data-pick-row-color]').forEach(b=>{
+  dropdown.querySelectorAll('[data-pick-batch-color]').forEach(b=>{
     b.addEventListener('click', (e)=>{
       e.stopPropagation();
-      if(!activeMatId) return;
+      if(!activeSize) return;
       const draft = state._costingDraft;
-      const m = draft && (draft.materials||[]).find(x=>x.id===activeMatId);
-      if(m){ m.rowColor = b.dataset.pickRowColor || null; state._costingDirty = true; }
+      if(draft){
+        if(!draft.batchColors) draft.batchColors = {};
+        if(b.dataset.pickBatchColor) draft.batchColors[activeSize] = b.dataset.pickBatchColor;
+        else delete draft.batchColors[activeSize];
+        state._costingDirty = true;
+      }
       hide();
       render();
     });
   });
-  _rowColorDocClickHandler = ()=>hide();
-  document.addEventListener('click', _rowColorDocClickHandler);
+  _batchColorDocClickHandler = ()=>hide();
+  document.addEventListener('click', _batchColorDocClickHandler);
 }
 
 /* ===================== Event wiring ===================== */
@@ -8482,6 +8495,7 @@ function attachShellHandlers(){
     state._costingDraft = {
       materials: JSON.parse(JSON.stringify(version.materials||[])),
       batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
+      batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
     };
     state._costingDirty = false;
     render();
@@ -8492,13 +8506,13 @@ function attachShellHandlers(){
     const who = state.session.staffName || state.session.name;
     const now = new Date().toISOString();
     const nextNum = (product.versions||[]).length + 1;
-    const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], createdBy:who, createdAt:now, editedBy:who, editedAt:now};
+    const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], batchColors:{}, createdBy:who, createdAt:now, editedBy:who, editedAt:now};
     if(!product.versions) product.versions = [];
     product.versions.push(newVersion);
     await save('costingProducts');
     logActivity(`Created costing version "${newVersion.name}" (${product.name})`);
     state._costingOpenVersionId = newVersion.id;
-    state._costingDraft = {materials:[], batchSizes:[]};
+    state._costingDraft = {materials:[], batchSizes:[], batchColors:{}};
     state._costingDirty = false;
     render();
   };
@@ -8582,6 +8596,7 @@ function attachShellHandlers(){
     if(!draft) return;
     const sz = parseFloat(b.dataset.removeCostingBatchsize);
     draft.batchSizes = (draft.batchSizes||[]).filter(s=>s!==sz);
+    if(draft.batchColors) delete draft.batchColors[sz];
     state._costingDirty = true;
     render();
   }));
@@ -8593,6 +8608,7 @@ function attachShellHandlers(){
     if(!product || !version || !draft) return;
     version.materials = JSON.parse(JSON.stringify(draft.materials||[]));
     version.batchSizes = JSON.parse(JSON.stringify(draft.batchSizes||[]));
+    version.batchColors = JSON.parse(JSON.stringify(draft.batchColors||{}));
     version.editedBy = state.session.staffName || state.session.name;
     version.editedAt = new Date().toISOString();
     await save('costingProducts');
@@ -8615,6 +8631,7 @@ function attachShellHandlers(){
       id: uid('CVER'), name,
       materials: JSON.parse(JSON.stringify(draft.materials||[])),
       batchSizes: JSON.parse(JSON.stringify(draft.batchSizes||[])),
+      batchColors: JSON.parse(JSON.stringify(draft.batchColors||{})),
       createdBy: who, createdAt: now, editedBy: who, editedAt: now,
     };
     if(!product.versions) product.versions = [];
@@ -8630,7 +8647,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-remove-supplier-tag]').forEach(b=>b.addEventListener('click', ()=>{
     costingRemoveSupplierTag(b.dataset.removeSupplierTag, Number(b.dataset.idx));
   }));
-  attachCostingRowColorPicker();
+  attachCostingBatchColorPicker();
   document.querySelectorAll('.cst-field').forEach(el=>el.addEventListener('input', ()=>costingOnFieldInput(el)));
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));

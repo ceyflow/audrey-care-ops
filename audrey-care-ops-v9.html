@@ -241,6 +241,12 @@
   table.costing-table tbody td, table.costing-table tbody th{border-bottom:1px solid var(--border);}
   table.costing-table tbody tr:last-child td{border-bottom:1px solid var(--border);}
   table.costing-table tfoot td{border-top:2px solid var(--ink);background:var(--accent-soft);}
+  /* Each batch size contributes an Amount+Cost pair, and with several sizes on one sheet it's
+     easy to lose track of where one pair ends and the next begins — a firm vertical rule before
+     every "Amount for …kg" column (the start of each pair) breaks the sheet into clear groups. */
+  table.costing-table .cst-group-start{border-left:2px solid var(--border);padding-left:16px;}
+  table.costing-table thead .cst-group-start{border-left:2px solid var(--ink);}
+  table.costing-table tfoot .cst-group-start{border-left:2px solid var(--ink);}
 
   .checklist-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
   table.checklist-grid{border-collapse:collapse;font-size:11.5px;white-space:nowrap;}
@@ -6010,7 +6016,7 @@ function renderCostingProductSheet(p){
     <table class="data-table costing-table" style="white-space:nowrap;">
       <thead><tr>
         <th>No</th><th>Raw material</th><th>%</th><th>Unit Price (Rs/kg)</th><th>Supplier</th>
-        ${sizes.map(sz=>`<th>Amount for ${sz}kg</th><th>Cost for ${sz}kg</th>`).join('')}
+        ${sizes.map(sz=>`<th class="cst-group-start">Amount for ${sz}kg</th><th>Cost for ${sz}kg</th>`).join('')}
         ${admin?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
@@ -6024,7 +6030,7 @@ function renderCostingProductSheet(p){
           ${sizes.map(sz=>{
             const amt = costingLineAmount(m.percent, sz);
             const cost = amt * (Number(m.costPerKg)||0);
-            return `<td class="cst-amt" data-mat="${m.id}" data-size="${sz}">${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}">Rs. ${cost.toFixed(2)}</td>`;
+            return `<td class="cst-amt cst-group-start" data-mat="${m.id}" data-size="${sz}">${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}">Rs. ${cost.toFixed(2)}</td>`;
           }).join('')}
           ${admin?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:''}
         </tr>`).join('')}
@@ -6034,7 +6040,7 @@ function renderCostingProductSheet(p){
         ${sizes.map(sz=>{
           const amtSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz), 0);
           const costSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz)*(Number(m.costPerKg)||0), 0);
-          return `<td id="cst-total-amt-${sz}">${amtSum.toFixed(3)}</td><td id="cst-total-cost-${sz}">Rs. ${costSum.toFixed(2)}</td>`;
+          return `<td id="cst-total-amt-${sz}" class="cst-group-start">${amtSum.toFixed(3)}</td><td id="cst-total-cost-${sz}">Rs. ${costSum.toFixed(2)}</td>`;
         }).join('')}
         ${admin?'<td></td>':''}
       </tr></tfoot>` : ''}

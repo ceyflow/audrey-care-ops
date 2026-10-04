@@ -6178,6 +6178,8 @@ function renderCostingPage(){
       batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
       fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
+      notes: version.notes||'',
+      productionMethod: version.productionMethod||'',
     };
     // Older saved versions may still have water sitting at the old 100% target (or any
     // other stale value) — re-balance it against the current target the moment the sheet
@@ -6387,14 +6389,19 @@ function renderCostingProductSheet(product, version){
   const batchColors = draft.batchColors || {};
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-versions" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
-  <div class="toolbar">
-    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="color:var(--muted);font-weight:500;">(ID: ${esc(product.productId)})</span>`:''} — ${esc(version.name)}${state._costingDirty ? ' <span style="color:var(--muted);font-weight:500;">(unsaved changes)</span>' : ''}</div>
+  <div class="toolbar" style="align-items:flex-start;">
+    <div style="font-size:23px;font-weight:700;font-family:'Fraunces',serif;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="font-size:14px;font-weight:500;color:var(--muted);font-family:inherit;">(ID: ${esc(product.productId)})</span>`:''} — ${esc(version.name)}${state._costingDirty ? ' <span style="font-size:14px;color:var(--muted);font-weight:500;font-family:inherit;">(unsaved changes)</span>' : ''}</div>
     ${admin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" class="btn btn-sm" id="btn-add-costing-material">+ Add raw material</button>
       <button type="button" class="btn btn-sm" id="btn-add-costing-fixedcost">+ Add fixed cost</button>
       <button type="button" class="btn btn-sm" id="btn-add-costing-batchsize">+ Add batch size</button>
       <button type="button" class="btn btn-primary btn-sm" id="btn-costing-save">💾 Save</button>
     </div>` : ''}
+  </div>
+  <div style="margin:2px 0 16px;">
+    ${admin
+      ? `<textarea class="cst-sheet-field" data-sheetfield="notes" placeholder="Notes about this version…" style="width:100%;min-height:44px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.notes||'')}</textarea>`
+      : (draft.notes ? `<div class="hint" style="white-space:pre-wrap;">${esc(draft.notes)}</div>` : '')}
   </div>
   <div class="panel" style="overflow-x:auto;">
     <table class="data-table costing-table" style="white-space:nowrap;">
@@ -6492,6 +6499,14 @@ function renderCostingProductSheet(product, version){
   ${sizes.length>0 && admin ? `
   <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
   ` : ''}
+  <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+    <div style="width:320px;max-width:100%;">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">Production method</label>
+      ${admin
+        ? `<textarea class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:70px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.productionMethod||'')}</textarea>`
+        : (draft.productionMethod ? `<div class="hint" style="white-space:pre-wrap;text-align:left;">${esc(draft.productionMethod)}</div>` : '<div class="hint">—</div>')}
+    </div>
+  </div>
   ${admin ? `<div id="costing-supplier-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;"></div>` : ''}
   ${admin ? `<div id="costing-batchcolor-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;padding:7px;flex-wrap:wrap;gap:5px;width:116px;">
     ${BATCH_COLOR_PALETTE.map(c=>`<button type="button" class="row-color-dot" data-pick-batch-color="${c}" style="background:${c};"></button>`).join('')}
@@ -8701,6 +8716,8 @@ function attachShellHandlers(){
       batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
       fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
+      notes: version.notes||'',
+      productionMethod: version.productionMethod||'',
     };
     costingAutoBalanceWater(state._costingDraft, null);
     state._costingDirty = false;
@@ -8713,13 +8730,13 @@ function attachShellHandlers(){
     const who = state.session.staffName || state.session.name;
     const now = new Date().toISOString();
     const nextNum = (product.versions||[]).length + 1;
-    const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], batchColors:{}, fixedCosts:defaultFixedCosts(), createdBy:who, createdAt:now, editedBy:who, editedAt:now};
+    const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], batchColors:{}, fixedCosts:defaultFixedCosts(), notes:'', productionMethod:'', createdBy:who, createdAt:now, editedBy:who, editedAt:now};
     if(!product.versions) product.versions = [];
     product.versions.push(newVersion);
     await save('costingProducts');
     logActivity(`Created costing version "${newVersion.name}" (${product.name})`);
     state._costingOpenVersionId = newVersion.id;
-    state._costingDraft = {materials:[], batchSizes:[], batchColors:{}, fixedCosts:JSON.parse(JSON.stringify(newVersion.fixedCosts))};
+    state._costingDraft = {materials:[], batchSizes:[], batchColors:{}, fixedCosts:JSON.parse(JSON.stringify(newVersion.fixedCosts)), notes:'', productionMethod:''};
     state._costingDirty = false;
     history.replaceState(null,'','#costing/'+encodeURIComponent(product.id)+'/'+encodeURIComponent(newVersion.id));
     render();
@@ -8835,6 +8852,8 @@ function attachShellHandlers(){
     version.batchSizes = JSON.parse(JSON.stringify(draft.batchSizes||[]));
     version.batchColors = JSON.parse(JSON.stringify(draft.batchColors||{}));
     version.fixedCosts = JSON.parse(JSON.stringify(draft.fixedCosts||[]));
+    version.notes = draft.notes||'';
+    version.productionMethod = draft.productionMethod||'';
     version.editedBy = state.session.staffName || state.session.name;
     version.editedAt = new Date().toISOString();
     await save('costingProducts');
@@ -8859,6 +8878,8 @@ function attachShellHandlers(){
       batchSizes: JSON.parse(JSON.stringify(draft.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(draft.batchColors||{})),
       fixedCosts: JSON.parse(JSON.stringify(draft.fixedCosts||[])),
+      notes: draft.notes||'',
+      productionMethod: draft.productionMethod||'',
       createdBy: who, createdAt: now, editedBy: who, editedAt: now,
     };
     if(!product.versions) product.versions = [];
@@ -8877,6 +8898,12 @@ function attachShellHandlers(){
   attachCostingBatchColorPicker();
   document.querySelectorAll('.cst-field').forEach(el=>el.addEventListener('input', ()=>costingOnFieldInput(el)));
   document.querySelectorAll('.cst-fc-field').forEach(el=>el.addEventListener('input', ()=>costingOnFixedCostFieldInput(el)));
+  document.querySelectorAll('.cst-sheet-field').forEach(el=>el.addEventListener('input', ()=>{
+    const draft = state._costingDraft;
+    if(!draft) return;
+    draft[el.dataset.sheetfield] = el.value;
+    state._costingDirty = true;
+  }));
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openModal('recipesheet:'+b.dataset.viewBatchsheet)));

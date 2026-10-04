@@ -6183,11 +6183,18 @@ function costingAutoBalanceWater(draft, editedId){
 // A raw material can be sourced from up to two suppliers, shown as removable name tags
 // rather than a plain text field — colored per supplier (by name, so the same supplier
 // always gets the same color) so multiple tags stay easy to tell apart at a glance.
+// Supplier names can run long ("Purechem Specialty Products (Pvt) Limited"), which blows up
+// row height in a dense costing sheet — show just a short snippet plus the initials avatar,
+// and keep the full name as a hover tooltip so it's still there when actually needed.
+function costingSupplierShortLabel(name){
+  const trimmed = (name||'').trim();
+  return trimmed.length>4 ? trimmed.slice(0,4)+'…' : trimmed;
+}
 function costingSupplierTagsHtml(m){
   return (m.suppliers||[]).map((name,idx)=>`
-    <span class="supplier-tag">
+    <span class="supplier-tag" title="${escAttr(name)}">
       <span class="tag-avatar" style="background:${tagColorFor(name)};">${esc(initials(name))}</span>
-      ${esc(name)}
+      ${esc(costingSupplierShortLabel(name))}
       <button type="button" class="tag-remove" data-remove-supplier-tag="${m.id}" data-idx="${idx}" title="Remove">×</button>
     </span>`).join('');
 }

@@ -6170,20 +6170,45 @@ async function submitStartBatch(e){
   });
   closeModal();
 }
+// activeBatch is a single shared object, not an array-of-records, so it gets none of the
+// concurrent-edit merge protection the rest of the save pipeline gives record arrays — a save
+// here always blindly overwrites the server copy, last-write-wins. That's a real risk for a
+// live batch timer the app itself expects multiple people to have open at once (a floor
+// tablet, an admin's laptop, …) — see the Stop-batch confirm's own "Everyone watching will
+// lose the live timer" text. If one viewer stops/finishes the batch while another's tab still
+// thinks it's running, that stale tab's next Pause/Next/Restart click would otherwise silently
+// resurrect the batch someone else already ended. Guard every mutator by re-checking the
+// server's current copy still matches (by id) the batch this tab thinks is active before
+// writing; if not, drop the stale local copy instead of overwriting whatever's really there now.
+async function verifyActiveBatchStillCurrent(expectedId){
+  try{
+    const server = await kvGet('activeBatch');
+    return !!server && server.id === expectedId;
+  }catch(e){ return true; } // can't check — don't block the action over a network hiccup
+}
+function dropStaleActiveBatch(message){
+  state.activeBatch = null;
+  stopBatchTicker();
+  showToast(message || 'This batch was already ended elsewhere');
+  render();
+}
 async function pauseBatch(){
   const b = state.activeBatch; if(!b || b.status!=='running') return;
+  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.remainingSecondsWhenPaused = Math.max(0, batchRemainingSeconds());
   b.status = 'paused';
   await save('activeBatch'); render();
 }
 async function resumeBatch(){
   const b = state.activeBatch; if(!b || b.status!=='paused') return;
+  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.stepDeadline = new Date(Date.now() + (b.remainingSecondsWhenPaused||0)*1000).toISOString();
   b.status = 'running'; b.remainingSecondsWhenPaused = null;
   await save('activeBatch'); render();
 }
 async function nextBatchStep(){
   const b = state.activeBatch; if(!b) return;
+  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   if(b.currentStep >= b.steps.length-1){
     b.status = 'completed';
     await save('activeBatch');
@@ -6200,6 +6225,7 @@ async function nextBatchStep(){
 }
 async function prevBatchStep(){
   const b = state.activeBatch; if(!b || b.currentStep<=0) return;
+  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.currentStep -= 1;
   const step = b.steps[b.currentStep];
   b.status = 'running';
@@ -6209,6 +6235,7 @@ async function prevBatchStep(){
 }
 async function restartCurrentStep(){
   const b = state.activeBatch; if(!b) return;
+  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   const step = b.steps[b.currentStep];
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
@@ -6218,6 +6245,13 @@ async function restartCurrentStep(){
 function stopBatch(){
   const isDone = state.activeBatch && state.activeBatch.status==='completed';
   const doStop = async ()=>{
+    const b = state.activeBatch;
+    if(b && !await verifyActiveBatchStillCurrent(b.id)){
+      // Someone already ended ours — possibly started a different one. Don't blindly null that
+      // out; just drop our own stale copy.
+      dropStaleActiveBatch('This batch was already ended elsewhere');
+      return;
+    }
     state.activeBatch = null;
     await save('activeBatch'); stopBatchTicker();
     showToast('Batch stopped');

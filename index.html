@@ -244,9 +244,13 @@
   /* Each batch size contributes an Amount+Cost pair, and with several sizes on one sheet it's
      easy to lose track of where one pair ends and the next begins — a firm vertical rule before
      every "Amount for …kg" column (the start of each pair) breaks the sheet into clear groups. */
-  table.costing-table .cst-group-start{border-left:2px solid var(--border);padding-left:16px;}
+  table.costing-table .cst-group-start{border-left:2px solid var(--border);padding-left:10px;}
   table.costing-table thead .cst-group-start{border-left:2px solid var(--ink);}
   table.costing-table tfoot .cst-group-start{border-left:2px solid var(--ink);}
+  /* Compact sizing — a costing sheet has many columns and rows, so a smaller, tighter grid
+     keeps more of it on screen at once than the app's normal table density. */
+  table.costing-table th{padding:7px 10px;font-size:11px;}
+  table.costing-table td{padding:5px 10px;font-size:12px;}
 
   .checklist-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
   table.checklist-grid{border-collapse:collapse;font-size:11.5px;white-space:nowrap;}
@@ -6023,10 +6027,10 @@ function renderCostingProductSheet(p){
         ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>`
         <tr data-mat-row="${m.id}">
           <td>${i+1}</td>
-          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:160px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:esc(m.name)}</td>
-          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:80px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
-          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:100px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
-          <td>${admin?`<input class="cst-field" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:110px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:esc(m.supplier||'—')}</td>
+          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
+          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
+          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
+          <td>${admin?`<input class="cst-field" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:100px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.supplier||'—')}</td>
           ${sizes.map(sz=>{
             const amt = costingLineAmount(m.percent, sz);
             const cost = amt * (Number(m.costPerKg)||0);

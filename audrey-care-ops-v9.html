@@ -240,12 +240,18 @@
   table.costing-table tbody tr{background:var(--bg);}
   table.costing-table tbody td, table.costing-table tbody th{border-bottom:1px solid var(--border);}
   table.costing-table tbody tr:last-child td{border-bottom:1px solid var(--border);}
-  table.costing-table tfoot td{border-top:2px solid var(--ink);background:var(--accent-soft);}
+  /* The ingredient Total row, and the Sub Total / Grand Total / Per Can Cost rows below the
+     fixed-cost items, all live in plain tbody rows rather than <tfoot> — a real <tfoot> is
+     always rendered at the very bottom of the table by the browser regardless of where it sits
+     in the markup, which would yank the ingredient Total down below the fixed-costs section.
+     This class gives them the same bold/top-border/tinted "totals row" look instead. */
+  table.costing-table .cst-foot-row td{border-top:2px solid var(--ink);background:var(--accent-soft);font-weight:700;}
+  table.costing-table .cst-foot-row-highlight td{background:var(--accent-grad);color:#fff;}
   /* Each batch size contributes an Amount+Cost pair, and with several sizes on one sheet it's
      easy to lose track of where one pair ends and the next begins — a firm vertical rule before
      every "Amount for …kg" column (the start of each pair) breaks the sheet into clear groups. */
   table.costing-table .cst-group-start{border-left:2px solid var(--border);padding-left:10px;}
-  table.costing-table tfoot .cst-group-start{border-left:2px solid var(--ink);}
+  table.costing-table .cst-foot-row .cst-group-start{border-left:2px solid var(--ink);}
   /* A colored bar above each batch size's Amount+Cost header pair (instead of a side line)
      marks where that group starts, read at a glance even while scrolled sideways. */
   table.costing-table thead th.cst-group-bar{border-top:4px solid var(--accent);background:var(--accent-soft);}
@@ -6157,6 +6163,7 @@ function renderCostingPage(){
       materials: JSON.parse(JSON.stringify(version.materials||[])),
       batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
+      fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
     };
     // Older saved versions may still have water sitting at the old 100% target (or any
     // other stale value) — re-balance it against the current target the moment the sheet
@@ -6292,6 +6299,39 @@ function costingAutoBalanceWater(draft, editedId){
   water.percent = newPct;
   return true;
 }
+// Fixed costs (electricity, cans, operator labor, chemist charges, …) sit below the raw
+// material rows and scale by batch size too, but by a manually-set quantity per size rather
+// than the material rows' percent-of-batch formula — e.g. electricity-hours or operator-shifts
+// don't scale linearly with batch size, so each quantity cell stays freely editable. The one
+// exception is "Can cost": every batch here is filled into 5L cans, so its quantity (number of
+// cans) is auto-generated from the batch size and only needs overriding if that ever changes.
+const KG_PER_CAN = 5;
+function isCanCostItem(item){ return /\bcan\b/i.test(item.name||''); }
+function defaultFixedCosts(){
+  return ['Electricity','Can cost','Operator','Chemist Charges'].map(name=>({id:uid('FC'), name, unitCost:0, qty:{}}));
+}
+// Makes sure a draft always has a fixed-costs list and that every batch size on the sheet has
+// a quantity entry for the Can-cost row — called whenever a draft is built or a batch size is
+// added, so older saved versions (or newly added sizes) never show a blank/undefined cell.
+// Only fills in what's missing; never overwrites a quantity the admin already set or cleared.
+// An explicitly empty array (the admin deleted every fixed-cost row and saved) is left alone —
+// only a genuinely missing list (an older saved version that predates this feature) gets seeded.
+function ensureFixedCostDefaults(draft){
+  if(!draft.fixedCosts) draft.fixedCosts = defaultFixedCosts();
+  draft.fixedCosts.forEach(item=>{
+    if(!item.qty) item.qty = {};
+    if(isCanCostItem(item)){
+      (draft.batchSizes||[]).forEach(sz=>{
+        if(item.qty[sz]==null) item.qty[sz] = Math.round((sz/KG_PER_CAN)*1000)/1000;
+      });
+    }
+  });
+}
+function fixedCostLineCost(item, sz){ return (Number((item.qty||{})[sz])||0) * (Number(item.unitCost)||0); }
+function costingFixedCostsSubTotal(fixedCosts, sz){ return (fixedCosts||[]).reduce((s,item)=>s+fixedCostLineCost(item, sz), 0); }
+function costingIngredientCostSum(materials, sz){ return (materials||[]).reduce((s,m)=>s+costingLineAmount(m.percent, sz)*(Number(m.costPerKg)||0), 0); }
+function costingGrandTotal(draft, sz){ return costingIngredientCostSum(draft.materials, sz) + costingFixedCostsSubTotal(draft.fixedCosts, sz); }
+function costingPerCanCost(draft, sz){ const cans = sz/KG_PER_CAN; return cans>0 ? costingGrandTotal(draft, sz)/cans : 0; }
 // A raw material can be sourced from up to two suppliers, shown as removable name tags
 // rather than a plain text field — colored per supplier (by name, so the same supplier
 // always gets the same color) so multiple tags stay easy to tell apart at a glance.
@@ -6319,7 +6359,9 @@ const BATCH_COLOR_PALETTE = ['#FCA5A5','#FDBA74','#FDE68A','#86EFAC','#93C5FD','
 function renderCostingProductSheet(product, version){
   const admin = isAdmin();
   const draft = state._costingDraft || {materials:[], batchSizes:[]};
+  ensureFixedCostDefaults(draft);
   const materials = draft.materials||[];
+  const fixedCosts = draft.fixedCosts||[];
   const sizes = (draft.batchSizes||[]).slice().sort((a,b)=>a-b);
   const totalPct = materials.reduce((s,m)=>s+(Number(m.percent)||0), 0);
   const totalUnitPrice = materials.reduce((s,m)=>s+(Number(m.costPerKg)||0), 0);
@@ -6331,6 +6373,7 @@ function renderCostingProductSheet(product, version){
     <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} — ${esc(version.name)}${state._costingDirty ? ' <span style="color:var(--muted);font-weight:500;">(unsaved changes)</span>' : ''}</div>
     ${admin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" class="btn btn-sm" id="btn-add-costing-material">+ Add raw material</button>
+      <button type="button" class="btn btn-sm" id="btn-add-costing-fixedcost">+ Add fixed cost</button>
       <button type="button" class="btn btn-sm" id="btn-add-costing-batchsize">+ Add batch size</button>
       <button type="button" class="btn btn-primary btn-sm" id="btn-costing-save">💾 Save</button>
     </div>` : ''}
@@ -6368,7 +6411,7 @@ function renderCostingProductSheet(product, version){
           ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
         </tr>`).join('')}
       </tbody>
-      ${materials.length>0 ? `<tfoot><tr style="font-weight:700;">
+      ${materials.length>0 ? `<tbody><tr class="cst-foot-row">
         <td></td><td>Total</td><td id="cst-total-percent">${totalPct.toFixed(2)}%</td><td id="cst-total-unitprice">Rs. ${totalUnitPrice.toFixed(2)}</td><td></td>
         ${sizes.map(sz=>{
           const amtSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz), 0);
@@ -6378,7 +6421,53 @@ function renderCostingProductSheet(product, version){
           return `<td id="cst-total-amt-${sz}" class="cst-group-start"${cellStyle}>${amtSum.toFixed(3)}</td><td id="cst-total-cost-${sz}"${cellStyle}>Rs. ${costSum.toFixed(2)}</td>`;
         }).join('')}
         ${admin?'<td></td>':''}
-      </tr></tfoot>` : ''}
+      </tr></tbody>` : ''}
+      <tbody>
+        <tr><td colspan="${colCount}" style="font-weight:700;padding-top:12px;background:var(--bg);">Fixed costs</td></tr>
+        ${fixedCosts.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No fixed costs yet. ${admin?'Add one (e.g. Electricity, Can cost).':''}</td></tr>` : fixedCosts.map((item,i)=>`
+        <tr data-fixedcost-row="${item.id}">
+          <td>${i+1}</td>
+          <td>${admin?`<input class="cst-fc-field" data-fcfield="name" data-fc="${item.id}" value="${esc(item.name)}" placeholder="e.g. Electricity" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(item.name)}</td>
+          <td></td>
+          <td>${admin?`<input class="cst-fc-field" type="number" min="0" step="0.01" data-fcfield="unitCost" data-fc="${item.id}" value="${item.unitCost}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(item.unitCost)||0).toFixed(2))}</td>
+          <td></td>
+          ${sizes.map(sz=>{
+            const qty = (item.qty||{})[sz];
+            const cost = fixedCostLineCost(item, sz);
+            const col = batchColors[sz] || null;
+            const cellStyle = col ? ` style="background:${col}33;"` : '';
+            return `<td class="cst-group-start"${cellStyle}>${admin?`<input class="cst-fc-field" type="number" min="0" step="0.001" data-fcfield="qty" data-fc="${item.id}" data-size="${sz}" value="${qty==null?'':qty}" style="width:64px;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font:inherit;">`:(qty==null?'—':qty)}</td><td class="cst-fc-cost" data-fc="${item.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
+          }).join('')}
+          ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-fixedcost="${item.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
+        </tr>`).join('')}
+        <tr class="cst-foot-row">
+          <td></td><td>Sub Total</td><td></td><td></td><td></td>
+          ${sizes.map(sz=>{
+            const col = batchColors[sz] || null;
+            const cellStyle = col ? ` style="background:${col}33;"` : '';
+            return `<td class="cst-group-start"${cellStyle}></td><td id="cst-subtotal-${sz}"${cellStyle}>Rs. ${costingFixedCostsSubTotal(fixedCosts, sz).toFixed(2)}</td>`;
+          }).join('')}
+          ${admin?'<td></td>':''}
+        </tr>
+        <tr class="cst-foot-row">
+          <td></td><td>Grand Total</td><td></td><td></td><td></td>
+          ${sizes.map(sz=>{
+            const col = batchColors[sz] || null;
+            const cellStyle = col ? ` style="background:${col}33;"` : '';
+            return `<td class="cst-group-start"${cellStyle}></td><td id="cst-grandtotal-${sz}"${cellStyle}>Rs. ${costingGrandTotal(draft, sz).toFixed(2)}</td>`;
+          }).join('')}
+          ${admin?'<td></td>':''}
+        </tr>
+        <tr class="cst-foot-row cst-foot-row-highlight">
+          <td></td><td>Per Can Cost (5L)</td><td></td><td></td><td></td>
+          ${sizes.map(sz=>{
+            const col = batchColors[sz] || null;
+            const cellStyle = col ? ` style="background:${col}33;"` : '';
+            return `<td class="cst-group-start"${cellStyle}></td><td id="cst-percan-${sz}"${cellStyle}>Rs. ${costingPerCanCost(draft, sz).toFixed(2)}</td>`;
+          }).join('')}
+          ${admin?'<td></td>':''}
+        </tr>
+      </tbody>
     </table>
   </div>
   ${sizes.length>0 && admin ? `
@@ -6445,6 +6534,44 @@ function costingRecomputeTotals(draft){
     const amtEl = document.getElementById('cst-total-amt-'+sz); if(amtEl) amtEl.textContent = amtSum.toFixed(3);
     const costEl = document.getElementById('cst-total-cost-'+sz); if(costEl) costEl.textContent = 'Rs. '+costSum.toFixed(2);
   });
+  costingRecomputeFixedTotals(draft);
+}
+// Refreshes Sub Total / Grand Total / Per Can Cost for every batch size directly via the DOM —
+// called after any raw-material edit (changes the ingredient half of Grand Total) or any fixed
+// cost edit (changes the Sub Total half), so both paths keep these three rows in sync.
+function costingRecomputeFixedTotals(draft){
+  (draft.batchSizes||[]).forEach(sz=>{
+    const subEl = document.getElementById('cst-subtotal-'+sz); if(subEl) subEl.textContent = 'Rs. '+costingFixedCostsSubTotal(draft.fixedCosts, sz).toFixed(2);
+    const grandEl = document.getElementById('cst-grandtotal-'+sz); if(grandEl) grandEl.textContent = 'Rs. '+costingGrandTotal(draft, sz).toFixed(2);
+    const perCanEl = document.getElementById('cst-percan-'+sz); if(perCanEl) perCanEl.textContent = 'Rs. '+costingPerCanCost(draft, sz).toFixed(2);
+  });
+}
+// Live-recomputes one fixed-cost row's Cost cells (mirrors costingRecomputeRow for raw
+// materials) and the Sub/Grand/Per-can rows, for a single input event without a full render().
+function costingRecomputeFixedCostRow(draft, item){
+  (draft.batchSizes||[]).forEach(sz=>{
+    const costEl = document.querySelector(`.cst-fc-cost[data-fc="${item.id}"][data-size="${sz}"]`);
+    if(costEl) costEl.textContent = 'Rs. ' + fixedCostLineCost(item, sz).toFixed(2);
+  });
+  costingRecomputeFixedTotals(draft);
+}
+function costingOnFixedCostFieldInput(el){
+  const draft = state._costingDraft;
+  if(!draft) return;
+  const item = (draft.fixedCosts||[]).find(x=>x.id===el.dataset.fc);
+  if(!item) return;
+  const field = el.dataset.fcfield;
+  if(field==='unitCost'){
+    item.unitCost = Math.max(0, parseFloat(el.value)||0);
+    costingRecomputeFixedCostRow(draft, item);
+  } else if(field==='qty'){
+    if(!item.qty) item.qty = {};
+    item.qty[el.dataset.size] = el.value==='' ? null : Math.max(0, parseFloat(el.value)||0);
+    costingRecomputeFixedCostRow(draft, item);
+  } else {
+    item[field] = el.value;
+  }
+  state._costingDirty = true;
 }
 function renderActiveBatchCard(){
   const b = state.activeBatch;
@@ -7162,6 +7289,15 @@ async function runConfirmedAction(){
       if(draft){
         draft.materials = (draft.materials||[]).filter(m=>m.id!==c.payload);
         costingAutoBalanceWater(draft, null);
+        state._costingDirty = true;
+      }
+      closeModal();
+      break;
+    }
+    case 'delete-costing-fixedcost': {
+      const draft = state._costingDraft;
+      if(draft){
+        draft.fixedCosts = (draft.fixedCosts||[]).filter(f=>f.id!==c.payload);
         state._costingDirty = true;
       }
       closeModal();
@@ -8505,6 +8641,7 @@ function attachShellHandlers(){
       materials: JSON.parse(JSON.stringify(version.materials||[])),
       batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
+      fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
     };
     costingAutoBalanceWater(state._costingDraft, null);
     state._costingDirty = false;
@@ -8516,13 +8653,13 @@ function attachShellHandlers(){
     const who = state.session.staffName || state.session.name;
     const now = new Date().toISOString();
     const nextNum = (product.versions||[]).length + 1;
-    const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], batchColors:{}, createdBy:who, createdAt:now, editedBy:who, editedAt:now};
+    const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], batchColors:{}, fixedCosts:defaultFixedCosts(), createdBy:who, createdAt:now, editedBy:who, editedAt:now};
     if(!product.versions) product.versions = [];
     product.versions.push(newVersion);
     await save('costingProducts');
     logActivity(`Created costing version "${newVersion.name}" (${product.name})`);
     state._costingOpenVersionId = newVersion.id;
-    state._costingDraft = {materials:[], batchSizes:[], batchColors:{}};
+    state._costingDraft = {materials:[], batchSizes:[], batchColors:{}, fixedCosts:JSON.parse(JSON.stringify(newVersion.fixedCosts))};
     state._costingDirty = false;
     render();
   };
@@ -8587,6 +8724,21 @@ function attachShellHandlers(){
       action: 'delete-costing-material', payload: b.dataset.deleteCostingMaterial,
     });
   }));
+  if(byIdEl('btn-add-costing-fixedcost')) byIdEl('btn-add-costing-fixedcost').onclick = ()=>{
+    const draft = state._costingDraft;
+    if(!draft) return;
+    if(!draft.fixedCosts) draft.fixedCosts = [];
+    draft.fixedCosts.push({id:uid('FC'), name:'', unitCost:0, qty:{}});
+    state._costingDirty = true;
+    render();
+  };
+  document.querySelectorAll('[data-delete-costing-fixedcost]').forEach(b=>b.addEventListener('click', ()=>{
+    openConfirmModal({
+      title: 'Delete fixed cost', danger: true, confirmLabel: 'Delete', requirePassword: true,
+      message: 'Delete this fixed cost row?',
+      action: 'delete-costing-fixedcost', payload: b.dataset.deleteCostingFixedcost,
+    });
+  }));
   if(byIdEl('btn-add-costing-batchsize')) byIdEl('btn-add-costing-batchsize').onclick = ()=>openModal('costingbatchsize');
   if(byIdEl('form-costing-batchsize')) byIdEl('form-costing-batchsize').addEventListener('submit', (e)=>{
     e.preventDefault();
@@ -8598,6 +8750,7 @@ function attachShellHandlers(){
     if(draft.batchSizes.includes(kg)){ showToast('That batch size is already on this sheet'); return; }
     draft.batchSizes.push(kg);
     draft.batchSizes.sort((a,b)=>a-b);
+    ensureFixedCostDefaults(draft);
     state._costingDirty = true;
     closeModal();
   });
@@ -8607,6 +8760,7 @@ function attachShellHandlers(){
     const sz = parseFloat(b.dataset.removeCostingBatchsize);
     draft.batchSizes = (draft.batchSizes||[]).filter(s=>s!==sz);
     if(draft.batchColors) delete draft.batchColors[sz];
+    (draft.fixedCosts||[]).forEach(item=>{ if(item.qty) delete item.qty[sz]; });
     state._costingDirty = true;
     render();
   }));
@@ -8619,6 +8773,7 @@ function attachShellHandlers(){
     version.materials = JSON.parse(JSON.stringify(draft.materials||[]));
     version.batchSizes = JSON.parse(JSON.stringify(draft.batchSizes||[]));
     version.batchColors = JSON.parse(JSON.stringify(draft.batchColors||{}));
+    version.fixedCosts = JSON.parse(JSON.stringify(draft.fixedCosts||[]));
     version.editedBy = state.session.staffName || state.session.name;
     version.editedAt = new Date().toISOString();
     await save('costingProducts');
@@ -8642,6 +8797,7 @@ function attachShellHandlers(){
       materials: JSON.parse(JSON.stringify(draft.materials||[])),
       batchSizes: JSON.parse(JSON.stringify(draft.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(draft.batchColors||{})),
+      fixedCosts: JSON.parse(JSON.stringify(draft.fixedCosts||[])),
       createdBy: who, createdAt: now, editedBy: who, editedAt: now,
     };
     if(!product.versions) product.versions = [];
@@ -8659,6 +8815,7 @@ function attachShellHandlers(){
   }));
   attachCostingBatchColorPicker();
   document.querySelectorAll('.cst-field').forEach(el=>el.addEventListener('input', ()=>costingOnFieldInput(el)));
+  document.querySelectorAll('.cst-fc-field').forEach(el=>el.addEventListener('input', ()=>costingOnFixedCostFieldInput(el)));
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openModal('recipesheet:'+b.dataset.viewBatchsheet)));

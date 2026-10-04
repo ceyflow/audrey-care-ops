@@ -6213,7 +6213,7 @@ function renderCostingProductGrid(){
   ${products.length===0 ? `<div class="empty-state">No products yet. ${admin?'Add one to start costing it.':''}</div>` : `
   <div class="recipe-grid">
     ${products.map(p=>{
-      const verCount = (p.versions||[]).length;
+      const verCount = activeCostingVersions(p).length;
       return `
       <div class="recipe-card clickable-card" data-open-costing-product="${p.id}" style="cursor:pointer;">
         <div class="rc-icon-badge">${icon(costingProductIcon(p.name))}</div>

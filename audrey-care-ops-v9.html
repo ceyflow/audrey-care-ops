@@ -236,8 +236,8 @@
   table.data-table tr.clickable:hover{background:var(--bg);cursor:pointer;}
   /* Costing sheets run wide (many batch-size columns) and tall (many raw materials) — a plain
      hairline between rows gets lost when your eye is tracking sideways across the table, so
-     rows alternate shade and get a firmer divider instead of just the thin default border. */
-  table.costing-table tbody tr:nth-child(even){background:var(--bg);}
+     every row gets a light tint and a firmer divider instead of just the thin default border. */
+  table.costing-table tbody tr{background:var(--bg);}
   table.costing-table tbody td, table.costing-table tbody th{border-bottom:1px solid var(--border);}
   table.costing-table tbody tr:last-child td{border-bottom:1px solid var(--border);}
   table.costing-table tfoot td{border-top:2px solid var(--ink);background:var(--accent-soft);}

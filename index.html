@@ -245,8 +245,11 @@
      easy to lose track of where one pair ends and the next begins — a firm vertical rule before
      every "Amount for …kg" column (the start of each pair) breaks the sheet into clear groups. */
   table.costing-table .cst-group-start{border-left:2px solid var(--border);padding-left:10px;}
-  table.costing-table thead .cst-group-start{border-left:2px solid var(--ink);}
   table.costing-table tfoot .cst-group-start{border-left:2px solid var(--ink);}
+  /* A colored bar above each batch size's Amount+Cost header pair (instead of a side line)
+     marks where that group starts, read at a glance even while scrolled sideways. */
+  table.costing-table thead th.cst-group-bar{border-top:4px solid var(--accent);background:var(--accent-soft);}
+  table.costing-table thead th.cst-group-first{border-left:2px solid var(--accent-dark);}
   /* Compact sizing — a costing sheet has many columns and rows, so a smaller, tighter grid
      keeps more of it on screen at once than the app's normal table density. */
   table.costing-table th{padding:7px 10px;font-size:11px;}
@@ -6325,7 +6328,7 @@ function renderCostingProductSheet(product, version){
       <thead><tr>
         ${admin?'<th>Color</th>':''}
         <th>No</th><th>Raw material</th><th>%</th><th>Unit Price (Rs/kg)</th><th>Supplier</th>
-        ${sizes.map(sz=>`<th class="cst-group-start">Amt ${sz}kg</th><th>Cost ${sz}kg</th>`).join('')}
+        ${sizes.map(sz=>`<th class="cst-group-bar cst-group-first">Amount ${sz}kg</th><th class="cst-group-bar">Cost ${sz}kg</th>`).join('')}
         ${admin?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>

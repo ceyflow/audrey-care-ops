@@ -6078,6 +6078,24 @@ function renderCostingProductGrid(){
   `;
 }
 function costingLineAmount(percent, batchKg){ return (Number(percent)||0)/100 * (Number(batchKg)||0); }
+// Water is conventionally "q.s. to 100%" in a cosmetic recipe — it fills whatever
+// percentage the other raw materials don't already account for, rather than being
+// typed in by hand. Matched by name so it works whether the row is called "Water" or
+// "DI Water"/"Di Water".
+function isWaterMaterial(m){ return /\bwater\b/i.test(m.name||''); }
+// Recomputes the water row's percent to make the sheet total 100%, unless the row just
+// edited (editedId) IS the water row itself — a direct edit to water's own percent is
+// respected rather than immediately overwritten. Returns true if water's percent changed.
+function costingAutoBalanceWater(product, editedId){
+  const materials = product.materials||[];
+  const water = materials.find(isWaterMaterial);
+  if(!water || water.id===editedId) return false;
+  const sumOthers = materials.filter(m=>m.id!==water.id).reduce((s,m)=>s+(Number(m.percent)||0), 0);
+  const newPct = Math.max(0, Math.round((100-sumOthers)*1000)/1000);
+  if(newPct===water.percent) return false;
+  water.percent = newPct;
+  return true;
+}
 function renderCostingProductSheet(p){
   const admin = isAdmin();
   const materials = p.materials||[];
@@ -6108,7 +6126,7 @@ function renderCostingProductSheet(p){
           <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
-          <td>${admin?`<input class="cst-field" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:100px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.supplier||'—')}</td>
+          <td>${admin?`<input class="cst-field" list="costing-suppliers-datalist" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:100px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.supplier||'—')}</td>
           ${sizes.map(sz=>{
             const amt = costingLineAmount(m.percent, sz);
             const cost = amt * (Number(m.costPerKg)||0);
@@ -6131,6 +6149,7 @@ function renderCostingProductSheet(p){
   ${sizes.length>0 && admin ? `
   <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
   ` : ''}
+  ${admin ? `<datalist id="costing-suppliers-datalist">${[...new Set(state.suppliers.map(s=>s.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('')}</datalist>` : ''}
   `;
 }
 // Live-recomputes the Amount/Cost cells for one row (and the Total row) directly via the DOM,
@@ -6151,9 +6170,22 @@ function costingOnFieldInput(el){
   if(field==='percent' || field==='costPerKg'){
     m[field] = Math.max(0, parseFloat(el.value)||0);
     costingRecomputeRow(product, m);
+    if(field==='percent' && costingAutoBalanceWater(product, m.id)){
+      const water = product.materials.find(isWaterMaterial);
+      costingRecomputeRow(product, water);
+      const waterInput = document.querySelector(`.cst-field[data-field="percent"][data-mat="${water.id}"]`);
+      if(waterInput) waterInput.value = water.percent;
+    }
     costingRecomputeTotals(product);
   } else {
     m[field] = el.value;
+    if(field==='name' && costingAutoBalanceWater(product, m.id)){
+      const water = product.materials.find(isWaterMaterial);
+      costingRecomputeRow(product, water);
+      const waterInput = document.querySelector(`.cst-field[data-field="percent"][data-mat="${water.id}"]`);
+      if(waterInput) waterInput.value = water.percent;
+      costingRecomputeTotals(product);
+    }
   }
   scheduleCostingSave();
 }
@@ -7841,6 +7873,7 @@ function attachShellHandlers(){
     if(!product) return;
     if(!product.materials) product.materials = [];
     product.materials.push({id:uid('CMAT'), name:'', percent:0, supplier:'', costPerKg:0});
+    costingAutoBalanceWater(product, null);
     await save('costingProducts');
     render();
   };
@@ -7849,6 +7882,7 @@ function attachShellHandlers(){
     if(!product) return;
     if(!confirm('Delete this raw material row?')) return;
     product.materials = (product.materials||[]).filter(m=>m.id!==b.dataset.deleteCostingMaterial);
+    costingAutoBalanceWater(product, null);
     await save('costingProducts');
     render();
   }));

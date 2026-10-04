@@ -6152,11 +6152,17 @@ function renderCostingPage(){
   if(!product) return renderCostingProductGrid();
   const version = state._costingOpenVersionId ? (product.versions||[]).find(v=>v.id===state._costingOpenVersionId) : null;
   if(!version) return renderCostingVersionsList(product);
-  if(!state._costingDraft) state._costingDraft = {
-    materials: JSON.parse(JSON.stringify(version.materials||[])),
-    batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
-    batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
-  };
+  if(!state._costingDraft){
+    state._costingDraft = {
+      materials: JSON.parse(JSON.stringify(version.materials||[])),
+      batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
+      batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
+    };
+    // Older saved versions may still have water sitting at the old 100% target (or any
+    // other stale value) — re-balance it against the current target the moment the sheet
+    // opens, so the Total row is correct right away instead of only after the next edit.
+    costingAutoBalanceWater(state._costingDraft, null);
+  }
   return renderCostingProductSheet(product, version);
 }
 // Picks an icon by keyword match on the product name, so the 6 default products each get
@@ -8500,6 +8506,7 @@ function attachShellHandlers(){
       batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
       batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
     };
+    costingAutoBalanceWater(state._costingDraft, null);
     state._costingDirty = false;
     render();
   }));

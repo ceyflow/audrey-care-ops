@@ -436,15 +436,11 @@
   .citypak-live-track .cpl-dot{position:absolute;top:33px;width:9px;height:9px;border-radius:50%;background:var(--border);}
   .citypak-live-track .cpl-dot.start{left:calc(6% - 4.5px);}
   .citypak-live-track .cpl-dot.end{left:calc(94% - 4.5px);background:var(--accent);}
-  .citypak-live-track .cpl-pin{position:absolute;top:0;left:6%;width:24px;height:24px;margin-left:-12px;color:var(--accent);animation:citypak-pin-glide 3.6s ease-in-out infinite;}
-  .citypak-live-track .cpl-pin svg{width:100%;height:100%;display:block;transform-origin:50% 100%;filter:drop-shadow(0 3px 3px rgba(20,25,20,.22));animation:citypak-pin-flex .9s ease-in-out infinite;}
-  @keyframes citypak-pin-glide{
+  .citypak-live-track .cpl-truck{position:absolute;top:19px;left:6%;width:30px;height:20px;margin-left:-15px;color:var(--accent);animation:citypak-truck-drive 3.6s ease-in-out infinite;}
+  .citypak-live-track .cpl-truck svg{width:100%;height:100%;display:block;filter:drop-shadow(0 3px 3px rgba(20,25,20,.22));}
+  @keyframes citypak-truck-drive{
     0%{left:6%;}
     88%,100%{left:88%;}
-  }
-  @keyframes citypak-pin-flex{
-    0%,100%{transform:scale(1,1);}
-    50%{transform:scale(.82,1.18);}
   }
 
   /* ---------------- Recipes / batch timer ---------------- */
@@ -863,7 +859,14 @@ function renderCitypakTrackingBlock(trackingNumber){
       <div class="cpl-line"></div>
       <div class="cpl-dot start"></div>
       <div class="cpl-dot end"></div>
-      <div class="cpl-pin"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.6" fill="var(--surface)"/></svg></div>
+      <div class="cpl-truck"><svg viewBox="0 0 30 20" fill="currentColor">
+        <path d="M1 5h14a1.5 1.5 0 0 1 1.5 1.5V15H2.5A1.5 1.5 0 0 1 1 13.5z"/>
+        <path d="M16.5 9h5l3.5 3.6V15h-8.5z"/>
+        <circle cx="7" cy="16" r="3.1"/>
+        <circle cx="22" cy="16" r="3.1"/>
+        <circle cx="7" cy="16" r="1" fill="var(--surface)"/>
+        <circle cx="22" cy="16" r="1" fill="var(--surface)"/>
+      </svg></div>
     </div>`;
   return `
   <div class="field" style="margin-top:18px;">

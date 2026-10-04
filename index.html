@@ -700,7 +700,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','materialCosts'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1771,7 +1771,8 @@ let state = {
   staffCategories: [],
   complaintCategories: [],
   complaintPriorities: [],
-  materialCosts: [],
+  costingProducts: [],
+  _costingOpenProductId: null,
   theme: {paletteId:'green'},
   aiChat: [],
   auth: null,
@@ -1870,6 +1871,12 @@ async function loadAll(){
       createdAt: new Date().toISOString()
     });
     kvSet('recipes', state.recipes).catch(e=>console.error('seed Body Lotion recipe failed', e));
+  }
+  if(!Array.isArray(state.costingProducts)) state.costingProducts = [];
+  if(state.costingProducts.length===0){
+    const DEFAULT_COSTING_PRODUCTS = ['Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Hand Wash', 'Bubble Bath'];
+    state.costingProducts = DEFAULT_COSTING_PRODUCTS.map(name => ({id:uid('CPROD'), name, materials:[], batchSizes:[]}));
+    kvSet('costingProducts', state.costingProducts).catch(e=>console.error('seed costingProducts failed', e));
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -2223,6 +2230,7 @@ async function logOut(){
 function goTo(page){
   if(!pageAllowed(page)) return;
   state.page = page; state.modal = null; state.sidebarOpen = false;
+  state._costingOpenProductId = null;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
   if(((location.hash||'').replace('#','').split('/')[0]||'')!==page) history.replaceState(null,'','#'+page);
   render();
@@ -5945,73 +5953,137 @@ function renderRecipesPage(){
 }
 // Material costs aren't tied to a fixed ingredients table — a recipe's materials are free-text
 // names, so costs are matched by name (trimmed, case-insensitive) rather than by id.
-function materialCostByName(){
-  const map = {};
-  state.materialCosts.forEach(c=>{
-    const key = (c.name||'').trim().toLowerCase();
-    if(key) map[key] = Number(c.costPerKg)||0;
-  });
-  return map;
-}
 function renderCostingPage(){
+  const product = state._costingOpenProductId ? state.costingProducts.find(p=>p.id===state._costingOpenProductId) : null;
+  return product ? renderCostingProductSheet(product) : renderCostingProductGrid();
+}
+function renderCostingProductGrid(){
   const admin = isAdmin();
-  const costs = state.materialCosts;
-  const costByName = materialCostByName();
+  const products = state.costingProducts;
   return `
   ${pageAllowed('blending') ? `<button type="button" class="btn-text" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
-  <div class="panel">
-    <div class="panel-head">
-      <h3>Raw material prices</h3>
-      ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-material-cost">+ Add material</button>` : ''}
-    </div>
-    <div class="panel-body" style="padding:0;">
-      ${costs.length===0 ? `<div class="empty-state">No material prices yet. ${admin?'Add one to start costing your recipes.':''}</div>` : `
-      <table class="data-table">
-        <thead><tr><th>Raw material</th><th>Cost per kg (Rs.)</th>${admin?'<th>Actions</th>':''}</tr></thead>
-        <tbody>
-          ${costs.map(c=>`
-          <tr>
-            <td>${admin?`<input class="mat-cost-name" data-mat-cost-id="${c.id}" value="${esc(c.name)}" placeholder="e.g. DI water" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:esc(c.name)}</td>
-            <td>${admin?`<input class="mat-cost-value" type="number" min="0" step="0.01" data-mat-cost-id="${c.id}" value="${c.costPerKg}" style="width:110px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:('Rs. '+(Number(c.costPerKg)||0).toFixed(2))}</td>
-            ${admin?`<td class="row-actions"><button type="button" class="btn btn-sm" data-save-material-cost="${c.id}">Save</button><button type="button" class="btn btn-sm btn-danger" data-delete-material-cost="${c.id}">Delete</button></td>`:''}
-          </tr>`).join('')}
-        </tbody>
-      </table>`}
-    </div>
+  <div class="toolbar">
+    <div class="hint" style="font-weight:600;color:var(--ink);">Product costing</div>
+    ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}
   </div>
-
-  <div class="panel">
-    <div class="panel-head"><h3>Recipe batch cost</h3></div>
-    <div class="panel-body" style="padding:0;">
-      ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet — add one in Production Guide first.</div>` : `
-      <table class="data-table">
-        <thead><tr><th>Recipe</th><th>Batch size</th><th>Total cost</th><th>Cost per kg</th></tr></thead>
-        <tbody>
-          ${state.recipes.map(r=>{
-            const batchSizeKg = Number(r.batchSizeKg)||0;
-            const mats = r.materials||[];
-            let total = 0, unpriced = 0;
-            mats.forEach(m=>{
-              const key = (m.name||'').trim().toLowerCase();
-              if(!key) return;
-              const amt = recipeMaterialAmount(m.percent, batchSizeKg);
-              if(Object.prototype.hasOwnProperty.call(costByName, key)) total += amt * costByName[key];
-              else unpriced++;
-            });
-            const perKg = batchSizeKg>0 ? total/batchSizeKg : 0;
-            return `
-            <tr>
-              <td>${esc(r.name)}</td>
-              <td>${batchSizeKg ? batchSizeKg+' kg' : '—'}</td>
-              <td>${mats.length===0 ? '—' : 'Rs. '+total.toFixed(2)}${unpriced ? ` <span class="hint" title="${unpriced} raw material${unpriced===1?'':'s'} in this recipe isn't priced above yet">(${unpriced} unpriced)</span>` : ''}</td>
-              <td>${batchSizeKg && mats.length ? 'Rs. '+perKg.toFixed(2)+'/kg' : '—'}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`}
-    </div>
-  </div>
+  ${products.length===0 ? `<div class="empty-state">No products yet. ${admin?'Add one to start costing it.':''}</div>` : `
+  <div class="recipe-grid">
+    ${products.map(p=>{
+      const matCount = (p.materials||[]).length;
+      const sizeCount = (p.batchSizes||[]).length;
+      return `
+      <div class="recipe-card" data-open-costing-product="${p.id}" style="cursor:pointer;">
+        <div class="rc-title">${esc(p.name)}</div>
+        <div class="rc-meta">${matCount} raw material${matCount===1?'':'s'}</div>
+        <div class="rc-meta">${sizeCount} batch size${sizeCount===1?'':'s'} costed</div>
+        ${admin ? `<div style="margin-top:8px;"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button></div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`}
   `;
+}
+function costingLineAmount(percent, batchKg){ return (Number(percent)||0)/100 * (Number(batchKg)||0); }
+function renderCostingProductSheet(p){
+  const admin = isAdmin();
+  const materials = p.materials||[];
+  const sizes = (p.batchSizes||[]).slice().sort((a,b)=>a-b);
+  const totalPct = materials.reduce((s,m)=>s+(Number(m.percent)||0), 0);
+  const totalUnitPrice = materials.reduce((s,m)=>s+(Number(m.costPerKg)||0), 0);
+  const colCount = 5 + sizes.length*2 + (admin?1:0);
+  return `
+  <button type="button" class="btn-text" id="btn-back-to-costing-products" style="margin-bottom:14px;">← Products</button>
+  <div class="toolbar">
+    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(p.name)} — costing sheet</div>
+    ${admin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm" id="btn-add-costing-material">+ Add raw material</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-add-costing-batchsize">+ Add batch size</button>
+    </div>` : ''}
+  </div>
+  <div class="panel" style="overflow-x:auto;">
+    <table class="data-table" style="white-space:nowrap;">
+      <thead><tr>
+        <th>No</th><th>Raw material</th><th>%</th><th>Unit Price (Rs/kg)</th><th>Supplier</th>
+        ${sizes.map(sz=>`<th>Amount for ${sz}kg</th><th>Cost for ${sz}kg</th>`).join('')}
+        ${admin?'<th>Actions</th>':''}
+      </tr></thead>
+      <tbody>
+        ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>`
+        <tr data-mat-row="${m.id}">
+          <td>${i+1}</td>
+          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:160px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:esc(m.name)}</td>
+          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:80px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
+          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:100px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
+          <td>${admin?`<input class="cst-field" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:110px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:esc(m.supplier||'—')}</td>
+          ${sizes.map(sz=>{
+            const amt = costingLineAmount(m.percent, sz);
+            const cost = amt * (Number(m.costPerKg)||0);
+            return `<td class="cst-amt" data-mat="${m.id}" data-size="${sz}">${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}">Rs. ${cost.toFixed(2)}</td>`;
+          }).join('')}
+          ${admin?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:''}
+        </tr>`).join('')}
+      </tbody>
+      ${materials.length>0 ? `<tfoot><tr style="font-weight:700;">
+        <td></td><td>Total</td><td id="cst-total-percent">${totalPct.toFixed(2)}%</td><td id="cst-total-unitprice">Rs. ${totalUnitPrice.toFixed(2)}</td><td></td>
+        ${sizes.map(sz=>{
+          const amtSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz), 0);
+          const costSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz)*(Number(m.costPerKg)||0), 0);
+          return `<td id="cst-total-amt-${sz}">${amtSum.toFixed(3)}</td><td id="cst-total-cost-${sz}">Rs. ${costSum.toFixed(2)}</td>`;
+        }).join('')}
+        ${admin?'<td></td>':''}
+      </tr></tfoot>` : ''}
+    </table>
+  </div>
+  ${sizes.length>0 && admin ? `
+  <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
+  ` : ''}
+  `;
+}
+// Live-recomputes the Amount/Cost cells for one row (and the Total row) directly via the DOM,
+// instead of a full render() on every keystroke — keeps the sheet feeling like a live
+// spreadsheet and never interrupts typing or drops focus. Persisting to the server is a
+// separate, debounced step (see scheduleCostingSave) so rapid edits don't each trigger a save.
+let _costingSaveTimer = null;
+function scheduleCostingSave(){
+  clearTimeout(_costingSaveTimer);
+  _costingSaveTimer = setTimeout(()=>{ save('costingProducts'); }, 900);
+}
+function costingOnFieldInput(el){
+  const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+  if(!product) return;
+  const m = (product.materials||[]).find(x=>x.id===el.dataset.mat);
+  if(!m) return;
+  const field = el.dataset.field;
+  if(field==='percent' || field==='costPerKg'){
+    m[field] = Math.max(0, parseFloat(el.value)||0);
+    costingRecomputeRow(product, m);
+    costingRecomputeTotals(product);
+  } else {
+    m[field] = el.value;
+  }
+  scheduleCostingSave();
+}
+function costingRecomputeRow(product, m){
+  (product.batchSizes||[]).forEach(sz=>{
+    const amt = costingLineAmount(m.percent, sz);
+    const cost = amt * (Number(m.costPerKg)||0);
+    const amtEl = document.querySelector(`.cst-amt[data-mat="${m.id}"][data-size="${sz}"]`);
+    const costEl = document.querySelector(`.cst-cost[data-mat="${m.id}"][data-size="${sz}"]`);
+    if(amtEl) amtEl.textContent = amt.toFixed(3);
+    if(costEl) costEl.textContent = 'Rs. ' + cost.toFixed(2);
+  });
+}
+function costingRecomputeTotals(product){
+  const materials = product.materials||[];
+  const totalPct = materials.reduce((s,m)=>s+(Number(m.percent)||0), 0);
+  const totalUnitPrice = materials.reduce((s,m)=>s+(Number(m.costPerKg)||0), 0);
+  const pctEl = document.getElementById('cst-total-percent'); if(pctEl) pctEl.textContent = totalPct.toFixed(2)+'%';
+  const upEl = document.getElementById('cst-total-unitprice'); if(upEl) upEl.textContent = 'Rs. '+totalUnitPrice.toFixed(2);
+  (product.batchSizes||[]).forEach(sz=>{
+    const amtSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz), 0);
+    const costSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz)*(Number(m.costPerKg)||0), 0);
+    const amtEl = document.getElementById('cst-total-amt-'+sz); if(amtEl) amtEl.textContent = amtSum.toFixed(3);
+    const costEl = document.getElementById('cst-total-cost-'+sz); if(costEl) costEl.textContent = 'Rs. '+costSum.toFixed(2);
+  });
 }
 function renderActiveBatchCard(){
   const b = state.activeBatch;
@@ -7617,28 +7689,66 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>deleteRecipe(b.dataset.deleteRecipe)));
 
   // Costing & recipe
-  if(byIdEl('btn-add-material-cost')) byIdEl('btn-add-material-cost').onclick = ()=>{
-    state.materialCosts.push({id:uid('MAT'), name:'', costPerKg:0});
+  if(byIdEl('btn-add-costing-product')) byIdEl('btn-add-costing-product').onclick = async ()=>{
+    const name = (prompt('Product name:')||'').trim();
+    if(!name) return;
+    state.costingProducts.push({id:uid('CPROD'), name, materials:[], batchSizes:[]});
+    await save('costingProducts');
     render();
   };
-  document.querySelectorAll('[data-save-material-cost]').forEach(b=>b.addEventListener('click', async ()=>{
-    const id = b.dataset.saveMaterialCost;
-    const c = state.materialCosts.find(x=>x.id===id); if(!c) return;
-    const nameEl = document.querySelector(`.mat-cost-name[data-mat-cost-id="${id}"]`);
-    const valEl = document.querySelector(`.mat-cost-value[data-mat-cost-id="${id}"]`);
-    const name = (nameEl ? nameEl.value : '').trim();
-    if(!name){ showToast('Enter a material name first'); return; }
-    c.name = name;
-    c.costPerKg = Math.max(0, parseFloat(valEl ? valEl.value : 0) || 0);
-    await save('materialCosts');
-    showToast('Saved');
+  document.querySelectorAll('[data-delete-costing-product]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirm('Delete this product\'s costing sheet? This cannot be undone.')) return;
+    state.costingProducts = state.costingProducts.filter(p=>p.id!==b.dataset.deleteCostingProduct);
+    await save('costingProducts');
     render();
   }));
-  document.querySelectorAll('[data-delete-material-cost]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirm('Delete this material price?')) return;
-    state.materialCosts = state.materialCosts.filter(c=>c.id!==b.dataset.deleteMaterialCost);
-    await save('materialCosts');
+  document.querySelectorAll('[data-open-costing-product]').forEach(el=>el.addEventListener('click', ()=>{
+    state._costingOpenProductId = el.dataset.openCostingProduct;
+    render();
   }));
+  if(byIdEl('btn-back-to-costing-products')) byIdEl('btn-back-to-costing-products').onclick = ()=>{
+    state._costingOpenProductId = null;
+    render();
+  };
+  if(byIdEl('btn-add-costing-material')) byIdEl('btn-add-costing-material').onclick = async ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    if(!product) return;
+    if(!product.materials) product.materials = [];
+    product.materials.push({id:uid('CMAT'), name:'', percent:0, supplier:'', costPerKg:0});
+    await save('costingProducts');
+    render();
+  };
+  document.querySelectorAll('[data-delete-costing-material]').forEach(b=>b.addEventListener('click', async ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    if(!product) return;
+    if(!confirm('Delete this raw material row?')) return;
+    product.materials = (product.materials||[]).filter(m=>m.id!==b.dataset.deleteCostingMaterial);
+    await save('costingProducts');
+    render();
+  }));
+  if(byIdEl('btn-add-costing-batchsize')) byIdEl('btn-add-costing-batchsize').onclick = async ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    if(!product) return;
+    const raw = prompt('Batch size, in kg (e.g. 100, or 0.5 for 500g):');
+    if(raw==null) return;
+    const kg = parseFloat(raw);
+    if(!kg || kg<=0){ showToast('Enter a valid number of kg'); return; }
+    if(!product.batchSizes) product.batchSizes = [];
+    if(product.batchSizes.includes(kg)){ showToast('That batch size is already on this sheet'); return; }
+    product.batchSizes.push(kg);
+    product.batchSizes.sort((a,b)=>a-b);
+    await save('costingProducts');
+    render();
+  };
+  document.querySelectorAll('[data-remove-costing-batchsize]').forEach(b=>b.addEventListener('click', async ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    if(!product) return;
+    const sz = parseFloat(b.dataset.removeCostingBatchsize);
+    product.batchSizes = (product.batchSizes||[]).filter(s=>s!==sz);
+    await save('costingProducts');
+    render();
+  }));
+  document.querySelectorAll('.cst-field').forEach(el=>el.addEventListener('input', ()=>costingOnFieldInput(el)));
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openModal('recipesheet:'+b.dataset.viewBatchsheet)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = ()=>window.print();

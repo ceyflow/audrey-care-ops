@@ -6154,7 +6154,7 @@ async function startBatch(recipeId, extra){
     status: 'running', stepDeadline: new Date(Date.now()+first.waitMinutes*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
   };
-  await save('activeBatch'); startBatchTicker();
+  await saveActiveBatchVerified(); startBatchTicker();
   showToast('Batch started: '+r.name);
 }
 async function submitStartBatch(e){
@@ -6192,26 +6192,44 @@ function dropStaleActiveBatch(message){
   showToast(message || 'This batch was already ended elsewhere');
   render();
 }
+// A plain save('activeBatch') showed its success toast on the live site while the server copy
+// was later found to still hold the OLD value on the very next refresh — reported as "stop a
+// batch, refresh, it's back". Unlike every other synced key this one has no merge protection at
+// all (it's a single object, not a record array), so if its write doesn't land for any reason
+// (a dropped request, a race with another save on the same key) there's nothing to catch it.
+// Read back what's actually stored right after saving and retry a few times if it didn't stick,
+// so by the time we report success it's actually confirmed on the server.
+async function saveActiveBatchVerified(){
+  const target = state.activeBatch;
+  for(let attempt=0; attempt<3; attempt++){
+    await save('activeBatch');
+    const confirmed = await kvGet('activeBatch').catch(()=>undefined);
+    if(stableStringify(confirmed) === stableStringify(target)) return true;
+    await new Promise(r=>setTimeout(r, 400));
+  }
+  console.error('activeBatch save did not verify after retries');
+  return false;
+}
 async function pauseBatch(){
   const b = state.activeBatch; if(!b || b.status!=='running') return;
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.remainingSecondsWhenPaused = Math.max(0, batchRemainingSeconds());
   b.status = 'paused';
-  await save('activeBatch'); render();
+  await saveActiveBatchVerified(); render();
 }
 async function resumeBatch(){
   const b = state.activeBatch; if(!b || b.status!=='paused') return;
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.stepDeadline = new Date(Date.now() + (b.remainingSecondsWhenPaused||0)*1000).toISOString();
   b.status = 'running'; b.remainingSecondsWhenPaused = null;
-  await save('activeBatch'); render();
+  await saveActiveBatchVerified(); render();
 }
 async function nextBatchStep(){
   const b = state.activeBatch; if(!b) return;
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   if(b.currentStep >= b.steps.length-1){
     b.status = 'completed';
-    await save('activeBatch');
+    await saveActiveBatchVerified();
     await finishBatchIntoBlendingBoard(b);
     return;
   }
@@ -6220,7 +6238,7 @@ async function nextBatchStep(){
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  await save('activeBatch');
+  await saveActiveBatchVerified();
   showToast('Now: '+step.ingredient+(step.amount?(' — '+step.amount):''));
 }
 async function prevBatchStep(){
@@ -6231,7 +6249,7 @@ async function prevBatchStep(){
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  await save('activeBatch'); render();
+  await saveActiveBatchVerified(); render();
 }
 async function restartCurrentStep(){
   const b = state.activeBatch; if(!b) return;
@@ -6240,7 +6258,7 @@ async function restartCurrentStep(){
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  await save('activeBatch'); render();
+  await saveActiveBatchVerified(); render();
 }
 function stopBatch(){
   const isDone = state.activeBatch && state.activeBatch.status==='completed';
@@ -6253,7 +6271,7 @@ function stopBatch(){
       return;
     }
     state.activeBatch = null;
-    await save('activeBatch'); stopBatchTicker();
+    await saveActiveBatchVerified(); stopBatchTicker();
     showToast('Batch stopped');
   };
   if(isDone){ doStop(); return; }
@@ -6277,7 +6295,7 @@ async function finishBatchIntoBlendingBoard(b){
   state.blendBatches.unshift(batch);
   await save('blendBatches');
   state.activeBatch = null;
-  await save('activeBatch');
+  await saveActiveBatchVerified();
   goTo('blending');
   showToast('Batch complete — added to Blending board: '+batch.product);
 }

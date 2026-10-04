@@ -4316,7 +4316,7 @@ function renderShell(freshPage){
   ${state.toast ? renderToast() : ''}
   ${state.chatNotice ? renderChatNotice() : ''}
   ${state.complaintNotice ? renderComplaintNotice() : ''}
-  ${(state.batchFocusMode && state.activeBatch) ? renderBatchFocusOverlay() : ''}
+  ${(state.batchFocusMode && isBatchDisplayActive()) ? renderBatchFocusOverlay() : ''}
   ${state.adminBroadcast ? `<div class="${freshBroadcast?'':'reopen-noanim'}">${renderAdminBroadcastPanel()}</div>` : ''}
   `;
 }
@@ -6300,12 +6300,19 @@ async function finishBatchIntoBlendingBoard(b){
   showToast('Batch complete — added to Blending board: '+batch.product);
 }
 function toggleBatchFocus(){ state.batchFocusMode = !state.batchFocusMode; render(); }
+// finishBatchIntoBlendingBoard transfers a 'completed' batch to the Blending board and nulls
+// activeBatch right after — that's meant to be instant, so the recipe page should never really
+// show the "All steps done / Dismiss" card for long. But activeBatch has no merge protection,
+// so a stale or delayed write/echo can leave a 'completed' batch sitting in state after it's
+// already been handed off. Rather than show that stuck intermediate state, treat a 'completed'
+// activeBatch as nothing to show: blank, same as if no batch were running at all.
+function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatch.status!=='completed'); }
 
 // ---- Rendering ----
 function renderRecipesPage(){
   return `
   ${pageAllowed('blending') ? `<button type="button" class="btn-text" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
-  ${state.activeBatch ? renderActiveBatchCard() : ''}
+  ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
     ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button>` : ''}
@@ -6323,7 +6330,7 @@ function renderRecipesPage(){
         ${matCount ? `<div class="rc-meta">${matCount} raw material${matCount===1?'':'s'} · ${totalPct.toFixed(1)}%${r.batchSizeKg?(' · ref. '+r.batchSizeKg+'kg batch'):''}</div>` : ''}
         <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'} · ~${totalMin} min total${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-          ${canManageBlendBoard() ? `<button class="btn btn-primary btn-sm" data-start-batch="${r.id}" ${state.activeBatch?'disabled':''}>${state.activeBatch?'Batch running':'Start batch'}</button>` : ''}
+          ${canManageBlendBoard() ? `<button class="btn btn-primary btn-sm" data-start-batch="${r.id}" ${isBatchDisplayActive()?'disabled':''}>${isBatchDisplayActive()?'Batch running':'Start batch'}</button>` : ''}
           ${matCount ? `<button class="btn btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
           ${isAdmin() ? `<button class="btn btn-sm" data-edit-recipe="${r.id}">Edit</button>` : ''}
           ${isAdmin() ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}

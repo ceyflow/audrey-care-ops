@@ -234,6 +234,13 @@
   table.data-table td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
   table.data-table tr:last-child td{border-bottom:none;}
   table.data-table tr.clickable:hover{background:var(--bg);cursor:pointer;}
+  /* Costing sheets run wide (many batch-size columns) and tall (many raw materials) — a plain
+     hairline between rows gets lost when your eye is tracking sideways across the table, so
+     rows alternate shade and get a firmer divider instead of just the thin default border. */
+  table.costing-table tbody tr:nth-child(even){background:var(--bg);}
+  table.costing-table tbody td, table.costing-table tbody th{border-bottom:1px solid var(--border);}
+  table.costing-table tbody tr:last-child td{border-bottom:1px solid var(--border);}
+  table.costing-table tfoot td{border-top:2px solid var(--ink);background:var(--accent-soft);}
 
   .checklist-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
   table.checklist-grid{border-collapse:collapse;font-size:11.5px;white-space:nowrap;}
@@ -6000,7 +6007,7 @@ function renderCostingProductSheet(p){
     </div>` : ''}
   </div>
   <div class="panel" style="overflow-x:auto;">
-    <table class="data-table" style="white-space:nowrap;">
+    <table class="data-table costing-table" style="white-space:nowrap;">
       <thead><tr>
         <th>No</th><th>Raw material</th><th>%</th><th>Unit Price (Rs/kg)</th><th>Supplier</th>
         ${sizes.map(sz=>`<th>Amount for ${sz}kg</th><th>Cost for ${sz}kg</th>`).join('')}

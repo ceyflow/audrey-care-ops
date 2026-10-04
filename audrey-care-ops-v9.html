@@ -2892,6 +2892,56 @@ async function deleteSupplier(id){
   state.suppliers = state.suppliers.filter(s=>s.id!==id);
   await save('suppliers'); closeModal();
 }
+// Parses CSV text into an array of row arrays, handling quoted fields that contain
+// commas or newlines — supplier addresses commonly do.
+function parseCsv(text){
+  const rows = []; let row = []; let field = ''; let inQuotes = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
+      } else field += c;
+    } else if(c === '"'){
+      inQuotes = true;
+    } else if(c === ','){
+      row.push(field); field = '';
+    } else if(c === '\n' || c === '\r'){
+      if(c === '\r' && text[i+1] === '\n') i++;
+      row.push(field); field = ''; rows.push(row); row = [];
+    } else field += c;
+  }
+  if(field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(f => f.trim() !== ''));
+}
+async function importSuppliersCsv(file){
+  const text = await file.text();
+  const rows = parseCsv(text);
+  if(rows.length < 2){ showToast('CSV has no data rows'); return; }
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const col = name => header.indexOf(name);
+  const idx = { name: col('name'), contact: col('contact'), phone: col('phone'), email: col('email'), address: col('address'), status: col('status') };
+  if(idx.name === -1){ showToast('CSV needs a "Name" column'); return; }
+  let added = 0, skipped = 0;
+  rows.slice(1).forEach(r => {
+    const name = (r[idx.name]||'').trim();
+    if(!name){ skipped++; return; }
+    const status = idx.status!==-1 ? (r[idx.status]||'').trim() : '';
+    state.suppliers.unshift({
+      id: uid('SUP'), name,
+      contact: idx.contact!==-1 ? (r[idx.contact]||'').trim() : '',
+      phone: idx.phone!==-1 ? (r[idx.phone]||'').trim() : '',
+      email: idx.email!==-1 ? (r[idx.email]||'').trim() : '',
+      address: idx.address!==-1 ? (r[idx.address]||'').trim() : '',
+      status: status==='Inactive' ? 'Inactive' : 'Active',
+      createdAt: new Date().toISOString(),
+    });
+    added++;
+  });
+  if(added>0) await save('suppliers');
+  showToast(`Imported ${added} supplier${added===1?'':'s'}${skipped?`, skipped ${skipped} row${skipped===1?'':'s'} without a name`:''}`);
+  render();
+}
 
 /* ===================== Complaints ===================== */
 async function submitComplaint(e){
@@ -4510,7 +4560,10 @@ function renderSuppliersPage(){
   </div>
   <div class="toolbar">
     <input class="search-input" id="supplier-search" placeholder="Search by name or phone…" value="${esc(state.filters.supplierSearch)}">
-    ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-supplier">+ Add supplier</button>` : ''}
+    ${isAdmin() ? `
+    <label class="btn" for="supplier-csv-input" style="cursor:pointer;">Import CSV</label>
+    <input type="file" id="supplier-csv-input" accept=".csv,text/csv" style="display:none;">
+    <button class="btn btn-primary" id="btn-new-supplier">+ Add supplier</button>` : ''}
   </div>
   <div class="panel">
     ${rows.length===0 ? `<div class="empty-state">No suppliers ${q?'match your search':'yet'}.</div>` : `
@@ -7575,6 +7628,9 @@ function attachShellHandlers(){
 
   // Suppliers
   if(byIdEl('btn-new-supplier')) byIdEl('btn-new-supplier').onclick = ()=>openModal('supplier:new');
+  if(byIdEl('supplier-csv-input')) byIdEl('supplier-csv-input').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(file) importSuppliersCsv(file); e.target.value = '';
+  });
   if(byIdEl('supplier-search')) byIdEl('supplier-search').addEventListener('input', e=>{ state.filters.supplierSearch = e.target.value; render(); });
   document.querySelectorAll('[data-supplier-row]').forEach(r=>r.addEventListener('click', ()=>openModal('supplier:'+r.dataset.supplierRow)));
   document.querySelectorAll('[data-edit-supplier]').forEach(b=>b.addEventListener('click', ()=>openModal('supplier:'+b.dataset.editSupplier)));

@@ -6216,8 +6216,12 @@ function renderCostingProductGrid(){
       <div class="recipe-card clickable-card" data-open-costing-product="${p.id}" style="cursor:pointer;">
         <div class="rc-icon-badge">${icon(costingProductIcon(p.name))}</div>
         <div class="rc-title">${esc(p.name)}</div>
+        ${p.productId ? `<div class="rc-meta">ID: ${esc(p.productId)}</div>` : ''}
         <div class="rc-meta">${verCount} version${verCount===1?'':'s'}</div>
-        ${isCostingSuperAdmin() ? `<div style="margin-top:8px;"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button></div>` : ''}
+        ${admin ? `<div style="margin-top:8px;display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm" data-edit-costing-product="${p.id}" onclick="event.stopPropagation()">Edit</button>
+          ${isCostingSuperAdmin() ? `<button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button>` : ''}
+        </div>` : ''}
       </div>`;
     }).join('')}
   </div>`}
@@ -6233,7 +6237,7 @@ function renderCostingVersionsList(product){
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-products" style="margin-bottom:14px;">← Products</button>
   <div class="toolbar">
-    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} — versions</div>
+    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="color:var(--muted);font-weight:500;">(ID: ${esc(product.productId)})</span>`:''} — versions</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button type="button" class="btn-text" data-costing-versions-view="archive" style="font-size:12.5px;">Archive${archivedCount?` (${archivedCount})`:''}</button>
       ${admin ? `<button type="button" class="btn btn-primary btn-sm" id="btn-add-costing-version">+ New version</button>` : ''}
@@ -6384,7 +6388,7 @@ function renderCostingProductSheet(product, version){
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-versions" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
   <div class="toolbar">
-    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} — ${esc(version.name)}${state._costingDirty ? ' <span style="color:var(--muted);font-weight:500;">(unsaved changes)</span>' : ''}</div>
+    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="color:var(--muted);font-weight:500;">(ID: ${esc(product.productId)})</span>`:''} — ${esc(version.name)}${state._costingDirty ? ' <span style="color:var(--muted);font-weight:500;">(unsaved changes)</span>' : ''}</div>
     ${admin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" class="btn btn-sm" id="btn-add-costing-material">+ Add raw material</button>
       <button type="button" class="btn btn-sm" id="btn-add-costing-fixedcost">+ Add fixed cost</button>
@@ -6907,6 +6911,7 @@ function renderModal(){
   if(type==='costingsavechoice') return costingSaveChoiceModal();
   if(type==='costingsaveas') return costingSaveAsModal();
   if(type==='costingrenameversion') return costingRenameVersionModal(id);
+  if(type==='costingeditproduct') return costingEditProductModal(id);
   if(type==='confirmaction') return confirmActionModal();
   if(type==='brandaddon') return brandingPreviewModal(parts.slice(1).join(':'));
   if(type==='brandnew') return brandingAddAddonModal();
@@ -7179,6 +7184,7 @@ function costingAddProductModal(){
       <div class="sub">Creates a new product card on the costing grid.</div>
       <form id="form-costing-add-product">
         <div class="field"><label>Product name</label><input name="name" required autofocus placeholder="e.g. Hand Sanitizer"></div>
+        <div class="field"><label>Product ID</label><input name="productId" placeholder="e.g. HSL29525 (optional)"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Add</button>
@@ -7236,6 +7242,25 @@ function costingRenameVersionModal(versionId){
       <div class="sub">${esc(product.name)}</div>
       <form id="form-costing-rename-version" data-version-id="${version.id}">
         <div class="field"><label>Version name</label><input name="versionName" required autofocus value="${esc(version.name)}"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function costingEditProductModal(productId){
+  const product = byId(state.costingProducts, productId);
+  if(!product) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>Edit product</h2>
+      <div class="sub">Name and ID shown on the costing grid.</div>
+      <form id="form-costing-edit-product" data-product-id="${product.id}">
+        <div class="field"><label>Product name</label><input name="name" required autofocus value="${esc(product.name)}"></div>
+        <div class="field"><label>Product ID</label><input name="productId" value="${esc(product.productId||'')}" placeholder="e.g. HSL29525 (optional)"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
@@ -8610,7 +8635,8 @@ function attachShellHandlers(){
     e.preventDefault();
     const name = e.target.name.value.trim();
     if(!name) return;
-    state.costingProducts.push({id:uid('CPROD'), name, versions:[]});
+    const productId = e.target.productId.value.trim();
+    state.costingProducts.push({id:uid('CPROD'), name, productId, versions:[]});
     await save('costingProducts');
     logActivity(`Created product costing "${name}"`);
     closeModal();
@@ -8623,6 +8649,21 @@ function attachShellHandlers(){
       action: 'delete-costing-product', payload: b.dataset.deleteCostingProduct,
     });
   }));
+  document.querySelectorAll('[data-edit-costing-product]').forEach(b=>b.addEventListener('click', ()=>openModal('costingeditproduct:'+b.dataset.editCostingProduct)));
+  if(byIdEl('form-costing-edit-product')) byIdEl('form-costing-edit-product').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const product = byId(state.costingProducts, e.target.dataset.productId);
+    if(!product) return;
+    const name = e.target.name.value.trim();
+    if(!name) return;
+    const oldName = product.name;
+    product.name = name;
+    product.productId = e.target.productId.value.trim();
+    await save('costingProducts');
+    logActivity(`Edited product costing "${oldName}"${oldName!==name?` to "${name}"`:''}`);
+    closeModal();
+    showToast('Saved');
+  });
   document.querySelectorAll('[data-open-costing-product]').forEach(el=>el.addEventListener('click', ()=>{
     state._costingOpenProductId = el.dataset.openCostingProduct;
     state._costingOpenVersionId = null;

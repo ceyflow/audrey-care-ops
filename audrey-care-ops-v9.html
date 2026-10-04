@@ -6126,7 +6126,7 @@ function renderCostingProductSheet(p){
           <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
-          <td>${admin?`<input class="cst-field" list="costing-suppliers-datalist" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:100px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.supplier||'—')}</td>
+          <td>${admin?`<input class="cst-field" autocomplete="off" data-field="supplier" data-mat="${m.id}" value="${esc(m.supplier||'')}" placeholder="Supplier" style="width:100px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.supplier||'—')}</td>
           ${sizes.map(sz=>{
             const amt = costingLineAmount(m.percent, sz);
             const cost = amt * (Number(m.costPerKg)||0);
@@ -6149,7 +6149,7 @@ function renderCostingProductSheet(p){
   ${sizes.length>0 && admin ? `
   <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
   ` : ''}
-  ${admin ? `<datalist id="costing-suppliers-datalist">${[...new Set(state.suppliers.map(s=>s.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('')}</datalist>` : ''}
+  ${admin ? `<div id="costing-supplier-dropdown" class="ac-dropdown" style="display:none;position:fixed;"></div>` : ''}
   `;
 }
 // Live-recomputes the Amount/Cost cells for one row (and the Total row) directly via the DOM,
@@ -6526,6 +6526,7 @@ function renderModal(){
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
   if(type==='smsconfirm') return smsConfirmModal();
+  if(type==='costingbatchsize') return costingAddBatchSizeModal();
   if(type==='brandaddon') return brandingPreviewModal(parts.slice(1).join(':'));
   if(type==='brandnew') return brandingAddAddonModal();
   if(type==='brandcrop') return brandCropModal();
@@ -6716,6 +6717,22 @@ function smsConfirmModal(){
         <button type="button" class="btn" id="btn-sms-confirm-no">No</button>
         <button type="button" class="btn btn-primary" id="btn-sms-confirm-yes">Yes, send SMS</button>
       </div>
+    </div>
+  </div>`;
+}
+function costingAddBatchSizeModal(){
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>Add batch size</h2>
+      <div class="sub">Enter the batch size in kg.</div>
+      <form id="form-costing-batchsize">
+        <div class="field"><label>Batch size (kg)</label><input name="kg" type="number" min="0" step="0.001" placeholder="e.g. 100, or 0.5 for 500g" required autofocus></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+      </form>
     </div>
   </div>`;
 }
@@ -7265,6 +7282,45 @@ function attachCustomerAutocomplete(input, suggestionsEl, applyMatch){
     hide();
   });
   input.addEventListener('blur', ()=>setTimeout(hide, 150));
+}
+// A costing sheet can have many Supplier fields (one per raw material row), so rather than
+// attaching a dropdown to each, one shared dropdown is positioned under whichever row's input
+// is currently focused — fixed-positioned so it isn't clipped by the sheet's horizontal scroll.
+function attachCostingSupplierAutocomplete(){
+  const dropdown = document.getElementById('costing-supplier-dropdown');
+  if(!dropdown) return;
+  let activeInput = null;
+  const hide = ()=>{ dropdown.style.display='none'; dropdown.innerHTML=''; activeInput=null; };
+  const show = (input)=>{
+    const typed = input.value.trim().toLowerCase();
+    if(!typed){ hide(); return; }
+    const names = [...new Set(state.suppliers.map(s=>s.name).filter(Boolean))];
+    const matches = names.filter(n=>n.toLowerCase().includes(typed)).slice(0,8);
+    if(matches.length===0){ hide(); return; }
+    activeInput = input;
+    const r = input.getBoundingClientRect();
+    dropdown.style.position = 'fixed';
+    dropdown.style.margin = '0';
+    dropdown.style.left = r.left+'px';
+    dropdown.style.right = 'auto';
+    dropdown.style.top = (r.bottom+4)+'px';
+    dropdown.style.width = Math.max(r.width,180)+'px';
+    dropdown.innerHTML = matches.map(n=>`<div class="ac-item" data-name="${escAttr(n)}">${esc(n)}</div>`).join('');
+    dropdown.style.display = 'block';
+  };
+  document.querySelectorAll('.cst-field[data-field="supplier"]').forEach(input=>{
+    input.addEventListener('input', ()=>show(input));
+    input.addEventListener('focus', ()=>show(input));
+    input.addEventListener('blur', ()=>setTimeout(hide, 150));
+  });
+  dropdown.addEventListener('mousedown', (e)=>{
+    const item = e.target.closest('.ac-item');
+    if(!item || !activeInput) return;
+    e.preventDefault();
+    activeInput.value = item.dataset.name;
+    costingOnFieldInput(activeInput);
+    hide();
+  });
 }
 
 /* ===================== Event wiring ===================== */
@@ -7886,20 +7942,20 @@ function attachShellHandlers(){
     await save('costingProducts');
     render();
   }));
-  if(byIdEl('btn-add-costing-batchsize')) byIdEl('btn-add-costing-batchsize').onclick = async ()=>{
+  if(byIdEl('btn-add-costing-batchsize')) byIdEl('btn-add-costing-batchsize').onclick = ()=>openModal('costingbatchsize');
+  if(byIdEl('form-costing-batchsize')) byIdEl('form-costing-batchsize').addEventListener('submit', async (e)=>{
+    e.preventDefault();
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     if(!product) return;
-    const raw = prompt('Batch size, in kg (e.g. 100, or 0.5 for 500g):');
-    if(raw==null) return;
-    const kg = parseFloat(raw);
+    const kg = parseFloat(e.target.kg.value);
     if(!kg || kg<=0){ showToast('Enter a valid number of kg'); return; }
     if(!product.batchSizes) product.batchSizes = [];
     if(product.batchSizes.includes(kg)){ showToast('That batch size is already on this sheet'); return; }
     product.batchSizes.push(kg);
     product.batchSizes.sort((a,b)=>a-b);
     await save('costingProducts');
-    render();
-  };
+    closeModal();
+  });
   document.querySelectorAll('[data-remove-costing-batchsize]').forEach(b=>b.addEventListener('click', async ()=>{
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     if(!product) return;
@@ -7909,6 +7965,7 @@ function attachShellHandlers(){
     render();
   }));
   document.querySelectorAll('.cst-field').forEach(el=>el.addEventListener('input', ()=>costingOnFieldInput(el)));
+  attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openModal('recipesheet:'+b.dataset.viewBatchsheet)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = ()=>window.print();

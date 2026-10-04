@@ -755,7 +755,16 @@ async function kvGet(key){
 let _recentSaveAt = {};
 async function kvSet(key, value){
   _recentSaveAt[key] = Date.now();
-  const { error } = await supabaseClient.from('app_data').upsert({ key, value, updated_at: new Date().toISOString() });
+  // Snapshot synchronously, before the first await. A few callers fire this off without
+  // awaiting it (e.g. loadAll()'s one-time seed saves) and keep mutating the SAME array/object
+  // right after — since JS passes it by reference, an un-cloned value would end up saving
+  // whatever that array looks like whenever this network request actually resolves, not what
+  // was true at the moment it was called. Confirmed concretely: seed a default recipe (fire-
+  // and-forget kvSet), then immediately add/remove another recipe in memory — without this
+  // clone, the unrelated later edit leaks into the seed's write, and e.g. a delete done right
+  // after can appear to silently "come back" once that slow write finally lands.
+  const snapshot = (value && typeof value==='object') ? JSON.parse(JSON.stringify(value)) : value;
+  const { error } = await supabaseClient.from('app_data').upsert({ key, value: snapshot, updated_at: new Date().toISOString() });
   if(error){ console.error('kvSet '+key, error); return false; }
   return true;
 }
@@ -934,8 +943,17 @@ async function sendBulkSms(){
   if(!message){ showToast('Enter a message before sending'); return; }
   const recipients = [...new Set([...state.bulkSmsCustomers].map(id=>{ const c = byId(state.customers, id); return c && c.phone; }).filter(Boolean))];
   if(!recipients.length){ showToast('Select at least one recipient'); return; }
-  if(!confirm('Send this message to ' + recipients.length + ' recipient' + (recipients.length===1?'':'s') + '? This cannot be undone.')) return;
-
+  const campaignName = ((nameEl && nameEl.value) || '').trim();
+  openConfirmModal({
+    title: 'Send bulk SMS', confirmLabel: 'Send',
+    message: 'Send this message to ' + recipients.length + ' recipient' + (recipients.length===1?'':'s') + '? This cannot be undone.',
+    // Not awaited — the modal should close right away so the page's own live progress
+    // indicator (below) is visible while the sends run, instead of staying hidden behind
+    // the confirm modal for the whole send.
+    onConfirm: ()=>{ executeBulkSmsSend(recipients, message, campaignName); },
+  });
+}
+async function executeBulkSmsSend(recipients, message, campaignName){
   const btn = document.getElementById('btn-send-bulk-sms'); if(btn) btn.disabled = true;
   const progressEl = document.getElementById('bulksms-progress');
   let sent = 0, failed = 0;
@@ -953,7 +971,7 @@ async function sendBulkSms(){
   if(!Array.isArray(state.smsCampaigns)) state.smsCampaigns = [];
   state.smsCampaigns.unshift({
     id: uid('CAMP'),
-    name: ((nameEl && nameEl.value) || '').trim(),
+    name: campaignName,
     message,
     recipientCount: recipients.length,
     sentCount: sent,
@@ -1016,10 +1034,14 @@ async function saveBulkSmsTemplateForm(e){
 }
 async function deleteBulkSmsTemplate(id){
   const t = byId(state.bulkSmsTemplates, id); if(!t) return;
-  if(!confirm(`Delete template "${t.name}"? This cannot be undone.`)) return;
-  state.bulkSmsTemplates = state.bulkSmsTemplates.filter(x=>x.id!==id);
-  await save('bulkSmsTemplates');
-  render();
+  openConfirmModal({
+    title: 'Delete template', danger: true, confirmLabel: 'Delete',
+    message: `Delete template "${t.name}"? This cannot be undone.`,
+    onConfirm: async ()=>{
+      state.bulkSmsTemplates = state.bulkSmsTemplates.filter(x=>x.id!==id);
+      await save('bulkSmsTemplates');
+    },
+  });
 }
 const FACEBOOK_REVIEW_LINK = 'https://www.facebook.com/share/1ecSon2Mn5/?mibextid=wwXIfr';
 // Leave as 'PASTE_GOOGLE_REVIEW_LINK' to disable the "Send Google review" button (it'll show a
@@ -2221,10 +2243,28 @@ function bindRichTextFields(root){
       btn.addEventListener('click', ()=>{
         body.focus();
         const cmd = btn.dataset.rtCmd;
-        let value = btn.dataset.rtValue || null;
+        const value = btn.dataset.rtValue || null;
         if(cmd==='createLink'){
-          value = prompt('Link URL:', 'https://');
-          if(!value) return;
+          // Capture the current selection before opening the (async) modal — focus moves to
+          // the modal's input, which would otherwise collapse/lose the text the link should
+          // wrap by the time the user confirms. Restored just before execCommand runs.
+          const sel = window.getSelection();
+          const range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+          openPromptModal({
+            title: 'Insert link', label: 'Link URL', defaultValue: 'https://', confirmLabel: 'Insert',
+            onSubmit: (url)=>{
+              if(!url) return;
+              body.focus();
+              if(range){
+                const sel2 = window.getSelection();
+                sel2.removeAllRanges();
+                sel2.addRange(range);
+              }
+              document.execCommand('createLink', false, url);
+              sync();
+            },
+          });
+          return;
         }
         document.execCommand(cmd, false, value);
         sync();
@@ -2356,7 +2396,17 @@ async function logOut(){
 }
 function goTo(page){
   if(!pageAllowed(page)) return;
-  if(state.page==='costing' && state._costingDirty && !confirm('Discard unsaved changes to this costing version?')) return;
+  if(state.page==='costing' && state._costingDirty){
+    openConfirmModal({
+      title: 'Discard changes?', danger: true, confirmLabel: 'Discard',
+      message: 'Discard unsaved changes to this costing version?',
+      onConfirm: ()=>{ performGoTo(page); },
+    });
+    return;
+  }
+  performGoTo(page);
+}
+function performGoTo(page){
   state.page = page; state.modal = null; state.sidebarOpen = false;
   state._costingOpenProductId = null;
   state._costingOpenVersionId = null;
@@ -2371,7 +2421,7 @@ function goTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state.pendingSmsConfirm = null; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -6036,7 +6086,8 @@ async function deleteRecipe(id){
 
 // ---- Batch run controls (Admin only) ----
 async function startBatch(recipeId, extra){
-  const r = byId(state.recipes, recipeId); if(!r || !r.steps.length) return;
+  const r = byId(state.recipes, recipeId); if(!r) return;
+  if(!r.steps.length){ showToast('Add at least one production step to this recipe (Edit) before starting a batch'); return; }
   extra = extra || {};
   const first = r.steps[0];
   state.activeBatch = {
@@ -6053,6 +6104,8 @@ async function startBatch(recipeId, extra){
 async function submitStartBatch(e){
   e.preventDefault();
   const f = e.target;
+  const r = byId(state.recipes, f.dataset.recipeId);
+  if(!r || !r.steps.length){ showToast('Add at least one production step to this recipe (Edit) before starting a batch'); return; }
   await startBatch(f.dataset.recipeId, {
     productName: f.productName.value.trim(),
     qty: f.qty.value.trim(),
@@ -6929,6 +6982,8 @@ function renderModal(){
   if(type==='costingrenameversion') return costingRenameVersionModal(id);
   if(type==='costingeditproduct') return costingEditProductModal(id);
   if(type==='confirmaction') return confirmActionModal();
+  if(type==='promptaction') return promptActionModal();
+  if(type==='alertinfo') return alertInfoModal();
   if(type==='brandaddon') return brandingPreviewModal(parts.slice(1).join(':'));
   if(type==='brandnew') return brandingAddAddonModal();
   if(type==='brandcrop') return brandCropModal();
@@ -7286,9 +7341,9 @@ function costingEditProductModal(productId){
   </div>`;
 }
 // A single styled stand-in for the browser's native confirm() dialog — opened with
-// openConfirmModal({title, sub, message, confirmLabel, danger, action, payload}) and resolved
-// by runConfirmedAction(), which switches on `action` to perform the right effect. Keeps every
-// "are you sure?" in the app visually consistent instead of the OS's own dark popup.
+// openConfirmModal({title, sub, message, confirmLabel, danger, requirePassword, onConfirm}) and
+// resolved by runConfirmedAction(), which awaits the caller's own onConfirm() closure. Keeps
+// every "are you sure?" in the app visually consistent instead of the OS's own dark popup.
 function openConfirmModal(opts){
   state._confirmAction = opts;
   openModal('confirmaction');
@@ -7339,62 +7394,64 @@ async function runConfirmedAction(){
       return;
     }
   }
-  switch(c.action){
-    case 'delete-costing-material': {
-      const draft = state._costingDraft;
-      if(draft){
-        draft.materials = (draft.materials||[]).filter(m=>m.id!==c.payload);
-        costingAutoBalanceWater(draft, null);
-        state._costingDirty = true;
-      }
-      closeModal();
-      break;
-    }
-    case 'delete-costing-fixedcost': {
-      const draft = state._costingDraft;
-      if(draft){
-        draft.fixedCosts = (draft.fixedCosts||[]).filter(f=>f.id!==c.payload);
-        state._costingDirty = true;
-      }
-      closeModal();
-      break;
-    }
-    case 'delete-costing-version': {
-      const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
-      const version = product && (product.versions||[]).find(v=>v.id===c.payload);
-      if(version){
-        version.archived = true;
-        version.archivedAt = new Date().toISOString();
-        version.archivedBy = state.session.staffName || state.session.name;
-        await save('costingProducts');
-        logActivity(`Archived costing version "${version.name}" (${product.name})`);
-        state._costingVersionsView = 'archive';
-      }
-      closeModal();
-      break;
-    }
-    case 'delete-costing-version-permanent': {
-      const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
-      const version = product && (product.versions||[]).find(v=>v.id===c.payload);
-      if(product){
-        product.versions = (product.versions||[]).filter(v=>v.id!==c.payload);
-        await save('costingProducts');
-        logActivity(`Permanently deleted costing version "${version?version.name:c.payload}" (${product.name})`);
-      }
-      closeModal();
-      break;
-    }
-    case 'delete-costing-product': {
-      const product = byId(state.costingProducts, c.payload);
-      state.costingProducts = state.costingProducts.filter(p=>p.id!==c.payload);
-      await save('costingProducts');
-      logActivity(`Deleted product costing "${product?product.name:c.payload}"`);
-      closeModal();
-      break;
-    }
-    default: closeModal();
-  }
   state._confirmAction = null;
+  if(c.onConfirm) await c.onConfirm();
+  closeModal();
+}
+// A single styled stand-in for the browser's native prompt() dialog — opened with
+// openPromptModal({title, sub, label, defaultValue, placeholder, inputType, confirmLabel,
+// onSubmit}); onSubmit(value) runs when the form is submitted (value is '' if left blank,
+// matching prompt()'s own "OK with nothing typed" behavior — never null, since there's no
+// separate Cancel-vs-blank distinction worth modeling here; every caller already treated an
+// empty/falsy prompt() result as "nothing to do").
+function openPromptModal(opts){
+  state._promptAction = opts;
+  openModal('promptaction');
+}
+function promptActionModal(){
+  const c = state._promptAction;
+  if(!c) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>${esc(c.title)}</h2>
+      ${c.sub?`<div class="sub">${esc(c.sub)}</div>`:''}
+      <form id="form-prompt-action">
+        <div class="field">${c.label?`<label>${esc(c.label)}</label>`:''}<input name="value" type="${c.inputType||'text'}" autofocus value="${escAttr(c.defaultValue||'')}" placeholder="${escAttr(c.placeholder||'')}"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">${esc(c.confirmLabel||'OK')}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+async function runPromptAction(value){
+  const c = state._promptAction;
+  if(!c) return;
+  state._promptAction = null;
+  if(c.onSubmit) await c.onSubmit(value);
+  closeModal();
+}
+// A single styled stand-in for the browser's native alert() dialog — openAlertModal(message)
+// or openAlertModal({title, message}).
+function openAlertModal(opts){
+  state._alertInfo = typeof opts==='string' ? {message:opts} : opts;
+  openModal('alertinfo');
+}
+function alertInfoModal(){
+  const c = state._alertInfo;
+  if(!c) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>${esc(c.title||'Notice')}</h2>
+      <p>${esc(c.message)}</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-alert-ok">OK</button>
+      </div>
+    </div>
+  </div>`;
 }
 function newOrderModal(presetCourier){
   return `
@@ -8662,7 +8719,11 @@ function attachShellHandlers(){
     openConfirmModal({
       title: 'Delete product', danger: true, confirmLabel: 'Delete', requirePassword: true,
       message: `Delete "${product?product.name:'this product'}"’s costing sheet, including all its versions? This cannot be undone.`,
-      action: 'delete-costing-product', payload: b.dataset.deleteCostingProduct,
+      onConfirm: async ()=>{
+        state.costingProducts = state.costingProducts.filter(p=>p.id!==b.dataset.deleteCostingProduct);
+        await save('costingProducts');
+        logActivity(`Deleted product costing "${product?product.name:b.dataset.deleteCostingProduct}"`);
+      },
     });
   }));
   document.querySelectorAll('[data-edit-costing-product]').forEach(b=>b.addEventListener('click', ()=>openModal('costingeditproduct:'+b.dataset.editCostingProduct)));
@@ -8700,12 +8761,22 @@ function attachShellHandlers(){
     render();
   }));
   if(byIdEl('btn-back-to-costing-versions')) byIdEl('btn-back-to-costing-versions').onclick = ()=>{
-    if(state._costingDirty && !confirm('Discard unsaved changes to this version?')) return;
-    state._costingOpenVersionId = null;
-    state._costingDraft = null;
-    state._costingDirty = false;
-    history.replaceState(null,'','#costing/'+encodeURIComponent(state._costingOpenProductId));
-    render();
+    const goBack = ()=>{
+      state._costingOpenVersionId = null;
+      state._costingDraft = null;
+      state._costingDirty = false;
+      history.replaceState(null,'','#costing/'+encodeURIComponent(state._costingOpenProductId));
+      render();
+    };
+    if(state._costingDirty){
+      openConfirmModal({
+        title: 'Discard changes?', danger: true, confirmLabel: 'Discard',
+        message: 'Discard unsaved changes to this version?',
+        onConfirm: goBack,
+      });
+      return;
+    }
+    goBack();
   };
   document.querySelectorAll('[data-open-costing-version]').forEach(el=>el.addEventListener('click', ()=>{
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
@@ -8786,7 +8857,16 @@ function attachShellHandlers(){
     openConfirmModal({
       title: 'Archive version', danger: true, confirmLabel: 'Archive', requirePassword: true,
       message: `Move "${version?version.name:'this version'}" to the archive? You can restore it later from Archive.`,
-      action: 'delete-costing-version', payload: b.dataset.deleteCostingVersion,
+      onConfirm: async ()=>{
+        if(version){
+          version.archived = true;
+          version.archivedAt = new Date().toISOString();
+          version.archivedBy = state.session.staffName || state.session.name;
+          await save('costingProducts');
+          logActivity(`Archived costing version "${version.name}" (${product.name})`);
+          state._costingVersionsView = 'archive';
+        }
+      },
     });
   }));
   document.querySelectorAll('[data-restore-costing-version]').forEach(b=>b.addEventListener('click', async ()=>{
@@ -8807,7 +8887,13 @@ function attachShellHandlers(){
     openConfirmModal({
       title: 'Delete permanently', danger: true, confirmLabel: 'Delete permanently', requirePassword: true,
       message: `Permanently delete "${version?version.name:'this version'}"? This cannot be undone.`,
-      action: 'delete-costing-version-permanent', payload: b.dataset.deleteCostingVersionPermanent,
+      onConfirm: async ()=>{
+        if(product){
+          product.versions = (product.versions||[]).filter(v=>v.id!==b.dataset.deleteCostingVersionPermanent);
+          await save('costingProducts');
+          logActivity(`Permanently deleted costing version "${version?version.name:b.dataset.deleteCostingVersionPermanent}" (${product.name})`);
+        }
+      },
     });
   }));
   if(byIdEl('btn-add-costing-material')) byIdEl('btn-add-costing-material').onclick = ()=>{
@@ -8823,7 +8909,14 @@ function attachShellHandlers(){
     openConfirmModal({
       title: 'Delete raw material', danger: true, confirmLabel: 'Delete', requirePassword: true,
       message: 'Delete this raw material row?',
-      action: 'delete-costing-material', payload: b.dataset.deleteCostingMaterial,
+      onConfirm: ()=>{
+        const draft = state._costingDraft;
+        if(draft){
+          draft.materials = (draft.materials||[]).filter(m=>m.id!==b.dataset.deleteCostingMaterial);
+          costingAutoBalanceWater(draft, null);
+          state._costingDirty = true;
+        }
+      },
     });
   }));
   if(byIdEl('btn-add-costing-fixedcost')) byIdEl('btn-add-costing-fixedcost').onclick = ()=>{
@@ -8838,7 +8931,13 @@ function attachShellHandlers(){
     openConfirmModal({
       title: 'Delete fixed cost', danger: true, confirmLabel: 'Delete', requirePassword: true,
       message: 'Delete this fixed cost row?',
-      action: 'delete-costing-fixedcost', payload: b.dataset.deleteCostingFixedcost,
+      onConfirm: ()=>{
+        const draft = state._costingDraft;
+        if(draft){
+          draft.fixedCosts = (draft.fixedCosts||[]).filter(f=>f.id!==b.dataset.deleteCostingFixedcost);
+          state._costingDirty = true;
+        }
+      },
     });
   }));
   if(byIdEl('btn-add-costing-batchsize')) byIdEl('btn-add-costing-batchsize').onclick = ()=>openModal('costingbatchsize');
@@ -8916,6 +9015,11 @@ function attachShellHandlers(){
     showToast('Saved as "'+name+'"');
   });
   if(byIdEl('btn-confirm-action')) byIdEl('btn-confirm-action').onclick = runConfirmedAction;
+  if(byIdEl('form-prompt-action')) byIdEl('form-prompt-action').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    await runPromptAction(e.target.value.value);
+  });
+  if(byIdEl('btn-alert-ok')) byIdEl('btn-alert-ok').onclick = closeModal;
   document.querySelectorAll('[data-remove-supplier-tag]').forEach(b=>b.addEventListener('click', ()=>{
     costingRemoveSupplierTag(b.dataset.removeSupplierTag, Number(b.dataset.idx));
   }));

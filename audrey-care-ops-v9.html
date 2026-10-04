@@ -1833,7 +1833,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -2082,7 +2082,10 @@ async function logActivity(message){
       role: state.session ? state.session.role : null,
       message,
     });
-    if(state.activityLog.length > 1000) state.activityLog = state.activityLog.slice(0, 1000);
+    // Keep a full year of history — trim only entries older than that, not by count, so an
+    // active shop doesn't lose months of audit trail to an arbitrary entry cap.
+    const oneYearAgo = Date.now() - 365*24*60*60*1000;
+    state.activityLog = state.activityLog.filter(l => new Date(l.at).getTime() >= oneYearAgo);
     await save('activityLog');
   }catch(e){ console.error('logActivity failed', e); }
 }
@@ -6742,18 +6745,45 @@ function changePasswordModal(){
     </div>
   </div>`;
 }
+function fmtMonthLabel(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m-1, 1).toLocaleDateString(undefined, {month:'long', year:'numeric'});
+}
 function activityLogModal(){
-  const q = (state.filters.activityLogSearch||'').trim().toLowerCase();
   const all = state.activityLog||[];
-  const rows = (q ? all.filter(l=>l.actor.toLowerCase().includes(q) || l.message.toLowerCase().includes(q)) : all).slice(0, 500);
+  const q = (state.filters.activityLogSearch||'').trim().toLowerCase();
+  const monthF = state.filters.activityLogMonth||'';
+  const dateF = state.filters.activityLogDate||'';
+  const userF = state.filters.activityLogUser||'';
+  const users = [...new Set(all.map(l=>l.actor))].sort((a,b)=>a.localeCompare(b));
+  const months = [...new Set(all.map(l=>l.at.slice(0,7)))].sort().reverse();
+  const anyFilterActive = !!(q||monthF||dateF||userF);
+  let filtered = all;
+  if(q) filtered = filtered.filter(l=>l.actor.toLowerCase().includes(q) || l.message.toLowerCase().includes(q));
+  if(monthF) filtered = filtered.filter(l=>l.at.slice(0,7)===monthF);
+  if(dateF) filtered = filtered.filter(l=>l.at.slice(0,10)===dateF);
+  if(userF) filtered = filtered.filter(l=>l.actor===userF);
+  const rows = filtered.slice(0, 500);
   return `
   <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:720px;max-height:82vh;display:flex;flex-direction:column;">
+    <div class="modal" style="max-width:760px;max-height:85vh;display:flex;flex-direction:column;">
       <h2>Activity log</h2>
       <div class="sub">Who did what, and when. Admin only.</div>
-      <input class="search-input" id="activitylog-search" placeholder="Search by person or action…" value="${esc(state.filters.activityLogSearch||'')}" style="margin:10px 0;">
+      <input class="search-input" id="activitylog-search" placeholder="Search by person or action…" value="${esc(state.filters.activityLogSearch||'')}" style="margin:10px 0 8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+        <select id="activitylog-month-filter" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;">
+          <option value="">All months</option>
+          ${months.map(m=>`<option value="${m}" ${m===monthF?'selected':''}>${esc(fmtMonthLabel(m))}</option>`).join('')}
+        </select>
+        <input type="date" id="activitylog-date-filter" value="${esc(dateF)}" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;">
+        <select id="activitylog-user-filter" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;">
+          <option value="">All people</option>
+          ${users.map(u=>`<option value="${escAttr(u)}" ${u===userF?'selected':''}>${esc(u)}</option>`).join('')}
+        </select>
+        ${anyFilterActive ? `<button type="button" class="btn-text" id="activitylog-clear-filters">Clear filters</button>` : ''}
+      </div>
       <div style="overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:8px;min-height:120px;">
-        ${rows.length===0 ? `<div class="empty-state">No activity ${q?'matches your search':'logged yet'}.</div>` : `
+        ${rows.length===0 ? `<div class="empty-state">No activity ${anyFilterActive?'matches these filters':'logged yet'}.</div>` : `
         <table class="data-table">
           <thead><tr><th>When</th><th>Who</th><th>Action</th></tr></thead>
           <tbody>
@@ -6761,7 +6791,7 @@ function activityLogModal(){
           </tbody>
         </table>`}
       </div>
-      ${all.length>500 && !q ? `<div class="hint" style="margin-top:6px;">Showing the 500 most recent of ${all.length} entries.</div>` : ''}
+      ${filtered.length>500 ? `<div class="hint" style="margin-top:6px;">Showing the 500 most recent of ${filtered.length} matching entries.</div>` : ''}
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
       </div>
@@ -7091,6 +7121,7 @@ async function runConfirmedAction(){
         version.archivedBy = state.session.staffName || state.session.name;
         await save('costingProducts');
         logActivity(`Archived costing version "${version.name}" (${product.name})`);
+        state._costingVersionsView = 'archive';
       }
       closeModal();
       break;
@@ -7757,6 +7788,19 @@ function attachShellHandlers(){
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
   if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
   if(byIdEl('activitylog-search')) byIdEl('activitylog-search').addEventListener('input', e=>{ state.filters.activityLogSearch = e.target.value; render(); });
+  if(byIdEl('activitylog-month-filter')) byIdEl('activitylog-month-filter').addEventListener('change', e=>{ state.filters.activityLogMonth = e.target.value; render(); });
+  if(byIdEl('activitylog-date-filter')) byIdEl('activitylog-date-filter').addEventListener('change', e=>{ state.filters.activityLogDate = e.target.value; render(); });
+  if(byIdEl('activitylog-user-filter')) byIdEl('activitylog-user-filter').addEventListener('change', e=>{ state.filters.activityLogUser = e.target.value; render(); });
+  if(byIdEl('activitylog-clear-filters')) byIdEl('activitylog-clear-filters').onclick = ()=>{
+    state.filters.activityLogSearch = ''; state.filters.activityLogMonth = ''; state.filters.activityLogDate = ''; state.filters.activityLogUser = '';
+    render();
+    // render() re-applies each field's PRE-click DOM value onto the freshly-rendered modal (by
+    // design, so in-progress typing elsewhere survives an unrelated re-render) — which would
+    // silently undo this button's own reset. Force the fields blank again after it runs.
+    ['activitylog-search','activitylog-month-filter','activitylog-date-filter','activitylog-user-filter'].forEach(id=>{
+      const el = byIdEl(id); if(el) el.value = '';
+    });
+  };
   if(byIdEl('form-change-password')) byIdEl('form-change-password').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;

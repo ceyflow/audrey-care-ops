@@ -700,7 +700,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','materialCosts'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1279,7 +1279,7 @@ const DEFAULT_AUTH = {
 const ROLES = ['Admin','Sub Admin','Blending','Packing','Customer Care','Orders Process'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','orderinquiry','blending','recipes','customers','suppliers','complaints','gmp','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','orderinquiry','blending','recipes','costing','customers','suppliers','complaints','gmp','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blending','customers','complaints'],
   Blending: ['blending','chat','recipes'],
   Packing: ['orders','chat'],
@@ -1771,6 +1771,7 @@ let state = {
   staffCategories: [],
   complaintCategories: [],
   complaintPriorities: [],
+  materialCosts: [],
   theme: {paletteId:'green'},
   aiChat: [],
   auth: null,
@@ -3831,6 +3832,7 @@ const NAV = [
     {id:'orders', label:'Orders board', icon:'orders'},
     {id:'blending', label:'Blending board', icon:'blender', children:[
       {id:'recipes', label:'Production Guide'},
+      {id:'costing', label:'Costing & recipe'},
     ]},
     {id:'customercare', label:'Customer Care', icon:'headset', children:[
       {id:'orderinquiry', label:'Order inquiry'},
@@ -3917,6 +3919,7 @@ const PAGE_META = {
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
   blending:{title:'Blending board', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Batch recipes with step-by-step timers for the blending team.'},
+  costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
@@ -4070,6 +4073,7 @@ function renderPage(){
     case 'ordersprocess': return renderOrdersProcessPage();
     case 'blending': return renderBlendingBoardPage();
     case 'recipes': return renderRecipesPage();
+    case 'costing': return renderCostingPage();
     case 'customers': return renderCustomersPage();
     case 'suppliers': return renderSuppliersPage();
     case 'complaints': return renderComplaintsPage();
@@ -5939,6 +5943,76 @@ function renderRecipesPage(){
   </div>`}
   `;
 }
+// Material costs aren't tied to a fixed ingredients table — a recipe's materials are free-text
+// names, so costs are matched by name (trimmed, case-insensitive) rather than by id.
+function materialCostByName(){
+  const map = {};
+  state.materialCosts.forEach(c=>{
+    const key = (c.name||'').trim().toLowerCase();
+    if(key) map[key] = Number(c.costPerKg)||0;
+  });
+  return map;
+}
+function renderCostingPage(){
+  const admin = isAdmin();
+  const costs = state.materialCosts;
+  const costByName = materialCostByName();
+  return `
+  ${pageAllowed('blending') ? `<button type="button" class="btn-text" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Raw material prices</h3>
+      ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-material-cost">+ Add material</button>` : ''}
+    </div>
+    <div class="panel-body" style="padding:0;">
+      ${costs.length===0 ? `<div class="empty-state">No material prices yet. ${admin?'Add one to start costing your recipes.':''}</div>` : `
+      <table class="data-table">
+        <thead><tr><th>Raw material</th><th>Cost per kg (Rs.)</th>${admin?'<th>Actions</th>':''}</tr></thead>
+        <tbody>
+          ${costs.map(c=>`
+          <tr>
+            <td>${admin?`<input class="mat-cost-name" data-mat-cost-id="${c.id}" value="${esc(c.name)}" placeholder="e.g. DI water" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:esc(c.name)}</td>
+            <td>${admin?`<input class="mat-cost-value" type="number" min="0" step="0.01" data-mat-cost-id="${c.id}" value="${c.costPerKg}" style="width:110px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;">`:('Rs. '+(Number(c.costPerKg)||0).toFixed(2))}</td>
+            ${admin?`<td class="row-actions"><button type="button" class="btn btn-sm" data-save-material-cost="${c.id}">Save</button><button type="button" class="btn btn-sm btn-danger" data-delete-material-cost="${c.id}">Delete</button></td>`:''}
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>Recipe batch cost</h3></div>
+    <div class="panel-body" style="padding:0;">
+      ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet — add one in Production Guide first.</div>` : `
+      <table class="data-table">
+        <thead><tr><th>Recipe</th><th>Batch size</th><th>Total cost</th><th>Cost per kg</th></tr></thead>
+        <tbody>
+          ${state.recipes.map(r=>{
+            const batchSizeKg = Number(r.batchSizeKg)||0;
+            const mats = r.materials||[];
+            let total = 0, unpriced = 0;
+            mats.forEach(m=>{
+              const key = (m.name||'').trim().toLowerCase();
+              if(!key) return;
+              const amt = recipeMaterialAmount(m.percent, batchSizeKg);
+              if(Object.prototype.hasOwnProperty.call(costByName, key)) total += amt * costByName[key];
+              else unpriced++;
+            });
+            const perKg = batchSizeKg>0 ? total/batchSizeKg : 0;
+            return `
+            <tr>
+              <td>${esc(r.name)}</td>
+              <td>${batchSizeKg ? batchSizeKg+' kg' : '—'}</td>
+              <td>${mats.length===0 ? '—' : 'Rs. '+total.toFixed(2)}${unpriced ? ` <span class="hint" title="${unpriced} raw material${unpriced===1?'':'s'} in this recipe isn't priced above yet">(${unpriced} unpriced)</span>` : ''}</td>
+              <td>${batchSizeKg && mats.length ? 'Rs. '+perKg.toFixed(2)+'/kg' : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  </div>
+  `;
+}
 function renderActiveBatchCard(){
   const b = state.activeBatch;
   const step = b.steps[b.currentStep];
@@ -7541,6 +7615,30 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
   document.querySelectorAll('[data-edit-recipe]').forEach(b=>b.addEventListener('click', ()=>openRecipeModal(b.dataset.editRecipe)));
   document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>deleteRecipe(b.dataset.deleteRecipe)));
+
+  // Costing & recipe
+  if(byIdEl('btn-add-material-cost')) byIdEl('btn-add-material-cost').onclick = ()=>{
+    state.materialCosts.push({id:uid('MAT'), name:'', costPerKg:0});
+    render();
+  };
+  document.querySelectorAll('[data-save-material-cost]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id = b.dataset.saveMaterialCost;
+    const c = state.materialCosts.find(x=>x.id===id); if(!c) return;
+    const nameEl = document.querySelector(`.mat-cost-name[data-mat-cost-id="${id}"]`);
+    const valEl = document.querySelector(`.mat-cost-value[data-mat-cost-id="${id}"]`);
+    const name = (nameEl ? nameEl.value : '').trim();
+    if(!name){ showToast('Enter a material name first'); return; }
+    c.name = name;
+    c.costPerKg = Math.max(0, parseFloat(valEl ? valEl.value : 0) || 0);
+    await save('materialCosts');
+    showToast('Saved');
+    render();
+  }));
+  document.querySelectorAll('[data-delete-material-cost]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirm('Delete this material price?')) return;
+    state.materialCosts = state.materialCosts.filter(c=>c.id!==b.dataset.deleteMaterialCost);
+    await save('materialCosts');
+  }));
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openModal('recipesheet:'+b.dataset.viewBatchsheet)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = ()=>window.print();

@@ -1799,6 +1799,7 @@ let state = {
   activityLog: [],
   _costingOpenProductId: null,
   _costingOpenVersionId: null,
+  _costingVersionsView: 'active',
   _costingDraft: null,
   _costingDirty: false,
   theme: {paletteId:'green'},
@@ -2323,6 +2324,7 @@ function goTo(page){
   state._costingOpenVersionId = null;
   state._costingDraft = null;
   state._costingDirty = false;
+  state._costingVersionsView = 'active';
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
   if(((location.hash||'').replace('#','').split('/')[0]||'')!==page) history.replaceState(null,'','#'+page);
   render();
@@ -6161,14 +6163,21 @@ function renderCostingProductGrid(){
   </div>`}
   `;
 }
+function activeCostingVersions(product){ return (product.versions||[]).filter(v=>!v.archived); }
+function archivedCostingVersions(product){ return (product.versions||[]).filter(v=>v.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0)); }
 function renderCostingVersionsList(product){
+  if(state._costingVersionsView==='archive') return renderCostingVersionsArchive(product);
   const admin = isAdmin();
-  const versions = (product.versions||[]).slice().sort((a,b)=>new Date(b.editedAt||b.createdAt)-new Date(a.editedAt||a.createdAt));
+  const versions = activeCostingVersions(product).slice().sort((a,b)=>new Date(b.editedAt||b.createdAt)-new Date(a.editedAt||a.createdAt));
+  const archivedCount = archivedCostingVersions(product).length;
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-products" style="margin-bottom:14px;">← Products</button>
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} — versions</div>
-    ${admin ? `<button type="button" class="btn btn-primary btn-sm" id="btn-add-costing-version">+ New version</button>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="btn-text" data-costing-versions-view="archive" style="font-size:12.5px;">Archive${archivedCount?` (${archivedCount})`:''}</button>
+      ${admin ? `<button type="button" class="btn btn-primary btn-sm" id="btn-add-costing-version">+ New version</button>` : ''}
+    </div>
   </div>
   <div class="panel">
     ${versions.length===0 ? `<div class="empty-state">No versions yet. ${admin?'Create one to start costing this product.':''}</div>` : `
@@ -6185,6 +6194,36 @@ function renderCostingVersionsList(product){
           ${admin?`<td class="row-actions" onclick="event.stopPropagation()">
             <button type="button" class="btn btn-sm" data-rename-costing-version="${v.id}">Rename</button>
             ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version="${v.id}">Delete</button>`:''}
+          </td>`:''}
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>
+  `;
+}
+function renderCostingVersionsArchive(product){
+  const admin = isAdmin();
+  const versions = archivedCostingVersions(product);
+  return `
+  <button type="button" class="btn-text" data-costing-versions-view="active" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
+  <div class="toolbar">
+    <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} — archived versions</div>
+  </div>
+  <div class="panel">
+    ${versions.length===0 ? `<div class="empty-state">No archived versions.</div>` : `
+    <table class="data-table">
+      <thead><tr><th>Version</th><th>Created</th><th>Created by</th><th>Archived</th><th>Archived by</th>${admin?'<th>Actions</th>':''}</tr></thead>
+      <tbody>
+        ${versions.map(v=>`
+        <tr>
+          <td>${esc(v.name)}</td>
+          <td>${fmtDateTime(v.createdAt)}</td>
+          <td>${esc(v.createdBy||'—')}</td>
+          <td>${fmtDateTime(v.archivedAt)}</td>
+          <td>${esc(v.archivedBy||'—')}</td>
+          ${admin?`<td class="row-actions">
+            <button type="button" class="btn btn-sm" data-restore-costing-version="${v.id}">Restore</button>
+            ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version-permanent="${v.id}">Delete permanently</button>`:''}
           </td>`:''}
         </tr>`).join('')}
       </tbody>
@@ -7042,10 +7081,23 @@ async function runConfirmedAction(){
     case 'delete-costing-version': {
       const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
       const version = product && (product.versions||[]).find(v=>v.id===c.payload);
+      if(version){
+        version.archived = true;
+        version.archivedAt = new Date().toISOString();
+        version.archivedBy = state.session.staffName || state.session.name;
+        await save('costingProducts');
+        logActivity(`Archived costing version "${version.name}" (${product.name})`);
+      }
+      closeModal();
+      break;
+    }
+    case 'delete-costing-version-permanent': {
+      const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+      const version = product && (product.versions||[]).find(v=>v.id===c.payload);
       if(product){
         product.versions = (product.versions||[]).filter(v=>v.id!==c.payload);
         await save('costingProducts');
-        logActivity(`Deleted costing version "${version?version.name:c.payload}" (${product.name})`);
+        logActivity(`Permanently deleted costing version "${version?version.name:c.payload}" (${product.name})`);
       }
       closeModal();
       break;
@@ -8283,12 +8335,18 @@ function attachShellHandlers(){
     state._costingOpenVersionId = null;
     state._costingDraft = null;
     state._costingDirty = false;
+    state._costingVersionsView = 'active';
     render();
   }));
   if(byIdEl('btn-back-to-costing-products')) byIdEl('btn-back-to-costing-products').onclick = ()=>{
     state._costingOpenProductId = null;
+    state._costingVersionsView = 'active';
     render();
   };
+  document.querySelectorAll('[data-costing-versions-view]').forEach(el=>el.addEventListener('click', ()=>{
+    state._costingVersionsView = el.dataset.costingVersionsView;
+    render();
+  }));
   if(byIdEl('btn-back-to-costing-versions')) byIdEl('btn-back-to-costing-versions').onclick = ()=>{
     if(state._costingDirty && !confirm('Discard unsaved changes to this version?')) return;
     state._costingOpenVersionId = null;
@@ -8343,9 +8401,30 @@ function attachShellHandlers(){
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     const version = product && (product.versions||[]).find(v=>v.id===b.dataset.deleteCostingVersion);
     openConfirmModal({
-      title: 'Delete version', danger: true, confirmLabel: 'Delete', requirePassword: true,
-      message: `Delete "${version?version.name:'this version'}"? This cannot be undone.`,
+      title: 'Archive version', danger: true, confirmLabel: 'Archive', requirePassword: true,
+      message: `Move "${version?version.name:'this version'}" to the archive? You can restore it later from Archive.`,
       action: 'delete-costing-version', payload: b.dataset.deleteCostingVersion,
+    });
+  }));
+  document.querySelectorAll('[data-restore-costing-version]').forEach(b=>b.addEventListener('click', async ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    const version = product && (product.versions||[]).find(v=>v.id===b.dataset.restoreCostingVersion);
+    if(!version) return;
+    version.archived = false;
+    version.archivedAt = null;
+    version.archivedBy = null;
+    await save('costingProducts');
+    logActivity(`Restored costing version "${version.name}" (${product.name})`);
+    showToast('Restored');
+    render();
+  }));
+  document.querySelectorAll('[data-delete-costing-version-permanent]').forEach(b=>b.addEventListener('click', ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    const version = product && (product.versions||[]).find(v=>v.id===b.dataset.deleteCostingVersionPermanent);
+    openConfirmModal({
+      title: 'Delete permanently', danger: true, confirmLabel: 'Delete permanently', requirePassword: true,
+      message: `Permanently delete "${version?version.name:'this version'}"? This cannot be undone.`,
+      action: 'delete-costing-version-permanent', payload: b.dataset.deleteCostingVersionPermanent,
     });
   }));
   if(byIdEl('btn-add-costing-material')) byIdEl('btn-add-costing-material').onclick = ()=>{

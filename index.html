@@ -718,7 +718,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','rawMaterials','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1297,7 +1297,7 @@ const DEFAULT_AUTH = {
 const ROLES = ['Admin','Sub Admin','Blending','Packing','Customer Care','Orders Process'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','orderinquiry','blending','recipes','costing','customers','suppliers','complaints','gmp','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','orderinquiry','blending','recipes','costing','customers','suppliers','rawmaterials','complaints','gmp','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blending','customers','complaints'],
   Blending: ['blending','chat','recipes'],
   Packing: ['orders','chat'],
@@ -1732,6 +1732,7 @@ const ICONS = {
   orders:'<rect x="3" y="4" width="5" height="16" rx="1.2"/><rect x="9.5" y="4" width="5" height="10" rx="1.2"/><rect x="16" y="4" width="5" height="13" rx="1.2"/>',
   customers:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/>',
   suppliers:'<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+  rawmaterials:'<rect x="6" y="4" width="12" height="4" rx="1"/><path d="M7 8v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/><path d="M10 16h4"/>',
   complaints:'<path d="M12 3l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/>',
   staff:'<circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2"/><path d="M15 15.2c2.6.3 4.5 2.2 4.5 4.8"/>',
   chat:'<path d="M21 11.5a8.4 8.4 0 0 1-8.4 8.4 8.3 8.3 0 0 1-3.8-.9L3 21l1.9-5.8a8.3 8.3 0 0 1-.9-3.7A8.4 8.4 0 0 1 12.5 3a8.4 8.4 0 0 1 8.4 8.4z"/><circle cx="8.3" cy="11.5" r=".55" fill="currentColor" stroke="none"/><circle cx="12.5" cy="11.5" r=".55" fill="currentColor" stroke="none"/><circle cx="16.7" cy="11.5" r=".55" fill="currentColor" stroke="none"/>',
@@ -1778,7 +1779,7 @@ function personIcon(){
 
 let state = {
   session: null,
-  orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [], templates: [],
+  orders: [], staff: [], customers: [], suppliers: [], rawMaterials: [], complaints: [], chat: [], templates: [],
   recipes: [], activeBatch: null, batchFocusMode: false,
   gmpChecklistEntries: [],
   blendBatches: [],
@@ -1818,7 +1819,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', rawMaterialSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -2893,6 +2894,27 @@ async function deleteSupplier(id){
   await save('suppliers'); closeModal();
 }
 
+async function submitRawMaterial(e){
+  e.preventDefault();
+  const f = e.target; const editId = f.dataset.editId;
+  const data = {
+    name: f.name.value.trim(), unitPrice: Number(f.unitPrice.value)||0, supplier: f.supplier.value.trim()
+  };
+  if(!data.name) return;
+  if(editId){
+    const m = byId(state.rawMaterials, editId); Object.assign(m, data);
+  } else {
+    state.rawMaterials.unshift({id:uid('RMAT'), ...data, createdAt:new Date().toISOString()});
+  }
+  await save('rawMaterials'); closeModal();
+  showToast(editId ? 'Raw material updated' : 'Raw material added');
+}
+async function deleteRawMaterial(id){
+  if(!confirm('Delete this raw material?')) return;
+  state.rawMaterials = state.rawMaterials.filter(m=>m.id!==id);
+  await save('rawMaterials'); closeModal();
+}
+
 /* ===================== Complaints ===================== */
 async function submitComplaint(e){
   e.preventDefault();
@@ -3866,6 +3888,7 @@ const NAV = [
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
     {id:'suppliers', label:'Suppliers', icon:'suppliers'},
+    {id:'rawmaterials', label:'Raw Materials', icon:'rawmaterials'},
     {id:'ordersprocess', label:'Orders Process', icon:'list'},
   ]},
   {group:'GMP', items:[
@@ -3948,6 +3971,7 @@ const PAGE_META = {
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
+  rawmaterials:{title:'Raw Materials', sub:'Prices and suppliers for every raw material you buy.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Fill in and track the factory\'s cleaning checklists — no paper needed.'},
@@ -4102,6 +4126,7 @@ function renderPage(){
     case 'costing': return renderCostingPage();
     case 'customers': return renderCustomersPage();
     case 'suppliers': return renderSuppliersPage();
+    case 'rawmaterials': return renderRawMaterialsPage();
     case 'complaints': return renderComplaintsPage();
     case 'gmp': return renderGmpPage();
     case 'staff': return renderStaffPage();
@@ -4525,6 +4550,38 @@ function renderSuppliersPage(){
           ${isAdmin()?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>
             <button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>
+          </td>`:''}
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>
+  `;
+}
+
+/* ===================== Raw Materials ===================== */
+function renderRawMaterialsPage(){
+  const q = state.filters.rawMaterialSearch.toLowerCase();
+  const rows = state.rawMaterials.filter(m => !q || m.name.toLowerCase().includes(q) || (m.supplier||'').toLowerCase().includes(q));
+  return `
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Total raw materials</div><div class="value">${state.rawMaterials.length}</div></div>
+  </div>
+  <div class="toolbar">
+    <input class="search-input" id="rawmaterial-search" placeholder="Search by name or supplier…" value="${esc(state.filters.rawMaterialSearch)}">
+    ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-rawmaterial">+ Add raw material</button>` : ''}
+  </div>
+  <div class="panel">
+    ${rows.length===0 ? `<div class="empty-state">No raw materials ${q?'match your search':'yet'}.</div>` : `
+    <table class="data-table">
+      <thead><tr><th>Raw material</th><th>Unit Price (Rs/kg)</th><th>Supplier</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}</tr></thead>
+      <tbody>
+        ${rows.map(m=>`
+        <tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`data-rawmaterial-row="${m.id}"`:''}>
+          <td>${esc(m.name)}</td><td>Rs. ${(Number(m.unitPrice)||0).toFixed(2)}</td><td>${esc(m.supplier)||'—'}</td>
+          <td>${fmtDate(m.createdAt)}</td>
+          ${isAdmin()?`<td class="row-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-sm" data-edit-rawmaterial="${m.id}">Edit</button>
+            <button class="btn btn-sm btn-danger" data-delete-rawmaterial="${m.id}">Delete</button>
           </td>`:''}
         </tr>`).join('')}
       </tbody>
@@ -6406,6 +6463,7 @@ function renderModal(){
   }
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
+  if(type==='rawmaterial') return rawMaterialFormModal(id==='new'?null:id);
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
   if(type==='complaintcustomerview') return complaintCustomerViewModal(id);
   if(type==='complaintphotos') return complaintPhotosModal(id);
@@ -6880,6 +6938,29 @@ function supplierFormModal(id){
           <div style="display:flex;gap:8px;">
             <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
             <button type="submit" class="btn btn-primary">${s?'Save changes':'Add supplier'}</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
+function rawMaterialFormModal(id){
+  const m = id ? byId(state.rawMaterials,id) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${m?'Edit raw material':'Add raw material'}</h2>
+      <div class="sub">${m?'Update this raw material’s details.':'Adds a new raw material record.'}</div>
+      <form id="form-rawmaterial" data-edit-id="${m?m.id:''}">
+        <div class="field"><label>Raw material name</label><input name="name" required value="${m?esc(m.name):''}" placeholder="e.g. DI Water"></div>
+        <div class="field"><label>Unit Price (Rs/kg)</label><input name="unitPrice" type="number" min="0" step="0.01" value="${m?m.unitPrice:''}"></div>
+        <div class="field"><label>Supplier</label><input name="supplier" value="${m?esc(m.supplier):''}"></div>
+        <div class="modal-actions" style="justify-content:space-between;">
+          <div>${m?`<button type="button" class="btn btn-danger" id="btn-delete-rawmaterial">Delete</button>`:''}</div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">${m?'Save changes':'Add raw material'}</button>
           </div>
         </div>
       </form>
@@ -7579,6 +7660,11 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-supplier-row]').forEach(r=>r.addEventListener('click', ()=>openModal('supplier:'+r.dataset.supplierRow)));
   document.querySelectorAll('[data-edit-supplier]').forEach(b=>b.addEventListener('click', ()=>openModal('supplier:'+b.dataset.editSupplier)));
   document.querySelectorAll('[data-delete-supplier]').forEach(b=>b.addEventListener('click', ()=>{ if(confirm('Delete this supplier?')){ state.suppliers = state.suppliers.filter(s=>s.id!==b.dataset.deleteSupplier); save('suppliers').then(render); } }));
+  if(byIdEl('btn-new-rawmaterial')) byIdEl('btn-new-rawmaterial').onclick = ()=>openModal('rawmaterial:new');
+  if(byIdEl('rawmaterial-search')) byIdEl('rawmaterial-search').addEventListener('input', e=>{ state.filters.rawMaterialSearch = e.target.value; render(); });
+  document.querySelectorAll('[data-rawmaterial-row]').forEach(r=>r.addEventListener('click', ()=>openModal('rawmaterial:'+r.dataset.rawmaterialRow)));
+  document.querySelectorAll('[data-edit-rawmaterial]').forEach(b=>b.addEventListener('click', ()=>openModal('rawmaterial:'+b.dataset.editRawmaterial)));
+  document.querySelectorAll('[data-delete-rawmaterial]').forEach(b=>b.addEventListener('click', ()=>{ if(confirm('Delete this raw material?')){ state.rawMaterials = state.rawMaterials.filter(m=>m.id!==b.dataset.deleteRawmaterial); save('rawMaterials').then(render); } }));
 
   // Complaints
   if(byIdEl('btn-new-complaint')) byIdEl('btn-new-complaint').onclick = ()=>openModal('complaint:new');
@@ -7946,6 +8032,8 @@ function attachShellHandlers(){
 
   if(byIdEl('form-supplier')) byIdEl('form-supplier').addEventListener('submit', submitSupplier);
   if(byIdEl('btn-delete-supplier')) byIdEl('btn-delete-supplier').onclick = ()=>{ const id=byIdEl('form-supplier').dataset.editId; deleteSupplier(id); };
+  if(byIdEl('form-rawmaterial')) byIdEl('form-rawmaterial').addEventListener('submit', submitRawMaterial);
+  if(byIdEl('btn-delete-rawmaterial')) byIdEl('btn-delete-rawmaterial').onclick = ()=>{ const id=byIdEl('form-rawmaterial').dataset.editId; deleteRawMaterial(id); };
 
   if(byIdEl('form-complaint')) byIdEl('form-complaint').addEventListener('submit', submitComplaint);
   attachCustomerAutocomplete(byIdEl('complaint-customer-input'), byIdEl('complaint-customer-suggestions'), (match)=>{

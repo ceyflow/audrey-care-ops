@@ -6265,20 +6265,23 @@ function renderCostingVersionsArchive(product){
   `;
 }
 function costingLineAmount(percent, batchKg){ return (Number(percent)||0)/100 * (Number(batchKg)||0); }
-// Water is conventionally "q.s. to 100%" in a cosmetic recipe — it fills whatever
-// percentage the other raw materials don't already account for, rather than being
-// typed in by hand. Matched by name so it works whether the row is called "Water" or
-// "DI Water"/"Di Water".
+// Water is conventionally "q.s. to 102%" in this factory's recipes (a small overage, not
+// a strict 100%) — it fills whatever percentage the other raw materials don't already
+// account for, rather than being typed in by hand. Matched by name so it works whether the
+// row is called "Water" or "DI Water"/"Di Water".
 function isWaterMaterial(m){ return /\bwater\b/i.test(m.name||''); }
-// Recomputes the water row's percent to make the sheet total 100%, unless the row just
-// edited (editedId) IS the water row itself — a direct edit to water's own percent is
-// respected rather than immediately overwritten. Returns true if water's percent changed.
+const WATER_TARGET_PERCENT = 102;
+// Recomputes the water row's percent to make the sheet total WATER_TARGET_PERCENT%, unless
+// the row just edited (editedId) IS the water row itself — a direct edit to water's own
+// percent is respected rather than immediately overwritten. Returns true if water's percent
+// changed. Same formula whether other rows are increased or reduced — water just re-fills
+// whatever gap is left.
 function costingAutoBalanceWater(draft, editedId){
   const materials = draft.materials||[];
   const water = materials.find(isWaterMaterial);
   if(!water || water.id===editedId) return false;
   const sumOthers = materials.filter(m=>m.id!==water.id).reduce((s,m)=>s+(Number(m.percent)||0), 0);
-  const newPct = Math.max(0, Math.round((100-sumOthers)*1000)/1000);
+  const newPct = Math.max(0, Math.round((WATER_TARGET_PERCENT-sumOthers)*1000)/1000);
   if(newPct===water.percent) return false;
   water.percent = newPct;
   return true;

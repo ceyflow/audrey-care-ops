@@ -724,7 +724,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1796,6 +1796,7 @@ let state = {
   complaintCategories: [],
   complaintPriorities: [],
   costingProducts: [],
+  activityLog: [],
   _costingOpenProductId: null,
   _costingOpenVersionId: null,
   _costingDraft: null,
@@ -1828,7 +1829,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -2065,6 +2066,22 @@ function saveSession(){
   try{ localStorage.setItem('audrey_session', JSON.stringify(state.session)); }
   catch(e){ console.error('save session failed', e); }
 }
+// A single admin-visible audit trail — who did what, and when. Call this alongside (never
+// instead of) the real action; a logging failure must never block or roll back the action it's
+// recording, so this never throws and the caller doesn't need to await it.
+async function logActivity(message){
+  try{
+    if(!Array.isArray(state.activityLog)) state.activityLog = [];
+    state.activityLog.unshift({
+      id: uid('LOG'), at: new Date().toISOString(),
+      actor: (state.session && (state.session.staffName || state.session.name)) || 'Unknown',
+      role: state.session ? state.session.role : null,
+      message,
+    });
+    if(state.activityLog.length > 1000) state.activityLog = state.activityLog.slice(0, 1000);
+    await save('activityLog');
+  }catch(e){ console.error('logActivity failed', e); }
+}
 
 /* ===================== Utilities ===================== */
 function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,7).toUpperCase(); }
@@ -2289,6 +2306,7 @@ async function confirmLogin(){
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
   await saveSession();
+  logActivity(`Logged in (${role})`);
   render();
 }
 async function logOut(){
@@ -2473,8 +2491,11 @@ async function restoreOrder(id){
 }
 async function deleteOrder(id){
   if(!confirm('Delete this order? This cannot be undone.')) return;
+  const o = byId(state.orders, id);
   state.orders = state.orders.filter(x=>x.id!==id);
-  await save('orders'); closeModal();
+  await save('orders');
+  logActivity(`Deleted order ${o?(o.orderNumber||o.id):id}${o&&o.customer?' ('+o.customer+')':''}`);
+  closeModal();
 }
 
 /* ===================== Blending board data ===================== */
@@ -3063,7 +3084,9 @@ async function deleteComplaint(id){
   if(!allowed){ showToast(c && c.archived ? 'Only Admin can delete archived complaints' : 'Only Admin can delete complaints'); return; }
   if(!confirm('Delete this complaint?')) return;
   state.complaints = state.complaints.filter(c=>c.id!==id);
-  await save('complaints'); closeModal();
+  await save('complaints');
+  logActivity(`Deleted complaint${c&&c.customer?' from '+c.customer:''}${c&&c.headline?': '+c.headline:''}`);
+  closeModal();
 }
 // Moves a Resolved/Closed complaint back to the active list. Once it's archived (2h+ after being
 // closed), only Admin can restore it — Sub Admin can still restore from the regular tabs.
@@ -4138,6 +4161,7 @@ function renderShell(freshPage){
             <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
           </div>
           <button class="btn btn-sm" id="btn-open-aibot" title="Ask the workspace assistant" style="display:flex;align-items:center;gap:6px;">${icon('bot')} Assistant</button>
+          ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
           ${state.session.staffName ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
           <button class="btn-text" id="btn-switch-role">Log out</button>
         </div>
@@ -6653,6 +6677,7 @@ function renderModal(){
   if(type==='checklistday') return checklistDayModal(parts.slice(1).join(':'));
   if(type==='aibot') return aiBotModal();
   if(type==='changepassword') return changePasswordModal();
+  if(type==='activitylog') return activityLogModal();
   return '';
 }
 function changePasswordModal(){
@@ -6671,6 +6696,32 @@ function changePasswordModal(){
           <button type="submit" class="btn btn-primary">Change password</button>
         </div>
       </form>
+    </div>
+  </div>`;
+}
+function activityLogModal(){
+  const q = (state.filters.activityLogSearch||'').trim().toLowerCase();
+  const all = state.activityLog||[];
+  const rows = (q ? all.filter(l=>l.actor.toLowerCase().includes(q) || l.message.toLowerCase().includes(q)) : all).slice(0, 500);
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:720px;max-height:82vh;display:flex;flex-direction:column;">
+      <h2>Activity log</h2>
+      <div class="sub">Who did what, and when. Admin only.</div>
+      <input class="search-input" id="activitylog-search" placeholder="Search by person or action…" value="${esc(state.filters.activityLogSearch||'')}" style="margin:10px 0;">
+      <div style="overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:8px;min-height:120px;">
+        ${rows.length===0 ? `<div class="empty-state">No activity ${q?'matches your search':'logged yet'}.</div>` : `
+        <table class="data-table">
+          <thead><tr><th>When</th><th>Who</th><th>Action</th></tr></thead>
+          <tbody>
+            ${rows.map(l=>`<tr><td style="white-space:nowrap;">${fmtDateTime(l.at)}</td><td style="white-space:nowrap;">${esc(l.actor)}</td><td>${esc(l.message)}</td></tr>`).join('')}
+          </tbody>
+        </table>`}
+      </div>
+      ${all.length>500 && !q ? `<div class="hint" style="margin-top:6px;">Showing the 500 most recent of ${all.length} entries.</div>` : ''}
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+      </div>
     </div>
   </div>`;
 }
@@ -6990,16 +7041,20 @@ async function runConfirmedAction(){
     }
     case 'delete-costing-version': {
       const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+      const version = product && (product.versions||[]).find(v=>v.id===c.payload);
       if(product){
         product.versions = (product.versions||[]).filter(v=>v.id!==c.payload);
         await save('costingProducts');
+        logActivity(`Deleted costing version "${version?version.name:c.payload}" (${product.name})`);
       }
       closeModal();
       break;
     }
     case 'delete-costing-product': {
+      const product = byId(state.costingProducts, c.payload);
       state.costingProducts = state.costingProducts.filter(p=>p.id!==c.payload);
       await save('costingProducts');
+      logActivity(`Deleted product costing "${product?product.name:c.payload}"`);
       closeModal();
       break;
     }
@@ -7644,6 +7699,8 @@ function attachShellHandlers(){
   if(byIdEl('btn-switch-role')) byIdEl('btn-switch-role').onclick = logOut;
   if(byIdEl('btn-open-aibot')) byIdEl('btn-open-aibot').onclick = ()=>openModal('aibot');
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
+  if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
+  if(byIdEl('activitylog-search')) byIdEl('activitylog-search').addEventListener('input', e=>{ state.filters.activityLogSearch = e.target.value; render(); });
   if(byIdEl('form-change-password')) byIdEl('form-change-password').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;
@@ -8210,6 +8267,7 @@ function attachShellHandlers(){
     if(!name) return;
     state.costingProducts.push({id:uid('CPROD'), name, versions:[]});
     await save('costingProducts');
+    logActivity(`Created product costing "${name}"`);
     closeModal();
   });
   document.querySelectorAll('[data-delete-costing-product]').forEach(b=>b.addEventListener('click', ()=>{
@@ -8260,6 +8318,7 @@ function attachShellHandlers(){
     if(!product.versions) product.versions = [];
     product.versions.push(newVersion);
     await save('costingProducts');
+    logActivity(`Created costing version "${newVersion.name}" (${product.name})`);
     state._costingOpenVersionId = newVersion.id;
     state._costingDraft = {materials:[], batchSizes:[]};
     state._costingDirty = false;
@@ -8273,8 +8332,10 @@ function attachShellHandlers(){
     if(!version) return;
     const name = e.target.versionName.value.trim();
     if(!name) return;
+    const oldName = version.name;
     version.name = name;
     await save('costingProducts');
+    logActivity(`Renamed costing version "${oldName}" to "${name}" (${product.name})`);
     closeModal();
     showToast('Renamed');
   });
@@ -8336,6 +8397,7 @@ function attachShellHandlers(){
     version.editedBy = state.session.staffName || state.session.name;
     version.editedAt = new Date().toISOString();
     await save('costingProducts');
+    logActivity(`Edited costing version "${version.name}" (${product.name})`);
     state._costingDirty = false;
     closeModal();
     showToast('Saved');
@@ -8361,6 +8423,7 @@ function attachShellHandlers(){
     state._costingOpenVersionId = newVersion.id;
     state._costingDirty = false;
     await save('costingProducts');
+    logActivity(`Created costing version "${name}" (${product.name})`);
     closeModal();
     showToast('Saved as "'+name+'"');
   });

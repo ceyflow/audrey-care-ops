@@ -6259,6 +6259,7 @@ function renderCostingVersionsList(product){
           <td>${esc(v.editedBy||v.createdBy||'—')}</td>
           ${admin?`<td class="row-actions" onclick="event.stopPropagation()">
             <button type="button" class="btn btn-sm" data-rename-costing-version="${v.id}">Rename</button>
+            <button type="button" class="btn btn-sm" data-transfer-costing-version="${v.id}">Transfer to Production Guide</button>
             ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version="${v.id}">Delete</button>`:''}
           </td>`:''}
         </tr>`).join('')}
@@ -8756,6 +8757,29 @@ function attachShellHandlers(){
     closeModal();
     showToast('Renamed');
   });
+  document.querySelectorAll('[data-transfer-costing-version]').forEach(b=>b.addEventListener('click', async ()=>{
+    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
+    const version = product && (product.versions||[]).find(v=>v.id===b.dataset.transferCostingVersion);
+    if(!product || !version) return;
+    const sizes = (version.batchSizes||[]).slice().sort((a,b)=>a-b);
+    const newRecipe = {
+      id: uid('RCP'),
+      name: `${product.name} — ${version.name}`,
+      description: version.notes||'',
+      batchSizeKg: sizes.length ? sizes[0] : 0,
+      standardPH: '',
+      combineNote: version.productionMethod||'',
+      materials: (version.materials||[]).map(m=>({id:uid('MAT'), name:m.name, percent:m.percent})),
+      steps: [],
+      createdAt: new Date().toISOString(),
+    };
+    if(!Array.isArray(state.recipes)) state.recipes = [];
+    state.recipes.unshift(newRecipe);
+    await save('recipes');
+    logActivity(`Transferred costing version "${version.name}" (${product.name}) to Production Guide`);
+    showToast('Transferred to Production Guide');
+    goTo('recipes');
+  }));
   document.querySelectorAll('[data-delete-costing-version]').forEach(b=>b.addEventListener('click', ()=>{
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     const version = product && (product.versions||[]).find(v=>v.id===b.dataset.deleteCostingVersion);

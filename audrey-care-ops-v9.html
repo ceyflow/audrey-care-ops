@@ -2023,8 +2023,22 @@ async function loadAll(){
   // middle-click "open in new tab" opens straight to that page instead of always landing on
   // the default one.
   if(state.session && !state.trackMode && !state.boardMode && !state.complaintMode){
-    const hashPage = ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase();
+    const hashParts = (location.hash||'').replace('#','').split('/');
+    const hashPage = (hashParts[0]||'').toLowerCase();
     if(hashPage && pageAllowed(hashPage)) state.page = hashPage;
+    // A refresh while deep inside a costing recipe (product + version open) should land back
+    // on that exact recipe sheet, not bounce out to the product grid — same drill-down the
+    // sidebar page-level hash already gives every other page, one level deeper.
+    if(state.page==='costing' && isAdmin() && hashParts[1]){
+      const product = byId(state.costingProducts, decodeURIComponent(hashParts[1]));
+      if(product){
+        state._costingOpenProductId = product.id;
+        if(hashParts[2]){
+          const version = (product.versions||[]).find(v=>v.id===decodeURIComponent(hashParts[2]));
+          if(version) state._costingOpenVersionId = version.id;
+        }
+      }
+    }
   }
   SYNCED_KEYS.forEach(k=>snapshotBaseline(k));
   render();
@@ -8615,11 +8629,13 @@ function attachShellHandlers(){
     state._costingDraft = null;
     state._costingDirty = false;
     state._costingVersionsView = 'active';
+    history.replaceState(null,'','#costing/'+encodeURIComponent(state._costingOpenProductId));
     render();
   }));
   if(byIdEl('btn-back-to-costing-products')) byIdEl('btn-back-to-costing-products').onclick = ()=>{
     state._costingOpenProductId = null;
     state._costingVersionsView = 'active';
+    history.replaceState(null,'','#costing');
     render();
   };
   document.querySelectorAll('[data-costing-versions-view]').forEach(el=>el.addEventListener('click', ()=>{
@@ -8631,6 +8647,7 @@ function attachShellHandlers(){
     state._costingOpenVersionId = null;
     state._costingDraft = null;
     state._costingDirty = false;
+    history.replaceState(null,'','#costing/'+encodeURIComponent(state._costingOpenProductId));
     render();
   };
   document.querySelectorAll('[data-open-costing-version]').forEach(el=>el.addEventListener('click', ()=>{
@@ -8646,6 +8663,7 @@ function attachShellHandlers(){
     };
     costingAutoBalanceWater(state._costingDraft, null);
     state._costingDirty = false;
+    history.replaceState(null,'','#costing/'+encodeURIComponent(product.id)+'/'+encodeURIComponent(version.id));
     render();
   }));
   if(byIdEl('btn-add-costing-version')) byIdEl('btn-add-costing-version').onclick = async ()=>{
@@ -8662,6 +8680,7 @@ function attachShellHandlers(){
     state._costingOpenVersionId = newVersion.id;
     state._costingDraft = {materials:[], batchSizes:[], batchColors:{}, fixedCosts:JSON.parse(JSON.stringify(newVersion.fixedCosts))};
     state._costingDirty = false;
+    history.replaceState(null,'','#costing/'+encodeURIComponent(product.id)+'/'+encodeURIComponent(newVersion.id));
     render();
   };
   document.querySelectorAll('[data-rename-costing-version]').forEach(b=>b.addEventListener('click', ()=>openModal('costingrenameversion:'+b.dataset.renameCostingVersion)));

@@ -2579,13 +2579,17 @@ async function restoreOrder(id){
   await save('orders');
   showToast('Order restored to the board');
 }
-async function deleteOrder(id){
-  if(!confirm('Delete this order? This cannot be undone.')) return;
+function deleteOrder(id){
   const o = byId(state.orders, id);
-  state.orders = state.orders.filter(x=>x.id!==id);
-  await save('orders');
-  logActivity(`Deleted order ${o?(o.orderNumber||o.id):id}${o&&o.customer?' ('+o.customer+')':''}`);
-  closeModal();
+  openConfirmModal({
+    title: 'Delete order', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this order? This cannot be undone.',
+    onConfirm: async ()=>{
+      state.orders = state.orders.filter(x=>x.id!==id);
+      await save('orders');
+      logActivity(`Deleted order ${o?(o.orderNumber||o.id):id}${o&&o.customer?' ('+o.customer+')':''}`);
+    },
+  });
 }
 
 /* ===================== Blending board data ===================== */
@@ -2632,11 +2636,16 @@ async function moveBlendToStage(id, newStage){
   await save('blendBatches');
   showToast('Moved to '+BLEND_STAGES[newStage]);
 }
-async function deleteBlendBatch(id){
+function deleteBlendBatch(id){
   if(!isAdmin()) return;
-  if(!confirm('Delete this batch? This cannot be undone.')) return;
-  state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
-  await save('blendBatches'); closeModal();
+  openConfirmModal({
+    title: 'Delete batch', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this batch? This cannot be undone.',
+    onConfirm: async ()=>{
+      state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
+      await save('blendBatches');
+    },
+  });
 }
 
 /* ===================== Branding / template customization ===================== */
@@ -2823,11 +2832,16 @@ async function brandingAddAddon(e){
   await save('branding'); closeModal();
   showToast('Addon added');
 }
-async function brandingDeleteAddon(id){
+function brandingDeleteAddon(id){
   if(!isAdmin() || id==='logo') return;
-  if(!confirm('Delete this addon?')) return;
-  state.branding.addons = (state.branding.addons||[]).filter(a=>a.id!==id);
-  await save('branding'); applyFavicon(); closeModal();
+  openConfirmModal({
+    title: 'Delete addon', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this addon?',
+    onConfirm: async ()=>{
+      state.branding.addons = (state.branding.addons||[]).filter(a=>a.id!==id);
+      await save('branding'); applyFavicon();
+    },
+  });
 }
 async function loadSampleData(){
   const now = Date.now();
@@ -2907,10 +2921,15 @@ async function addStaffMember(e){
     showToast('Staff added');
   }
 }
-async function removeStaffMember(id){
-  if(!confirm('Remove this staff member?')) return;
-  state.staff = state.staff.filter(s=>s.id!==id);
-  await save('staff'); render();
+function removeStaffMember(id){
+  openConfirmModal({
+    title: 'Remove staff member', danger: true, confirmLabel: 'Remove',
+    message: 'Remove this staff member?',
+    onConfirm: async ()=>{
+      state.staff = state.staff.filter(s=>s.id!==id);
+      await save('staff');
+    },
+  });
 }
 async function uploadStaffPhoto(staffId, file){
   const s = byId(state.staff, staffId); if(!s || !file) return;
@@ -2950,10 +2969,15 @@ async function submitCustomer(e){
   await save('customers'); closeModal();
   showToast(editId ? 'Customer updated' : 'Customer added');
 }
-async function deleteCustomer(id){
-  if(!confirm('Delete this customer?')) return;
-  state.customers = state.customers.filter(c=>c.id!==id);
-  await save('customers'); closeModal();
+function deleteCustomer(id){
+  openConfirmModal({
+    title: 'Delete customer', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this customer?',
+    onConfirm: async ()=>{
+      state.customers = state.customers.filter(c=>c.id!==id);
+      await save('customers');
+    },
+  });
 }
 // Parses CSV text into rows of cells, honoring quoted fields (with "" as an escaped quote).
 function parseCsvText(text){
@@ -3054,10 +3078,15 @@ async function submitSupplier(e){
   await save('suppliers'); closeModal();
   showToast(editId ? 'Supplier updated' : 'Supplier added');
 }
-async function deleteSupplier(id){
-  if(!confirm('Delete this supplier?')) return;
-  state.suppliers = state.suppliers.filter(s=>s.id!==id);
-  await save('suppliers'); closeModal();
+function deleteSupplier(id){
+  openConfirmModal({
+    title: 'Delete supplier', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this supplier?',
+    onConfirm: async ()=>{
+      state.suppliers = state.suppliers.filter(s=>s.id!==id);
+      await save('suppliers');
+    },
+  });
 }
 async function importSuppliersCsv(file){
   const text = await file.text();
@@ -3168,15 +3197,19 @@ async function submitComplaint(e){
   showToast(editId ? 'Complaint updated' : 'Complaint logged');
   if(statusChanged) sendComplaintStatusSms(complaint);
 }
-async function deleteComplaint(id){
+function deleteComplaint(id){
   const c = byId(state.complaints, id);
   const allowed = c && c.archived ? isAdmin() : (isAdmin() || isSubAdmin());
   if(!allowed){ showToast(c && c.archived ? 'Only Admin can delete archived complaints' : 'Only Admin can delete complaints'); return; }
-  if(!confirm('Delete this complaint?')) return;
-  state.complaints = state.complaints.filter(c=>c.id!==id);
-  await save('complaints');
-  logActivity(`Deleted complaint${c&&c.customer?' from '+c.customer:''}${c&&c.headline?': '+c.headline:''}`);
-  closeModal();
+  openConfirmModal({
+    title: 'Delete complaint', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this complaint?',
+    onConfirm: async ()=>{
+      state.complaints = state.complaints.filter(x=>x.id!==id);
+      await save('complaints');
+      logActivity(`Deleted complaint${c&&c.customer?' from '+c.customer:''}${c&&c.headline?': '+c.headline:''}`);
+    },
+  });
 }
 // Moves a Resolved/Closed complaint back to the active list. Once it's archived (2h+ after being
 // closed), only Admin can restore it — Sub Admin can still restore from the regular tabs.
@@ -3311,13 +3344,17 @@ async function sendChatMessage(e){
   scrollChatToBottom();
   await save('chat');
 }
-async function deleteChatHistory(){
+function deleteChatHistory(){
   if(!isAdmin()) return;
-  if(!confirm('Delete the entire team chat history? This clears it for everyone and cannot be undone.')) return;
-  state.chat = [];
-  await save('chat');
-  render();
-  showToast('Chat history deleted');
+  openConfirmModal({
+    title: 'Delete chat history', danger: true, confirmLabel: 'Delete',
+    message: 'Delete the entire team chat history? This clears it for everyone and cannot be undone.',
+    onConfirm: async ()=>{
+      state.chat = [];
+      await save('chat');
+      showToast('Chat history deleted');
+    },
+  });
 }
 
 /* ===================== AI workspace assistant ===================== */
@@ -4130,16 +4167,18 @@ function findNavItemById(id){
   }
   return null;
 }
-async function renameNavItem(id){
+function renameNavItem(id){
   const item = findNavItemById(id); if(!item) return;
-  const name = prompt('Rename this sidebar item:', navLabel(item));
-  if(name==null) return;
-  const trimmed = name.trim();
-  if(!state.navLabels) state.navLabels = {};
-  if(!trimmed || trimmed===item.label) delete state.navLabels[id];
-  else state.navLabels[id] = trimmed;
-  await save('navLabels');
-  render();
+  openPromptModal({
+    title: 'Rename this sidebar item', label: 'Name', defaultValue: navLabel(item), confirmLabel: 'Save',
+    onSubmit: async (name)=>{
+      const trimmed = (name||'').trim();
+      if(!state.navLabels) state.navLabels = {};
+      if(!trimmed || trimmed===item.label) delete state.navLabels[id];
+      else state.navLabels[id] = trimmed;
+      await save('navLabels');
+    },
+  });
 }
 function navGroupsFor(allowedIds){
   return NAV
@@ -5761,10 +5800,15 @@ async function submitTemplate(e){
   await save('templates'); closeModal();
   showToast('Template created');
 }
-async function deleteTemplate(id){
-  if(!confirm('Delete this task template?')) return;
-  state.templates = state.templates.filter(t=>t.id!==id);
-  await save('templates'); render();
+function deleteTemplate(id){
+  openConfirmModal({
+    title: 'Delete template', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this task template?',
+    onConfirm: async ()=>{
+      state.templates = state.templates.filter(t=>t.id!==id);
+      await save('templates');
+    },
+  });
 }
 function templateFormModal(){
   return `
@@ -6078,10 +6122,16 @@ async function submitRecipe(e){
   await save('recipes'); state._recipeDraft = null; closeModal();
   showToast('Recipe saved');
 }
-async function deleteRecipe(id){
-  if(!confirm('Delete this recipe? This does not affect any batch currently running.')) return;
-  state.recipes = state.recipes.filter(r=>r.id!==id);
-  await save('recipes'); render();
+function deleteRecipe(id){
+  const r = byId(state.recipes, id);
+  openConfirmModal({
+    title: 'Delete recipe', danger: true, confirmLabel: 'Delete',
+    message: `Delete "${r?r.name:'this recipe'}"? This does not affect any batch currently running.`,
+    onConfirm: async ()=>{
+      state.recipes = state.recipes.filter(x=>x.id!==id);
+      await save('recipes');
+    },
+  });
 }
 
 // ---- Batch run controls (Admin only) ----
@@ -6159,12 +6209,19 @@ async function restartCurrentStep(){
   b.remainingSecondsWhenPaused = null;
   await save('activeBatch'); render();
 }
-async function stopBatch(){
+function stopBatch(){
   const isDone = state.activeBatch && state.activeBatch.status==='completed';
-  if(!isDone && !confirm('Stop this batch? Everyone watching will lose the live timer.')) return;
-  state.activeBatch = null;
-  await save('activeBatch'); stopBatchTicker();
-  showToast('Batch stopped');
+  const doStop = async ()=>{
+    state.activeBatch = null;
+    await save('activeBatch'); stopBatchTicker();
+    showToast('Batch stopped');
+  };
+  if(isDone){ doStop(); return; }
+  openConfirmModal({
+    title: 'Stop batch', danger: true, confirmLabel: 'Stop batch',
+    message: 'Stop this batch? Everyone watching will lose the live timer.',
+    onConfirm: doStop,
+  });
 }
 // Finishing a recipe's step timer feeds it into the Blending board as a real batch,
 // then takes everyone watching straight there — no manual "Dismiss" click needed.
@@ -7340,12 +7397,42 @@ function costingEditProductModal(productId){
     </div>
   </div>`;
 }
+// Several confirm()/prompt()/alert() replacements are triggered by a button INSIDE another
+// already-open modal (e.g. "add a new delivery list" from within the Manage Lists modal) — that
+// underlying modal (and whatever draft it's editing) needs to still be there afterward, not get
+// clobbered by the single `state.modal` slot these overlays also use. Each open*Modal() below
+// captures whatever modal was open as `_returnTo`, and closeOverlayModal() restores it instead
+// of closing everything, the same way the native dialog never touched the modal underneath it.
+const OVERLAY_MODAL_TYPES = ['confirmaction','promptaction','alertinfo'];
+function currentModalReturnTarget(){
+  const base = (state.modal||'').split(':')[0];
+  return (state.modal && !OVERLAY_MODAL_TYPES.includes(base)) ? state.modal : null;
+}
+// Used by the three open*Modal() functions below. Normally the modal to return to is just
+// whatever's currently open — but a handler that opens one of these overlays from INSIDE
+// another overlay's own onConfirm/onSubmit (e.g. an "that name already exists" alert raised
+// while handling a prompt's submit) runs before that outer overlay has closed, so
+// `state.modal` is still 'promptaction'/etc., not the real modal underneath both of them.
+// Passing an explicit `_returnTo` in opts (including null, to force closing everything) skips
+// the auto-detection for exactly that case.
+function resolveReturnTo(opts){
+  return opts._returnTo !== undefined ? opts._returnTo : currentModalReturnTarget();
+}
+function closeOverlayModal(returnTo){
+  state.modal = returnTo || null;
+  state._confirmAction = null; state._promptAction = null; state._alertInfo = null;
+  render();
+}
 // A single styled stand-in for the browser's native confirm() dialog — opened with
-// openConfirmModal({title, sub, message, confirmLabel, danger, requirePassword, onConfirm}) and
-// resolved by runConfirmedAction(), which awaits the caller's own onConfirm() closure. Keeps
-// every "are you sure?" in the app visually consistent instead of the OS's own dark popup.
+// openConfirmModal({title, sub, message, confirmLabel, danger, requirePassword, onConfirm,
+// keepParentModal}) and resolved by runConfirmedAction(), which awaits the caller's own
+// onConfirm() closure. Cancelling always returns to whatever modal was open underneath; after a
+// successful confirm it closes everything UNLESS keepParentModal is set (for "delete one item
+// from the list I'm still editing" cases, as opposed to "delete the thing this whole modal is
+// showing", which should close). Keeps every "are you sure?" visually consistent instead of the
+// OS's own dark popup.
 function openConfirmModal(opts){
-  state._confirmAction = opts;
+  state._confirmAction = {...opts, _returnTo: resolveReturnTo(opts)};
   openModal('confirmaction');
 }
 function confirmActionModal(){
@@ -7362,7 +7449,7 @@ function confirmActionModal(){
       <div class="hint" id="confirm-action-password-error" style="color:var(--danger);"></div>
       ` : ''}
       <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+        <button type="button" class="btn" id="btn-cancel-confirm-action">Cancel</button>
         <button type="button" class="btn ${c.danger?'btn-danger':'btn-primary'}" id="btn-confirm-action">${esc(c.confirmLabel||'OK')}</button>
       </div>
     </div>
@@ -7396,16 +7483,20 @@ async function runConfirmedAction(){
   }
   state._confirmAction = null;
   if(c.onConfirm) await c.onConfirm();
-  closeModal();
+  // onConfirm may itself have opened a NEW overlay (e.g. a validation alert) — leave it be
+  // instead of closing/clearing it out from under itself.
+  if(state._confirmAction || state._promptAction || state._alertInfo){ render(); return; }
+  closeOverlayModal(c.keepParentModal ? c._returnTo : null);
 }
 // A single styled stand-in for the browser's native prompt() dialog — opened with
 // openPromptModal({title, sub, label, defaultValue, placeholder, inputType, confirmLabel,
 // onSubmit}); onSubmit(value) runs when the form is submitted (value is '' if left blank,
 // matching prompt()'s own "OK with nothing typed" behavior — never null, since there's no
 // separate Cancel-vs-blank distinction worth modeling here; every caller already treated an
-// empty/falsy prompt() result as "nothing to do").
+// empty/falsy prompt() result as "nothing to do"). Always returns to whatever modal was open
+// underneath (a prompt is never a terminal/destructive action the way a confirm can be).
 function openPromptModal(opts){
-  state._promptAction = opts;
+  state._promptAction = {...opts, _returnTo: resolveReturnTo(opts)};
   openModal('promptaction');
 }
 function promptActionModal(){
@@ -7419,7 +7510,7 @@ function promptActionModal(){
       <form id="form-prompt-action">
         <div class="field">${c.label?`<label>${esc(c.label)}</label>`:''}<input name="value" type="${c.inputType||'text'}" autofocus value="${escAttr(c.defaultValue||'')}" placeholder="${escAttr(c.placeholder||'')}"></div>
         <div class="modal-actions">
-          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="button" class="btn" id="btn-cancel-prompt-action">Cancel</button>
           <button type="submit" class="btn btn-primary">${esc(c.confirmLabel||'OK')}</button>
         </div>
       </form>
@@ -7431,12 +7522,16 @@ async function runPromptAction(value){
   if(!c) return;
   state._promptAction = null;
   if(c.onSubmit) await c.onSubmit(value);
-  closeModal();
+  // onSubmit may itself have opened a NEW overlay (e.g. a "that name already exists" alert, or
+  // the second prompt in a two-step flow) — leave it be instead of closing it right back out.
+  if(state._confirmAction || state._promptAction || state._alertInfo){ render(); return; }
+  closeOverlayModal(c._returnTo);
 }
 // A single styled stand-in for the browser's native alert() dialog — openAlertModal(message)
-// or openAlertModal({title, message}).
+// or openAlertModal({title, message}). Always returns to whatever modal was open underneath.
 function openAlertModal(opts){
-  state._alertInfo = typeof opts==='string' ? {message:opts} : opts;
+  const o = typeof opts==='string' ? {message:opts} : opts;
+  state._alertInfo = {...o, _returnTo: resolveReturnTo(o)};
   openModal('alertinfo');
 }
 function alertInfoModal(){
@@ -8193,13 +8288,18 @@ function attachShellHandlers(){
     state.filters.orderArchiveLimit = (state.filters.orderArchiveLimit || ORDER_ARCHIVE_PAGE_SIZE) + ORDER_ARCHIVE_PAGE_SIZE;
     render();
   };
-  if(byIdEl('btn-delete-selected-orders')) byIdEl('btn-delete-selected-orders').onclick = async ()=>{
+  if(byIdEl('btn-delete-selected-orders')) byIdEl('btn-delete-selected-orders').onclick = ()=>{
     const n = state.selectedOrders.size;
-    if(!confirm(`Delete ${n} selected order${n===1?'':'s'}? This cannot be undone.`)) return;
-    state.orders = state.orders.filter(o=>!state.selectedOrders.has(o.id));
-    state.selectedOrders.clear();
-    await save('orders');
-    showToast(`Deleted ${n} order${n===1?'':'s'}`);
+    openConfirmModal({
+      title: 'Delete orders', danger: true, confirmLabel: 'Delete',
+      message: `Delete ${n} selected order${n===1?'':'s'}? This cannot be undone.`,
+      onConfirm: async ()=>{
+        state.orders = state.orders.filter(o=>!state.selectedOrders.has(o.id));
+        state.selectedOrders.clear();
+        await save('orders');
+        showToast(`Deleted ${n} order${n===1?'':'s'}`);
+      },
+    });
   };
   document.querySelectorAll('.card').forEach(c=>{
     if(c.dataset.order) c.addEventListener('click', ()=>openModal('order:'+c.dataset.order));
@@ -8272,30 +8372,40 @@ function attachShellHandlers(){
     openModal('managelines');
   };
   if(byIdEl('btn-add-delivery-line')) byIdEl('btn-add-delivery-line').onclick = ()=>{
-    const name = (prompt('New list name:')||'').trim();
-    if(!name) return;
-    if(state._deliveryLinesDraft.some(l=>l.key===name)){ alert('A list with that name already exists.'); return; }
-    state._deliveryLinesDraft.push({key:name, label:name});
-    render();
+    openPromptModal({
+      title: 'New list', label: 'List name', confirmLabel: 'Add',
+      onSubmit: (value)=>{
+        const name = (value||'').trim();
+        if(!name) return;
+        if(state._deliveryLinesDraft.some(l=>l.key===name)){ openAlertModal({title:"Can't add", message:'A list with that name already exists.', _returnTo:'managelines'}); return; }
+        state._deliveryLinesDraft.push({key:name, label:name});
+      },
+    });
   };
   document.querySelectorAll('[data-edit-delivery-line]').forEach(b=>b.addEventListener('click', ()=>{
     const key = b.dataset.editDeliveryLine;
     const line = state._deliveryLinesDraft.find(l=>l.key===key); if(!line) return;
-    const name = prompt('Rename this list:', line.label);
-    if(name==null) return;
-    const trimmed = name.trim();
-    if(!trimmed) return;
-    line.label = trimmed;
-    render();
+    openPromptModal({
+      title: 'Rename this list', label: 'List name', defaultValue: line.label, confirmLabel: 'Save',
+      onSubmit: (name)=>{
+        const trimmed = (name||'').trim();
+        if(!trimmed) return;
+        line.label = trimmed;
+      },
+    });
   }));
   document.querySelectorAll('[data-delete-delivery-line]').forEach(b=>b.addEventListener('click', ()=>{
     const key = b.dataset.deleteDeliveryLine;
     const line = state._deliveryLinesDraft.find(l=>l.key===key); if(!line) return;
     const inUse = state.orders.filter(o=>(o.courierService||'')===key).length;
-    if(inUse>0){ alert(`Can't delete "${line.label}" — ${inUse} order(s) still use it. Move or complete them first.`); return; }
-    if(!confirm(`Delete "${line.label}"? This cannot be undone.`)) return;
-    state._deliveryLinesDraft = state._deliveryLinesDraft.filter(l=>l.key!==key);
-    render();
+    if(inUse>0){ openAlertModal(`Can't delete "${line.label}" — ${inUse} order(s) still use it. Move or complete them first.`); return; }
+    openConfirmModal({
+      title: 'Delete list', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      message: `Delete "${line.label}"? This cannot be undone.`,
+      onConfirm: ()=>{
+        state._deliveryLinesDraft = state._deliveryLinesDraft.filter(l=>l.key!==key);
+      },
+    });
   }));
   if(byIdEl('btn-save-delivery-lines')) byIdEl('btn-save-delivery-lines').onclick = async ()=>{
     const list = document.querySelector('.nav-order-list[data-nav-group="deliverylines"]');
@@ -8314,30 +8424,40 @@ function attachShellHandlers(){
     openModal('managestaffcategories');
   };
   if(byIdEl('btn-add-staff-category')) byIdEl('btn-add-staff-category').onclick = ()=>{
-    const name = (prompt('New category name:')||'').trim();
-    if(!name) return;
-    if(state._staffCategoriesDraft.some(c=>c.key===name)){ alert('A category with that name already exists.'); return; }
-    state._staffCategoriesDraft.push({key:name, label:name});
-    render();
+    openPromptModal({
+      title: 'New category', label: 'Category name', confirmLabel: 'Add',
+      onSubmit: (value)=>{
+        const name = (value||'').trim();
+        if(!name) return;
+        if(state._staffCategoriesDraft.some(c=>c.key===name)){ openAlertModal({title:"Can't add", message:'A category with that name already exists.', _returnTo:'managestaffcategories'}); return; }
+        state._staffCategoriesDraft.push({key:name, label:name});
+      },
+    });
   };
   document.querySelectorAll('[data-edit-staff-category]').forEach(b=>b.addEventListener('click', ()=>{
     const key = b.dataset.editStaffCategory;
     const cat = state._staffCategoriesDraft.find(c=>c.key===key); if(!cat) return;
-    const name = prompt('Rename this category:', cat.label);
-    if(name==null) return;
-    const trimmed = name.trim();
-    if(!trimmed) return;
-    cat.label = trimmed;
-    render();
+    openPromptModal({
+      title: 'Rename this category', label: 'Category name', defaultValue: cat.label, confirmLabel: 'Save',
+      onSubmit: (name)=>{
+        const trimmed = (name||'').trim();
+        if(!trimmed) return;
+        cat.label = trimmed;
+      },
+    });
   }));
   document.querySelectorAll('[data-delete-staff-category]').forEach(b=>b.addEventListener('click', ()=>{
     const key = b.dataset.deleteStaffCategory;
     const cat = state._staffCategoriesDraft.find(c=>c.key===key); if(!cat) return;
     const inUse = state.staff.filter(s=>s.category===key).length;
-    if(inUse>0){ alert(`Can't delete "${cat.label}" — ${inUse} staff member(s) are in it. Move or remove them first.`); return; }
-    if(!confirm(`Delete "${cat.label}"? This cannot be undone.`)) return;
-    state._staffCategoriesDraft = state._staffCategoriesDraft.filter(c=>c.key!==key);
-    render();
+    if(inUse>0){ openAlertModal(`Can't delete "${cat.label}" — ${inUse} staff member(s) are in it. Move or remove them first.`); return; }
+    openConfirmModal({
+      title: 'Delete category', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      message: `Delete "${cat.label}"? This cannot be undone.`,
+      onConfirm: ()=>{
+        state._staffCategoriesDraft = state._staffCategoriesDraft.filter(c=>c.key!==key);
+      },
+    });
   }));
   if(byIdEl('btn-save-staff-categories')) byIdEl('btn-save-staff-categories').onclick = async ()=>{
     const list = document.querySelector('.nav-order-list[data-nav-group="staffcategories"]');
@@ -8356,34 +8476,44 @@ function attachShellHandlers(){
     openModal('complaintreasons');
   };
   if(byIdEl('btn-add-complaint-reason')) byIdEl('btn-add-complaint-reason').onclick = ()=>{
-    const name = (prompt('New reason:')||'').trim();
-    if(!name) return;
-    if(state._complaintReasonsDraft.includes(name)){ alert('That reason already exists.'); return; }
-    state._complaintReasonsDraft.push(name);
-    render();
+    openPromptModal({
+      title: 'New reason', label: 'Reason', confirmLabel: 'Add',
+      onSubmit: (value)=>{
+        const name = (value||'').trim();
+        if(!name) return;
+        if(state._complaintReasonsDraft.includes(name)){ openAlertModal({title:"Can't add", message:'That reason already exists.', _returnTo:'complaintreasons'}); return; }
+        state._complaintReasonsDraft.push(name);
+      },
+    });
   };
-  document.querySelectorAll('[data-edit-complaint-reason]').forEach(b=>b.addEventListener('click', async ()=>{
+  document.querySelectorAll('[data-edit-complaint-reason]').forEach(b=>b.addEventListener('click', ()=>{
     const oldVal = b.dataset.editComplaintReason;
-    const name = prompt('Rename this reason:', oldVal);
-    if(name==null) return;
-    const trimmed = name.trim();
-    if(!trimmed || trimmed===oldVal) return;
-    if(state._complaintReasonsDraft.includes(trimmed)){ alert('That reason already exists.'); return; }
-    const idx = state._complaintReasonsDraft.indexOf(oldVal);
-    if(idx===-1) return;
-    state._complaintReasonsDraft[idx] = trimmed;
-    let touched = false;
-    state.complaints.forEach(c=>{ if(c.category===oldVal){ c.category = trimmed; touched = true; } });
-    if(touched) await save('complaints');
-    render();
+    openPromptModal({
+      title: 'Rename this reason', label: 'Reason', defaultValue: oldVal, confirmLabel: 'Save',
+      onSubmit: async (name)=>{
+        const trimmed = (name||'').trim();
+        if(!trimmed || trimmed===oldVal) return;
+        if(state._complaintReasonsDraft.includes(trimmed)){ openAlertModal({title:"Can't rename", message:'That reason already exists.', _returnTo:'complaintreasons'}); return; }
+        const idx = state._complaintReasonsDraft.indexOf(oldVal);
+        if(idx===-1) return;
+        state._complaintReasonsDraft[idx] = trimmed;
+        let touched = false;
+        state.complaints.forEach(c=>{ if(c.category===oldVal){ c.category = trimmed; touched = true; } });
+        if(touched) await save('complaints');
+      },
+    });
   }));
   document.querySelectorAll('[data-delete-complaint-reason]').forEach(b=>b.addEventListener('click', ()=>{
     const val = b.dataset.deleteComplaintReason;
     const inUse = state.complaints.filter(c=>c.category===val).length;
-    if(inUse>0){ alert(`Can't delete "${val}" — ${inUse} complaint(s) still use it. Change them to a different reason first.`); return; }
-    if(!confirm(`Delete "${val}"? This cannot be undone.`)) return;
-    state._complaintReasonsDraft = state._complaintReasonsDraft.filter(r=>r!==val);
-    render();
+    if(inUse>0){ openAlertModal(`Can't delete "${val}" — ${inUse} complaint(s) still use it. Change them to a different reason first.`); return; }
+    openConfirmModal({
+      title: 'Delete reason', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      message: `Delete "${val}"? This cannot be undone.`,
+      onConfirm: ()=>{
+        state._complaintReasonsDraft = state._complaintReasonsDraft.filter(r=>r!==val);
+      },
+    });
   }));
   if(byIdEl('btn-save-complaint-reasons')) byIdEl('btn-save-complaint-reasons').onclick = async ()=>{
     const list = document.querySelector('.nav-order-list[data-nav-group="complaintreasons"]');
@@ -8401,34 +8531,44 @@ function attachShellHandlers(){
     openModal('complaintpriorities');
   };
   if(byIdEl('btn-add-complaint-priority')) byIdEl('btn-add-complaint-priority').onclick = ()=>{
-    const name = (prompt('New priority level:')||'').trim();
-    if(!name) return;
-    if(state._complaintPrioritiesDraft.includes(name)){ alert('That priority already exists.'); return; }
-    state._complaintPrioritiesDraft.push(name);
-    render();
+    openPromptModal({
+      title: 'New priority level', label: 'Priority', confirmLabel: 'Add',
+      onSubmit: (value)=>{
+        const name = (value||'').trim();
+        if(!name) return;
+        if(state._complaintPrioritiesDraft.includes(name)){ openAlertModal({title:"Can't add", message:'That priority already exists.', _returnTo:'complaintpriorities'}); return; }
+        state._complaintPrioritiesDraft.push(name);
+      },
+    });
   };
-  document.querySelectorAll('[data-edit-complaint-priority]').forEach(b=>b.addEventListener('click', async ()=>{
+  document.querySelectorAll('[data-edit-complaint-priority]').forEach(b=>b.addEventListener('click', ()=>{
     const oldVal = b.dataset.editComplaintPriority;
-    const name = prompt('Rename this priority level:', oldVal);
-    if(name==null) return;
-    const trimmed = name.trim();
-    if(!trimmed || trimmed===oldVal) return;
-    if(state._complaintPrioritiesDraft.includes(trimmed)){ alert('That priority already exists.'); return; }
-    const idx = state._complaintPrioritiesDraft.indexOf(oldVal);
-    if(idx===-1) return;
-    state._complaintPrioritiesDraft[idx] = trimmed;
-    let touched = false;
-    state.complaints.forEach(c=>{ if(c.priority===oldVal){ c.priority = trimmed; touched = true; } });
-    if(touched) await save('complaints');
-    render();
+    openPromptModal({
+      title: 'Rename this priority level', label: 'Priority', defaultValue: oldVal, confirmLabel: 'Save',
+      onSubmit: async (name)=>{
+        const trimmed = (name||'').trim();
+        if(!trimmed || trimmed===oldVal) return;
+        if(state._complaintPrioritiesDraft.includes(trimmed)){ openAlertModal({title:"Can't rename", message:'That priority already exists.', _returnTo:'complaintpriorities'}); return; }
+        const idx = state._complaintPrioritiesDraft.indexOf(oldVal);
+        if(idx===-1) return;
+        state._complaintPrioritiesDraft[idx] = trimmed;
+        let touched = false;
+        state.complaints.forEach(c=>{ if(c.priority===oldVal){ c.priority = trimmed; touched = true; } });
+        if(touched) await save('complaints');
+      },
+    });
   }));
   document.querySelectorAll('[data-delete-complaint-priority]').forEach(b=>b.addEventListener('click', ()=>{
     const val = b.dataset.deleteComplaintPriority;
     const inUse = state.complaints.filter(c=>c.priority===val).length;
-    if(inUse>0){ alert(`Can't delete "${val}" — ${inUse} complaint(s) still use it. Change them to a different priority first.`); return; }
-    if(!confirm(`Delete "${val}"? This cannot be undone.`)) return;
-    state._complaintPrioritiesDraft = state._complaintPrioritiesDraft.filter(p=>p!==val);
-    render();
+    if(inUse>0){ openAlertModal(`Can't delete "${val}" — ${inUse} complaint(s) still use it. Change them to a different priority first.`); return; }
+    openConfirmModal({
+      title: 'Delete priority', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      message: `Delete "${val}"? This cannot be undone.`,
+      onConfirm: ()=>{
+        state._complaintPrioritiesDraft = state._complaintPrioritiesDraft.filter(p=>p!==val);
+      },
+    });
   }));
   if(byIdEl('btn-save-complaint-priorities')) byIdEl('btn-save-complaint-priorities').onclick = async ()=>{
     const list = document.querySelector('.nav-order-list[data-nav-group="complaintpriorities"]');
@@ -8483,7 +8623,16 @@ function attachShellHandlers(){
   });
   document.querySelectorAll('[data-customer-row]').forEach(r=>r.addEventListener('click', ()=>openModal('customer:'+r.dataset.customerRow)));
   document.querySelectorAll('[data-edit-customer]').forEach(b=>b.addEventListener('click', ()=>openModal('customer:'+b.dataset.editCustomer)));
-  document.querySelectorAll('[data-delete-customer]').forEach(b=>b.addEventListener('click', ()=>{ if(confirm('Delete this customer?')){ state.customers = state.customers.filter(c=>c.id!==b.dataset.deleteCustomer); save('customers').then(render); } }));
+  document.querySelectorAll('[data-delete-customer]').forEach(b=>b.addEventListener('click', ()=>{
+    openConfirmModal({
+      title: 'Delete customer', danger: true, confirmLabel: 'Delete',
+      message: 'Delete this customer?',
+      onConfirm: async ()=>{
+        state.customers = state.customers.filter(c=>c.id!==b.dataset.deleteCustomer);
+        await save('customers');
+      },
+    });
+  }));
   document.querySelectorAll('.customer-select-row').forEach(cb=>cb.addEventListener('change', ()=>{
     if(cb.checked) state.selectedCustomers.add(cb.dataset.customerId); else state.selectedCustomers.delete(cb.dataset.customerId);
     render();
@@ -8501,13 +8650,18 @@ function attachShellHandlers(){
       render();
     });
   }
-  if(byIdEl('btn-delete-selected-customers')) byIdEl('btn-delete-selected-customers').onclick = async ()=>{
+  if(byIdEl('btn-delete-selected-customers')) byIdEl('btn-delete-selected-customers').onclick = ()=>{
     const n = state.selectedCustomers.size;
-    if(!confirm(`Delete ${n} selected customer${n===1?'':'s'}? This cannot be undone.`)) return;
-    state.customers = state.customers.filter(c=>!state.selectedCustomers.has(c.id));
-    state.selectedCustomers.clear();
-    await save('customers');
-    showToast(`Deleted ${n} customer${n===1?'':'s'}`);
+    openConfirmModal({
+      title: 'Delete customers', danger: true, confirmLabel: 'Delete',
+      message: `Delete ${n} selected customer${n===1?'':'s'}? This cannot be undone.`,
+      onConfirm: async ()=>{
+        state.customers = state.customers.filter(c=>!state.selectedCustomers.has(c.id));
+        state.selectedCustomers.clear();
+        await save('customers');
+        showToast(`Deleted ${n} customer${n===1?'':'s'}`);
+      },
+    });
   };
 
   // Customer ratings
@@ -8528,17 +8682,22 @@ function attachShellHandlers(){
       render();
     });
   }
-  if(byIdEl('btn-delete-selected-ratings')) byIdEl('btn-delete-selected-ratings').onclick = async ()=>{
+  if(byIdEl('btn-delete-selected-ratings')) byIdEl('btn-delete-selected-ratings').onclick = ()=>{
     const n = state.selectedRatings.size;
-    if(!confirm(`Delete ${n} selected rating${n===1?'':'s'}? This cannot be undone.`)) return;
-    state.orders.forEach(o=>{
-      if(state.selectedRatings.has(o.id)){
-        delete o.customerRating; delete o.customerRatingAt; delete o.customerRatingFeedback;
-      }
+    openConfirmModal({
+      title: 'Delete ratings', danger: true, confirmLabel: 'Delete',
+      message: `Delete ${n} selected rating${n===1?'':'s'}? This cannot be undone.`,
+      onConfirm: async ()=>{
+        state.orders.forEach(o=>{
+          if(state.selectedRatings.has(o.id)){
+            delete o.customerRating; delete o.customerRatingAt; delete o.customerRatingFeedback;
+          }
+        });
+        state.selectedRatings.clear();
+        await save('orders');
+        showToast(`Deleted ${n} rating${n===1?'':'s'}`);
+      },
     });
-    state.selectedRatings.clear();
-    await save('orders');
-    showToast(`Deleted ${n} rating${n===1?'':'s'}`);
   };
 
   // Suppliers
@@ -8549,7 +8708,16 @@ function attachShellHandlers(){
   if(byIdEl('supplier-search')) byIdEl('supplier-search').addEventListener('input', e=>{ state.filters.supplierSearch = e.target.value; render(); });
   document.querySelectorAll('[data-supplier-row]').forEach(r=>r.addEventListener('click', ()=>openModal('supplier:'+r.dataset.supplierRow)));
   document.querySelectorAll('[data-edit-supplier]').forEach(b=>b.addEventListener('click', ()=>openModal('supplier:'+b.dataset.editSupplier)));
-  document.querySelectorAll('[data-delete-supplier]').forEach(b=>b.addEventListener('click', ()=>{ if(confirm('Delete this supplier?')){ state.suppliers = state.suppliers.filter(s=>s.id!==b.dataset.deleteSupplier); save('suppliers').then(render); } }));
+  document.querySelectorAll('[data-delete-supplier]').forEach(b=>b.addEventListener('click', ()=>{
+    openConfirmModal({
+      title: 'Delete supplier', danger: true, confirmLabel: 'Delete',
+      message: 'Delete this supplier?',
+      onConfirm: async ()=>{
+        state.suppliers = state.suppliers.filter(s=>s.id!==b.dataset.deleteSupplier);
+        await save('suppliers');
+      },
+    });
+  }));
   document.querySelectorAll('.supplier-select-row').forEach(cb=>cb.addEventListener('change', ()=>{
     if(cb.checked) state.selectedSuppliers.add(cb.dataset.supplierId); else state.selectedSuppliers.delete(cb.dataset.supplierId);
     render();
@@ -8567,13 +8735,18 @@ function attachShellHandlers(){
       render();
     });
   }
-  if(byIdEl('btn-delete-selected-suppliers')) byIdEl('btn-delete-selected-suppliers').onclick = async ()=>{
+  if(byIdEl('btn-delete-selected-suppliers')) byIdEl('btn-delete-selected-suppliers').onclick = ()=>{
     const n = state.selectedSuppliers.size;
-    if(!confirm(`Delete ${n} selected supplier${n===1?'':'s'}? This cannot be undone.`)) return;
-    state.suppliers = state.suppliers.filter(s=>!state.selectedSuppliers.has(s.id));
-    state.selectedSuppliers.clear();
-    await save('suppliers');
-    showToast(`Deleted ${n} supplier${n===1?'':'s'}`);
+    openConfirmModal({
+      title: 'Delete suppliers', danger: true, confirmLabel: 'Delete',
+      message: `Delete ${n} selected supplier${n===1?'':'s'}? This cannot be undone.`,
+      onConfirm: async ()=>{
+        state.suppliers = state.suppliers.filter(s=>!state.selectedSuppliers.has(s.id));
+        state.selectedSuppliers.clear();
+        await save('suppliers');
+        showToast(`Deleted ${n} supplier${n===1?'':'s'}`);
+      },
+    });
   };
 
   // Complaints
@@ -8614,22 +8787,32 @@ function attachShellHandlers(){
       render();
     });
   }
-  if(byIdEl('btn-delete-selected-complaints')) byIdEl('btn-delete-selected-complaints').onclick = async ()=>{
+  if(byIdEl('btn-delete-selected-complaints')) byIdEl('btn-delete-selected-complaints').onclick = ()=>{
     const n = state.selectedComplaints.size;
-    if(!confirm(`Delete ${n} selected complaint${n===1?'':'s'}? This cannot be undone.`)) return;
-    state.complaints = state.complaints.filter(c=>!state.selectedComplaints.has(c.id));
-    state.selectedComplaints.clear();
-    await save('complaints');
-    showToast(`Deleted ${n} complaint${n===1?'':'s'}`);
+    openConfirmModal({
+      title: 'Delete complaints', danger: true, confirmLabel: 'Delete',
+      message: `Delete ${n} selected complaint${n===1?'':'s'}? This cannot be undone.`,
+      onConfirm: async ()=>{
+        state.complaints = state.complaints.filter(c=>!state.selectedComplaints.has(c.id));
+        state.selectedComplaints.clear();
+        await save('complaints');
+        showToast(`Deleted ${n} complaint${n===1?'':'s'}`);
+      },
+    });
   };
   document.querySelectorAll('[data-complaints-view]').forEach(b=>b.addEventListener('click', ()=>{ state.complaintsView = b.dataset.complaintsView; state.selectedComplaints.clear(); render(); }));
-  if(byIdEl('btn-reset-complaints-archive')) byIdEl('btn-reset-complaints-archive').onclick = async ()=>{
+  if(byIdEl('btn-reset-complaints-archive')) byIdEl('btn-reset-complaints-archive').onclick = ()=>{
     if(!isAdmin()) return;
     const n = archivedComplaints().length;
-    if(!confirm(`Reset the archive? This permanently deletes ${n} archived complaint${n===1?'':'s'} and cannot be undone.`)) return;
-    state.complaints = state.complaints.filter(c=>!c.archived);
-    await save('complaints');
-    showToast('Archive reset');
+    openConfirmModal({
+      title: 'Reset archive', danger: true, confirmLabel: 'Reset archive',
+      message: `Reset the archive? This permanently deletes ${n} archived complaint${n===1?'':'s'} and cannot be undone.`,
+      onConfirm: async ()=>{
+        state.complaints = state.complaints.filter(c=>!c.archived);
+        await save('complaints');
+        showToast('Archive reset');
+      },
+    });
   };
   // GMP Checklists
   document.querySelectorAll('[data-checklist-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpChecklistId = b.dataset.checklistSelect; render(); }));
@@ -8674,8 +8857,8 @@ function attachShellHandlers(){
     const btn = byIdEl('btn-sign-pad-save');
     const canvas = byIdEl('sign-pad-canvas');
     const name = (byIdEl('sign-pad-name').value||'').trim();
-    if(!name){ alert('Please enter who is signing.'); return; }
-    if(!canvas || !canvas.dataset.hasDrawing){ alert('Please draw a signature first.'); return; }
+    if(!name){ openAlertModal('Please enter who is signing.'); return; }
+    if(!canvas || !canvas.dataset.hasDrawing){ openAlertModal('Please draw a signature first.'); return; }
     const [checklistId, y, m, day, fieldKey] = btn.dataset.signTarget.split('|');
     const dataUrl = canvas.toDataURL('image/png');
     await updateGmpChecklistSignOff(checklistId, Number(y), Number(m), fieldKey, Number(day), {name, dataUrl, signedAt:new Date().toISOString()});
@@ -9015,11 +9198,19 @@ function attachShellHandlers(){
     showToast('Saved as "'+name+'"');
   });
   if(byIdEl('btn-confirm-action')) byIdEl('btn-confirm-action').onclick = runConfirmedAction;
+  if(byIdEl('btn-cancel-confirm-action')) byIdEl('btn-cancel-confirm-action').onclick = ()=>{
+    closeOverlayModal(state._confirmAction && state._confirmAction._returnTo);
+  };
   if(byIdEl('form-prompt-action')) byIdEl('form-prompt-action').addEventListener('submit', async (e)=>{
     e.preventDefault();
     await runPromptAction(e.target.value.value);
   });
-  if(byIdEl('btn-alert-ok')) byIdEl('btn-alert-ok').onclick = closeModal;
+  if(byIdEl('btn-cancel-prompt-action')) byIdEl('btn-cancel-prompt-action').onclick = ()=>{
+    closeOverlayModal(state._promptAction && state._promptAction._returnTo);
+  };
+  if(byIdEl('btn-alert-ok')) byIdEl('btn-alert-ok').onclick = ()=>{
+    closeOverlayModal(state._alertInfo && state._alertInfo._returnTo);
+  };
   document.querySelectorAll('[data-remove-supplier-tag]').forEach(b=>b.addEventListener('click', ()=>{
     costingRemoveSupplierTag(b.dataset.removeSupplierTag, Number(b.dataset.idx));
   }));
@@ -9244,26 +9435,41 @@ function attachShellHandlers(){
     await saveAuth();
     showToast('Logins updated');
   });
-  document.querySelectorAll('[data-add-login]').forEach(b=>b.addEventListener('click', async ()=>{
+  document.querySelectorAll('[data-add-login]').forEach(b=>b.addEventListener('click', ()=>{
     const role = b.dataset.addLogin;
-    const name = (prompt('Name for the new '+role+' login:')||'').trim();
-    if(!name) return;
-    const password = (prompt('Temporary password for '+name+' — they can change it themselves after logging in:')||'').trim();
-    if(!password) return;
-    const hashed = await sha256Hex(password);
-    state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: [...(state.auth.roleLogins[role]||[]), {name, password: hashed}]}};
-    await saveAuth();
-    showToast(name+' added');
+    openPromptModal({
+      title: 'New '+role+' login', label: 'Name', confirmLabel: 'Next',
+      onSubmit: (nameValue)=>{
+        const name = (nameValue||'').trim();
+        if(!name) return;
+        openPromptModal({
+          title: 'Temporary password', sub: name+' can change it themselves after logging in.', label: 'Password', confirmLabel: 'Add login',
+          onSubmit: async (passwordValue)=>{
+            const password = (passwordValue||'').trim();
+            if(!password) return;
+            const hashed = await sha256Hex(password);
+            state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: [...(state.auth.roleLogins[role]||[]), {name, password: hashed}]}};
+            await saveAuth();
+            showToast(name+' added');
+          },
+        });
+      },
+    });
   }));
-  document.querySelectorAll('[data-remove-login]').forEach(b=>b.addEventListener('click', async ()=>{
+  document.querySelectorAll('[data-remove-login]').forEach(b=>b.addEventListener('click', ()=>{
     const [role, idxStr] = b.dataset.removeLogin.split('|');
     const idx = Number(idxStr);
     const entries = state.auth.roleLogins[role]||[];
     const target = entries[idx];
-    if(!confirm(`Remove ${target?target.name:'this'} login?`)) return;
-    state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: entries.filter((_,i)=>i!==idx)}};
-    await saveAuth();
-    showToast('Login removed');
+    openConfirmModal({
+      title: 'Remove login', danger: true, confirmLabel: 'Remove',
+      message: `Remove ${target?target.name:'this'} login?`,
+      onConfirm: async ()=>{
+        state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: entries.filter((_,i)=>i!==idx)}};
+        await saveAuth();
+        showToast('Login removed');
+      },
+    });
   }));
 
   if(byIdEl('form-role-pages')) byIdEl('form-role-pages').addEventListener('submit', async (e)=>{

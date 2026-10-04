@@ -2169,9 +2169,9 @@ async function confirmLogin(){
   const logins = state.auth.roleLogins && state.auth.roleLogins[role];
   let sessionName = role;
   if(logins && logins.length){
-    const nameSelect = document.getElementById('login-name');
-    const chosenName = nameSelect ? nameSelect.value : '';
-    const match = logins.find(l=>l.name===chosenName);
+    const nameInput = document.getElementById('login-name');
+    const typedName = (nameInput ? nameInput.value : '').trim();
+    const match = logins.find(l=>l.name.toLowerCase()===typedName.toLowerCase());
     const ok = match && await passwordMatches(password, match.password);
     if(!ok){
       if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
@@ -3747,9 +3747,8 @@ function renderLogin(){
         ${logins && logins.length ? `
         <div class="field">
           <label>Name</label>
-          <select id="login-name">
-            ${logins.map(l=>`<option value="${escAttr(l.name)}">${esc(l.name)}</option>`).join('')}
-          </select>
+          <input id="login-name" type="text" placeholder="Type your name" autocomplete="off" autocapitalize="words">
+          <div class="hint">${logins.map(l=>esc(l.name)).join(', ')}</div>
         </div>` : ''}
         <div class="field">
           <label>Password</label>

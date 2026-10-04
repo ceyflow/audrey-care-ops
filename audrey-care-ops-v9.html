@@ -1809,6 +1809,7 @@ let state = {
   sidebarOpen: false,
   ordersView: 'kanban',
   selectedCustomers: new Set(),
+  selectedSuppliers: new Set(),
   selectedOrders: new Set(),
   bulkSmsCustomers: new Set(),
   bulkSmsProgress: null,
@@ -2892,55 +2893,56 @@ async function deleteSupplier(id){
   state.suppliers = state.suppliers.filter(s=>s.id!==id);
   await save('suppliers'); closeModal();
 }
-// Parses CSV text into an array of row arrays, handling quoted fields that contain
-// commas or newlines — supplier addresses commonly do.
-function parseCsv(text){
-  const rows = []; let row = []; let field = ''; let inQuotes = false;
-  for(let i=0; i<text.length; i++){
-    const c = text[i];
-    if(inQuotes){
-      if(c === '"'){
-        if(text[i+1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
-      } else field += c;
-    } else if(c === '"'){
-      inQuotes = true;
-    } else if(c === ','){
-      row.push(field); field = '';
-    } else if(c === '\n' || c === '\r'){
-      if(c === '\r' && text[i+1] === '\n') i++;
-      row.push(field); field = ''; rows.push(row); row = [];
-    } else field += c;
-  }
-  if(field !== '' || row.length){ row.push(field); rows.push(row); }
-  return rows.filter(r => r.some(f => f.trim() !== ''));
-}
 async function importSuppliersCsv(file){
   const text = await file.text();
-  const rows = parseCsv(text);
-  if(rows.length < 2){ showToast('CSV has no data rows'); return; }
-  const header = rows[0].map(h => h.trim().toLowerCase());
-  const col = name => header.indexOf(name);
-  const idx = { name: col('name'), contact: col('contact'), phone: col('phone'), email: col('email'), address: col('address'), status: col('status') };
-  if(idx.name === -1){ showToast('CSV needs a "Name" column'); return; }
-  let added = 0, skipped = 0;
-  rows.slice(1).forEach(r => {
-    const name = (r[idx.name]||'').trim();
+  const rows = parseCsvText(text).filter(r=>r.some(cell=>cell.trim()!==''));
+  if(rows.length===0){ showToast('That file has no rows to import'); return; }
+  const header = rows[0].map(h=>h.trim().toLowerCase());
+  const findCol = names => header.findIndex(h=>names.includes(h));
+  const nameIdx = findCol(['name','supplier name','company']);
+  const contactIdx = findCol(['contact','contact person']);
+  const phoneIdx = findCol(['phone','mobile','phone number','contact number']);
+  const emailIdx = findCol(['email','email address']);
+  const addressIdx = findCol(['address','addr']);
+  const statusIdx = findCol(['status']);
+  const dataRows = nameIdx===-1 ? rows : rows.slice(1);
+  const cols = nameIdx===-1
+    ? {name:0, contact:1, phone:2, email:3, address:4, status:5}
+    : {name:nameIdx, contact:contactIdx, phone:phoneIdx, email:emailIdx, address:addressIdx, status:statusIdx};
+  const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
+  // Skip rows that match a supplier already in the list, so re-importing the same file
+  // (or an overlapping one) never creates duplicates.
+  const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const normPhone = s => String(s||'').replace(/\D/g,'');
+  const existingNames = new Set(state.suppliers.map(s=>normName(s.name)));
+  const existingPhones = new Set(state.suppliers.map(s=>normPhone(s.phone)).filter(Boolean));
+  let added = 0, skipped = 0, duplicates = 0;
+  dataRows.forEach(r=>{
+    const name = cell(r, cols.name);
     if(!name){ skipped++; return; }
-    const status = idx.status!==-1 ? (r[idx.status]||'').trim() : '';
+    const phone = cell(r, cols.phone);
+    const nName = normName(name), nPhone = normPhone(phone);
+    if(existingNames.has(nName) || (nPhone && existingPhones.has(nPhone))){
+      duplicates++;
+      return;
+    }
+    const status = cell(r, cols.status);
     state.suppliers.unshift({
-      id: uid('SUP'), name,
-      contact: idx.contact!==-1 ? (r[idx.contact]||'').trim() : '',
-      phone: idx.phone!==-1 ? (r[idx.phone]||'').trim() : '',
-      email: idx.email!==-1 ? (r[idx.email]||'').trim() : '',
-      address: idx.address!==-1 ? (r[idx.address]||'').trim() : '',
+      id: uid('SUP'), name, contact: cell(r, cols.contact), phone,
+      email: cell(r, cols.email), address: cell(r, cols.address),
       status: status==='Inactive' ? 'Inactive' : 'Active',
       createdAt: new Date().toISOString(),
     });
+    existingNames.add(nName);
+    if(nPhone) existingPhones.add(nPhone);
     added++;
   });
   if(added>0) await save('suppliers');
-  showToast(`Imported ${added} supplier${added===1?'':'s'}${skipped?`, skipped ${skipped} row${skipped===1?'':'s'} without a name`:''}`);
   render();
+  const notes = [];
+  if(duplicates) notes.push(`skipped ${duplicates} already in your list`);
+  if(skipped) notes.push(`skipped ${skipped} with no name`);
+  showToast(`Imported ${added} supplier${added===1?'':'s'}${notes.length?`, ${notes.join(', ')}`:''}`);
 }
 
 /* ===================== Complaints ===================== */
@@ -4561,17 +4563,28 @@ function renderSuppliersPage(){
   <div class="toolbar">
     <input class="search-input" id="supplier-search" placeholder="Search by name or phone…" value="${esc(state.filters.supplierSearch)}">
     ${isAdmin() ? `
-    <label class="btn" for="supplier-csv-input" style="cursor:pointer;">Import CSV</label>
-    <input type="file" id="supplier-csv-input" accept=".csv,text/csv" style="display:none;">
-    <button class="btn btn-primary" id="btn-new-supplier">+ Add supplier</button>` : ''}
+    <div style="display:flex;gap:8px;align-items:center;">
+      ${state.selectedSuppliers.size>0 ? `
+      <span class="hint">${state.selectedSuppliers.size} selected</span>
+      <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-suppliers">Delete selected</button>
+      ` : ''}
+      <label class="btn" style="cursor:pointer;">⬆ Import CSV
+        <input type="file" id="supplier-csv-input" accept=".csv,text/csv" style="display:none;">
+      </label>
+      <button class="btn btn-primary" id="btn-new-supplier">+ Add supplier</button>
+    </div>` : ''}
   </div>
   <div class="panel">
     ${rows.length===0 ? `<div class="empty-state">No suppliers ${q?'match your search':'yet'}.</div>` : `
     <table class="data-table">
-      <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}</tr></thead>
+      <thead><tr>
+        ${isAdmin()?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
+        <th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}
+      </tr></thead>
       <tbody>
         ${rows.map(s=>`
         <tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`data-supplier-row="${s.id}"`:''}>
+          ${isAdmin()?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
           <td>${esc(s.name)}</td><td>${esc(s.contact)||'—'}</td><td>${esc(s.phone)||'—'}</td>
           <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></td>
           <td>${fmtDate(s.createdAt)}</td>
@@ -7635,6 +7648,31 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-supplier-row]').forEach(r=>r.addEventListener('click', ()=>openModal('supplier:'+r.dataset.supplierRow)));
   document.querySelectorAll('[data-edit-supplier]').forEach(b=>b.addEventListener('click', ()=>openModal('supplier:'+b.dataset.editSupplier)));
   document.querySelectorAll('[data-delete-supplier]').forEach(b=>b.addEventListener('click', ()=>{ if(confirm('Delete this supplier?')){ state.suppliers = state.suppliers.filter(s=>s.id!==b.dataset.deleteSupplier); save('suppliers').then(render); } }));
+  document.querySelectorAll('.supplier-select-row').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(cb.checked) state.selectedSuppliers.add(cb.dataset.supplierId); else state.selectedSuppliers.delete(cb.dataset.supplierId);
+    render();
+  }));
+  if(byIdEl('supplier-select-all')){
+    const rowBoxes = [...document.querySelectorAll('.supplier-select-row')];
+    const selectAllBox = byIdEl('supplier-select-all');
+    selectAllBox.checked = rowBoxes.length>0 && rowBoxes.every(cb=>cb.checked);
+    selectAllBox.indeterminate = rowBoxes.some(cb=>cb.checked) && !selectAllBox.checked;
+    selectAllBox.addEventListener('change', ()=>{
+      rowBoxes.forEach(cb=>{
+        if(selectAllBox.checked) state.selectedSuppliers.add(cb.dataset.supplierId);
+        else state.selectedSuppliers.delete(cb.dataset.supplierId);
+      });
+      render();
+    });
+  }
+  if(byIdEl('btn-delete-selected-suppliers')) byIdEl('btn-delete-selected-suppliers').onclick = async ()=>{
+    const n = state.selectedSuppliers.size;
+    if(!confirm(`Delete ${n} selected supplier${n===1?'':'s'}? This cannot be undone.`)) return;
+    state.suppliers = state.suppliers.filter(s=>!state.selectedSuppliers.has(s.id));
+    state.selectedSuppliers.clear();
+    await save('suppliers');
+    showToast(`Deleted ${n} supplier${n===1?'':'s'}`);
+  };
 
   // Complaints
   if(byIdEl('btn-new-complaint')) byIdEl('btn-new-complaint').onclick = ()=>openModal('complaint:new');

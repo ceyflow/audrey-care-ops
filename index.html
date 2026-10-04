@@ -2910,6 +2910,13 @@ async function importSuppliersCsv(file){
   const cols = nameIdx===-1
     ? {name:0, vendorId:-1, contact:1, phone:2, email:3, address:4, status:5}
     : {name:nameIdx, vendorId:vendorIdIdx, contact:contactIdx, phone:phoneIdx, email:emailIdx, address:addressIdx, status:statusIdx};
+  // Some of these files have no column actually headed "Vendor ID" — the vendor ID
+  // instead sits under whatever's headed "Contact"/"Contact Person". When there's no
+  // dedicated Vendor ID column, treat the Contact column's value as the vendor ID.
+  if(cols.vendorId===-1 && cols.contact!==-1){
+    cols.vendorId = cols.contact;
+    cols.contact = -1;
+  }
   const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
   // Skip rows that match a supplier already in the list, so re-importing the same file
   // (or an overlapping one) never creates duplicates.

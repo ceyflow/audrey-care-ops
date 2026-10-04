@@ -2876,7 +2876,7 @@ async function submitSupplier(e){
   e.preventDefault();
   const f = e.target; const editId = f.dataset.editId;
   const data = {
-    name: f.name.value.trim(), contact: f.contact.value.trim(), phone: f.phone.value.trim(),
+    name: f.name.value.trim(), vendorId: f.vendorId.value.trim(), contact: f.contact.value.trim(), phone: f.phone.value.trim(),
     email: f.email.value.trim(), address: f.address.value.trim(), status: f.status.value
   };
   if(!data.name) return;
@@ -2899,7 +2899,8 @@ async function importSuppliersCsv(file){
   if(rows.length===0){ showToast('That file has no rows to import'); return; }
   const header = rows[0].map(h=>h.trim().toLowerCase());
   const findCol = names => header.findIndex(h=>names.includes(h));
-  const nameIdx = findCol(['name','supplier name','company']);
+  const nameIdx = findCol(['name','supplier name','company','vendor name','vendor','supplier']);
+  const vendorIdIdx = findCol(['vendor id','vendorid','vendor code','vendorcode','vendor no','vendor number','supplier id','sup id','supplier code','id','code']);
   const contactIdx = findCol(['contact','contact person']);
   const phoneIdx = findCol(['phone','mobile','phone number','contact number']);
   const emailIdx = findCol(['email','email address']);
@@ -2907,8 +2908,8 @@ async function importSuppliersCsv(file){
   const statusIdx = findCol(['status']);
   const dataRows = nameIdx===-1 ? rows : rows.slice(1);
   const cols = nameIdx===-1
-    ? {name:0, contact:1, phone:2, email:3, address:4, status:5}
-    : {name:nameIdx, contact:contactIdx, phone:phoneIdx, email:emailIdx, address:addressIdx, status:statusIdx};
+    ? {name:0, vendorId:-1, contact:1, phone:2, email:3, address:4, status:5}
+    : {name:nameIdx, vendorId:vendorIdIdx, contact:contactIdx, phone:phoneIdx, email:emailIdx, address:addressIdx, status:statusIdx};
   const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
   // Skip rows that match a supplier already in the list, so re-importing the same file
   // (or an overlapping one) never creates duplicates.
@@ -2916,25 +2917,28 @@ async function importSuppliersCsv(file){
   const normPhone = s => String(s||'').replace(/\D/g,'');
   const existingNames = new Set(state.suppliers.map(s=>normName(s.name)));
   const existingPhones = new Set(state.suppliers.map(s=>normPhone(s.phone)).filter(Boolean));
+  const existingVendorIds = new Set(state.suppliers.map(s=>normName(s.vendorId)).filter(Boolean));
   let added = 0, skipped = 0, duplicates = 0;
   dataRows.forEach(r=>{
     const name = cell(r, cols.name);
     if(!name){ skipped++; return; }
     const phone = cell(r, cols.phone);
-    const nName = normName(name), nPhone = normPhone(phone);
-    if(existingNames.has(nName) || (nPhone && existingPhones.has(nPhone))){
+    const vendorId = cell(r, cols.vendorId);
+    const nName = normName(name), nPhone = normPhone(phone), nVendorId = normName(vendorId);
+    if(existingNames.has(nName) || (nPhone && existingPhones.has(nPhone)) || (nVendorId && existingVendorIds.has(nVendorId))){
       duplicates++;
       return;
     }
     const status = cell(r, cols.status);
     state.suppliers.unshift({
-      id: uid('SUP'), name, contact: cell(r, cols.contact), phone,
+      id: uid('SUP'), name, vendorId, contact: cell(r, cols.contact), phone,
       email: cell(r, cols.email), address: cell(r, cols.address),
       status: status==='Inactive' ? 'Inactive' : 'Active',
       createdAt: new Date().toISOString(),
     });
     existingNames.add(nName);
     if(nPhone) existingPhones.add(nPhone);
+    if(nVendorId) existingVendorIds.add(nVendorId);
     added++;
   });
   if(added>0) await save('suppliers');
@@ -4552,7 +4556,7 @@ function renderCustomersPage(){
 /* ===================== Suppliers page ===================== */
 function renderSuppliersPage(){
   const q = state.filters.supplierSearch.toLowerCase();
-  const rows = state.suppliers.filter(s => !q || s.name.toLowerCase().includes(q) || (s.phone||'').includes(q));
+  const rows = state.suppliers.filter(s => !q || s.name.toLowerCase().includes(q) || (s.vendorId||'').toLowerCase().includes(q) || (s.phone||'').includes(q));
   const active = state.suppliers.filter(s=>s.status==='Active').length;
   return `
   <div class="stat-grid">
@@ -4561,7 +4565,7 @@ function renderSuppliersPage(){
     <div class="stat-card"><div class="label">Inactive</div><div class="value">${state.suppliers.length-active}</div></div>
   </div>
   <div class="toolbar">
-    <input class="search-input" id="supplier-search" placeholder="Search by name or phone…" value="${esc(state.filters.supplierSearch)}">
+    <input class="search-input" id="supplier-search" placeholder="Search by name or vendor ID…" value="${esc(state.filters.supplierSearch)}">
     ${isAdmin() ? `
     <div style="display:flex;gap:8px;align-items:center;">
       ${state.selectedSuppliers.size>0 ? `
@@ -4579,13 +4583,13 @@ function renderSuppliersPage(){
     <table class="data-table">
       <thead><tr>
         ${isAdmin()?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
-        <th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}
+        <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
         ${rows.map(s=>`
         <tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`data-supplier-row="${s.id}"`:''}>
           ${isAdmin()?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
-          <td>${esc(s.name)}</td><td>${esc(s.contact)||'—'}</td><td>${esc(s.phone)||'—'}</td>
+          <td>${esc(s.name)}</td><td>${esc(s.vendorId)||'—'}</td>
           <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></td>
           <td>${fmtDate(s.createdAt)}</td>
           ${isAdmin()?`<td class="row-actions" onclick="event.stopPropagation()">
@@ -6928,7 +6932,10 @@ function supplierFormModal(id){
       <h2>${s?'Edit supplier':'Add supplier'}</h2>
       <div class="sub">${s?'Update this supplier\u2019s details.':'Adds a new supplier record.'}</div>
       <form id="form-supplier" data-edit-id="${s?s.id:''}">
-        <div class="field"><label>Supplier name</label><input name="name" required value="${s?esc(s.name):''}"></div>
+        <div class="field-row">
+          <div class="field"><label>Supplier name</label><input name="name" required value="${s?esc(s.name):''}"></div>
+          <div class="field"><label>Vendor ID</label><input name="vendorId" placeholder="e.g. VD00086" value="${s?esc(s.vendorId):''}"></div>
+        </div>
         <div class="field-row">
           <div class="field"><label>Contact person</label><input name="contact" value="${s?esc(s.contact):''}"></div>
           <div class="field"><label>Phone</label><input name="phone" value="${s?esc(s.phone):''}"></div>

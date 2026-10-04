@@ -6461,9 +6461,10 @@ function renderCostingProductSheet(product, version){
         <tr class="cst-foot-row cst-foot-row-highlight">
           <td></td><td>Per Can Cost (5L)</td><td></td><td></td><td></td>
           ${sizes.map(sz=>{
-            const col = batchColors[sz] || null;
-            const cellStyle = col ? ` style="background:${col}33;"` : '';
-            return `<td class="cst-group-start"${cellStyle}></td><td id="cst-percan-${sz}"${cellStyle}>Rs. ${costingPerCanCost(draft, sz).toFixed(2)}</td>`;
+            // Always the solid highlight here, regardless of batchColors — this row is the
+            // key headline figure, and a pale per-size tint under the white highlight text
+            // (from the .cst-foot-row-highlight class) would make it unreadable.
+            return `<td class="cst-group-start"></td><td id="cst-percan-${sz}">Rs. ${costingPerCanCost(draft, sz).toFixed(2)}</td>`;
           }).join('')}
           ${admin?'<td></td>':''}
         </tr>

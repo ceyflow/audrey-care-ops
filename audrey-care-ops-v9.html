@@ -285,12 +285,15 @@
   .day-task-status{font-weight:700;padding:4px 10px;border-radius:999px;font-size:11.5px;flex-shrink:0;}
   .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;}
   .chip{display:inline-block;font-size:12px;font-weight:500;padding:5px 12px;border-radius:999px;background:var(--bg);border:1px solid var(--border);color:var(--ink);}
-  .cst-supplier-box{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:28px;}
-  .supplier-tag{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 5px 2px 2px;font-size:12px;white-space:nowrap;color:var(--ink);}
-  .supplier-tag .tag-avatar{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;}
+  .cst-supplier-box{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:20px;}
+  .supplier-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 4px 1px 2px;font-size:11.5px;white-space:nowrap;color:var(--ink);}
+  .supplier-tag .tag-avatar{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0;}
   .supplier-tag .tag-remove{border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;padding:0 1px;}
   .supplier-tag .tag-remove:hover{color:var(--ink);}
-  .cst-supplier-input{border:none;outline:none;background:transparent;font:inherit;flex:1;min-width:60px;padding:4px 2px;color:var(--ink);}
+  .cst-supplier-input{border:none;outline:none;background:transparent;font:inherit;flex:1;min-width:50px;padding:2px 2px;color:var(--ink);}
+  .row-color-dot{width:16px;height:16px;border-radius:50%;border:none;padding:0;cursor:pointer;flex-shrink:0;}
+  .row-color-trigger{width:15px;height:15px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;padding:0;cursor:pointer;}
+  .row-color-trigger:hover{border-color:var(--muted);}
   .pill-active{background:var(--accent-soft);color:var(--accent-dark);}
   .pill-inactive{background:#F0F0EE;color:var(--muted);}
   .pill-open{background:var(--clay-soft);color:var(--clay);}
@@ -1749,6 +1752,12 @@ const ICONS = {
   gmp:'<path d="M8 3.5h8a1 1 0 0 1 1 1V4.5h1.5A1.5 1.5 0 0 1 20 6v14a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 20V6a1.5 1.5 0 0 1 1.5-1.5H7V4.5a1 1 0 0 1 1-1z"/><path d="M8.5 3h7v3h-7z"/><path d="M7.5 12l2.7 2.7L16.5 9"/>',
   flask:'<path d="M9 2h6"/><path d="M10 2v6.3L4.8 17a2.2 2.2 0 0 0 1.9 3.3h10.6a2.2 2.2 0 0 0 1.9-3.3L14 8.3V2"/><path d="M7.5 14.5h9"/>',
   bottle:'<rect x="9.5" y="2" width="5" height="3" rx="1"/><path d="M10 5v3.3L7.8 10.6A2 2 0 0 0 7 12.1V19a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-6.9a2 2 0 0 0-.8-1.5L14 8.3V5"/><path d="M7.3 15h9.4"/>',
+  shampoo:'<rect x="9.5" y="2.2" width="5" height="2.3" rx="1"/><path d="M10 4.5v2.7L7.8 9.8A2 2 0 0 0 7 11.3V19a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-7.7a2 2 0 0 0-.8-1.5L14 7.2V4.5"/><path d="M14 5.6h2.3"/><path d="M16.3 5.6v1.4"/><path d="M7.3 14.5h9.4"/>',
+  showergel:'<path d="M6.5 9h11"/><path d="M8 9a4 4 0 0 1 8 0"/><path d="M8.3 12.3v1.4"/><path d="M12 12.3v2.1"/><path d="M15.7 12.3v1.4"/><path d="M9.3 17.3v1.4"/><path d="M14.7 17.3v1.4"/>',
+  conditioner:'<path d="M7 4c3 2 3 4 0 6s-3 4 0 6"/><path d="M11.3 4c3 2 3 4 0 6s-3 4 0 6"/><path d="M15.6 4c3 2 3 4 0 6s-3 4 0 6"/>',
+  bodylotion:'<rect x="3.5" y="2.3" width="4.4" height="2.3" rx="1"/><path d="M4 4.6v2.7L2.1 9.7A1.9 1.9 0 0 0 1.5 11v7.1a1.9 1.9 0 0 0 1.9 1.9h3.8a1.9 1.9 0 0 0 1.9-1.9V11a1.9 1.9 0 0 0-.6-1.4L6.2 7.3V4.6"/><path d="M13 13.8c1.3-1.4 2.9-1.4 3.6 0s2.3 1.4 3.6 0"/><path d="M14.2 17.6c1-1 2-1 3 0s2 1 3 0"/>',
+  handwash:'<path d="M5.5 8.5h8a3 3 0 0 1 3 3v1"/><circle cx="5.5" cy="8.5" r="1.4"/><path d="M16.5 14v1.3"/><path d="M14.7 20.3a1.8 1.8 0 0 0 3.6 0c0-1.4-1.8-3.5-1.8-3.5s-1.8 2.1-1.8 3.5z"/>',
+  bubblebath:'<circle cx="8" cy="14" r="2.8"/><circle cx="14.5" cy="11.3" r="3.8"/><circle cx="17.2" cy="17" r="2"/><circle cx="6.8" cy="19" r="1.3"/>',
   blender:'<path d="M10 3h4"/><path d="M10.5 3v5.3L5.9 16.9a2.3 2.3 0 0 0 2 3.4h8.2a2.3 2.3 0 0 0 2-3.4L13.5 8.3V3"/><path d="M8.3 14.2h7.4"/>',
   bot:'<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none"/><path d="M9 17.5h6"/><path d="M2 12v3"/><path d="M22 12v3"/>',
   send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/>',
@@ -6146,6 +6155,19 @@ function renderCostingPage(){
   };
   return renderCostingProductSheet(product, version);
 }
+// Picks an icon by keyword match on the product name, so the 6 default products each get
+// a distinct, relevant glyph instead of one generic bottle — falls back to a plain bottle for
+// any custom product name that doesn't match a known category.
+function costingProductIcon(name){
+  const n = (name||'').toLowerCase();
+  if(n.includes('shampoo')) return 'shampoo';
+  if(n.includes('condition')) return 'conditioner';
+  if(n.includes('lotion')) return 'bodylotion';
+  if(n.includes('bubble')) return 'bubblebath';
+  if(n.includes('hand') && n.includes('wash')) return 'handwash';
+  if(n.includes('shower') || n.includes('gel')) return 'showergel';
+  return 'bottle';
+}
 function renderCostingProductGrid(){
   const admin = isAdmin();
   const products = state.costingProducts;
@@ -6161,7 +6183,7 @@ function renderCostingProductGrid(){
       const verCount = (p.versions||[]).length;
       return `
       <div class="recipe-card clickable-card" data-open-costing-product="${p.id}" style="cursor:pointer;">
-        <div class="rc-icon-badge">${icon('bottle')}</div>
+        <div class="rc-icon-badge">${icon(costingProductIcon(p.name))}</div>
         <div class="rc-title">${esc(p.name)}</div>
         <div class="rc-meta">${verCount} version${verCount===1?'':'s'}</div>
         ${isCostingSuperAdmin() ? `<div style="margin-top:8px;"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button></div>` : ''}
@@ -6275,6 +6297,11 @@ function costingSupplierTagsHtml(m){
       <button type="button" class="tag-remove" data-remove-supplier-tag="${m.id}" data-idx="${idx}" title="Remove">×</button>
     </span>`).join('');
 }
+// A small preset palette for tagging a raw material row with a color, so a row stays easy to
+// spot while scrolling sideways through a wide sheet (many batch-size columns). Rather than
+// showing all 7 swatches on every row (too much clutter), each row gets one compact trigger
+// button — click it to pop open a shared little palette near that row to pick from.
+const ROW_COLOR_PALETTE = ['#FCA5A5','#FDBA74','#FDE68A','#86EFAC','#93C5FD','#C4B5FD','#F9A8D4'];
 function renderCostingProductSheet(product, version){
   const admin = isAdmin();
   const draft = state._costingDraft || {materials:[], batchSizes:[]};
@@ -6282,7 +6309,7 @@ function renderCostingProductSheet(product, version){
   const sizes = (draft.batchSizes||[]).slice().sort((a,b)=>a-b);
   const totalPct = materials.reduce((s,m)=>s+(Number(m.percent)||0), 0);
   const totalUnitPrice = materials.reduce((s,m)=>s+(Number(m.costPerKg)||0), 0);
-  const colCount = 5 + sizes.length*2 + (admin?1:0);
+  const colCount = 5 + (admin?1:0) + sizes.length*2 + (admin?1:0);
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-versions" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
   <div class="toolbar">
@@ -6296,18 +6323,20 @@ function renderCostingProductSheet(product, version){
   <div class="panel" style="overflow-x:auto;">
     <table class="data-table costing-table" style="white-space:nowrap;">
       <thead><tr>
+        ${admin?'<th>Color</th>':''}
         <th>No</th><th>Raw material</th><th>%</th><th>Unit Price (Rs/kg)</th><th>Supplier</th>
-        ${sizes.map(sz=>`<th class="cst-group-start">Amount for ${sz}kg</th><th>Cost for ${sz}kg</th>`).join('')}
+        ${sizes.map(sz=>`<th class="cst-group-start">Amt ${sz}kg</th><th>Cost ${sz}kg</th>`).join('')}
         ${admin?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
         ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>`
-        <tr data-mat-row="${m.id}">
+        <tr data-mat-row="${m.id}"${m.rowColor?` style="background:${m.rowColor}4D;"`:''}>
+          ${admin?`<td><button type="button" class="row-color-trigger" data-row-color-trigger="${m.id}" title="Set row color" style="${m.rowColor?`background:${m.rowColor};border-color:${m.rowColor};`:''}"></button></td>`:''}
           <td>${i+1}</td>
           <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
-          <td>${admin?`<div class="cst-supplier-box" style="width:210px;border:1px solid var(--border);border-radius:5px;padding:2px 4px;flex-wrap:nowrap;">
+          <td>${admin?`<div class="cst-supplier-box" style="width:158px;border:1px solid var(--border);border-radius:5px;padding:1px 3px;flex-wrap:nowrap;">
             ${costingSupplierTagsHtml(m)}
             ${(m.suppliers||[]).length<2 ? `<input class="cst-supplier-input" autocomplete="off" data-field="supplierInput" data-mat="${m.id}" placeholder="${(m.suppliers||[]).length?'':'Supplier'}">` : ''}
           </div>`:((m.suppliers||[]).join(', ')||'—')}</td>
@@ -6320,6 +6349,7 @@ function renderCostingProductSheet(product, version){
         </tr>`).join('')}
       </tbody>
       ${materials.length>0 ? `<tfoot><tr style="font-weight:700;">
+        ${admin?'<td></td>':''}
         <td></td><td>Total</td><td id="cst-total-percent">${totalPct.toFixed(2)}%</td><td id="cst-total-unitprice">Rs. ${totalUnitPrice.toFixed(2)}</td><td></td>
         ${sizes.map(sz=>{
           const amtSum = materials.reduce((s,m)=>s+costingLineAmount(m.percent, sz), 0);
@@ -6333,7 +6363,11 @@ function renderCostingProductSheet(product, version){
   ${sizes.length>0 && admin ? `
   <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
   ` : ''}
-  ${admin ? `<div id="costing-supplier-dropdown" class="ac-dropdown" style="display:none;position:fixed;"></div>` : ''}
+  ${admin ? `<div id="costing-supplier-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;"></div>` : ''}
+  ${admin ? `<div id="costing-rowcolor-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;padding:7px;flex-wrap:wrap;gap:5px;width:116px;">
+    ${ROW_COLOR_PALETTE.map(c=>`<button type="button" class="row-color-dot" data-pick-row-color="${c}" style="background:${c};"></button>`).join('')}
+    <button type="button" class="btn-text" data-pick-row-color="" style="display:block;width:100%;margin-top:4px;font-size:11px;text-align:left;">Clear color</button>
+  </div>` : ''}
   `;
 }
 // Live-recomputes the Amount/Cost cells for one row (and the Total row) directly via the DOM,
@@ -7764,6 +7798,41 @@ function attachCostingSupplierAutocomplete(){
     hide();
   });
 }
+// One shared color-palette popover for every row's color trigger button, positioned under
+// whichever trigger was clicked — keeps every row's own cell down to a single small button
+// instead of showing all 7 swatches inline on every row.
+let _rowColorDocClickHandler = null;
+function attachCostingRowColorPicker(){
+  const dropdown = document.getElementById('costing-rowcolor-dropdown');
+  if(!dropdown) return;
+  if(_rowColorDocClickHandler) document.removeEventListener('click', _rowColorDocClickHandler);
+  let activeMatId = null;
+  const hide = ()=>{ dropdown.style.display='none'; activeMatId=null; };
+  document.querySelectorAll('[data-row-color-trigger]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(activeMatId===btn.dataset.rowColorTrigger){ hide(); return; }
+      activeMatId = btn.dataset.rowColorTrigger;
+      const r = btn.getBoundingClientRect();
+      dropdown.style.left = r.left+'px';
+      dropdown.style.top = (r.bottom+4)+'px';
+      dropdown.style.display = 'flex';
+    });
+  });
+  dropdown.querySelectorAll('[data-pick-row-color]').forEach(b=>{
+    b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(!activeMatId) return;
+      const draft = state._costingDraft;
+      const m = draft && (draft.materials||[]).find(x=>x.id===activeMatId);
+      if(m){ m.rowColor = b.dataset.pickRowColor || null; state._costingDirty = true; }
+      hide();
+      render();
+    });
+  });
+  _rowColorDocClickHandler = ()=>hide();
+  document.addEventListener('click', _rowColorDocClickHandler);
+}
 
 /* ===================== Event wiring ===================== */
 function attachShellHandlers(){
@@ -8558,6 +8627,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-remove-supplier-tag]').forEach(b=>b.addEventListener('click', ()=>{
     costingRemoveSupplierTag(b.dataset.removeSupplierTag, Number(b.dataset.idx));
   }));
+  attachCostingRowColorPicker();
   document.querySelectorAll('.cst-field').forEach(el=>el.addEventListener('input', ()=>costingOnFieldInput(el)));
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));

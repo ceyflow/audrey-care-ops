@@ -525,6 +525,20 @@
   .step-editor-row .se-actions button{border:1px solid var(--border);background:#fff;border-radius:6px;width:26px;height:24px;font-size:11px;line-height:1;color:var(--muted);}
   .step-editor-row .se-actions button:hover{background:var(--bg);}
 
+  /* Batch sheet's own mixing-step cards — compact, labeled fields with the reorder/delete
+     controls inline in a header row instead of a tall side column, so nothing runs off the
+     edge of the (narrower) batch sheet modal. */
+  .bsheet-step-row{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg);}
+  .bsheet-step-row .bsr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+  .bsheet-step-row .bsr-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink);}
+  .bsheet-step-row .bsr-badge{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;}
+  .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:0 0 3px;}
+  .bsheet-step-row .bsr-actions{display:flex;gap:4px;flex-shrink:0;}
+  .bsheet-step-row .bsr-actions button{border:1px solid var(--border);background:#fff;border-radius:6px;width:24px;height:22px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;}
+  .bsheet-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);}
+  @media (max-width:560px){ .bsheet-step-row .bsr-fields{grid-template-columns:1fr;} }
+
   .batch-focus{
     position:fixed;inset:0;z-index:400;background:linear-gradient(160deg,#0F2A20,#173A2B);
     color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -660,9 +674,14 @@
   @media print{
     body *{ visibility:hidden; }
     .batch-sheet-print, .batch-sheet-print *{ visibility:visible; }
-    .batch-sheet-print{ position:absolute; top:0; left:0; width:100%; max-width:100%; box-shadow:none; margin:0; }
+    /* .modal normally caps itself at 88vh with overflow-y:auto for on-screen scrolling — left
+       alone, print only renders what's within that clipped box, which can print a blank page
+       once the sheet (especially with the editable step rows) runs taller than that. */
+    .batch-sheet-print{ position:absolute; top:0; left:0; width:100%; max-width:100%; max-height:none; overflow:visible; box-shadow:none; margin:0; }
     .overlay{ position:static; background:none; padding:0; }
     .batch-sheet-print .modal-actions{ display:none; }
+    .batch-sheet-print input{ border:none; background:none; padding:0; color:inherit; }
+    .batch-sheet-print .bsheet-step-row .bsr-actions{ display:none; }
   }
 </style>
 </head>
@@ -7008,17 +7027,19 @@ function recipeBatchSheetModal(recipeId){
       ${canEditSteps ? `
       <div id="step-editor-list">
         ${draftSteps.map((s,i)=>`
-        <div class="step-editor-row">
-          <span class="se-num">${i+1}</span>
-          <div class="se-fields">
-            <input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="Instruction — e.g. Carbomer + H2O">
-            <input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="Amount — e.g. 80kg">
-            <input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}" placeholder="Wait (min)">
+        <div class="bsheet-step-row">
+          <div class="bsr-head">
+            <div class="bsr-title"><span class="bsr-badge">${i+1}</span> Step ${i+1}</div>
+            <div class="bsr-actions">
+              <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
+              <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
+              <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+            </div>
           </div>
-          <div class="se-actions">
-            <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
-            <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
-            <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+          <div class="bsr-fields">
+            <div class="bsr-field"><label>Instruction</label><input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
+            <div class="bsr-field"><label>Amount</label><input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
+            <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
           </div>
         </div>`).join('')}
       </div>

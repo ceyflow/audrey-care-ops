@@ -528,15 +528,19 @@
   /* Batch sheet's own mixing-step cards — compact, labeled fields with the reorder/delete
      controls inline in a header row instead of a tall side column, so nothing runs off the
      edge of the (narrower) batch sheet modal. */
-  .bsheet-step-row{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg);}
-  .bsheet-step-row .bsr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
-  .bsheet-step-row .bsr-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink);}
-  .bsheet-step-row .bsr-badge{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;}
-  .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:0 0 3px;}
-  .bsheet-step-row .bsr-actions{display:flex;gap:4px;flex-shrink:0;}
-  .bsheet-step-row .bsr-actions button{border:1px solid var(--border);background:#fff;border-radius:6px;width:24px;height:22px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;}
-  .bsheet-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);}
+  .bsheet-step-row{border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px;background:var(--surface);box-shadow:0 1px 2px rgba(20,40,25,.04),0 6px 16px rgba(20,40,25,.05);transition:box-shadow .15s ease,border-color .15s ease;}
+  .bsheet-step-row:hover{border-color:var(--accent);box-shadow:0 2px 4px rgba(20,40,25,.05),0 10px 24px rgba(20,40,25,.08);}
+  .bsheet-step-row .bsr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .bsheet-step-row .bsr-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .bsheet-step-row .bsr-badge{width:24px;height:24px;border-radius:50%;background:linear-gradient(155deg,var(--accent),var(--accent-dark));color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 5px rgba(60,144,88,.35);}
+  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
+  .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 5px;}
+  .bsheet-step-row .bsr-field input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease;}
+  .bsheet-step-row .bsr-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .bsheet-step-row .bsr-actions{display:flex;gap:6px;flex-shrink:0;}
+  .bsheet-step-row .bsr-actions button{border:1px solid var(--border);background:var(--surface);border-radius:7px;width:26px;height:24px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;transition:all .15s ease;}
+  .bsheet-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);}
+  .bsheet-step-row .bsr-actions button:active{transform:scale(.92);}
   @media (max-width:560px){ .bsheet-step-row .bsr-fields{grid-template-columns:1fr;} }
 
   .batch-focus{
@@ -680,7 +684,7 @@
     .batch-sheet-print{ position:absolute; top:0; left:0; width:100%; max-width:100%; max-height:none; overflow:visible; box-shadow:none; margin:0; }
     .overlay{ position:static; background:none; padding:0; }
     .batch-sheet-print .modal-actions{ display:none; }
-    .batch-sheet-print input{ border:none; background:none; padding:0; color:inherit; }
+    .batch-sheet-print input{ border:none!important; background:none!important; padding:0!important; color:inherit; box-shadow:none!important; }
     .batch-sheet-print .bsheet-step-row .bsr-actions{ display:none; }
   }
 </style>
@@ -7023,7 +7027,7 @@ function recipeBatchSheetModal(recipeId){
           <tr style="font-weight:700;"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td id="sheet-total-amt">${totalAmt.toFixed(3)}</td></tr>
         </tbody>
       </table>
-      <div class="hint" style="font-weight:600;color:var(--ink);margin:16px 0 8px;">Mixing steps</div>
+      <div class="hint" style="font-weight:600;color:var(--ink);margin:22px 0 12px;">Mixing steps</div>
       ${canEditSteps ? `
       <div id="step-editor-list">
         ${draftSteps.map((s,i)=>`
@@ -7043,7 +7047,7 @@ function recipeBatchSheetModal(recipeId){
           </div>
         </div>`).join('')}
       </div>
-      <button type="button" class="btn btn-sm" id="btn-add-step" style="margin-bottom:16px;">+ Add step</button>
+      <button type="button" class="btn btn-sm" id="btn-add-step" style="margin-bottom:20px;">+ Add step</button>
       ` : (r.steps.length ? `
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${r.steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}

@@ -6191,19 +6191,6 @@ async function startBatch(recipeId, extra){
   await saveActiveBatchVerified(); startBatchTicker();
   showToast('Batch started: '+r.name);
 }
-async function submitStartBatch(e){
-  e.preventDefault();
-  const f = e.target;
-  const r = byId(state.recipes, f.dataset.recipeId);
-  if(!r || !r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return; }
-  await startBatch(f.dataset.recipeId, {
-    productName: f.productName.value.trim(),
-    qty: f.qty.value.trim(),
-    batchNo: f.batchNo.value.trim(),
-    variation: f.variation.value.trim()
-  });
-  closeModal();
-}
 // activeBatch is a single shared object, not an array-of-records, so it gets none of the
 // concurrent-edit merge protection the rest of the save pipeline gives record arrays — a save
 // here always blindly overwrites the server copy, last-write-wins. That's a real risk for a
@@ -6889,28 +6876,6 @@ function renderBatchFocusOverlay(){
     </div>` : ''}
   </div>`;
 }
-function startBatchModal(recipeId){
-  const r = byId(state.recipes, recipeId); if(!r) return '';
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal">
-      <h2>Start batch</h2>
-      <div class="sub">${esc(r.name)} · ${r.steps.length} step${r.steps.length===1?'':'s'}</div>
-      <form id="form-start-batch" data-recipe-id="${r.id}">
-        <div class="field-row">
-          <div class="field"><label>Product name</label><input name="productName" required value="${esc(r.name)}"></div>
-          <div class="field"><label>Quantity</label><input name="qty" autocomplete="off" placeholder="e.g. 250Kg"></div>
-        </div>
-        <div class="field"><label>Batch number</label><input name="batchNo" autocomplete="off" placeholder="Auto-generated if left blank"></div>
-        <div class="field"><label>Variation</label><textarea name="variation" placeholder="e.g. Lavender scent, extra moisturizer" style="min-height:80px;"></textarea></div>
-        <div class="modal-actions">
-          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Start batch</button>
-        </div>
-      </form>
-    </div>
-  </div>`;
-}
 function recipeFormModal(){
   const d = state._recipeDraft;
   const totalPct = recipeMaterialsTotalPercent(d.materials);
@@ -7170,7 +7135,6 @@ function renderModal(){
   if(type==='template') return templateFormModal();
   if(type==='recipe') return recipeFormModal();
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
-  if(type==='startbatch') return startBatchModal(id);
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
   if(type==='smsconfirm') return smsConfirmModal();
@@ -9024,7 +8988,6 @@ function attachShellHandlers(){
 
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
-  document.querySelectorAll('[data-edit-recipe]').forEach(b=>b.addEventListener('click', ()=>openRecipeModal(b.dataset.editRecipe)));
   document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>deleteRecipe(b.dataset.deleteRecipe)));
 
   // Costing & recipe
@@ -9366,12 +9329,13 @@ function attachShellHandlers(){
     state._costingDirty = true;
   }));
   attachCostingSupplierAutocomplete();
-  document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openBatchSheetModal(b.dataset.viewBatchsheet)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = ()=>window.print();
   if(byIdEl('btn-save-batchsheet-steps')) byIdEl('btn-save-batchsheet-steps').onclick = ()=>saveBatchSheetSteps(state._recipeDraft && state._recipeDraft.id);
-  if(byIdEl('btn-start-batch-from-sheet')) byIdEl('btn-start-batch-from-sheet').onclick = (e)=>openModal('startbatch:'+e.currentTarget.dataset.recipeId);
-  if(byIdEl('form-start-batch')) byIdEl('form-start-batch').addEventListener('submit', submitStartBatch);
+  if(byIdEl('btn-start-batch-from-sheet')) byIdEl('btn-start-batch-from-sheet').onclick = async (e)=>{
+    await startBatch(e.currentTarget.dataset.recipeId);
+    if(state.activeBatch) closeModal(); // zero-step recipes show a toast and stay open instead
+  };
   if(byIdEl('form-recipe')) byIdEl('form-recipe').addEventListener('submit', submitRecipe);
   if(byIdEl('btn-add-step')) byIdEl('btn-add-step').onclick = ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftAddStep(); };
   document.querySelectorAll('[data-step-up]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveStep(b.dataset.stepUp, -1); }));

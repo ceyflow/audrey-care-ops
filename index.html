@@ -7047,10 +7047,14 @@ async function saveBatchSheetSteps(recipeId){
     .filter(s=>s.ingredient);
   if(steps.length===0){ showToast('Add at least one step'); return; }
   const r = byId(state.recipes, recipeId); if(!r) return;
+  const sizeEl = document.getElementById('sheet-batch-size');
+  const batchSizeKg = sizeEl ? Math.max(0, parseFloat(sizeEl.value)||0) : r.batchSizeKg;
   r.steps = steps;
+  r.batchSizeKg = batchSizeKg;
   d.steps = steps.map(s=>({...s}));
+  d.batchSizeKg = batchSizeKg;
   await save('recipes');
-  showToast('Mixing steps saved');
+  showToast('Batch sheet saved');
   render();
 }
 

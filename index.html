@@ -6217,7 +6217,7 @@ function openMixingTemplatesPicker(recipeId){
   state._mixingTemplatePickerForRecipeId = recipeId;
   openModal('mixingtemplates');
 }
-function applyMixingTemplateToRecipe(templateId){
+async function applyMixingTemplateToRecipe(templateId){
   if(!isAdmin()) return;
   const recipeId = state._mixingTemplatePickerForRecipeId;
   const t = templateById(templateId);
@@ -6229,7 +6229,11 @@ function applyMixingTemplateToRecipe(templateId){
     ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
     : {...s, id:uid('STEP')});
   openModal('recipesheet:'+recipeId);
-  showToast('Steps loaded from "'+t.name+'"');
+  // Persist right away instead of leaving it as an unsaved draft — applying a template felt like
+  // it "didn't stick" whenever someone navigated off the sheet before remembering to hit the
+  // separate Save button, since reopening the sheet rebuilds the draft from whatever's actually
+  // saved on the recipe.
+  await saveBatchSheetSteps(recipeId);
 }
 function closeMixingTemplatesPicker(){
   const recipeId = state._mixingTemplatePickerForRecipeId;

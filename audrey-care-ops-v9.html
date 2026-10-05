@@ -6828,6 +6828,9 @@ function renderCostingProductSheet(product, version){
       <button type="button" class="btn btn-primary btn-sm" id="btn-costing-save">💾 Save</button>
     </div>` : ''}
   </div>
+  ${sizes.length>0 && admin ? `
+  <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
+  ` : ''}
   <div style="margin:2px 0 16px;">
     ${admin
       ? `<textarea class="cst-sheet-field" data-sheetfield="notes" placeholder="Notes about this version…" style="width:100%;min-height:44px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.notes||'')}</textarea>`
@@ -6926,14 +6929,11 @@ function renderCostingProductSheet(product, version){
       </tbody>
     </table>
   </div>
-  ${sizes.length>0 && admin ? `
-  <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
-  ` : ''}
-  <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-    <div style="width:320px;max-width:100%;">
+  <div style="margin-top:14px;">
+    <div style="width:100%;max-width:640px;">
       <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">Production method</label>
       ${admin
-        ? `<textarea class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:70px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.productionMethod||'')}</textarea>`
+        ? `<textarea class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:160px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.productionMethod||'')}</textarea>`
         : (draft.productionMethod ? `<div class="hint" style="white-space:pre-wrap;text-align:left;">${esc(draft.productionMethod)}</div>` : '<div class="hint">—</div>')}
     </div>
   </div>

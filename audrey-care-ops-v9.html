@@ -764,7 +764,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1930,6 +1930,7 @@ async function loadAll(){
   // deleted the seeded "Body Lotion - Hotel Range" recipe. Checking "does it exist right now"
   // instead of "was this ever saved before" would silently resurrect it on every later refresh.
   const recipesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('recipes')] == null;
+  const mixingStepTemplatesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('mixingStepTemplates')] == null;
   SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || defaultFor(k); });
   if(!state.branding || !Array.isArray(state.branding.addons)) state.branding = {addons: []};
   if(!state.navOrder || typeof state.navOrder !== 'object' || Array.isArray(state.navOrder)) state.navOrder = {};
@@ -1987,6 +1988,12 @@ async function loadAll(){
       createdAt: new Date().toISOString()
     });
     kvSet('recipes', state.recipes).catch(e=>console.error('seed Body Lotion recipe failed', e));
+  }
+  if(!Array.isArray(state.mixingStepTemplates)) state.mixingStepTemplates = [];
+  if(mixingStepTemplatesNeverSaved && state.mixingStepTemplates.length===0){
+    const DEFAULT_MIXING_TEMPLATE_NAMES = ['Shower Gel', 'Shampoo', 'Conditioner', 'Body Lotion', 'Hand Wash'];
+    state.mixingStepTemplates = DEFAULT_MIXING_TEMPLATE_NAMES.map(name => ({id: uid('MTPL'), name, steps: [newStepDraft()]}));
+    kvSet('mixingStepTemplates', state.mixingStepTemplates).catch(e=>console.error('seed mixingStepTemplates failed', e));
   }
   if(!Array.isArray(state.costingProducts)) state.costingProducts = [];
   if(state.costingProducts.length===0){
@@ -6177,6 +6184,99 @@ function openBatchSheetModal(id){
   state._recipeDraft = buildRecipeDraft(id);
   openModal('recipesheet:'+id);
 }
+// ---- Mixing steps templates ----
+// Reusable step sequences (by product type) a new recipe can start from, instead of typing the
+// same mixing procedure out every time. Kept entirely separate from state._recipeDraft (its own
+// draft object + add/move/remove/sync functions below) so editing a template never risks
+// clobbering an in-progress recipe edit, and vice versa.
+function templateById(id){ return byId(state.mixingStepTemplates, id); }
+function openMixingTemplatesModal(){ openModal('mixingtemplates'); }
+function openTemplateStepsModal(id){
+  const t = templateById(id); if(!t) return;
+  state._templateDraft = {id:t.id, name:t.name, steps:t.steps.map(s=>({...s}))};
+  openModal('mixingtemplatesteps:'+id);
+}
+function templateDraftAddStep(){ state._templateDraft.steps.push(newStepDraft()); render(); }
+function templateDraftRemoveStep(stepId){
+  if(state._templateDraft.steps.length<=1) return;
+  state._templateDraft.steps = state._templateDraft.steps.filter(s=>s.id!==stepId);
+  render();
+}
+function templateDraftMoveStep(stepId, dir){
+  const steps = state._templateDraft.steps;
+  const i = steps.findIndex(s=>s.id===stepId);
+  const j = i+dir;
+  if(j<0 || j>=steps.length) return;
+  [steps[i], steps[j]] = [steps[j], steps[i]];
+  render();
+}
+function syncTemplateDraftStepFieldsFromDOM(){
+  const d = state._templateDraft; if(!d) return;
+  const nameEl = document.getElementById('template-name');
+  if(nameEl) d.name = nameEl.value;
+  d.steps.forEach(s=>{
+    const ing = document.getElementById('tstep-ing-'+s.id);
+    const amt = document.getElementById('tstep-amt-'+s.id);
+    const wait = document.getElementById('tstep-wait-'+s.id);
+    if(ing) s.ingredient = ing.value;
+    if(amt) s.amount = amt.value;
+    if(wait) s.waitMinutes = parseFloat(wait.value)||0;
+  });
+}
+async function saveTemplateSteps(){
+  if(!isAdmin()) return;
+  syncTemplateDraftStepFieldsFromDOM();
+  const d = state._templateDraft; if(!d) return;
+  const name = (d.name||'').trim();
+  const steps = d.steps
+    .map(s=>({id:s.id, ingredient:(s.ingredient||'').trim(), amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)}))
+    .filter(s=>s.ingredient);
+  if(!name){ showToast('Name this template'); return; }
+  if(steps.length===0){ showToast('Add at least one step'); return; }
+  const t = templateById(d.id);
+  if(t){ t.name = name; t.steps = steps; }
+  await save('mixingStepTemplates');
+  state._templateDraft = null;
+  showToast('Template saved');
+  openMixingTemplatesModal();
+}
+function deleteMixingTemplate(id){
+  if(!isAdmin()) return;
+  const t = templateById(id);
+  openConfirmModal({
+    title: 'Delete template', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+    message: `Delete "${t?esc(t.name):'this template'}"? Recipes already created from it are not affected.`,
+    onConfirm: async ()=>{
+      state.mixingStepTemplates = state.mixingStepTemplates.filter(x=>x.id!==id);
+      await save('mixingStepTemplates');
+    },
+  });
+}
+function addMixingTemplatePrompt(){
+  if(!isAdmin()) return;
+  openPromptModal({
+    title: 'New mixing steps template', label: 'Template name', placeholder: 'e.g. Face Wash',
+    confirmLabel: 'Create', _returnTo: 'mixingtemplates',
+    onSubmit: async (value)=>{
+      const name = (value||'').trim();
+      if(!name) return;
+      const t = {id: uid('MTPL'), name, steps: [newStepDraft()]};
+      state.mixingStepTemplates.push(t);
+      await save('mixingStepTemplates');
+      openTemplateStepsModal(t.id);
+    },
+  });
+}
+// Seeds a brand-new recipe draft with a copy of the template's steps (fresh ids, so editing the
+// new recipe's steps never mutates the template it came from) and opens the usual recipe form.
+function useMixingTemplateForNewRecipe(id){
+  if(!isAdmin()) return;
+  const t = templateById(id); if(!t) return;
+  state._recipeDraft = buildRecipeDraft(null);
+  state._recipeDraft.name = t.name;
+  state._recipeDraft.steps = t.steps.map(s=>({...s, id:uid('STEP')}));
+  openModal('recipe:new');
+}
 function draftAddStep(){ state._recipeDraft.steps.push(newStepDraft()); render(); }
 function draftRemoveStep(stepId){
   if(state._recipeDraft.steps.length<=1) return;
@@ -6458,7 +6558,7 @@ function renderRecipesPage(){
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
-    ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button>` : ''}
+    ${isAdmin() ? `<div style="display:flex;gap:8px;"><button class="btn" id="btn-mixing-templates">Mixing steps templates</button><button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button></div>` : ''}
   </div>
   ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${isAdmin()?'Create one to start guiding the blending team through a batch.':''}</div>` : `
   <div class="recipe-grid">
@@ -6998,6 +7098,70 @@ function renderBatchFocusOverlay(){
     </div>` : ''}
   </div>`;
 }
+function renderMixingTemplatesModal(){
+  const list = state.mixingStepTemplates || [];
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:720px;">
+      <h2>Mixing steps templates</h2>
+      <div class="sub">Reusable step sequences — start a new recipe from one instead of typing the mixing procedure out again.</div>
+      ${list.length===0 ? `<div class="empty-state">No templates yet.</div>` : `
+      <div class="recipe-grid" style="margin:16px 0;">
+        ${list.map(t=>`
+        <div class="recipe-card">
+          <div class="rc-title">${esc(t.name)}</div>
+          <div class="rc-meta">${t.steps.length} step${t.steps.length===1?'':'s'}</div>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" data-use-mixing-template="${t.id}">Use for new recipe</button>
+            <button class="btn btn-sm" data-edit-mixing-template="${t.id}">Edit steps</button>
+            <button class="btn btn-sm btn-danger" data-delete-mixing-template="${t.id}">Delete</button>
+          </div>
+        </div>`).join('')}
+      </div>`}
+      <div class="modal-actions" style="justify-content:space-between;margin-top:16px;">
+        <button type="button" class="btn btn-primary" id="btn-add-mixing-template">+ Add a template</button>
+        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderTemplateStepsModal(){
+  const d = state._templateDraft; if(!d) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:680px;">
+      <h2>${d.id?'Edit template':'New template'}</h2>
+      <div class="field" style="margin-bottom:18px;">
+        <label>Template name</label>
+        <input id="template-name" value="${esc(d.name)}" placeholder="e.g. Shower Gel">
+      </div>
+      <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Mixing steps</div>
+      <div id="template-step-editor-list">
+        ${d.steps.map((s,i)=>`
+        <div class="bsheet-step-row">
+          <div class="bsr-head">
+            <div class="bsr-title"><span class="bsr-badge">${i+1}</span> Step ${i+1}</div>
+            <div class="bsr-actions">
+              <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
+              <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
+              <button type="button" data-tstep-remove="${s.id}" title="Remove">✕</button>
+            </div>
+          </div>
+          <div class="bsr-fields">
+            <div class="bsr-field"><label>Instruction</label><input id="tstep-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
+            <div class="bsr-field"><label>Amount</label><input id="tstep-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
+            <div class="bsr-field"><label>Wait (min)</label><input id="tstep-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <button type="button" class="btn btn-sm" id="btn-add-template-step" style="margin-bottom:20px;">+ Add step</button>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-template-steps">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-template-steps">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
 function recipeFormModal(){
   const d = state._recipeDraft;
   const totalPct = recipeMaterialsTotalPercent(d.materials);
@@ -7314,6 +7478,8 @@ function renderModal(){
   if(type==='staff') return staffFormModal(id==='new'?null:id);
   if(type==='template') return templateFormModal();
   if(type==='recipe') return recipeFormModal();
+  if(type==='mixingtemplates') return renderMixingTemplatesModal();
+  if(type==='mixingtemplatesteps') return renderTemplateStepsModal();
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
@@ -7807,10 +7973,13 @@ async function runPromptAction(value){
   const c = state._promptAction;
   if(!c) return;
   state._promptAction = null;
+  const modalBeforeSubmit = state.modal;
   if(c.onSubmit) await c.onSubmit(value);
   // onSubmit may itself have opened a NEW overlay (e.g. a "that name already exists" alert, or
-  // the second prompt in a two-step flow) — leave it be instead of closing it right back out.
-  if(state._confirmAction || state._promptAction || state._alertInfo){ render(); return; }
+  // the second prompt in a two-step flow), or navigated straight into a different regular modal
+  // (e.g. naming a new template, then landing straight in its step editor) — leave either alone
+  // instead of closing it right back out.
+  if(state._confirmAction || state._promptAction || state._alertInfo || state.modal !== modalBeforeSubmit){ render(); return; }
   closeOverlayModal(c._returnTo);
 }
 // A single styled stand-in for the browser's native alert() dialog — openAlertModal(message)
@@ -9168,6 +9337,17 @@ function attachShellHandlers(){
 
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
+  if(byIdEl('btn-mixing-templates')) byIdEl('btn-mixing-templates').onclick = openMixingTemplatesModal;
+  if(byIdEl('btn-add-mixing-template')) byIdEl('btn-add-mixing-template').onclick = addMixingTemplatePrompt;
+  document.querySelectorAll('[data-use-mixing-template]').forEach(b=>b.addEventListener('click', ()=>useMixingTemplateForNewRecipe(b.dataset.useMixingTemplate)));
+  document.querySelectorAll('[data-edit-mixing-template]').forEach(b=>b.addEventListener('click', ()=>openTemplateStepsModal(b.dataset.editMixingTemplate)));
+  document.querySelectorAll('[data-delete-mixing-template]').forEach(b=>b.addEventListener('click', ()=>deleteMixingTemplate(b.dataset.deleteMixingTemplate)));
+  if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
+  if(byIdEl('btn-save-template-steps')) byIdEl('btn-save-template-steps').onclick = saveTemplateSteps;
+  if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddStep(); };
+  document.querySelectorAll('[data-tstep-up]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftMoveStep(b.dataset.tstepUp, -1); }));
+  document.querySelectorAll('[data-tstep-down]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftMoveStep(b.dataset.tstepDown, 1); }));
+  document.querySelectorAll('[data-tstep-remove]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftRemoveStep(b.dataset.tstepRemove); }));
   document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>deleteRecipe(b.dataset.deleteRecipe)));
 
   // Costing & recipe

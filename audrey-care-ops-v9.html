@@ -7291,7 +7291,7 @@ function renderTemplateStepsModal(){
                     return `
                     <div class="prep-checklist-item prep-field-item">
                       <input type="text" id="tfld-value-${c.id}" value="${esc(c.value)}" placeholder="Value" class="prep-field-value">
-                      <input type="text" id="tfld-label-${c.id}" value="${esc(c.label)}" placeholder="Question — e.g. Initial Ph level">
+                      <input type="text" id="tfld-label-${c.id}" value="${esc(c.label)}" placeholder="Initial Water pH Level">
                       ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                     </div>`;
                   }

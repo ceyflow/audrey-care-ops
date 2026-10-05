@@ -542,6 +542,8 @@
   .bsheet-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);}
   .bsheet-step-row .bsr-actions button:active{transform:scale(.92);}
   @media (max-width:560px){ .bsheet-step-row .bsr-fields{grid-template-columns:1fr;} }
+  .batchsheet-template-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+  @media (max-width:760px){ .batchsheet-template-grid{grid-template-columns:1fr;} }
 
   .batch-focus{
     position:fixed;inset:0;z-index:400;background:linear-gradient(160deg,#0F2A20,#173A2B);
@@ -5264,29 +5266,89 @@ const BATCH_SHEET_TOGGLES = [
   {key:'showCombineNote', label:'"Combine together" note'},
   {key:'showFooter', label:'Footer text'},
 ];
+// A miniature, non-interactive rendition of what printBatchSheet()/recipeBatchSheetModal() will
+// actually produce, using placeholder data — so toggling a checkbox or editing the footer text
+// shows its effect immediately, without needing a real recipe or a Save round-trip first.
+function batchSheetPreviewMarkup(tpl){
+  return `
+  <div style="border:1px solid var(--border);border-radius:10px;padding:18px;background:#fff;font-family:'Inter',system-ui,sans-serif;color:#20291F;font-size:11px;">
+    ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:8px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:34px;max-width:160px;object-fit:contain;"></div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+      <div>${tpl.showDate ? `<div style="font-size:9px;color:#6C8071;">Date</div><div style="font-weight:600;">${esc(fmtDate(new Date().toISOString()))}</div>` : ''}</div>
+      <div>${tpl.showBatchNo ? `<div style="font-size:9px;color:#6C8071;">Batch number</div><div style="font-weight:600;">BLD-SAMPLE</div>` : ''}</div>
+    </div>
+    <div style="text-align:center;font-weight:700;font-size:14px;text-transform:uppercase;margin:4px 0 2px;">Sample Product — Version 1</div>
+    ${tpl.showDescription ? `<div style="text-align:center;margin-bottom:6px;color:#6C8071;">An example product description</div>` : ''}
+    <div style="text-align:center;margin-bottom:10px;color:#6C8071;">Batch size: <strong style="color:#20291F;">100</strong> kg</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+      <thead><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:3px 4px;">No</th><th style="text-align:left;padding:3px 4px;">Raw material</th><th style="text-align:left;padding:3px 4px;">%</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:3px 4px;">1</td><td style="padding:3px 4px;">Water</td><td style="padding:3px 4px;">80.000</td></tr>
+        <tr><td style="padding:3px 4px;">2</td><td style="padding:3px 4px;">SLES</td><td style="padding:3px 4px;">12.000</td></tr>
+      </tbody>
+    </table>
+    <div style="font-weight:600;margin-bottom:4px;">Mixing steps</div>
+    <ol style="margin:0 0 10px;padding-left:16px;">
+      <li>Water — 80kg</li>
+      <li>SLES — 12kg</li>
+    </ol>
+    ${tpl.showCombineNote ? `<div style="border:1px solid var(--border);border-radius:6px;padding:6px 8px;margin-bottom:8px;"><strong>Combine together:</strong> Example ingredients list</div>` : ''}
+    ${tpl.showPH ? `<div style="text-align:center;margin-bottom:6px;color:#6C8071;">Standard finished product pH 5.5 - 6.5</div>` : ''}
+    ${(tpl.showFooter && tpl.footerText) ? `<div style="text-align:center;color:#6C8071;">${esc(tpl.footerText)}</div>` : ''}
+  </div>`;
+}
+// Reads the live (possibly unsaved) form values rather than state.batchSheetTemplate, so the
+// preview updates the instant something is toggled or typed, before Save is clicked.
+function updateBatchSheetTemplatePreview(){
+  const f = document.getElementById('form-batchsheet-template');
+  const previewEl = document.getElementById('batchsheet-template-preview');
+  if(!f || !previewEl) return;
+  const tpl = {};
+  BATCH_SHEET_TOGGLES.forEach(x=>{ tpl[x.key] = !!f[x.key].checked; });
+  tpl.footerText = f.footerText.value;
+  previewEl.innerHTML = batchSheetPreviewMarkup(tpl);
+}
 function renderBatchSheetTemplatePanel(){
   const t = batchSheetTemplate();
   return `
   <div class="panel">
     <div class="panel-head"><h3>Batch sheet template</h3></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:14px;">Choose what shows up on the printed/viewed batch sheet — raw materials, percentages and mixing steps always show; everything below is optional.</div>
-      <form id="form-batchsheet-template">
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
-          ${BATCH_SHEET_TOGGLES.map(x=>`
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" name="${x.key}" ${t[x.key]?'checked':''}>
-            <span>${esc(x.label)}</span>${x.hint?` <span class="hint">— ${esc(x.hint)}</span>`:''}
-          </label>`).join('')}
+      <div class="hint" style="margin-bottom:14px;">Choose what shows up on the printed/viewed batch sheet — raw materials, percentages and mixing steps always show; everything below is optional. The preview updates as you make changes.</div>
+      <div class="batchsheet-template-grid">
+        <div>
+          <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:8px;">Logo</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+            ${batchSheetLogo() ? `<img src="${batchSheetLogo()}" alt="Batch sheet logo" style="height:40px;width:auto;max-width:140px;object-fit:contain;">` : `<span class="hint">— none —</span>`}
+            <div style="display:flex;gap:8px;margin-left:auto;">
+              <label class="btn btn-sm" style="cursor:pointer;">Change
+                <input type="file" class="brand-change-input" data-addon="batchSheetLogo" style="display:none;" accept="image/*">
+              </label>
+              ${batchSheetLogo() ? `<button type="button" class="btn btn-sm btn-danger" data-brand-delete="batchSheetLogo">Remove</button>` : ''}
+            </div>
+          </div>
+          <form id="form-batchsheet-template">
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+              ${BATCH_SHEET_TOGGLES.map(x=>`
+              <label style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" name="${x.key}" ${t[x.key]?'checked':''}>
+                <span>${esc(x.label)}</span>${x.hint?` <span class="hint">— ${esc(x.hint)}</span>`:''}
+              </label>`).join('')}
+            </div>
+            <div class="field" style="max-width:320px;">
+              <label>Footer text</label>
+              <input name="footerText" value="${esc(t.footerText)}" placeholder="e.g. Audrey Care (Pvt) Ltd.">
+            </div>
+            <div class="modal-actions" style="justify-content:flex-start;padding:0;margin-top:16px;">
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </form>
         </div>
-        <div class="field" style="max-width:320px;">
-          <label>Footer text</label>
-          <input name="footerText" value="${esc(t.footerText)}" placeholder="e.g. Audrey Care (Pvt) Ltd.">
+        <div>
+          <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:8px;">Preview</div>
+          <div id="batchsheet-template-preview">${batchSheetPreviewMarkup(t)}</div>
         </div>
-        <div class="modal-actions" style="justify-content:flex-start;padding:0;margin-top:16px;">
-          <button type="submit" class="btn btn-primary">Save</button>
-        </div>
-      </form>
+      </div>
     </div>
   </div>`;
 }
@@ -5709,17 +5771,6 @@ function renderSettingsPage(){
                 <input type="file" class="brand-change-input" data-addon="favicon" style="display:none;" accept="image/*">
               </label>
               ${faviconLogo() ? `<button class="btn btn-sm btn-danger" data-brand-delete="favicon">Remove</button>` : ''}
-            </td>
-          </tr>
-          <tr>
-            <td>${batchSheetLogo() ? `<img src="${batchSheetLogo()}" alt="Batch sheet logo" style="height:34px;width:auto;max-width:120px;object-fit:contain;">` : '<span class="hint">— none —</span>'}</td>
-            <td>Batch sheet logo <span class="hint">(printed batch sheet header)</span></td>
-            <td class="row-actions">
-              <button class="btn btn-sm" data-brand-preview="batchSheetLogo">Preview</button>
-              <label class="btn btn-sm" style="cursor:pointer;">Change
-                <input type="file" class="brand-change-input" data-addon="batchSheetLogo" style="display:none;" accept="image/*">
-              </label>
-              ${batchSheetLogo() ? `<button class="btn btn-sm btn-danger" data-brand-delete="batchSheetLogo">Remove</button>` : ''}
             </td>
           </tr>
           ${(state.branding.addons||[]).filter(a=>!['logo','ordersBoardLogo','trackPageLogo','welcomeLogo','favicon','batchSheetLogo'].includes(a.id)).map(a=>`
@@ -9740,7 +9791,12 @@ function attachShellHandlers(){
     showToast('SMS settings updated');
   });
 
-  if(byIdEl('form-batchsheet-template')) byIdEl('form-batchsheet-template').addEventListener('submit', submitBatchSheetTemplate);
+  if(byIdEl('form-batchsheet-template')){
+    const f = byIdEl('form-batchsheet-template');
+    f.addEventListener('submit', submitBatchSheetTemplate);
+    f.addEventListener('change', updateBatchSheetTemplatePreview);
+    f.addEventListener('input', updateBatchSheetTemplatePreview);
+  }
   if(byIdEl('form-alert-sound')) byIdEl('form-alert-sound').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;

@@ -6207,7 +6207,7 @@ function applyMixingTemplateToRecipe(templateId){
   if(!recipeId || !t || !state._recipeDraft || state._recipeDraft.id!==recipeId){ openModal(null); return; }
   state._recipeDraft.steps = t.steps.map(s=>({...s, id:uid('STEP')}));
   openModal('recipesheet:'+recipeId);
-  showToast('Mixing steps loaded from "'+t.name+'"');
+  showToast('Steps loaded from "'+t.name+'"');
 }
 function closeMixingTemplatesPicker(){
   const recipeId = state._mixingTemplatePickerForRecipeId;
@@ -6278,7 +6278,7 @@ function deleteMixingTemplate(id){
 function addMixingTemplatePrompt(){
   if(!isAdmin()) return;
   openPromptModal({
-    title: 'New mixing steps template', label: 'Template name', placeholder: 'e.g. Face Wash',
+    title: 'New phrases template', label: 'Template name', placeholder: 'e.g. Face Wash',
     confirmLabel: 'Create', _returnTo: 'mixingtemplates',
     onSubmit: async (value)=>{
       const name = (value||'').trim();
@@ -6571,7 +6571,7 @@ function renderRecipesPage(){
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
-    ${isAdmin() ? `<div style="display:flex;gap:8px;"><button class="btn" id="btn-mixing-templates">Mixing steps templates</button><button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button></div>` : ''}
+    ${isAdmin() ? `<div style="display:flex;gap:8px;"><button class="btn" id="btn-mixing-templates">Phrases templates</button><button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button></div>` : ''}
   </div>
   ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${isAdmin()?'Create one to start guiding the blending team through a batch.':''}</div>` : `
   <div class="recipe-grid">
@@ -7118,7 +7118,7 @@ function renderMixingTemplatesModal(){
     return `
     <div class="overlay" id="overlay">
       <div class="modal" style="max-width:720px;">
-        <h2>Use a mixing steps template</h2>
+        <h2>Use a phrases template</h2>
         <div class="sub">Pick one — its steps replace whatever's currently in the batch sheet.</div>
         ${list.length===0 ? `<div class="empty-state">No templates yet.</div>` : `
         <div class="recipe-grid" style="margin:16px 0;">
@@ -7140,7 +7140,7 @@ function renderMixingTemplatesModal(){
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:720px;">
-      <h2>Mixing steps templates</h2>
+      <h2>Phrases templates</h2>
       <div class="sub">Reusable step sequences — start a new recipe from one instead of typing the mixing procedure out again.</div>
       ${list.length===0 ? `<div class="empty-state">No templates yet.</div>` : `
       <div class="recipe-grid" style="margin:16px 0;">

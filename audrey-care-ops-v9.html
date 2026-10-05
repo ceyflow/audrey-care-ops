@@ -6223,9 +6223,11 @@ function applyMixingTemplateToRecipe(templateId){
   const t = templateById(templateId);
   state._mixingTemplatePickerForRecipeId = null;
   if(!recipeId || !t || !state._recipeDraft || state._recipeDraft.id!==recipeId){ openModal(null); return; }
-  // Preparation/checking steps are a phrases-template-only concept for now — the batch sheet's
-  // step editor only understands phrase steps (ingredient/amount/wait), so only those carry over.
-  state._recipeDraft.steps = t.steps.filter(s=>s.type!=='preparation').map(s=>({...s, id:uid('STEP')}));
+  // Fresh ids throughout (steps and, for preparation steps, their checklist items too) so the
+  // recipe's copy is fully independent of the template it came from.
+  state._recipeDraft.steps = t.steps.map(s => s.type==='preparation'
+    ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
+    : {...s, id:uid('STEP')});
   openModal('recipesheet:'+recipeId);
   showToast('Steps loaded from "'+t.name+'"');
 }
@@ -6262,31 +6264,42 @@ const DEFAULT_PREP_CHECKLIST_ITEMS = [
   'Are the machines and equipment cleaned and sanitized?',
   'Are all the materials received in good condition? (Check for color change, expiration, change of nature, and odor)',
 ];
-function templateDraftAddPreparationStep(){
-  state._templateDraft.steps.push({
+// Generic step-draft operations, parameterized by which draft object to mutate (state._recipeDraft
+// or state._templateDraft) — both the batch sheet and the phrases template editor can now contain
+// Preparation/Checking steps, and this is the one place that logic lives.
+function stepsAddPreparationStep(draft){
+  draft.steps.push({
     id: uid('PREP'), type: 'preparation',
     checklist: DEFAULT_PREP_CHECKLIST_ITEMS.map(text=>({id:uid('CHK'), kind:'checklist', text})),
   });
   render();
 }
-function templateDraftAddChecklistItem(stepId){
-  const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
+function stepsAddChecklistItem(draft, stepId){
+  const step = draft.steps.find(s=>s.id===stepId); if(!step) return;
   if(!step.checklist) step.checklist = [];
   step.checklist.push({id:uid('CHK'), kind:'checklist', text:''});
   render();
 }
-function templateDraftAddFieldItem(stepId){
-  const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
+function stepsAddFieldItem(draft, stepId){
+  const step = draft.steps.find(s=>s.id===stepId); if(!step) return;
   if(!step.checklist) step.checklist = [];
   step.checklist.push({id:uid('FLD'), kind:'field', label:'', value:''});
   render();
 }
-function templateDraftRemoveChecklistItem(stepId, itemId){
-  const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
+function stepsRemoveChecklistItem(draft, stepId, itemId){
+  const step = draft.steps.find(s=>s.id===stepId); if(!step) return;
   if((step.checklist||[]).length<=1) return;
   step.checklist = step.checklist.filter(c=>c.id!==itemId);
   render();
 }
+function templateDraftAddPreparationStep(){ stepsAddPreparationStep(state._templateDraft); }
+function templateDraftAddChecklistItem(stepId){ stepsAddChecklistItem(state._templateDraft, stepId); }
+function templateDraftAddFieldItem(stepId){ stepsAddFieldItem(state._templateDraft, stepId); }
+function templateDraftRemoveChecklistItem(stepId, itemId){ stepsRemoveChecklistItem(state._templateDraft, stepId, itemId); }
+function draftAddPreparationStep(){ stepsAddPreparationStep(state._recipeDraft); }
+function draftAddChecklistItem(stepId){ stepsAddChecklistItem(state._recipeDraft, stepId); }
+function draftAddFieldItem(stepId){ stepsAddFieldItem(state._recipeDraft, stepId); }
+function draftRemoveChecklistItem(stepId, itemId){ stepsRemoveChecklistItem(state._recipeDraft, stepId, itemId); }
 function templateDraftRemoveStep(stepId){
   if(state._templateDraft.steps.length<=1) return;
   state._templateDraft.steps = state._templateDraft.steps.filter(s=>s.id!==stepId);
@@ -6415,6 +6428,22 @@ function syncDraftStepFieldsFromDOM(){
   // pull current input values into the draft before add/remove/reorder/submit, so nothing typed is lost
   const steps = state._recipeDraft.steps;
   steps.forEach(s=>{
+    if(s.type==='preparation'){
+      // Only ever reached via the batch sheet (recipeFormModal never seeds a preparation step) —
+      // same field layout as the phrases template editor's preparation cards.
+      (s.checklist||[]).forEach(c=>{
+        if(c.kind==='field'){
+          const labelEl = document.getElementById('step-tfld-label-'+c.id);
+          const valueEl = document.getElementById('step-tfld-value-'+c.id);
+          if(labelEl) c.label = labelEl.value;
+          if(valueEl) c.value = valueEl.value;
+          return;
+        }
+        const el = document.getElementById('step-tchk-'+c.id);
+        if(el) c.text = el.value;
+      });
+      return;
+    }
     const ing = document.getElementById('step-ing-'+s.id);
     const amt = document.getElementById('step-amt-'+s.id);
     const wait = document.getElementById('step-wait-'+s.id);
@@ -7457,32 +7486,79 @@ function recipeBatchSheetModal(recipeId){
         </tbody>
       </table>
       <div class="hint" style="font-weight:600;color:var(--ink);margin:22px 0 12px;">Production Steps</div>
-      ${canEditSteps ? `
+      ${canEditSteps ? (()=>{
+        let phraseCount = 0, prepCount = 0;
+        const ordinals = draftSteps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
+        return `
       <div id="step-editor-list">
-        ${draftSteps.map((s,i)=>`
-        <div class="bsheet-step-row">
-          <div class="bsr-head">
-            <div class="bsr-title"><span class="bsr-badge">${letterLabel(i)}</span> Phrase ${letterLabel(i)}</div>
-            <div class="bsr-actions">
-              <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
-              <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
-              <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+        ${draftSteps.map((s,i)=>{
+          const ord = ordinals[i];
+          if(s.type==='preparation'){
+            const checklist = s.checklist||[];
+            return `
+            <div class="prep-step-row">
+              <div class="bsr-head">
+                <div class="bsr-title"><span class="prep-badge">${ord}</span> Preparation/Checking Step ${ord} <span class="prep-pill">Preparation</span></div>
+                <div class="bsr-actions">
+                  <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
+                  <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
+                  <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+                </div>
+              </div>
+              <div class="prep-checklist">
+                ${checklist.map(c=>{
+                  if(c.kind==='field'){
+                    return `
+                    <div class="prep-checklist-item prep-field-item">
+                      <input type="text" id="step-tfld-value-${c.id}" value="${esc(c.value)}" placeholder="Value" class="prep-field-value">
+                      <input type="text" id="step-tfld-label-${c.id}" value="${esc(c.label)}" placeholder="Initial Water pH Level">
+                      ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
+                    </div>`;
+                  }
+                  return `
+                  <div class="prep-checklist-item">
+                    <input type="checkbox" disabled>
+                    <input type="text" id="step-tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
+                    ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
+                  </div>`;
+                }).join('')}
+              </div>
+              <div class="prep-footer">
+                <button type="button" class="btn btn-sm" data-prep-add-item="${s.id}">☑ Add Preparation Here</button>
+                <button type="button" class="btn btn-sm" data-prep-add-field="${s.id}">+ Add Step Here</button>
+              </div>
+            </div>`;
+          }
+          return `
+          <div class="bsheet-step-row">
+            <div class="bsr-head">
+              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)}</div>
+              <div class="bsr-actions">
+                <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
+                <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
+                <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+              </div>
             </div>
-          </div>
-          <div class="bsr-fields">
-            <div class="bsr-field"><label>Instruction</label><input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
-            <div class="bsr-field"><label>Amount</label><input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
-            <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
-          </div>
-        </div>`).join('')}
+            <div class="bsr-fields">
+              <div class="bsr-field"><label>Instruction</label><input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
+              <div class="bsr-field"><label>Amount</label><input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
+              <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:20px;">
-        <button type="button" class="btn btn-sm" id="btn-add-step">+ Add step</button>
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm" id="btn-add-step">+ Add phrase</button>
+        <button type="button" class="btn btn-sm" id="btn-add-prep-step">+ Add preparation checking step</button>
         <button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>
       </div>
-      ` : (r.steps.length ? `
+      `;
+      })() : (r.steps.length ? `
       <ol style="margin:0 0 14px;padding-left:20px;">
-        ${r.steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
+        ${r.steps.map(s=> s.type==='preparation'
+          ? `<li style="margin-bottom:4px;">Preparation/Checking: ${(s.checklist||[]).map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join('; ')}</li>`
+          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
+        ).join('')}
       </ol>` : '')}
       ${(tpl.showCombineNote && r.combineNote) ? `<div class="hint" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;"><strong style="color:var(--ink);">Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
       ${(tpl.showPH && r.standardPH) ? `<div class="hint" style="text-align:center;margin-bottom:10px;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
@@ -7511,15 +7587,28 @@ function printBatchSheet(recipeId){
   const canEditSteps = isAdmin() && state._recipeDraft && state._recipeDraft.id===r.id;
   const baseSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
   const steps = baseSteps.map(s=>{
+    if(s.type==='preparation'){
+      const checklist = (s.checklist||[]).map(c=>{
+        if(c.kind==='field'){
+          const labelEl = document.getElementById('step-tfld-label-'+c.id);
+          const valueEl = document.getElementById('step-tfld-value-'+c.id);
+          return {kind:'field', label: labelEl?labelEl.value:c.label, value: valueEl?valueEl.value:c.value};
+        }
+        const el = document.getElementById('step-tchk-'+c.id);
+        return {kind:'checklist', text: el?el.value:c.text};
+      });
+      return {type:'preparation', checklist};
+    }
     const ingEl = document.getElementById('step-ing-'+s.id);
     const amtEl = document.getElementById('step-amt-'+s.id);
     const waitEl = document.getElementById('step-wait-'+s.id);
     return {
+      type: 'phrase',
       ingredient: ingEl ? ingEl.value : s.ingredient,
       amount: amtEl ? amtEl.value : s.amount,
       waitMinutes: waitEl ? (parseFloat(waitEl.value)||0) : s.waitMinutes,
     };
-  }).filter(s=>s.ingredient);
+  }).filter(s=> s.type==='preparation' ? (s.checklist||[]).length>0 : s.ingredient);
   const area = document.getElementById('print-area');
   if(!area) return;
   const tpl = batchSheetTemplate();
@@ -7543,7 +7632,10 @@ function printBatchSheet(recipeId){
       ${steps.length ? `
       <div style="font-weight:600;margin:16px 0 8px;">Production Steps</div>
       <ol style="margin:0 0 14px;padding-left:20px;">
-        ${steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
+        ${steps.map(s=> s.type==='preparation'
+          ? `<li style="margin-bottom:4px;"><strong>Preparation/Checking:</strong> ${s.checklist.map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join('; ')}</li>`
+          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
+        ).join('')}
       </ol>` : ''}
       ${(tpl.showCombineNote && r.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
       ${(tpl.showPH && r.standardPH) ? `<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
@@ -7555,16 +7647,32 @@ function printBatchSheet(recipeId){
 async function saveBatchSheetSteps(recipeId){
   syncDraftStepFieldsFromDOM();
   const d = state._recipeDraft;
-  const steps = d.steps
-    .map(s=>({id:s.id, ingredient:(s.ingredient||'').trim(), amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)}))
-    .filter(s=>s.ingredient);
-  if(steps.length===0){ showToast('Add at least one step'); return; }
+  const steps = d.steps.map(s=>{
+    if(s.type==='preparation'){
+      const checklist = (s.checklist||[]).map(c=>{
+        if(c.kind==='field'){
+          const label = (c.label||'').trim();
+          return label ? {id:c.id, kind:'field', label, value:(c.value||'').trim()} : null;
+        }
+        const text = (c.text||'').trim();
+        return text ? {id:c.id, kind:'checklist', text} : null;
+      }).filter(Boolean);
+      return checklist.length ? {id:s.id, type:'preparation', checklist} : null;
+    }
+    const ingredient = (s.ingredient||'').trim();
+    if(!ingredient) return null;
+    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
+  }).filter(Boolean);
+  if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const r = byId(state.recipes, recipeId); if(!r) return;
   const sizeEl = document.getElementById('sheet-batch-size');
   const batchSizeKg = sizeEl ? Math.max(0, parseFloat(sizeEl.value)||0) : r.batchSizeKg;
   r.steps = steps;
   r.batchSizeKg = batchSizeKg;
-  d.steps = steps.map(s=>({...s}));
+  // Deep-copy (not just {...s}) so the still-open draft's checklist arrays are independent of
+  // what was just saved to r.steps — otherwise further edits here would mutate the saved recipe
+  // directly, bypassing Save entirely, the same reference-sharing bug fixed for the template editor.
+  d.steps = steps.map(s => s.type==='preparation' ? {...s, checklist:s.checklist.map(c=>({...c}))} : {...s});
   d.batchSizeKg = batchSizeKg;
   await save('recipes');
   showToast('Batch sheet saved');
@@ -9890,6 +9998,14 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-step-up]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveStep(b.dataset.stepUp, -1); }));
   document.querySelectorAll('[data-step-down]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveStep(b.dataset.stepDown, 1); }));
   document.querySelectorAll('[data-step-remove]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftRemoveStep(b.dataset.stepRemove); }));
+  if(byIdEl('btn-add-prep-step')) byIdEl('btn-add-prep-step').onclick = ()=>{ syncDraftStepFieldsFromDOM(); draftAddPreparationStep(); };
+  document.querySelectorAll('[data-prep-add-item]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftStepFieldsFromDOM(); draftAddChecklistItem(b.dataset.prepAddItem); }));
+  document.querySelectorAll('[data-prep-add-field]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftStepFieldsFromDOM(); draftAddFieldItem(b.dataset.prepAddField); }));
+  document.querySelectorAll('[data-chk-remove]').forEach(b=>b.addEventListener('click', ()=>{
+    syncDraftStepFieldsFromDOM();
+    const [stepId, itemId] = b.dataset.chkRemove.split(':');
+    draftRemoveChecklistItem(stepId, itemId);
+  }));
   if(byIdEl('btn-add-material')) byIdEl('btn-add-material').onclick = ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftAddMaterial(); };
   document.querySelectorAll('[data-mat-up]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveMaterial(b.dataset.matUp, -1); }));
   document.querySelectorAll('[data-mat-down]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveMaterial(b.dataset.matDown, 1); }));

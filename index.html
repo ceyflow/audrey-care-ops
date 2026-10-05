@@ -550,6 +550,8 @@
   .prep-checklist-item input[type="text"]{flex:1;border:none;background:transparent;font:inherit;font-size:13px;color:var(--ink);outline:none;min-width:0;}
   .prep-checklist-remove{border:none;background:none;color:var(--muted);cursor:pointer;flex-shrink:0;font-size:12px;padding:2px 4px;}
   .prep-checklist-remove:hover{color:var(--ink);}
+  .prep-field-item input.prep-field-value{flex:0 0 120px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:5px 9px;}
+  .prep-field-item input.prep-field-value:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
   .prep-footer{display:flex;gap:8px;flex-wrap:wrap;}
   .batchsheet-template-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
   @media (max-width:760px){ .batchsheet-template-grid{grid-template-columns:1fr;} }
@@ -6253,6 +6255,9 @@ function templateDraftAddPhrase(){
 // A Preparation/Checking step is a second, distinct kind of entry in the same ordered list — a
 // pre-run checklist (e.g. "is the equipment clean?") rather than a mixing instruction. Starts
 // seeded with the two most common GMP-style checks so there's something to edit, not a blank.
+// Its own item list mixes two row kinds: 'checklist' (checkbox + yes/no question, via "Add
+// Preparation Here") and 'field' (a question on the left, an empty box on the right for the
+// value measured later — e.g. "Initial Ph level" / blank, via "Add Step Here").
 const DEFAULT_PREP_CHECKLIST_ITEMS = [
   'Are the machines and equipment cleaned and sanitized?',
   'Are all the materials received in good condition? (Check for color change, expiration, change of nature, and odor)',
@@ -6260,21 +6265,20 @@ const DEFAULT_PREP_CHECKLIST_ITEMS = [
 function templateDraftAddPreparationStep(){
   state._templateDraft.steps.push({
     id: uid('PREP'), type: 'preparation',
-    checklist: DEFAULT_PREP_CHECKLIST_ITEMS.map(text=>({id:uid('CHK'), text})),
+    checklist: DEFAULT_PREP_CHECKLIST_ITEMS.map(text=>({id:uid('CHK'), kind:'checklist', text})),
   });
-  render();
-}
-function templateDraftAddPhraseAfter(afterStepId){
-  const steps = state._templateDraft.steps;
-  const i = steps.findIndex(s=>s.id===afterStepId);
-  const s = newStepDraft(); s.type = 'phrase';
-  steps.splice(i<0 ? steps.length : i+1, 0, s);
   render();
 }
 function templateDraftAddChecklistItem(stepId){
   const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
   if(!step.checklist) step.checklist = [];
-  step.checklist.push({id:uid('CHK'), text:''});
+  step.checklist.push({id:uid('CHK'), kind:'checklist', text:''});
+  render();
+}
+function templateDraftAddFieldItem(stepId){
+  const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
+  if(!step.checklist) step.checklist = [];
+  step.checklist.push({id:uid('FLD'), kind:'field', label:'', value:''});
   render();
 }
 function templateDraftRemoveChecklistItem(stepId, itemId){
@@ -6303,6 +6307,13 @@ function syncTemplateDraftStepFieldsFromDOM(){
   d.steps.forEach(s=>{
     if(s.type==='preparation'){
       (s.checklist||[]).forEach(c=>{
+        if(c.kind==='field'){
+          const labelEl = document.getElementById('tfld-label-'+c.id);
+          const valueEl = document.getElementById('tfld-value-'+c.id);
+          if(labelEl) c.label = labelEl.value;
+          if(valueEl) c.value = valueEl.value;
+          return;
+        }
         const el = document.getElementById('tchk-'+c.id);
         if(el) c.text = el.value;
       });
@@ -6323,7 +6334,14 @@ async function saveTemplateSteps(){
   const name = (d.name||'').trim();
   const steps = d.steps.map(s=>{
     if(s.type==='preparation'){
-      const checklist = (s.checklist||[]).map(c=>({id:c.id, text:(c.text||'').trim()})).filter(c=>c.text);
+      const checklist = (s.checklist||[]).map(c=>{
+        if(c.kind==='field'){
+          const label = (c.label||'').trim();
+          return label ? {id:c.id, kind:'field', label, value:(c.value||'').trim()} : null;
+        }
+        const text = (c.text||'').trim();
+        return text ? {id:c.id, kind:'checklist', text} : null;
+      }).filter(Boolean);
       return checklist.length ? {id:s.id, type:'preparation', checklist} : null;
     }
     const ingredient = (s.ingredient||'').trim();
@@ -7268,16 +7286,26 @@ function renderTemplateStepsModal(){
                 </div>
               </div>
               <div class="prep-checklist">
-                ${checklist.map(c=>`
-                <div class="prep-checklist-item">
-                  <input type="checkbox" disabled>
-                  <input type="text" id="tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
-                  ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
-                </div>`).join('')}
+                ${checklist.map(c=>{
+                  if(c.kind==='field'){
+                    return `
+                    <div class="prep-checklist-item prep-field-item">
+                      <input type="text" id="tfld-label-${c.id}" value="${esc(c.label)}" placeholder="Question — e.g. Initial Ph level">
+                      <input type="text" id="tfld-value-${c.id}" value="${esc(c.value)}" placeholder="Value" class="prep-field-value">
+                      ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
+                    </div>`;
+                  }
+                  return `
+                  <div class="prep-checklist-item">
+                    <input type="checkbox" disabled>
+                    <input type="text" id="tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
+                    ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
+                  </div>`;
+                }).join('')}
               </div>
               <div class="prep-footer">
                 <button type="button" class="btn btn-sm" data-tprep-add-item="${s.id}">☑ Add Preparation Here</button>
-                <button type="button" class="btn btn-sm" data-tphrase-add-after="${s.id}">+ Add Step Here</button>
+                <button type="button" class="btn btn-sm" data-tprep-add-field="${s.id}">+ Add Step Here</button>
               </div>
             </div>`;
           }
@@ -9503,7 +9531,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-tstep-down]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftMoveStep(b.dataset.tstepDown, 1); }));
   document.querySelectorAll('[data-tstep-remove]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftRemoveStep(b.dataset.tstepRemove); }));
   document.querySelectorAll('[data-tprep-add-item]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddChecklistItem(b.dataset.tprepAddItem); }));
-  document.querySelectorAll('[data-tphrase-add-after]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPhraseAfter(b.dataset.tphraseAddAfter); }));
+  document.querySelectorAll('[data-tprep-add-field]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddFieldItem(b.dataset.tprepAddField); }));
   document.querySelectorAll('[data-tchk-remove]').forEach(b=>b.addEventListener('click', ()=>{
     syncTemplateDraftStepFieldsFromDOM();
     const [stepId, itemId] = b.dataset.tchkRemove.split(':');

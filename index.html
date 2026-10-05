@@ -6013,13 +6013,24 @@ function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 // any batch size instead of being locked to one fixed absolute weight.
 function recipeMaterialAmount(percent, batchSizeKg){ return (Number(percent)||0)/100 * (Number(batchSizeKg)||0); }
 function recipeMaterialsTotalPercent(materials){ return (materials||[]).reduce((sum,m)=>sum+(Number(m.percent)||0), 0); }
-function openRecipeModal(id){
+function buildRecipeDraft(id){
   const r = id ? byId(state.recipes, id) : null;
-  state._recipeDraft = r
+  return r
     ? {id:r.id, name:r.name, description:r.description||'', batchSizeKg:r.batchSizeKg||'', standardPH:r.standardPH||'', combineNote:r.combineNote||'',
        materials: (r.materials||[]).map(m=>({...m})), steps: r.steps.map(s=>({...s}))}
     : {id:null, name:'', description:'', batchSizeKg:'', standardPH:'', combineNote:'', materials:[newMaterialDraft()], steps:[newStepDraft()]};
+}
+function openRecipeModal(id){
+  state._recipeDraft = buildRecipeDraft(id);
   openModal('recipe:'+(id||'new'));
+}
+// The batch sheet is now also where the blending team tweaks mixing steps (reorder/delete/add)
+// right before running a batch, instead of a separate admin-only Edit screen — reuses the same
+// draft + step-editor wiring as the full recipe form.
+function openBatchSheetModal(id){
+  if(!byId(state.recipes, id)) return;
+  state._recipeDraft = buildRecipeDraft(id);
+  openModal('recipesheet:'+id);
 }
 function draftAddStep(){ state._recipeDraft.steps.push(newStepDraft()); render(); }
 function draftRemoveStep(stepId){
@@ -6143,7 +6154,7 @@ function deleteRecipe(id){
 // ---- Batch run controls (Admin only) ----
 async function startBatch(recipeId, extra){
   const r = byId(state.recipes, recipeId); if(!r) return;
-  if(!r.steps.length){ showToast('Add at least one production step to this recipe (Edit) before starting a batch'); return; }
+  if(!r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return; }
   extra = extra || {};
   const first = r.steps[0];
   state.activeBatch = {
@@ -6161,7 +6172,7 @@ async function submitStartBatch(e){
   e.preventDefault();
   const f = e.target;
   const r = byId(state.recipes, f.dataset.recipeId);
-  if(!r || !r.steps.length){ showToast('Add at least one production step to this recipe (Edit) before starting a batch'); return; }
+  if(!r || !r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return; }
   await startBatch(f.dataset.recipeId, {
     productName: f.productName.value.trim(),
     qty: f.qty.value.trim(),
@@ -6330,9 +6341,7 @@ function renderRecipesPage(){
         ${matCount ? `<div class="rc-meta">${matCount} raw material${matCount===1?'':'s'} · ${totalPct.toFixed(1)}%${r.batchSizeKg?(' · ref. '+r.batchSizeKg+'kg batch'):''}</div>` : ''}
         <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'} · ~${totalMin} min total${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-          ${canManageBlendBoard() ? `<button class="btn btn-primary btn-sm" data-start-batch="${r.id}" ${isBatchDisplayActive()?'disabled':''}>${isBatchDisplayActive()?'Batch running':'Start batch'}</button>` : ''}
-          ${matCount ? `<button class="btn btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
-          ${isAdmin() ? `<button class="btn btn-sm" data-edit-recipe="${r.id}">Edit</button>` : ''}
+          ${matCount ? `<button class="btn btn-primary btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
           ${isAdmin() ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
         </div>
       </div>`;
@@ -6970,6 +6979,11 @@ function recipeBatchSheetModal(recipeId){
   const batchSizeKg = r.batchSizeKg || 0;
   const totalPct = recipeMaterialsTotalPercent(r.materials);
   const totalAmt = recipeMaterialAmount(totalPct, batchSizeKg);
+  // Step editing lives here now (admin only) instead of a separate Edit screen — reuses the
+  // same draft + step-editor-row markup/handlers as the full recipe form.
+  const canEditSteps = isAdmin() && state._recipeDraft && state._recipeDraft.id===r.id;
+  const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
+  const batchActive = isBatchDisplayActive();
   return `
   <div class="overlay" id="overlay">
     <div class="modal batch-sheet-print" style="max-width:680px;">
@@ -6990,20 +7004,54 @@ function recipeBatchSheetModal(recipeId){
           <tr style="font-weight:700;"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td id="sheet-total-amt">${totalAmt.toFixed(3)}</td></tr>
         </tbody>
       </table>
-      ${r.steps.length ? `
       <div class="hint" style="font-weight:600;color:var(--ink);margin:16px 0 8px;">Mixing steps</div>
+      ${canEditSteps ? `
+      <div id="step-editor-list">
+        ${draftSteps.map((s,i)=>`
+        <div class="step-editor-row">
+          <span class="se-num">${i+1}</span>
+          <div class="se-fields">
+            <input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="Instruction — e.g. Carbomer + H2O">
+            <input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="Amount — e.g. 80kg">
+            <input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}" placeholder="Wait (min)">
+          </div>
+          <div class="se-actions">
+            <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
+            <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
+            <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+          </div>
+        </div>`).join('')}
+      </div>
+      <button type="button" class="btn btn-sm" id="btn-add-step" style="margin-bottom:16px;">+ Add step</button>
+      ` : (r.steps.length ? `
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${r.steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
-      </ol>` : ''}
+      </ol>` : '')}
       ${r.combineNote ? `<div class="hint" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;"><strong style="color:var(--ink);">Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
       ${r.standardPH ? `<div class="hint" style="text-align:center;margin-bottom:10px;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
       <div class="hint" style="text-align:center;">Audrey Care (Pvt) Ltd.</div>
-      <div class="modal-actions" style="justify-content:center;margin-top:16px;">
+      <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-        <button type="button" class="btn btn-primary" id="btn-print-batchsheet">🖨 Print</button>
+        <button type="button" class="btn" id="btn-print-batchsheet">🖨 Print</button>
+        ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
+        ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
       </div>
     </div>
   </div>`;
+}
+async function saveBatchSheetSteps(recipeId){
+  syncDraftStepFieldsFromDOM();
+  const d = state._recipeDraft;
+  const steps = d.steps
+    .map(s=>({id:s.id, ingredient:(s.ingredient||'').trim(), amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)}))
+    .filter(s=>s.ingredient);
+  if(steps.length===0){ showToast('Add at least one step'); return; }
+  const r = byId(state.recipes, recipeId); if(!r) return;
+  r.steps = steps;
+  d.steps = steps.map(s=>({...s}));
+  await save('recipes');
+  showToast('Mixing steps saved');
+  render();
 }
 
 /* ===================== Team chat ===================== */
@@ -9290,8 +9338,10 @@ function attachShellHandlers(){
   }));
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-start-batch]').forEach(b=>b.addEventListener('click', ()=>openModal('startbatch:'+b.dataset.startBatch)));
-  document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openModal('recipesheet:'+b.dataset.viewBatchsheet)));
+  document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openBatchSheetModal(b.dataset.viewBatchsheet)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = ()=>window.print();
+  if(byIdEl('btn-save-batchsheet-steps')) byIdEl('btn-save-batchsheet-steps').onclick = ()=>saveBatchSheetSteps(state._recipeDraft && state._recipeDraft.id);
+  if(byIdEl('btn-start-batch-from-sheet')) byIdEl('btn-start-batch-from-sheet').onclick = (e)=>openModal('startbatch:'+e.currentTarget.dataset.recipeId);
   if(byIdEl('form-start-batch')) byIdEl('form-start-batch').addEventListener('submit', submitStartBatch);
   if(byIdEl('form-recipe')) byIdEl('form-recipe').addEventListener('submit', submitRecipe);
   if(byIdEl('btn-add-step')) byIdEl('btn-add-step').onclick = ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftAddStep(); };

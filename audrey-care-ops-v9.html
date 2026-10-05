@@ -2196,6 +2196,13 @@ async function logActivity(message){
 
 /* ===================== Utilities ===================== */
 function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,7).toUpperCase(); }
+// 0-based index -> A, B, …, Z, AA, AB, … (Excel-column style) — used to letter production-step
+// phrases instead of numbering them.
+function letterLabel(i){
+  let n = i, s = '';
+  do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n/26) - 1; } while(n >= 0);
+  return s;
+}
 function initials(name){ return name.trim().split(/\s+/).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
 const TAG_COLORS = ['#7C5CFC','#D99A1F','#4CAF6D','#3B82C4','#E0615C','#C45CA0','#2FA8A0','#C4825C'];
 function tagColorFor(name){
@@ -5294,7 +5301,7 @@ function batchSheetPreviewMarkup(tpl){
         <tr><td style="padding:3px 4px;">2</td><td style="padding:3px 4px;">SLES</td><td style="padding:3px 4px;">12.000</td></tr>
       </tbody>
     </table>
-    <div style="font-weight:600;margin-bottom:4px;">Mixing steps</div>
+    <div style="font-weight:600;margin-bottom:4px;">Production Steps</div>
     <ol style="margin:0 0 10px;padding-left:16px;">
       <li>Water — 80kg</li>
       <li>SLES — 12kg</li>
@@ -7171,12 +7178,12 @@ function renderTemplateStepsModal(){
         <label>Template name</label>
         <input id="template-name" value="${esc(d.name)}" placeholder="e.g. Shower Gel">
       </div>
-      <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Mixing steps</div>
+      <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>
       <div id="template-step-editor-list">
         ${d.steps.map((s,i)=>`
         <div class="bsheet-step-row">
           <div class="bsr-head">
-            <div class="bsr-title"><span class="bsr-badge">${i+1}</span> Step ${i+1}</div>
+            <div class="bsr-title"><span class="bsr-badge">${letterLabel(i)}</span> Phrase ${letterLabel(i)}</div>
             <div class="bsr-actions">
               <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
               <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
@@ -7241,7 +7248,7 @@ function recipeFormModal(){
         </div>
         <div class="field"><label>Combine together (optional)</label><textarea name="combineNote" placeholder="e.g. White Oil, Palm Oil, Stearic Acid, Cetyl Alcohol, Cetareth 20, GMS 40, BHT, EGDS" style="min-height:60px;">${esc(d.combineNote)}</textarea></div>
 
-        <div class="hint" style="font-weight:600;color:var(--ink);margin:14px 0 8px;">Mixing steps</div>
+        <div class="hint" style="font-weight:600;color:var(--ink);margin:14px 0 8px;">Production Steps</div>
         <div id="step-editor-list">
           ${d.steps.map((s,i)=>`
           <div class="step-editor-row">
@@ -7316,13 +7323,13 @@ function recipeBatchSheetModal(recipeId){
           <tr style="font-weight:700;"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td id="sheet-total-amt">${totalAmt.toFixed(3)}</td></tr>
         </tbody>
       </table>
-      <div class="hint" style="font-weight:600;color:var(--ink);margin:22px 0 12px;">Mixing steps</div>
+      <div class="hint" style="font-weight:600;color:var(--ink);margin:22px 0 12px;">Production Steps</div>
       ${canEditSteps ? `
       <div id="step-editor-list">
         ${draftSteps.map((s,i)=>`
         <div class="bsheet-step-row">
           <div class="bsr-head">
-            <div class="bsr-title"><span class="bsr-badge">${i+1}</span> Step ${i+1}</div>
+            <div class="bsr-title"><span class="bsr-badge">${letterLabel(i)}</span> Phrase ${letterLabel(i)}</div>
             <div class="bsr-actions">
               <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
               <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
@@ -7401,7 +7408,7 @@ function printBatchSheet(recipeId){
         </tbody>
       </table>
       ${steps.length ? `
-      <div style="font-weight:600;margin:16px 0 8px;">Mixing steps</div>
+      <div style="font-weight:600;margin:16px 0 8px;">Production Steps</div>
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
       </ol>` : ''}

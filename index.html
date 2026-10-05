@@ -5272,7 +5272,7 @@ const BATCH_SHEET_TOGGLES = [
 function batchSheetPreviewMarkup(tpl){
   return `
   <div style="border:1px solid var(--border);border-radius:10px;padding:18px;background:#fff;font-family:'Inter',system-ui,sans-serif;color:#20291F;font-size:11px;">
-    ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:8px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:34px;max-width:160px;object-fit:contain;"></div>` : ''}
+    ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:8px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:52px;max-width:220px;object-fit:contain;"></div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
       <div>${tpl.showDate ? `<div style="font-size:9px;color:#6C8071;">Date</div><div style="font-weight:600;">${esc(fmtDate(new Date().toISOString()))}</div>` : ''}</div>
       <div>${tpl.showBatchNo ? `<div style="font-size:9px;color:#6C8071;">Batch number</div><div style="font-weight:600;">BLD-SAMPLE</div>` : ''}</div>
@@ -5319,7 +5319,7 @@ function renderBatchSheetTemplatePanel(){
         <div>
           <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:8px;">Logo</div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
-            ${batchSheetLogo() ? `<img src="${batchSheetLogo()}" alt="Batch sheet logo" style="height:40px;width:auto;max-width:140px;object-fit:contain;">` : `<span class="hint">— none —</span>`}
+            ${batchSheetLogo() ? `<img src="${batchSheetLogo()}" alt="Batch sheet logo" style="height:56px;width:auto;max-width:200px;object-fit:contain;">` : `<span class="hint">— none —</span>`}
             <div style="display:flex;gap:8px;margin-left:auto;">
               <label class="btn btn-sm" style="cursor:pointer;">Change
                 <input type="file" class="brand-change-input" data-addon="batchSheetLogo" style="display:none;" accept="image/*">
@@ -7098,7 +7098,7 @@ function recipeBatchSheetModal(recipeId){
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:680px;">
-      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:48px;max-width:220px;object-fit:contain;"></div>` : ''}
+      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:90px;max-width:320px;object-fit:contain;"></div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
         <div>${tpl.showDate ? `<div class="hint">Date</div><div style="font-weight:600;">${fmtDate(new Date().toISOString())}</div>` : ''}</div>
         <div>${tpl.showBatchNo ? `<div class="hint">Batch number</div><input id="sheet-batch-no" value="${esc(uid('BLD'))}" style="font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:150px;text-align:right;">` : ''}</div>
@@ -7182,7 +7182,7 @@ function printBatchSheet(recipeId){
   const tpl = batchSheetTemplate();
   area.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:24px;font-family:'Inter',system-ui,sans-serif;color:#20291F;">
-      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:48px;max-width:220px;object-fit:contain;"></div>` : ''}
+      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:90px;max-width:320px;object-fit:contain;"></div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
         <div>${tpl.showDate ? `<div style="font-size:12px;color:#6C8071;">Date</div><div style="font-weight:600;">${fmtDate(new Date().toISOString())}</div>` : ''}</div>
         <div>${tpl.showBatchNo ? `<div style="font-size:12px;color:#6C8071;">Batch number</div><div style="font-weight:600;">${esc(batchNo)}</div>` : ''}</div>

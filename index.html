@@ -762,10 +762,20 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
+const DEFAULT_BATCH_SHEET_TEMPLATE = {
+  showLogo:true, showDate:true, showBatchNo:true, showDescription:true,
+  showPH:true, showCombineNote:true, showFooter:true, footerText:'Audrey Care (Pvt) Ltd.'
+};
+function batchSheetTemplate(){ return {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})}; }
+function batchSheetLogo(){
+  const addons = (state.branding && state.branding.addons) || [];
+  const found = addons.find(a=>a.id==='batchSheetLogo');
+  return (found && found.image) || null;
+}
 
 async function kvGet(key){
   const { data, error } = await supabaseClient.from('app_data').select('value').eq('key', key).maybeSingle();
@@ -1178,7 +1188,7 @@ function subscribeRealtime(){
         state.auth = incoming; render(); return;
       }
       if(SYNCED_KEYS.includes(k)){
-        const incoming = payload.new ? payload.new.value : (k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : [])))))));
+        const incoming = payload.new ? payload.new.value : (k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : []))))))));
         if(stableStringify(state[k])===stableStringify(incoming) || recentlySavedByUs(k)) return;
         const prevChatLen = (k==='chat' && Array.isArray(state.chat)) ? state.chat.length : null;
         const prevComplaintsById = (k==='complaints' && Array.isArray(state.complaints)) ? new Map(state.complaints.map(c=>[c.id,c])) : null;
@@ -1910,7 +1920,7 @@ const _complaintRequestedId = _trackRequestedId;
 /* ===================== Storage ===================== */
 async function loadAll(){
   if(!BACKEND_CONFIGURED){ state.loaded = true; state.backendMissing = true; render(); return; }
-  const defaultFor = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : []))))));
+  const defaultFor = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
   const loadedValues = await Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
   // for that key yet, i.e. the raw load came back null/undefined). That's different from the
@@ -1924,6 +1934,7 @@ async function loadAll(){
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
+  state.batchSheetTemplate = {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})};
   if(!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0){
     state.deliveryLines = JSON.parse(JSON.stringify(DEFAULT_DELIVERY_LINES));
     kvSet('deliveryLines', state.deliveryLines).catch(e=>console.error('seed deliveryLines failed', e));
@@ -2831,7 +2842,7 @@ function initCropModal(){
 const BRAND_ADDON_NAMES = {
   logo: 'Logo (sign-in & sidebar)', ordersBoardLogo: 'Orders board logo',
   trackPageLogo: 'Track order page logo', welcomeLogo: 'Welcome screen logo',
-  favicon: 'Favicon (browser tab icon)'
+  favicon: 'Favicon (browser tab icon)', batchSheetLogo: 'Batch sheet logo (printed sheet)'
 };
 async function finishBrandCrop(dataUrl){
   const pc = state.pendingCrop;
@@ -5244,6 +5255,52 @@ const TEMPLATE_OPTIONAL_FIELDS = [
   {key:'courierNumber', label:'Courier Number', hint:'Tracking number for logistics'},
   {key:'courierService', label:'Delivery Method', hint:'Vendor selection (e.g. DHL, FedEx)'},
 ];
+const BATCH_SHEET_TOGGLES = [
+  {key:'showLogo', label:'Logo', hint:'The batch sheet logo set above, if one is uploaded'},
+  {key:'showDate', label:'Date'},
+  {key:'showBatchNo', label:'Batch number'},
+  {key:'showDescription', label:'Product description'},
+  {key:'showPH', label:'Standard finished product pH'},
+  {key:'showCombineNote', label:'"Combine together" note'},
+  {key:'showFooter', label:'Footer text'},
+];
+function renderBatchSheetTemplatePanel(){
+  const t = batchSheetTemplate();
+  return `
+  <div class="panel">
+    <div class="panel-head"><h3>Batch sheet template</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:14px;">Choose what shows up on the printed/viewed batch sheet — raw materials, percentages and mixing steps always show; everything below is optional.</div>
+      <form id="form-batchsheet-template">
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+          ${BATCH_SHEET_TOGGLES.map(x=>`
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" name="${x.key}" ${t[x.key]?'checked':''}>
+            <span>${esc(x.label)}</span>${x.hint?` <span class="hint">— ${esc(x.hint)}</span>`:''}
+          </label>`).join('')}
+        </div>
+        <div class="field" style="max-width:320px;">
+          <label>Footer text</label>
+          <input name="footerText" value="${esc(t.footerText)}" placeholder="e.g. Audrey Care (Pvt) Ltd.">
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start;padding:0;margin-top:16px;">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+async function submitBatchSheetTemplate(e){
+  e.preventDefault();
+  if(!isAdmin()) return;
+  const f = e.target;
+  const next = {...batchSheetTemplate()};
+  BATCH_SHEET_TOGGLES.forEach(x=>{ next[x.key] = !!f[x.key].checked; });
+  next.footerText = f.footerText.value.trim();
+  state.batchSheetTemplate = next;
+  await save('batchSheetTemplate');
+  showToast('Batch sheet template saved');
+}
 function renderSidebarOrderPanel(){
   const groups = NAV
     .map(g => ({ ...g, items: orderedNavItems(g.group, g.items) }))
@@ -5654,7 +5711,18 @@ function renderSettingsPage(){
               ${faviconLogo() ? `<button class="btn btn-sm btn-danger" data-brand-delete="favicon">Remove</button>` : ''}
             </td>
           </tr>
-          ${(state.branding.addons||[]).filter(a=>!['logo','ordersBoardLogo','trackPageLogo','welcomeLogo','favicon'].includes(a.id)).map(a=>`
+          <tr>
+            <td>${batchSheetLogo() ? `<img src="${batchSheetLogo()}" alt="Batch sheet logo" style="height:34px;width:auto;max-width:120px;object-fit:contain;">` : '<span class="hint">— none —</span>'}</td>
+            <td>Batch sheet logo <span class="hint">(printed batch sheet header)</span></td>
+            <td class="row-actions">
+              <button class="btn btn-sm" data-brand-preview="batchSheetLogo">Preview</button>
+              <label class="btn btn-sm" style="cursor:pointer;">Change
+                <input type="file" class="brand-change-input" data-addon="batchSheetLogo" style="display:none;" accept="image/*">
+              </label>
+              ${batchSheetLogo() ? `<button class="btn btn-sm btn-danger" data-brand-delete="batchSheetLogo">Remove</button>` : ''}
+            </td>
+          </tr>
+          ${(state.branding.addons||[]).filter(a=>!['logo','ordersBoardLogo','trackPageLogo','welcomeLogo','favicon','batchSheetLogo'].includes(a.id)).map(a=>`
           <tr>
             <td>${a.image?`<img src="${esc(a.image)}" alt="${esc(a.name)}" style="height:34px;width:auto;max-width:120px;object-fit:contain;">`:'<span class="hint">—</span>'}</td>
             <td>${esc(a.name)}</td>
@@ -5670,6 +5738,8 @@ function renderSettingsPage(){
       </table>
     </div>
   </div>` : ''}
+
+  ${isAdmin() ? renderBatchSheetTemplatePanel() : ''}
 
   ${isAdmin() ? `
   <div class="panel">
@@ -6973,15 +7043,17 @@ function recipeBatchSheetModal(recipeId){
   const canEditSteps = isAdmin() && state._recipeDraft && state._recipeDraft.id===r.id;
   const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
   const batchActive = isBatchDisplayActive();
+  const tpl = batchSheetTemplate();
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:680px;">
+      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:48px;max-width:220px;object-fit:contain;"></div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-        <div><div class="hint">Date</div><div style="font-weight:600;">${fmtDate(new Date().toISOString())}</div></div>
-        <div><div class="hint">Batch number</div><input id="sheet-batch-no" value="${esc(uid('BLD'))}" style="font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:150px;text-align:right;"></div>
+        <div>${tpl.showDate ? `<div class="hint">Date</div><div style="font-weight:600;">${fmtDate(new Date().toISOString())}</div>` : ''}</div>
+        <div>${tpl.showBatchNo ? `<div class="hint">Batch number</div><input id="sheet-batch-no" value="${esc(uid('BLD'))}" style="font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:150px;text-align:right;">` : ''}</div>
       </div>
       <h2 style="text-align:center;margin:6px 0 2px;text-transform:uppercase;">${esc(r.name)}</h2>
-      ${r.description ? `<div class="hint" style="text-align:center;margin-bottom:10px;">${esc(r.description)}</div>` : ''}
+      ${(tpl.showDescription && r.description) ? `<div class="hint" style="text-align:center;margin-bottom:10px;">${esc(r.description)}</div>` : ''}
       <div class="field" style="max-width:220px;margin:0 auto 14px;">
         <label style="text-align:center;display:block;">Batch size (kg)</label>
         <input id="sheet-batch-size" type="number" min="0" step="0.1" value="${batchSizeKg}" style="text-align:center;" oninput="updateBatchSheetAmounts('${r.id}')">
@@ -7018,9 +7090,9 @@ function recipeBatchSheetModal(recipeId){
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${r.steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
       </ol>` : '')}
-      ${r.combineNote ? `<div class="hint" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;"><strong style="color:var(--ink);">Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
-      ${r.standardPH ? `<div class="hint" style="text-align:center;margin-bottom:10px;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
-      <div class="hint" style="text-align:center;">Audrey Care (Pvt) Ltd.</div>
+      ${(tpl.showCombineNote && r.combineNote) ? `<div class="hint" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;"><strong style="color:var(--ink);">Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
+      ${(tpl.showPH && r.standardPH) ? `<div class="hint" style="text-align:center;margin-bottom:10px;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
+      ${(tpl.showFooter && tpl.footerText) ? `<div class="hint" style="text-align:center;">${esc(tpl.footerText)}</div>` : ''}
       <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
         <button type="button" class="btn" id="btn-print-batchsheet" data-recipe-id="${r.id}">🖨 Print</button>
@@ -7056,14 +7128,16 @@ function printBatchSheet(recipeId){
   }).filter(s=>s.ingredient);
   const area = document.getElementById('print-area');
   if(!area) return;
+  const tpl = batchSheetTemplate();
   area.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:24px;font-family:'Inter',system-ui,sans-serif;color:#20291F;">
+      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:48px;max-width:220px;object-fit:contain;"></div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-        <div><div style="font-size:12px;color:#6C8071;">Date</div><div style="font-weight:600;">${fmtDate(new Date().toISOString())}</div></div>
-        <div><div style="font-size:12px;color:#6C8071;">Batch number</div><div style="font-weight:600;">${esc(batchNo)}</div></div>
+        <div>${tpl.showDate ? `<div style="font-size:12px;color:#6C8071;">Date</div><div style="font-weight:600;">${fmtDate(new Date().toISOString())}</div>` : ''}</div>
+        <div>${tpl.showBatchNo ? `<div style="font-size:12px;color:#6C8071;">Batch number</div><div style="font-weight:600;">${esc(batchNo)}</div>` : ''}</div>
       </div>
       <h2 style="text-align:center;margin:6px 0 2px;text-transform:uppercase;">${esc(r.name)}</h2>
-      ${r.description ? `<div style="text-align:center;margin-bottom:10px;color:#6C8071;font-size:13px;">${esc(r.description)}</div>` : ''}
+      ${(tpl.showDescription && r.description) ? `<div style="text-align:center;margin-bottom:10px;color:#6C8071;font-size:13px;">${esc(r.description)}</div>` : ''}
       <div style="text-align:center;margin-bottom:14px;font-size:13px;color:#6C8071;">Batch size: <strong style="color:#20291F;">${batchSizeKg}</strong> kg</div>
       <table class="data-table">
         <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th><th>Amount needed</th></tr></thead>
@@ -7077,9 +7151,9 @@ function printBatchSheet(recipeId){
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
       </ol>` : ''}
-      ${r.combineNote ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
-      ${r.standardPH ? `<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
-      <div style="text-align:center;font-size:13px;color:#6C8071;">Audrey Care (Pvt) Ltd.</div>
+      ${(tpl.showCombineNote && r.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
+      ${(tpl.showPH && r.standardPH) ? `<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
+      ${(tpl.showFooter && tpl.footerText) ? `<div style="text-align:center;font-size:13px;color:#6C8071;">${esc(tpl.footerText)}</div>` : ''}
     </div>
   `;
   window.print();
@@ -9666,6 +9740,7 @@ function attachShellHandlers(){
     showToast('SMS settings updated');
   });
 
+  if(byIdEl('form-batchsheet-template')) byIdEl('form-batchsheet-template').addEventListener('submit', submitBatchSheetTemplate);
   if(byIdEl('form-alert-sound')) byIdEl('form-alert-sound').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;

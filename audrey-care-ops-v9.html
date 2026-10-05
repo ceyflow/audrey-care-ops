@@ -528,20 +528,29 @@
   /* Batch sheet's own mixing-step cards — compact, labeled fields with the reorder/delete
      controls inline in a header row instead of a tall side column, so nothing runs off the
      edge of the (narrower) batch sheet modal. */
-  .bsheet-step-row{border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px;background:var(--surface);box-shadow:0 1px 2px rgba(20,40,25,.04),0 6px 16px rgba(20,40,25,.05);transition:box-shadow .15s ease,border-color .15s ease;}
-  .bsheet-step-row:hover{border-color:var(--accent);box-shadow:0 2px 4px rgba(20,40,25,.05),0 10px 24px rgba(20,40,25,.08);}
-  .bsheet-step-row .bsr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
-  .bsheet-step-row .bsr-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .bsheet-step-row,.prep-step-row{border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px;background:var(--surface);box-shadow:0 1px 2px rgba(20,40,25,.04),0 6px 16px rgba(20,40,25,.05);transition:box-shadow .15s ease,border-color .15s ease;}
+  .bsheet-step-row:hover,.prep-step-row:hover{border-color:var(--accent);box-shadow:0 2px 4px rgba(20,40,25,.05),0 10px 24px rgba(20,40,25,.08);}
+  .bsheet-step-row .bsr-head,.prep-step-row .bsr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .bsheet-step-row .bsr-title,.prep-step-row .bsr-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
   .bsheet-step-row .bsr-badge{width:24px;height:24px;border-radius:50%;background:linear-gradient(155deg,var(--accent),var(--accent-dark));color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 5px rgba(60,144,88,.35);}
   .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
   .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 5px;}
   .bsheet-step-row .bsr-field input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease;}
   .bsheet-step-row .bsr-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
-  .bsheet-step-row .bsr-actions{display:flex;gap:6px;flex-shrink:0;}
-  .bsheet-step-row .bsr-actions button{border:1px solid var(--border);background:var(--surface);border-radius:7px;width:26px;height:24px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;transition:all .15s ease;}
-  .bsheet-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);}
-  .bsheet-step-row .bsr-actions button:active{transform:scale(.92);}
+  .bsheet-step-row .bsr-actions,.prep-step-row .bsr-actions{display:flex;gap:6px;flex-shrink:0;}
+  .bsheet-step-row .bsr-actions button,.prep-step-row .bsr-actions button{border:1px solid var(--border);background:var(--surface);border-radius:7px;width:26px;height:24px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;transition:all .15s ease;}
+  .bsheet-step-row .bsr-actions button:hover,.prep-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);}
+  .bsheet-step-row .bsr-actions button:active,.prep-step-row .bsr-actions button:active{transform:scale(.92);}
   @media (max-width:560px){ .bsheet-step-row .bsr-fields{grid-template-columns:1fr;} }
+  .prep-badge{width:24px;height:24px;border-radius:50%;background:#3B82F6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 5px rgba(37,99,235,.35);}
+  .prep-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:999px;background:#DBEAFE;color:#2563EB;text-transform:uppercase;letter-spacing:.03em;}
+  .prep-checklist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .prep-checklist-item{display:flex;align-items:center;gap:9px;background:var(--bg);border-radius:8px;padding:9px 11px;}
+  .prep-checklist-item input[type="checkbox"]{flex-shrink:0;width:16px;height:16px;}
+  .prep-checklist-item input[type="text"]{flex:1;border:none;background:transparent;font:inherit;font-size:13px;color:var(--ink);outline:none;min-width:0;}
+  .prep-checklist-remove{border:none;background:none;color:var(--muted);cursor:pointer;flex-shrink:0;font-size:12px;padding:2px 4px;}
+  .prep-checklist-remove:hover{color:var(--ink);}
+  .prep-footer{display:flex;gap:8px;flex-wrap:wrap;}
   .batchsheet-template-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
   @media (max-width:760px){ .batchsheet-template-grid{grid-template-columns:1fr;} }
 
@@ -6212,7 +6221,9 @@ function applyMixingTemplateToRecipe(templateId){
   const t = templateById(templateId);
   state._mixingTemplatePickerForRecipeId = null;
   if(!recipeId || !t || !state._recipeDraft || state._recipeDraft.id!==recipeId){ openModal(null); return; }
-  state._recipeDraft.steps = t.steps.map(s=>({...s, id:uid('STEP')}));
+  // Preparation/checking steps are a phrases-template-only concept for now — the batch sheet's
+  // step editor only understands phrase steps (ingredient/amount/wait), so only those carry over.
+  state._recipeDraft.steps = t.steps.filter(s=>s.type!=='preparation').map(s=>({...s, id:uid('STEP')}));
   openModal('recipesheet:'+recipeId);
   showToast('Steps loaded from "'+t.name+'"');
 }
@@ -6223,10 +6234,55 @@ function closeMixingTemplatesPicker(){
 }
 function openTemplateStepsModal(id){
   const t = templateById(id); if(!t) return;
-  state._templateDraft = {id:t.id, name:t.name, steps:t.steps.map(s=>({...s}))};
+  // {...s} alone would leave a preparation step's checklist array shared by reference with the
+  // saved template — editing/reordering/removing a checklist item in the draft would mutate the
+  // real template immediately, even before Save (and survive a Cancel). Clone it too.
+  state._templateDraft = {
+    id: t.id, name: t.name,
+    steps: t.steps.map(s => s.type==='preparation'
+      ? {...s, checklist: (s.checklist||[]).map(c=>({...c}))}
+      : {...s}),
+  };
   openModal('mixingtemplatesteps:'+id);
 }
-function templateDraftAddStep(){ state._templateDraft.steps.push(newStepDraft()); render(); }
+function templateDraftAddPhrase(){
+  const s = newStepDraft(); s.type = 'phrase';
+  state._templateDraft.steps.push(s);
+  render();
+}
+// A Preparation/Checking step is a second, distinct kind of entry in the same ordered list — a
+// pre-run checklist (e.g. "is the equipment clean?") rather than a mixing instruction. Starts
+// seeded with the two most common GMP-style checks so there's something to edit, not a blank.
+const DEFAULT_PREP_CHECKLIST_ITEMS = [
+  'Are the machines and equipment cleaned and sanitized?',
+  'Are all the materials received in good condition? (Check for color change, expiration, change of nature, and odor)',
+];
+function templateDraftAddPreparationStep(){
+  state._templateDraft.steps.push({
+    id: uid('PREP'), type: 'preparation',
+    checklist: DEFAULT_PREP_CHECKLIST_ITEMS.map(text=>({id:uid('CHK'), text})),
+  });
+  render();
+}
+function templateDraftAddPhraseAfter(afterStepId){
+  const steps = state._templateDraft.steps;
+  const i = steps.findIndex(s=>s.id===afterStepId);
+  const s = newStepDraft(); s.type = 'phrase';
+  steps.splice(i<0 ? steps.length : i+1, 0, s);
+  render();
+}
+function templateDraftAddChecklistItem(stepId){
+  const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
+  if(!step.checklist) step.checklist = [];
+  step.checklist.push({id:uid('CHK'), text:''});
+  render();
+}
+function templateDraftRemoveChecklistItem(stepId, itemId){
+  const step = state._templateDraft.steps.find(s=>s.id===stepId); if(!step) return;
+  if((step.checklist||[]).length<=1) return;
+  step.checklist = step.checklist.filter(c=>c.id!==itemId);
+  render();
+}
 function templateDraftRemoveStep(stepId){
   if(state._templateDraft.steps.length<=1) return;
   state._templateDraft.steps = state._templateDraft.steps.filter(s=>s.id!==stepId);
@@ -6245,6 +6301,13 @@ function syncTemplateDraftStepFieldsFromDOM(){
   const nameEl = document.getElementById('template-name');
   if(nameEl) d.name = nameEl.value;
   d.steps.forEach(s=>{
+    if(s.type==='preparation'){
+      (s.checklist||[]).forEach(c=>{
+        const el = document.getElementById('tchk-'+c.id);
+        if(el) c.text = el.value;
+      });
+      return;
+    }
     const ing = document.getElementById('tstep-ing-'+s.id);
     const amt = document.getElementById('tstep-amt-'+s.id);
     const wait = document.getElementById('tstep-wait-'+s.id);
@@ -6258,11 +6321,17 @@ async function saveTemplateSteps(){
   syncTemplateDraftStepFieldsFromDOM();
   const d = state._templateDraft; if(!d) return;
   const name = (d.name||'').trim();
-  const steps = d.steps
-    .map(s=>({id:s.id, ingredient:(s.ingredient||'').trim(), amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)}))
-    .filter(s=>s.ingredient);
+  const steps = d.steps.map(s=>{
+    if(s.type==='preparation'){
+      const checklist = (s.checklist||[]).map(c=>({id:c.id, text:(c.text||'').trim()})).filter(c=>c.text);
+      return checklist.length ? {id:s.id, type:'preparation', checklist} : null;
+    }
+    const ingredient = (s.ingredient||'').trim();
+    if(!ingredient) return null;
+    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
+  }).filter(Boolean);
   if(!name){ showToast('Name this template'); return; }
-  if(steps.length===0){ showToast('Add at least one step'); return; }
+  if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const t = templateById(d.id);
   if(t){ t.name = name; t.steps = steps; }
   await save('mixingStepTemplates');
@@ -7170,6 +7239,10 @@ function renderMixingTemplatesModal(){
 }
 function renderTemplateStepsModal(){
   const d = state._templateDraft; if(!d) return '';
+  // Phrases and Preparation/Checking steps live in one ordered list but are numbered within
+  // their own kind (Phrase A, B, C… / Preparation/Checking Step 1, 2, 3…), not by raw position.
+  let phraseCount = 0, prepCount = 0;
+  const ordinals = d.steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:680px;">
@@ -7180,24 +7253,56 @@ function renderTemplateStepsModal(){
       </div>
       <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>
       <div id="template-step-editor-list">
-        ${d.steps.map((s,i)=>`
-        <div class="bsheet-step-row">
-          <div class="bsr-head">
-            <div class="bsr-title"><span class="bsr-badge">${letterLabel(i)}</span> Phrase ${letterLabel(i)}</div>
-            <div class="bsr-actions">
-              <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
-              <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
-              <button type="button" data-tstep-remove="${s.id}" title="Remove">✕</button>
+        ${d.steps.map((s,i)=>{
+          const ord = ordinals[i];
+          if(s.type==='preparation'){
+            const checklist = s.checklist||[];
+            return `
+            <div class="prep-step-row">
+              <div class="bsr-head">
+                <div class="bsr-title"><span class="prep-badge">${ord}</span> Preparation/Checking Step ${ord} <span class="prep-pill">Preparation</span></div>
+                <div class="bsr-actions">
+                  <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
+                  <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
+                  <button type="button" data-tstep-remove="${s.id}" title="Remove">✕</button>
+                </div>
+              </div>
+              <div class="prep-checklist">
+                ${checklist.map(c=>`
+                <div class="prep-checklist-item">
+                  <input type="checkbox" disabled>
+                  <input type="text" id="tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
+                  ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
+                </div>`).join('')}
+              </div>
+              <div class="prep-footer">
+                <button type="button" class="btn btn-sm" data-tprep-add-item="${s.id}">☑ Add Preparation Here</button>
+                <button type="button" class="btn btn-sm" data-tphrase-add-after="${s.id}">+ Add Step Here</button>
+              </div>
+            </div>`;
+          }
+          return `
+          <div class="bsheet-step-row">
+            <div class="bsr-head">
+              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)}</div>
+              <div class="bsr-actions">
+                <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
+                <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
+                <button type="button" data-tstep-remove="${s.id}" title="Remove">✕</button>
+              </div>
             </div>
-          </div>
-          <div class="bsr-fields">
-            <div class="bsr-field"><label>Instruction</label><input id="tstep-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
-            <div class="bsr-field"><label>Amount</label><input id="tstep-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
-            <div class="bsr-field"><label>Wait (min)</label><input id="tstep-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
-          </div>
-        </div>`).join('')}
+            <div class="bsr-fields">
+              <div class="bsr-field"><label>Instruction</label><input id="tstep-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
+              <div class="bsr-field"><label>Amount</label><input id="tstep-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
+              <div class="bsr-field"><label>Wait (min)</label><input id="tstep-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
-      <button type="button" class="btn btn-sm" id="btn-add-template-step" style="margin-bottom:20px;">+ Add step</button>
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm" id="btn-add-template-step">+ Add phrase</button>
+        <button type="button" class="btn btn-sm" id="btn-add-template-prep-step">+ Add preparation checking step</button>
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-template-steps">Cancel</button>
         <button type="button" class="btn btn-primary" id="btn-save-template-steps">Save</button>
@@ -9392,10 +9497,18 @@ function attachShellHandlers(){
   if(byIdEl('btn-use-mixing-template')) byIdEl('btn-use-mixing-template').onclick = (e)=>openMixingTemplatesPicker(e.currentTarget.dataset.recipeId);
   if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
   if(byIdEl('btn-save-template-steps')) byIdEl('btn-save-template-steps').onclick = saveTemplateSteps;
-  if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddStep(); };
+  if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPhrase(); };
+  if(byIdEl('btn-add-template-prep-step')) byIdEl('btn-add-template-prep-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPreparationStep(); };
   document.querySelectorAll('[data-tstep-up]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftMoveStep(b.dataset.tstepUp, -1); }));
   document.querySelectorAll('[data-tstep-down]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftMoveStep(b.dataset.tstepDown, 1); }));
   document.querySelectorAll('[data-tstep-remove]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftRemoveStep(b.dataset.tstepRemove); }));
+  document.querySelectorAll('[data-tprep-add-item]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddChecklistItem(b.dataset.tprepAddItem); }));
+  document.querySelectorAll('[data-tphrase-add-after]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPhraseAfter(b.dataset.tphraseAddAfter); }));
+  document.querySelectorAll('[data-tchk-remove]').forEach(b=>b.addEventListener('click', ()=>{
+    syncTemplateDraftStepFieldsFromDOM();
+    const [stepId, itemId] = b.dataset.tchkRemove.split(':');
+    templateDraftRemoveChecklistItem(stepId, itemId);
+  }));
   document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>deleteRecipe(b.dataset.deleteRecipe)));
 
   // Costing & recipe

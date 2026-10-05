@@ -6190,7 +6190,30 @@ function openBatchSheetModal(id){
 // draft object + add/move/remove/sync functions below) so editing a template never risks
 // clobbering an in-progress recipe edit, and vice versa.
 function templateById(id){ return byId(state.mixingStepTemplates, id); }
-function openMixingTemplatesModal(){ openModal('mixingtemplates'); }
+function openMixingTemplatesModal(){ state._mixingTemplatePickerForRecipeId = null; openModal('mixingtemplates'); }
+// Opened from a recipe's batch sheet via "Use template" — same card grid, but in this mode each
+// card is a one-click "load these steps into the sheet I came from" picker instead of the usual
+// manage/edit/delete view, and Close returns to that batch sheet rather than closing outright.
+function openMixingTemplatesPicker(recipeId){
+  if(!byId(state.recipes, recipeId)) return;
+  state._mixingTemplatePickerForRecipeId = recipeId;
+  openModal('mixingtemplates');
+}
+function applyMixingTemplateToRecipe(templateId){
+  if(!isAdmin()) return;
+  const recipeId = state._mixingTemplatePickerForRecipeId;
+  const t = templateById(templateId);
+  state._mixingTemplatePickerForRecipeId = null;
+  if(!recipeId || !t || !state._recipeDraft || state._recipeDraft.id!==recipeId){ openModal(null); return; }
+  state._recipeDraft.steps = t.steps.map(s=>({...s, id:uid('STEP')}));
+  openModal('recipesheet:'+recipeId);
+  showToast('Mixing steps loaded from "'+t.name+'"');
+}
+function closeMixingTemplatesPicker(){
+  const recipeId = state._mixingTemplatePickerForRecipeId;
+  state._mixingTemplatePickerForRecipeId = null;
+  openModal(recipeId ? 'recipesheet:'+recipeId : null);
+}
 function openTemplateStepsModal(id){
   const t = templateById(id); if(!t) return;
   state._templateDraft = {id:t.id, name:t.name, steps:t.steps.map(s=>({...s}))};
@@ -6266,16 +6289,6 @@ function addMixingTemplatePrompt(){
       openTemplateStepsModal(t.id);
     },
   });
-}
-// Seeds a brand-new recipe draft with a copy of the template's steps (fresh ids, so editing the
-// new recipe's steps never mutates the template it came from) and opens the usual recipe form.
-function useMixingTemplateForNewRecipe(id){
-  if(!isAdmin()) return;
-  const t = templateById(id); if(!t) return;
-  state._recipeDraft = buildRecipeDraft(null);
-  state._recipeDraft.name = t.name;
-  state._recipeDraft.steps = t.steps.map(s=>({...s, id:uid('STEP')}));
-  openModal('recipe:new');
 }
 function draftAddStep(){ state._recipeDraft.steps.push(newStepDraft()); render(); }
 function draftRemoveStep(stepId){
@@ -7100,6 +7113,30 @@ function renderBatchFocusOverlay(){
 }
 function renderMixingTemplatesModal(){
   const list = state.mixingStepTemplates || [];
+  const pickerRecipeId = state._mixingTemplatePickerForRecipeId;
+  if(pickerRecipeId){
+    return `
+    <div class="overlay" id="overlay">
+      <div class="modal" style="max-width:720px;">
+        <h2>Use a mixing steps template</h2>
+        <div class="sub">Pick one — its steps replace whatever's currently in the batch sheet.</div>
+        ${list.length===0 ? `<div class="empty-state">No templates yet.</div>` : `
+        <div class="recipe-grid" style="margin:16px 0;">
+          ${list.map(t=>`
+          <div class="recipe-card">
+            <div class="rc-title">${esc(t.name)}</div>
+            <div class="rc-meta">${t.steps.length} step${t.steps.length===1?'':'s'}</div>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" data-use-mixing-template="${t.id}">Use this template</button>
+            </div>
+          </div>`).join('')}
+        </div>`}
+        <div class="modal-actions" style="margin-top:16px;">
+          <button type="button" class="btn" id="btn-cancel-mixing-picker">Close</button>
+        </div>
+      </div>
+    </div>`;
+  }
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:720px;">
@@ -7112,8 +7149,7 @@ function renderMixingTemplatesModal(){
           <div class="rc-title">${esc(t.name)}</div>
           <div class="rc-meta">${t.steps.length} step${t.steps.length===1?'':'s'}</div>
           <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" data-use-mixing-template="${t.id}">Use for new recipe</button>
-            <button class="btn btn-sm" data-edit-mixing-template="${t.id}">Edit steps</button>
+            <button class="btn btn-primary btn-sm" data-edit-mixing-template="${t.id}">Edit steps</button>
             <button class="btn btn-sm btn-danger" data-delete-mixing-template="${t.id}">Delete</button>
           </div>
         </div>`).join('')}
@@ -7300,7 +7336,10 @@ function recipeBatchSheetModal(recipeId){
           </div>
         </div>`).join('')}
       </div>
-      <button type="button" class="btn btn-sm" id="btn-add-step" style="margin-bottom:20px;">+ Add step</button>
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button type="button" class="btn btn-sm" id="btn-add-step">+ Add step</button>
+        <button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>
+      </div>
       ` : (r.steps.length ? `
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${r.steps.map(s=>`<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`).join('')}
@@ -9339,9 +9378,11 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
   if(byIdEl('btn-mixing-templates')) byIdEl('btn-mixing-templates').onclick = openMixingTemplatesModal;
   if(byIdEl('btn-add-mixing-template')) byIdEl('btn-add-mixing-template').onclick = addMixingTemplatePrompt;
-  document.querySelectorAll('[data-use-mixing-template]').forEach(b=>b.addEventListener('click', ()=>useMixingTemplateForNewRecipe(b.dataset.useMixingTemplate)));
   document.querySelectorAll('[data-edit-mixing-template]').forEach(b=>b.addEventListener('click', ()=>openTemplateStepsModal(b.dataset.editMixingTemplate)));
   document.querySelectorAll('[data-delete-mixing-template]').forEach(b=>b.addEventListener('click', ()=>deleteMixingTemplate(b.dataset.deleteMixingTemplate)));
+  document.querySelectorAll('[data-use-mixing-template]').forEach(b=>b.addEventListener('click', ()=>applyMixingTemplateToRecipe(b.dataset.useMixingTemplate)));
+  if(byIdEl('btn-cancel-mixing-picker')) byIdEl('btn-cancel-mixing-picker').onclick = closeMixingTemplatesPicker;
+  if(byIdEl('btn-use-mixing-template')) byIdEl('btn-use-mixing-template').onclick = (e)=>openMixingTemplatesPicker(e.currentTarget.dataset.recipeId);
   if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
   if(byIdEl('btn-save-template-steps')) byIdEl('btn-save-template-steps').onclick = saveTemplateSteps;
   if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddStep(); };

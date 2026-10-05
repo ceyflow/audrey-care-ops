@@ -5777,17 +5777,6 @@ function renderSettingsPage(){
             </td>
           </tr>
           <tr>
-            <td>${welcomeLogo() ? `<img src="${welcomeLogo()}" alt="Welcome screen logo" style="height:34px;width:auto;max-width:120px;object-fit:contain;">` : '<span class="hint">— none —</span>'}</td>
-            <td>Welcome screen logo <span class="hint">(shown after Admin signs in)</span></td>
-            <td class="row-actions">
-              <button class="btn btn-sm" data-brand-preview="welcomeLogo">Preview</button>
-              <label class="btn btn-sm" style="cursor:pointer;">Change
-                <input type="file" class="brand-change-input" data-addon="welcomeLogo" style="display:none;" accept="image/*">
-              </label>
-              ${welcomeLogo() ? `<button class="btn btn-sm btn-danger" data-brand-delete="welcomeLogo">Remove</button>` : ''}
-            </td>
-          </tr>
-          <tr>
             <td>${faviconLogo() ? `<img src="${faviconLogo()}" alt="Favicon" style="height:34px;width:34px;object-fit:contain;">` : '<span class="hint">— default —</span>'}</td>
             <td>Favicon <span class="hint">(browser tab icon)</span></td>
             <td class="row-actions">

@@ -2792,6 +2792,7 @@ async function advanceRndProject(id){
   p.stage += 1;
   p.history.push({stage:p.stage, at:new Date().toISOString(), by:state.session.name});
   await save('rndProjects');
+  await markRndAttendanceAuto(p.chemist);
   showToast(p.stage===lastStage ? 'Marked as completed' : 'Moved to '+RND_STAGES[p.stage]);
 }
 async function submitRndEdit(e){
@@ -2832,6 +2833,7 @@ async function addRndLogEntry(id, text){
   if(!Array.isArray(p.log)) p.log = [];
   p.log.unshift({id: uid('LOG'), at: new Date().toISOString(), by: state.session.name, text: text.trim()});
   await save('rndProjects');
+  await markRndAttendanceAuto(p.chemist);
 }
 function todayStr(){
   const d = new Date();
@@ -2879,19 +2881,17 @@ function deleteRndChemist(id){
     },
   });
 }
-// One attendance record per chemist per calendar day — marking twice the same day is a no-op
-// toast, not a duplicate row, so "visits this month" stays an honest headcount.
-async function markRndAttendance(chemistId){
-  if(!canManageRnd()) return;
-  const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
+function rndChemistByName(name){ return name ? state.rndChemists.find(c=>c.name===name) : null; }
+// Attendance is never marked by hand — it's a byproduct of real work: the moment a chemist's
+// product moves forward a stage (they started developing it) or gets a log update (they were
+// in, working), that counts as a visit for today. One record per chemist per calendar day, so
+// several updates in one visit still count as a single day present.
+async function markRndAttendanceAuto(chemistName){
+  const chemist = rndChemistByName(chemistName); if(!chemist) return;
   const today = todayStr();
-  if(state.rndAttendance.find(a=>a.chemistId===chemistId && a.date===today)){
-    showToast(chemist.name+' is already marked present today');
-    return;
-  }
-  state.rndAttendance.unshift({id: uid('ATT'), chemistId, chemistName: chemist.name, date: today, at: new Date().toISOString(), by: state.session.name});
+  if(state.rndAttendance.find(a=>a.chemistId===chemist.id && a.date===today)) return;
+  state.rndAttendance.unshift({id: uid('ATT'), chemistId: chemist.id, chemistName: chemist.name, date: today, at: new Date().toISOString(), by: state.session.name});
   await save('rndAttendance');
-  showToast(chemist.name+' marked present today');
 }
 function rndAttendanceCountThisMonth(chemistId){
   const now = new Date();
@@ -5090,14 +5090,15 @@ function renderRndChemistsTab(){
     return `
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No chemists added yet.</p>
-      <div class="hint" style="margin-bottom:14px;">Add your visiting chemists here so you can mark their attendance each time they come in to work on a product.</div>
+      <div class="hint" style="margin-bottom:14px;">Add your visiting chemists here. Attendance marks itself — the moment one of them starts developing a product or adds a log update, that counts as a visit for today.</div>
       ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist-2">+ Add the first chemist</button>` : ''}
     </div>`;
   }
   return `
+  <div class="hint" style="margin-bottom:12px;">Attendance is automatic — a chemist is marked present the day they advance a product's stage or add a log update, no check-in needed.</div>
   <div class="panel" style="margin-bottom:16px;">
     <table class="data-table">
-      <thead><tr><th>Chemist</th><th>Phone</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
+      <thead><tr><th>Chemist</th><th>Phone</th><th>Today</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
       <tbody>
         ${chemists.map(c=>{
           const markedToday = state.rndAttendance.some(a=>a.chemistId===c.id && a.date===today);
@@ -5106,13 +5107,11 @@ function renderRndChemistsTab(){
           <tr>
             <td>${esc(c.name)}</td>
             <td>${c.phone?esc(c.phone):'—'}</td>
+            <td>${markedToday ? `<span class="pill pill-active">✓ Present</span>` : `<span class="hint">—</span>`}</td>
             <td>${rndAttendanceCountThisMonth(c.id)}</td>
             <td>${last?fmtDateTime(last.at):'Never'}</td>
             <td style="white-space:nowrap;">
-              <div style="display:flex;gap:6px;justify-content:flex-end;">
-                ${canManageRnd() ? `<button type="button" class="btn btn-sm ${markedToday?'':'btn-primary'}" data-mark-rnd-attendance="${c.id}" ${markedToday?'disabled':''}>${markedToday?'✓ Present today':'Mark present today'}</button>` : ''}
-                ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
-              </div>
+              ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
             </td>
           </tr>`;
         }).join('')}
@@ -9015,7 +9014,7 @@ function rndChemistFormModal(id){
   <div class="overlay" id="overlay">
     <div class="modal">
       <h2>${c?'Edit chemist':'Add chemist'}</h2>
-      <div class="sub">${c?'Update this chemist’s details.':'Add a chemist who visits to develop products — mark their attendance each time they come in.'}</div>
+      <div class="sub">${c?'Update this chemist’s details.':'Add a chemist who visits to develop products — attendance is tracked automatically once they’re assigned to one.'}</div>
       <form id="form-rnd-chemist" data-edit-id="${c?c.id:''}">
         <div class="field"><label>Name</label><input name="name" required autocomplete="off" value="${c?esc(c.name):''}"></div>
         <div class="field"><label>Phone</label><input name="phone" autocomplete="off" value="${c?esc(c.phone||''):''}"></div>
@@ -9924,7 +9923,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-rnd-chemist')) byIdEl('btn-new-rnd-chemist').onclick = ()=>openModal('rndchemist:new');
   if(byIdEl('btn-new-rnd-chemist-2')) byIdEl('btn-new-rnd-chemist-2').onclick = ()=>openModal('rndchemist:new');
   document.querySelectorAll('[data-edit-rnd-chemist]').forEach(b=>b.addEventListener('click', ()=>openModal('rndchemist:'+b.dataset.editRndChemist)));
-  document.querySelectorAll('[data-mark-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>markRndAttendance(b.dataset.markRndAttendance)));
   if(byIdEl('form-rnd-chemist')) byIdEl('form-rnd-chemist').addEventListener('submit', submitRndChemistForm);
   if(byIdEl('btn-delete-rnd-chemist')) byIdEl('btn-delete-rnd-chemist').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndChemist(id); };
 

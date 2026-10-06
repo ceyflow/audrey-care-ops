@@ -501,8 +501,12 @@
   .batch-card .batch-recipe-name{font-size:13px;opacity:.75;text-transform:uppercase;letter-spacing:.04em;}
   .batch-card .batch-step-title{font-size:22px;font-weight:600;margin:4px 0 2px;font-family:'Fraunces',serif;}
   .batch-card .batch-step-amount{font-size:14.5px;opacity:.9;}
-  .batch-prep-checklist{margin:10px 0;}
-  .batch-prep-checklist .bpc-row{font-size:14.5px;opacity:.9;padding:2px 0;}
+  .batch-prep-checklist{margin:14px 0;text-align:left;max-width:560px;}
+  .batch-prep-checklist .bpc-row{font-size:15px;opacity:.92;padding:6px 0;}
+  .batch-prep-checklist .bpc-check{display:flex;align-items:flex-start;gap:10px;}
+  .batch-prep-checklist .bpc-check input[type="checkbox"]{width:20px;height:20px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:#FFD27A;}
+  .batch-prep-checklist .bpc-check label{cursor:pointer;}
+  .batch-prep-checklist .bpc-field strong{color:#FFD27A;}
   .batch-countdown{font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:18px 0 6px;letter-spacing:.01em;}
   .batch-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
@@ -569,8 +573,9 @@
   .batch-focus .bf-step-of{font-size:16px;opacity:.6;margin-bottom:18px;}
   .batch-focus .bf-ingredient{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(38px,7vw,88px);line-height:1.1;max-width:1000px;}
   .batch-focus .bf-amount{font-size:clamp(20px,3vw,34px);opacity:.9;margin-top:10px;}
-  .batch-focus .batch-prep-checklist{margin-top:14px;}
-  .batch-focus .batch-prep-checklist .bpc-row{font-size:clamp(16px,2vw,22px);opacity:.9;padding:4px 0;}
+  .batch-focus .batch-prep-checklist{margin-top:18px;max-width:800px;}
+  .batch-focus .batch-prep-checklist .bpc-row{font-size:clamp(16px,2vw,22px);opacity:.9;padding:6px 0;}
+  .batch-focus .batch-prep-checklist .bpc-check input[type="checkbox"]{width:28px;height:28px;margin-top:3px;}
   .batch-focus .bf-countdown{font-size:clamp(70px,14vw,180px);font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:34px 0 8px;}
   .batch-focus .bf-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
   .batch-focus .bf-note{font-size:18px;opacity:.8;margin-bottom:26px;}
@@ -6131,8 +6136,8 @@ function batchStepLabel(step){ return step.type==='preparation' ? 'Preparation/C
 function batchStepChecklistHtml(step){
   if(step.type!=='preparation') return '';
   return `<div class="batch-prep-checklist">${(step.checklist||[]).map(c=> c.kind==='field'
-    ? `<div class="bpc-row">${esc(c.label)}: <strong>${esc(c.value)||'—'}</strong></div>`
-    : `<div class="bpc-row">☐ ${esc(c.text)}</div>`
+    ? `<div class="bpc-row bpc-field">${esc(c.label)}: <strong>${esc(c.value)||'—'}</strong></div>`
+    : `<div class="bpc-row bpc-check"><input type="checkbox" id="batch-chk-${c.id}"><label for="batch-chk-${c.id}">${esc(c.text)}</label></div>`
   ).join('')}</div>`;
 }
 function batchRemainingSeconds(){
@@ -7184,10 +7189,11 @@ function renderActiveBatchCard(){
       <div class="batch-step-amount">Started by ${esc(b.startedBy)} · ${fmtDateTime(b.startedAt)}</div>
     ` : `
       <div class="batch-step-title">Step ${b.currentStep+1} of ${b.steps.length}: ${esc(batchStepLabel(step))}</div>
-      ${step.amount ? `<div class="batch-step-amount">${esc(step.amount)}</div>` : ''}
-      ${batchStepChecklistHtml(step)}
-      <div id="batch-countdown" class="batch-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
-      <div id="batch-countdown-note" class="rc-meta" style="opacity:.85;">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'paused' : (remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step'))}</div>
+      ${step.type==='preparation' ? batchStepChecklistHtml(step) : `
+        ${step.amount ? `<div class="batch-step-amount">${esc(step.amount)}</div>` : ''}
+        <div id="batch-countdown" class="batch-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
+        <div id="batch-countdown-note" class="rc-meta" style="opacity:.85;">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'paused' : (remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step'))}</div>
+      `}
     `}
     <div class="batch-progress-track"><div class="batch-progress-fill" style="width:${pct}%;"></div></div>
 
@@ -7231,10 +7237,11 @@ function renderBatchFocusOverlay(){
     ` : `
       <div class="bf-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>
       <div class="bf-ingredient">${esc(batchStepLabel(step))}</div>
-      ${step.amount ? `<div class="bf-amount">${esc(step.amount)}</div>` : ''}
-      ${batchStepChecklistHtml(step)}
-      <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
-      <div class="bf-note">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — moving on…" : 'remaining on this step'))}</div>
+      ${step.type==='preparation' ? batchStepChecklistHtml(step) : `
+        ${step.amount ? `<div class="bf-amount">${esc(step.amount)}</div>` : ''}
+        <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
+        <div class="bf-note">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — moving on…" : 'remaining on this step'))}</div>
+      `}
     `}
     ${isAdmin() ? `
     <div class="bf-controls">

@@ -2509,6 +2509,9 @@ async function logOut(){
   await saveSession();
   render();
 }
+// These pages are only ever opened from their department hub's cards (Blending Department /
+// Customer Care) — mapped to that hub so Back can return there. See performGoTo/popstate below.
+const SUBPAGE_PARENT_HUB = { blending:'blendingdept', recipes:'blendingdept', costing:'blendingdept', orderinquiry:'customercare', complaints:'customercare' };
 function goTo(page){
   if(!pageAllowed(page)) return;
   if(state.page==='costing' && state._costingDirty){
@@ -2529,7 +2532,13 @@ function performGoTo(page){
   state._costingDirty = false;
   state._costingVersionsView = 'active';
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
-  if(((location.hash||'').replace('#','').split('/')[0]||'')!==page) history.replaceState(null,'','#'+page);
+  if(((location.hash||'').replace('#','').split('/')[0]||'')!==page){
+    // Costing & recipe / Production Guide / Mixing and Filling, and Order inquiry / Complaints,
+    // are only ever opened from their department hub's cards — push a real history entry for
+    // them so the browser's Back button returns to that hub, instead of leaving the app.
+    if(SUBPAGE_PARENT_HUB[page]) history.pushState(null,'','#'+page);
+    else history.replaceState(null,'','#'+page);
+  }
   render();
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
@@ -10817,6 +10826,17 @@ function attachShellHandlers(){
 
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape' && state.batchFocusMode){ state.batchFocusMode = false; render(); }
+});
+// Fires when the browser's Back/Forward button pops one of the history entries pushed in
+// performGoTo (the hub sub-pages) — resync app state to whatever page the hash now names.
+window.addEventListener('popstate', ()=>{
+  if(!state.session || state.trackMode || state.boardMode || state.complaintMode) return;
+  const page = (location.hash||'').replace('#','').split('/')[0] || '';
+  if(!page || !pageAllowed(page)) return;
+  state.page = page; state.modal = null;
+  if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
+  if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
+  render();
 });
 loadAll();
 </script>

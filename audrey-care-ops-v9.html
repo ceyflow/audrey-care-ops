@@ -38,6 +38,10 @@
     --s-delivered:#3FA968;  --s-delivered-soft:#E4F8EA;
     --s-qc:#B14B3F;         --s-qc-soft:#FBEEEC;
     --s-mixing:#2E8B8B;     --s-mixing-soft:#E3F3F3;
+    --s-idea:#6B5B95;        --s-idea-soft:#EBE7F2;
+    --s-formulating:#A8790F; --s-formulating-soft:#F5EBD4;
+    --s-sampletest:#2E8B8B;  --s-sampletest-soft:#E3F3F3;
+    --s-rndreview:#B14B3F;   --s-rndreview-soft:#FBEEEC;
     --radius:10px;
     --sidebar-w:240px;
   }
@@ -785,7 +789,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1396,7 +1400,7 @@ const DEFAULT_AUTH = {
 const ROLES = ['Admin','Sub Admin','Blending','Packing','Customer Care','Orders Process'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','orderinquiry','blending','recipes','costing','customers','suppliers','complaints','gmp','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','orderinquiry','blending','recipes','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blending','customers','complaints'],
   Blending: ['blending','chat','recipes'],
   Packing: ['orders','chat'],
@@ -1404,7 +1408,7 @@ const ROLE_PAGES = {
   'Orders Process': ['ordersprocess']
 };
 // Pages an Admin can toggle on/off for Blending and Packing from Settings → Page access.
-const ROLE_PAGE_TOGGLES = ['dashboard','orders','orderinquiry','blending','recipes','customers','suppliers','complaints','gmp','staff','chat','ratings'];
+const ROLE_PAGE_TOGGLES = ['dashboard','orders','orderinquiry','blending','recipes','customers','suppliers','complaints','gmp','rnd','staff','chat','ratings'];
 function pagesForRole(role){
   const custom = state.auth.rolePages && state.auth.rolePages[role];
   return (Array.isArray(custom) && custom.length) ? custom : (ROLE_PAGES[role] || []);
@@ -1636,6 +1640,20 @@ const BLEND_STAGE_STYLE = {
 const BLEND_NEXT_ACTION_LABEL = {0:'Send to 1st QC (Base)',1:'Approve — start mixing',2:'Send to 2nd QC',3:'Approve — start filling',4:'Send to 3rd QC',5:'Approve — dispatch to stock'};
 function canManageBlendBoard(){ return isAdmin() || (state.session && state.session.role==='Blending'); }
 function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < BLEND_STAGES.length-1; }
+
+const RND_STAGES = ['Idea','Formulating','Sample Testing','Review','Completed'];
+const RND_STAGE_KEYS = ['idea','formulating','sampletest','rndreview','delivered'];
+const RND_STAGE_STYLE = {
+  idea:{c:'var(--s-idea)', bg:'var(--s-idea-soft)'},
+  formulating:{c:'var(--s-formulating)', bg:'var(--s-formulating-soft)'},
+  sampletest:{c:'var(--s-sampletest)', bg:'var(--s-sampletest-soft)'},
+  rndreview:{c:'var(--s-rndreview)', bg:'var(--s-rndreview-soft)'},
+  delivered:{c:'var(--s-delivered)', bg:'var(--s-delivered-soft)'}
+};
+const RND_NEXT_ACTION_LABEL = {0:'Start formulating',1:'Send sample for testing',2:'Send for review',3:'Mark completed'};
+const RND_PROJECT_TYPES = ['New product','Improvement'];
+function canManageRnd(){ return isAdmin(); }
+function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
 
 /* ===================== GMP checklists ===================== */
 // GMP "Checklists" — live, fillable monthly cleaning checklists (built from the factory's own
@@ -1888,6 +1906,7 @@ let state = {
   recipes: [], activeBatch: null, batchFocusMode: false,
   gmpChecklistEntries: [],
   blendBatches: [],
+  rndProjects: [],
   branding: {addons: []},
   navOrder: {},
   navExpanded: {blending:true, customercare:true},
@@ -1930,7 +1949,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid' },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndCalPeriod: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -2724,6 +2743,91 @@ function deleteBlendBatch(id){
       await save('blendBatches');
     },
   });
+}
+
+/* ===================== R&D projects ===================== */
+async function createRndProject(e){
+  e.preventDefault();
+  const f = e.target;
+  const project = {
+    id: uid('RND'),
+    name: f.name.value.trim(),
+    type: f.type.value,
+    relatedProduct: f.relatedProduct.value.trim(),
+    chemist: f.chemist.value.trim(),
+    targetDate: f.targetDate.value || '',
+    notes: f.notes.value.trim(),
+    stage: 0,
+    createdAt: new Date().toISOString(),
+    log: [],
+    history: [{stage:0, at:new Date().toISOString(), by:state.session.name}],
+  };
+  state.rndProjects.unshift(project);
+  await save('rndProjects');
+  closeModal();
+  showToast('R&D project added');
+}
+async function advanceRndProject(id){
+  const p = byId(state.rndProjects,id);
+  const lastStage = RND_STAGES.length-1;
+  if(!p || p.stage>=lastStage || !canAdvanceRnd(p.stage)) return;
+  p.stage += 1;
+  p.history.push({stage:p.stage, at:new Date().toISOString(), by:state.session.name});
+  await save('rndProjects');
+  showToast(p.stage===lastStage ? 'Project marked completed' : 'Moved to '+RND_STAGES[p.stage]);
+}
+async function submitRndEdit(e){
+  e.preventDefault();
+  const f = e.target; const id = f.dataset.projectId;
+  const p = byId(state.rndProjects, id); if(!p) return;
+  Object.assign(p, {
+    name: f.name.value.trim() || p.name,
+    type: f.type.value,
+    relatedProduct: f.relatedProduct.value.trim(),
+    chemist: f.chemist.value.trim(),
+    targetDate: f.targetDate.value || '',
+    notes: f.notes.value.trim(),
+  });
+  await save('rndProjects'); closeModal();
+  showToast('Project updated');
+}
+async function moveRndToStage(id, newStage){
+  const p = byId(state.rndProjects, id); if(!p || p.stage===newStage || !canManageRnd()) return;
+  p.stage = newStage;
+  p.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
+  await save('rndProjects');
+  showToast('Moved to '+RND_STAGES[newStage]);
+}
+function deleteRndProject(id){
+  if(!isAdmin()) return;
+  openConfirmModal({
+    title: 'Delete R&D project', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this project? This cannot be undone.',
+    onConfirm: async ()=>{
+      state.rndProjects = state.rndProjects.filter(x=>x.id!==id);
+      await save('rndProjects');
+    },
+  });
+}
+async function addRndLogEntry(id, text){
+  const p = byId(state.rndProjects, id); if(!p || !text.trim()) return;
+  if(!Array.isArray(p.log)) p.log = [];
+  p.log.unshift({id: uid('LOG'), at: new Date().toISOString(), by: state.session.name, text: text.trim()});
+  await save('rndProjects');
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function rndDueInfo(p){
+  if(!p.targetDate) return null;
+  const done = p.stage >= RND_STAGES.length-1;
+  const today = todayStr();
+  if(done) return {label:'Completed', color:'var(--s-delivered)'};
+  if(p.targetDate < today) return {label:'Overdue', color:'var(--danger)'};
+  if(p.targetDate === today) return {label:'Due today', color:'var(--s-rndreview)'};
+  const days = Math.ceil((new Date(p.targetDate) - new Date(today)) / 86400000);
+  return {label:`Due in ${days}d`, color:'var(--s-formulating)'};
 }
 
 /* ===================== Branding / template customization ===================== */
@@ -4217,6 +4321,9 @@ const NAV = [
   {group:'GMP', items:[
     {id:'gmp', label:'GMP checklists', icon:'gmp'},
   ]},
+  {group:'R&D', items:[
+    {id:'rnd', label:'R&D', icon:'flask'},
+  ]},
   {group:'Team', items:[
     {id:'staff', label:'Staff', icon:'staff'},
     {id:'chat', label:'Team chat', icon:'chat'},
@@ -4299,6 +4406,7 @@ const PAGE_META = {
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Fill in and track the factory\'s cleaning checklists — no paper needed.'},
+  rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, and progress.'},
   staff:{title:'Staff', sub:'People working across the pipeline.'},
   chat:{title:'Team chat', sub:'Message everyone signed in to the workspace.'},
   bulksms:{title:'Bulk SMS', sub:'Send one message to a list of customers at once.'},
@@ -4453,6 +4561,7 @@ function renderPage(){
     case 'suppliers': return renderSuppliersPage();
     case 'complaints': return renderComplaintsPage();
     case 'gmp': return renderGmpPage();
+    case 'rnd': return renderRndPage();
     case 'staff': return renderStaffPage();
     case 'chat': return renderChatPage();
     case 'bulksms': return renderBulkSmsPage();
@@ -4733,6 +4842,126 @@ function renderBlendCard(b){
     <div class="meta-row">
       <span class="assignee ${b.assignee?'':'unassigned'}"><span class="dot"></span>${b.assignee ? esc(b.assignee) : 'Unassigned'}</span>
       <span class="days">${daysAgo(b.createdAt)}</span>
+    </div>
+  </div>`;
+}
+
+/* ===================== R&D page ===================== */
+function renderRndPage(){
+  const view = state.filters.rndView === 'calendar' ? 'calendar' : 'board';
+  const now = new Date();
+  let period = state.filters.rndCalPeriod;
+  let year, month;
+  if(period && /^\d{4}-\d{1,2}$/.test(period)){ [year, month] = period.split('-').map(Number); }
+  else { year = now.getFullYear(); month = now.getMonth()+1; }
+  return `
+  <div class="toolbar" style="flex-wrap:wrap;">
+    <div class="tabs">
+      <button type="button" class="tab ${view==='calendar'?'':'active'}" data-rnd-view-mode="board">Board</button>
+      <button type="button" class="tab ${view==='calendar'?'active':''}" data-rnd-view-mode="calendar">📅 Calendar</button>
+    </div>
+    ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd" style="margin-left:auto;">+ New project</button>` : ''}
+  </div>
+  ${view==='calendar' ? `
+  <div class="toolbar" style="justify-content:center;gap:8px;">
+    <button type="button" class="btn btn-sm" id="btn-rnd-prev-month">‹ Prev</button>
+    <div style="font-weight:600;font-size:13px;min-width:130px;text-align:center;">${MONTH_NAMES[month-1]} ${year}</div>
+    <button type="button" class="btn btn-sm" id="btn-rnd-next-month">Next ›</button>
+  </div>
+  <div class="panel">
+    <div class="hint" style="margin-bottom:10px;">Each dot marks a project's target completion date — red means overdue, green means completed, gold means still on schedule. Click a date to see what's due.</div>
+    ${renderRndCalendar(year, month)}
+  </div>
+  ` : (state.rndProjects.length===0 ? `
+    <div class="empty-state">
+      <p style="font-size:15px;margin-bottom:14px;">No R&D projects yet.</p>
+      <div class="hint" style="margin-bottom:14px;">Track new product development and improvements to existing products here — formulas, sample tests, and a dated log.</div>
+      ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-2">+ Add the first project</button>` : ''}
+    </div>
+  ` : `
+  <div class="board">
+    ${RND_STAGES.map((stageName,i)=>renderRndColumn(stageName,i)).join('')}
+  </div>`)}
+  `;
+}
+function renderRndColumn(stageName, i){
+  const key = RND_STAGE_KEYS[i]; const style = RND_STAGE_STYLE[key];
+  const projects = state.rndProjects.filter(p=>p.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  return `
+  <div class="column">
+    <div class="column-head" style="background:${style.bg};color:${style.c};">
+      <span class="name">${stageName}</span><span class="count">${projects.length}</span>
+    </div>
+    <div class="column-body" data-rnd-stage="${i}">
+      ${projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join('')}
+    </div>
+  </div>`;
+}
+function renderRndCard(p){
+  const typeLabel = p.type || 'New product';
+  const due = rndDueInfo(p);
+  return `
+  <div class="card" draggable="${canManageRnd()?'true':'false'}" data-rnd="${p.id}">
+    <div class="top-row"><span class="customer">${esc(p.name)}</span><span class="order-id">${p.id}</span></div>
+    <div class="product">${esc(typeLabel)}${p.relatedProduct?(' · '+esc(p.relatedProduct)):''}</div>
+    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+      <span class="pill pill-medium">${esc(typeLabel)}</span>
+      ${due ? `<span class="pill" style="background:${due.color};color:#fff;">${esc(due.label)}</span>` : ''}
+    </div>
+    <div class="meta-row">
+      <span class="assignee ${p.chemist?'':'unassigned'}"><span class="dot"></span>${p.chemist ? esc(p.chemist) : 'No chemist assigned'}</span>
+      <span class="days">${daysAgo(p.createdAt)}</span>
+    </div>
+  </div>`;
+}
+function renderRndCalendar(year, month){
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstWeekday = new Date(year, month-1, 1).getDay();
+  const weekdayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const today = todayStr();
+  let dayCellsHtml = '';
+  for(let i=0;i<firstWeekday;i++) dayCellsHtml += `<div class="cal-day cal-day-empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const due = state.rndProjects.filter(p=>p.targetDate===dateStr);
+    let dotColor = null;
+    if(due.length){
+      const allDone = due.every(p=>p.stage>=RND_STAGES.length-1);
+      const anyOverdue = !allDone && dateStr < today;
+      dotColor = allDone ? 'var(--s-delivered)' : (anyOverdue ? 'var(--danger)' : 'var(--s-formulating)');
+    }
+    dayCellsHtml += `
+    <button type="button" class="cal-day" data-rnd-day="${year}|${month}|${d}">
+      <span class="cal-day-num">${d}</span>
+      ${dotColor ? `<span class="cal-day-dot" style="background:${dotColor};"></span>` : ''}
+      ${due.length>1 ? `<span class="cal-day-signed" title="${due.length} projects due">${due.length}</span>` : ''}
+    </button>`;
+  }
+  return `
+  <div class="cal-weekdays">${weekdayLabels.map(w=>`<div>${w}</div>`).join('')}</div>
+  <div class="cal-grid">${dayCellsHtml}</div>
+  `;
+}
+function rndDayModal(paramStr){
+  const [yearStr, monthStr, dayStr] = paramStr.split('|');
+  const year = Number(yearStr), month = Number(monthStr), day = Number(dayStr);
+  const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const due = state.rndProjects.filter(p=>p.targetDate===dateStr);
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:480px;">
+      <h2>${esc(MONTH_NAMES[month-1])} ${day}, ${year}</h2>
+      <div class="sub">R&D projects targeted for this date.</div>
+      <div style="margin-top:14px;">
+        ${due.length===0 ? `<div class="empty-state">Nothing due this day.</div>` : due.map(p=>`
+        <div class="card" style="margin-bottom:8px;cursor:pointer;" data-rnd-day-project="${p.id}">
+          <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
+          <div class="product">${esc(p.type||'New product')} · ${esc(RND_STAGES[p.stage])}</div>
+        </div>`).join('')}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+      </div>
     </div>
   </div>`;
 }
@@ -7776,6 +8005,11 @@ function renderModal(){
     if(id==='new') return newBlendBatchModal();
     return renderBlendDrawer(id);
   }
+  if(type==='rnd'){
+    if(id==='new') return newRndProjectModal();
+    return renderRndDrawer(id);
+  }
+  if(type==='rnddaymodal') return rndDayModal(parts.slice(1).join(':'));
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
@@ -8516,6 +8750,96 @@ function renderBlendDrawer(id){
   </div>`;
 }
 
+function newRndProjectModal(){
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>New R&D project</h2>
+      <div class="sub">Track a new product idea, or an improvement to an existing one.</div>
+      <form id="form-new-rnd">
+        <div class="field"><label>Project name</label><input name="name" required autocomplete="off" placeholder="e.g. Aloevera Face Cleanser"></div>
+        <div class="field-row">
+          <div class="field"><label>Type</label>
+            <select name="type">${RND_PROJECT_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Target completion date</label><input type="date" name="targetDate"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Related product</label><input name="relatedProduct" autocomplete="off" placeholder="If improving an existing product"></div>
+          <div class="field"><label>Chemist</label><input name="chemist" autocomplete="off" placeholder="Who's developing this"></div>
+        </div>
+        <div class="field"><label>Notes</label><textarea name="notes" placeholder="Brief, target, anything worth noting"></textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add project</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function renderRndDrawer(id){
+  const p = byId(state.rndProjects,id); if(!p) return '';
+  const key = RND_STAGE_KEYS[p.stage]; const style = RND_STAGE_STYLE[key];
+  const canAdv = canAdvanceRnd(p.stage);
+  const ro = !canManageRnd();
+  const roAttr = ro ? 'readonly' : '';
+  const log = Array.isArray(p.log) ? p.log : [];
+  return `
+  <div class="drawer-overlay" id="overlay"></div>
+  <div class="drawer">
+    <button class="drawer-close" id="btn-cancel-modal" aria-label="Close" style="color:#fff;">✕</button>
+    <div class="drawer-hero">
+      <div>
+        <button type="button" class="back" id="btn-drawer-back-close">← Back to board</button>
+        <h2>${esc(p.name)}</h2>
+        <div class="sub">${esc(p.type||'New product')} · ${RND_STAGES[p.stage]} · created ${fmtDateTime(p.createdAt)}</div>
+      </div>
+      <div class="stat-chip"><div class="k">Days in progress</div><div class="v">${daysAgo(p.createdAt)}</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
+      <span class="stage-badge" style="background:${style.bg};color:${style.c};">${RND_STAGES[p.stage]}</span>
+    </div>
+
+    ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
+    <form id="form-rnd-edit" data-project-id="${p.id}">
+      <div class="field"><label>Project name</label><input name="name" value="${esc(p.name)}" ${roAttr}></div>
+      <div class="field-row">
+        <div class="field"><label>Type</label>
+          <select name="type" ${roAttr}>${RND_PROJECT_TYPES.map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Target completion date</label><input type="date" name="targetDate" value="${esc(p.targetDate||'')}" ${roAttr}></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Related product</label><input name="relatedProduct" value="${esc(p.relatedProduct||'')}" ${roAttr}></div>
+        <div class="field"><label>Chemist</label><input name="chemist" value="${esc(p.chemist||'')}" ${roAttr}></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(p.notes||''))}</textarea></div>
+
+      <div class="field"><label>Stage history</label>
+        <div class="timeline">${p.history.map(h=>`<div class="item">${RND_STAGES[h.stage]} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
+      </div>
+
+      <div class="modal-actions" style="justify-content:space-between;">
+        <div>${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd">Delete</button>` : ''}</div>
+        <div style="display:flex;gap:8px;">
+          ${!ro && canAdv ? `<button type="button" class="btn" id="btn-advance-rnd">${RND_NEXT_ACTION_LABEL[p.stage]}</button>` : ''}
+          ${!ro ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
+        </div>
+      </div>
+    </form>
+
+    <div class="field" style="margin-top:6px;"><label>Development log</label>
+      ${!ro ? `
+      <form id="form-rnd-log" data-project-id="${p.id}" style="display:flex;gap:8px;margin-bottom:12px;">
+        <textarea name="logtext" placeholder="What happened — a formula tweak, a sample test result, anything worth logging" rows="2" style="flex:1;" required></textarea>
+        <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Add</button>
+      </form>` : ''}
+      ${log.length===0 ? `<div class="hint">No log entries yet.</div>` : `
+      <div class="timeline">${log.map(l=>`<div class="item">${escBody(l.text)} <div class="t">${fmtDateTime(l.at)} · ${esc(l.by)}</div></div>`).join('')}</div>`}
+    </div>
+  </div>`;
+}
+
 function customerFormModal(id){
   const c = id ? byId(state.customers,id) : null;
   const norm = v => String(v||'').trim().toLowerCase();
@@ -9065,6 +9389,7 @@ function attachShellHandlers(){
   document.querySelectorAll('.card').forEach(c=>{
     if(c.dataset.order) c.addEventListener('click', ()=>openModal('order:'+c.dataset.order));
     else if(c.dataset.blend) c.addEventListener('click', ()=>openModal('blend:'+c.dataset.blend));
+    else if(c.dataset.rnd) c.addEventListener('click', ()=>openModal('rnd:'+c.dataset.rnd));
   });
   document.querySelectorAll('[data-order-row]').forEach(r=>r.addEventListener('click', ()=>openModal('order:'+r.dataset.orderRow)));
 
@@ -9074,10 +9399,11 @@ function attachShellHandlers(){
     c.addEventListener('dragstart', e=>{
       if(c.dataset.order){ state._draggedOrderId = c.dataset.order; }
       else if(c.dataset.blend){ state._draggedBlendId = c.dataset.blend; }
+      else if(c.dataset.rnd){ state._draggedRndId = c.dataset.rnd; }
       c.classList.add('dragging');
-      if(e.dataTransfer){ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.dataset.order || c.dataset.blend || ''); }
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.dataset.order || c.dataset.blend || c.dataset.rnd || ''); }
     });
-    c.addEventListener('dragend', ()=>{ c.classList.remove('dragging'); state._draggedOrderId = null; state._draggedBlendId = null; });
+    c.addEventListener('dragend', ()=>{ c.classList.remove('dragging'); state._draggedOrderId = null; state._draggedBlendId = null; state._draggedRndId = null; });
   });
   document.querySelectorAll('.column-body[data-stage]').forEach(col=>{
     col.addEventListener('dragover', e=>{
@@ -9359,6 +9685,49 @@ function attachShellHandlers(){
   if(byIdEl('form-blend-edit')) byIdEl('form-blend-edit').addEventListener('submit', submitBlendEdit);
   if(byIdEl('btn-advance-blend')) byIdEl('btn-advance-blend').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceBlendBatch(id); };
   if(byIdEl('btn-delete-blend')) byIdEl('btn-delete-blend').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteBlendBatch(id); };
+
+  // R&D board
+  if(byIdEl('btn-new-rnd')) byIdEl('btn-new-rnd').onclick = ()=>openModal('rnd:new');
+  if(byIdEl('btn-new-rnd-2')) byIdEl('btn-new-rnd-2').onclick = ()=>openModal('rnd:new');
+  document.querySelectorAll('[data-rnd-view-mode]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = b.dataset.rndViewMode; render(); }));
+  function currentRndPeriod(){
+    const period = state.filters.rndCalPeriod;
+    if(period && /^\d{4}-\d{1,2}$/.test(period)) return period.split('-').map(Number);
+    const now = new Date(); return [now.getFullYear(), now.getMonth()+1];
+  }
+  if(byIdEl('btn-rnd-prev-month')) byIdEl('btn-rnd-prev-month').onclick = ()=>{
+    let [y,m] = currentRndPeriod(); m -= 1; if(m<1){ m=12; y-=1; }
+    state.filters.rndCalPeriod = y+'-'+m; render();
+  };
+  if(byIdEl('btn-rnd-next-month')) byIdEl('btn-rnd-next-month').onclick = ()=>{
+    let [y,m] = currentRndPeriod(); m += 1; if(m>12){ m=1; y+=1; }
+    state.filters.rndCalPeriod = y+'-'+m; render();
+  };
+  document.querySelectorAll('[data-rnd-day]').forEach(b=>b.addEventListener('click', ()=>openModal('rnddaymodal:'+b.dataset.rndDay)));
+  document.querySelectorAll('[data-rnd-day-project]').forEach(c=>c.addEventListener('click', ()=>openModal('rnd:'+c.dataset.rndDayProject)));
+  document.querySelectorAll('.column-body[data-rnd-stage]').forEach(col=>{
+    col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', ()=>col.classList.remove('drag-over'));
+    col.addEventListener('drop', e=>{
+      e.preventDefault(); col.classList.remove('drag-over');
+      const rndId = state._draggedRndId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+      const targetStage = parseInt(col.dataset.rndStage, 10);
+      if(rndId) moveRndToStage(rndId, targetStage);
+      state._draggedRndId = null;
+    });
+  });
+  if(byIdEl('form-new-rnd')) byIdEl('form-new-rnd').addEventListener('submit', createRndProject);
+  if(byIdEl('form-rnd-edit')) byIdEl('form-rnd-edit').addEventListener('submit', submitRndEdit);
+  if(byIdEl('form-rnd-log')) byIdEl('form-rnd-log').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const f = e.target;
+    const text = f.logtext.value;
+    f.logtext.value = '';
+    await addRndLogEntry(f.dataset.projectId, text);
+    render();
+  });
+  if(byIdEl('btn-advance-rnd')) byIdEl('btn-advance-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceRndProject(id); };
+  if(byIdEl('btn-delete-rnd')) byIdEl('btn-delete-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndProject(id); };
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');

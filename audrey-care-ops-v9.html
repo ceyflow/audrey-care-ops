@@ -1981,6 +1981,14 @@ async function loadAll(){
   SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || defaultFor(k); });
   if(!state.branding || !Array.isArray(state.branding.addons)) state.branding = {addons: []};
   if(!state.navOrder || typeof state.navOrder !== 'object' || Array.isArray(state.navOrder)) state.navOrder = {};
+  // One-time cleanup: 'blending' used to be the top-level sidebar group id (label "Blending
+  // Department" after a rename) before it became a leaf page under the new 'blendingdept' hub.
+  // A stale custom label saved under the old id would otherwise bleed into the board's page
+  // title now that 'blending' refers to the board itself.
+  if(state.navLabels && state.navLabels.blending === 'Blending Department'){
+    delete state.navLabels.blending;
+    kvSet('navLabels', state.navLabels).catch(e=>console.error('clear stale blending navLabel failed', e));
+  }
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
@@ -3558,7 +3566,7 @@ const AI_NAV_PAGES = {
   dashboard: ['dashboard', 'home'],
   orders: ['orders board', 'order board', 'orders'],
   orderinquiry: ['order inquiry', 'order lookup'],
-  blending: ['blending board', 'blending'],
+  blending: ['mixing and filling', 'blending board', 'blending'],
   recipes: ['recipes', 'recipe'],
   customers: ['customers'],
   suppliers: ['suppliers'],
@@ -4314,9 +4322,9 @@ const NAV = [
   {group:'Operations', items:[
     {id:'orders', label:'Orders board', icon:'orders'},
     {id:'blendingdept', label:'Blending Department', icon:'blender', children:[
-      {id:'blending', label:'Blending board'},
-      {id:'recipes', label:'Production Guide'},
       {id:'costing', label:'Costing & recipe'},
+      {id:'recipes', label:'Production Guide'},
+      {id:'blending', label:'Mixing and Filling'},
     ]},
     {id:'customercare', label:'Customer Care', icon:'headset', children:[
       {id:'orderinquiry', label:'Order inquiry'},
@@ -4408,7 +4416,7 @@ const PAGE_META = {
   customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
   blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, or costing.'},
-  blending:{title:'Blending board', sub:'Track every batch from blending through quality checks to stock.'},
+  blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Batch recipes with step-by-step timers for the blending team.'},
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
@@ -4446,27 +4454,11 @@ function renderShell(freshPage){
       ${navGroups.map(g=>`
         <div class="nav-group">
           <div class="group-label">${g.group}</div>
-          ${g.items.map(it=>{
-            const hasChildren = it.children && it.children.length>0;
-            const expanded = hasChildren && !!(state.navExpanded && state.navExpanded[it.id]);
-            const link = `
-            <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="${hasChildren?'flex:1;margin-bottom:0;':''}">
+          ${g.items.map(it=>`
+            <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}">
               ${icon(it.icon)}<span>${esc(navLabel(it))}</span>
               ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
-            </a>`;
-            if(!hasChildren) return link;
-            return `
-            <div class="nav-item-row">
-              ${link}
-              <button type="button" class="nav-expand-btn ${expanded?'open':''}" data-nav-toggle="${it.id}" title="${expanded?'Collapse':'Expand'}">${icon('chevron')}</button>
-            </div>
-            ${expanded ? `<div class="nav-subitems">
-              ${it.children.map(c=>`
-              <a href="#${c.id}" class="nav-subitem ${state.page===c.id?'active':''}" data-nav="${c.id}">
-                <span class="nav-subitem-dash">–</span>${esc(navLabel(c))}
-              </a>`).join('')}
-            </div>` : ''}`;
-          }).join('')}
+            </a>`).join('')}
         </div>`).join('')}
       <div class="sidebar-foot">Signed in as ${esc(state.session.name)} · ${esc(state.session.role)}</div>
     </aside>
@@ -4834,9 +4826,9 @@ function renderOrderInquiryPage(){
 /* ===================== Blending Department landing ===================== */
 function renderBlendingDeptPage(){
   const cards = [
-    {id:'blending', label:'Blending board', icon:'blender'},
-    {id:'recipes', label:'Production Guide', icon:'recipe'},
     {id:'costing', label:'Costing & recipe', icon:'list'},
+    {id:'recipes', label:'Production Guide', icon:'recipe'},
+    {id:'blending', label:'Mixing and Filling', icon:'blender'},
   ].filter(c=>pageAllowed(c.id));
   return `
   <div class="landing-grid">
@@ -6969,7 +6961,7 @@ async function finishBatchIntoBlendingBoard(b){
   state.activeBatch = null;
   await saveActiveBatchVerified();
   goTo('blending');
-  showToast('Batch complete — added to Blending board: '+batch.product);
+  showToast('Batch complete — added to Mixing and Filling: '+batch.product);
 }
 function toggleBatchFocus(){ state.batchFocusMode = !state.batchFocusMode; render(); }
 // finishBatchIntoBlendingBoard transfers a 'completed' batch to the Blending board and nulls
@@ -6983,7 +6975,7 @@ function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatc
 // ---- Rendering ----
 function renderRecipesPage(){
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
+  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Mixing and Filling</button>` : ''}
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
@@ -7050,7 +7042,7 @@ function renderCostingProductGrid(){
   const admin = isAdmin();
   const products = state.costingProducts;
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
+  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Mixing and Filling</button>` : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Product costing</div>
     ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}

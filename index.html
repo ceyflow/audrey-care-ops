@@ -6983,7 +6983,6 @@ function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatc
 // ---- Rendering ----
 function renderRecipesPage(){
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Mixing and Filling</button>` : ''}
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
@@ -7050,7 +7049,6 @@ function renderCostingProductGrid(){
   const admin = isAdmin();
   const products = state.costingProducts;
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Mixing and Filling</button>` : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Product costing</div>
     ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}

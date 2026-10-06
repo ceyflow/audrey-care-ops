@@ -78,7 +78,6 @@
   .sidebar .brand .brand-logo{display:block;height:44px;width:auto;object-fit:contain;}
   .sidebar .brand .tagline{display:block;font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.01em;}
   .nav-group{padding:16px 12px 4px;}
-  .nav-group .group-label{font-size:11px;color:var(--muted);padding:0 10px 6px;font-weight:600;}
   .nav-item{
     display:flex;align-items:center;gap:10px;
     padding:9px 12px;border-radius:8px;
@@ -330,10 +329,12 @@
   .list-row .lr-date{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;}
 
   /* ---------------- Section landing cards (e.g. Customer Care) ---------------- */
-  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:4px;}
-  .landing-card{position:relative;display:flex;align-items:center;gap:12px;background:var(--accent-grad);color:#fff;border:none;border-radius:10px;padding:20px 22px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
+  .landing-section{margin-bottom:26px;}
+  .landing-section-title{font-size:14.5px;font-weight:700;color:var(--ink);padding-bottom:9px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+  .landing-card{position:relative;display:flex;align-items:center;gap:8px;background:var(--accent-grad);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
   .landing-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(60,144,88,.28);}
-  .landing-card svg{width:22px;height:22px;flex-shrink:0;}
+  .landing-card svg{width:15px;height:15px;flex-shrink:0;}
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
 
   /* ---------------- Kanban (Orders) ---------------- */
@@ -4451,15 +4452,13 @@ function renderShell(freshPage){
         <img src="${currentLogo()}" alt="Audrey" class="brand-logo">
         <span class="tagline">Operations</span>
       </div>
-      ${navGroups.map(g=>`
-        <div class="nav-group">
-          <div class="group-label">${g.group}</div>
-          ${g.items.map(it=>`
-            <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}">
-              ${icon(it.icon)}<span>${esc(navLabel(it))}</span>
-              ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
-            </a>`).join('')}
-        </div>`).join('')}
+      <div class="nav-group">
+        ${navGroups.flatMap(g=>g.items).map(it=>`
+          <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}">
+            ${icon(it.icon)}<span>${esc(navLabel(it))}</span>
+            ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
+          </a>`).join('')}
+      </div>
       <div class="sidebar-foot">Signed in as ${esc(state.session.name)} · ${esc(state.session.role)}</div>
     </aside>
 
@@ -4758,14 +4757,17 @@ function renderCustomerCarePage(){
     {id:'complaints', label:'Complaints', icon:'headset', badge: openComplaints || null},
   ].filter(c=>pageAllowed(c.id));
   return `
-  <div class="landing-grid">
-    ${cards.map(c=>`
-    <button type="button" class="landing-card" data-nav="${c.id}">
-      ${c.badge ? `<span class="landing-card-badge">${c.badge}</span>` : ''}
-      ${icon(c.icon)}<span>${esc(c.label)}</span>
-    </button>`).join('')}
+  <div class="landing-section">
+    <div class="landing-section-title">Customer Support</div>
+    ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : `
+    <div class="landing-grid">
+      ${cards.map(c=>`
+      <button type="button" class="landing-card" data-nav="${c.id}">
+        ${c.badge ? `<span class="landing-card-badge">${c.badge}</span>` : ''}
+        ${icon(c.icon)}<span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>`}
   </div>
-  ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : ''}
   `;
 }
 
@@ -4831,13 +4833,16 @@ function renderBlendingDeptPage(){
     {id:'blending', label:'Mixing and Filling', icon:'blender'},
   ].filter(c=>pageAllowed(c.id));
   return `
-  <div class="landing-grid">
-    ${cards.map(c=>`
-    <button type="button" class="landing-card" data-nav="${c.id}">
-      ${icon(c.icon)}<span>${esc(c.label)}</span>
-    </button>`).join('')}
+  <div class="landing-section">
+    <div class="landing-section-title">Production</div>
+    ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : `
+    <div class="landing-grid">
+      ${cards.map(c=>`
+      <button type="button" class="landing-card" data-nav="${c.id}">
+        ${icon(c.icon)}<span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>`}
   </div>
-  ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : ''}
   `;
 }
 
@@ -6975,7 +6980,6 @@ function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatc
 // ---- Rendering ----
 function renderRecipesPage(){
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Mixing and Filling</button>` : ''}
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
@@ -7042,7 +7046,6 @@ function renderCostingProductGrid(){
   const admin = isAdmin();
   const products = state.costingProducts;
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Mixing and Filling</button>` : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Product costing</div>
     ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}

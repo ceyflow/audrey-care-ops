@@ -1959,7 +1959,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndCalPeriod: null },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board' },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -4963,34 +4963,18 @@ function renderBlendCard(b){
 /* ===================== R&D page ===================== */
 function renderRndPage(){
   const viewRaw = state.filters.rndView;
-  const view = viewRaw==='calendar' ? 'calendar' : (viewRaw==='chemists' ? 'chemists' : 'board');
-  const now = new Date();
-  let period = state.filters.rndCalPeriod;
-  let year, month;
-  if(period && /^\d{4}-\d{1,2}$/.test(period)){ [year, month] = period.split('-').map(Number); }
-  else { year = now.getFullYear(); month = now.getMonth()+1; }
+  const view = viewRaw==='chemists' ? 'chemists' : 'board';
   return `
   <div class="toolbar" style="flex-wrap:wrap;">
     <div class="tabs">
       <button type="button" class="tab ${view==='board'?'active':''}" data-rnd-view-mode="board">Products</button>
-      <button type="button" class="tab ${view==='calendar'?'active':''}" data-rnd-view-mode="calendar">📅 Calendar</button>
       <button type="button" class="tab ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">🧪 Chemists</button>
     </div>
     ${view==='chemists'
       ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
       : (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd" style="margin-left:auto;">+ Add product</button>` : '')}
   </div>
-  ${view==='calendar' ? `
-  <div class="toolbar" style="justify-content:center;gap:8px;">
-    <button type="button" class="btn btn-sm" id="btn-rnd-prev-month">‹ Prev</button>
-    <div style="font-weight:600;font-size:13px;min-width:130px;text-align:center;">${MONTH_NAMES[month-1]} ${year}</div>
-    <button type="button" class="btn btn-sm" id="btn-rnd-next-month">Next ›</button>
-  </div>
-  <div class="panel">
-    <div class="hint" style="margin-bottom:10px;">Each dot marks a product's target completion date — red means overdue, green means completed, gold means still on schedule. Click a date to see what's due.</div>
-    ${renderRndCalendar(year, month)}
-  </div>
-  ` : view==='chemists' ? renderRndChemistsTab() : (state.rndProjects.length===0 ? `
+  ${view==='chemists' ? renderRndChemistsTab() : (state.rndProjects.length===0 ? `
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>
@@ -5029,57 +5013,6 @@ function renderRndCard(p){
     <div class="meta-row">
       <span class="assignee ${p.chemist?'':'unassigned'}"><span class="dot"></span>${p.chemist ? esc(p.chemist) : 'No chemist assigned'}</span>
       <span class="days">${daysAgo(p.createdAt)}</span>
-    </div>
-  </div>`;
-}
-function renderRndCalendar(year, month){
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const firstWeekday = new Date(year, month-1, 1).getDay();
-  const weekdayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const today = todayStr();
-  let dayCellsHtml = '';
-  for(let i=0;i<firstWeekday;i++) dayCellsHtml += `<div class="cal-day cal-day-empty"></div>`;
-  for(let d=1; d<=daysInMonth; d++){
-    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const due = state.rndProjects.filter(p=>p.targetDate===dateStr);
-    let dotColor = null;
-    if(due.length){
-      const allDone = due.every(p=>p.stage>=RND_STAGES.length-1);
-      const anyOverdue = !allDone && dateStr < today;
-      dotColor = allDone ? 'var(--s-delivered)' : (anyOverdue ? 'var(--danger)' : 'var(--s-formulating)');
-    }
-    dayCellsHtml += `
-    <button type="button" class="cal-day" data-rnd-day="${year}|${month}|${d}">
-      <span class="cal-day-num">${d}</span>
-      ${dotColor ? `<span class="cal-day-dot" style="background:${dotColor};"></span>` : ''}
-      ${due.length>1 ? `<span class="cal-day-signed" title="${due.length} projects due">${due.length}</span>` : ''}
-    </button>`;
-  }
-  return `
-  <div class="cal-weekdays">${weekdayLabels.map(w=>`<div>${w}</div>`).join('')}</div>
-  <div class="cal-grid">${dayCellsHtml}</div>
-  `;
-}
-function rndDayModal(paramStr){
-  const [yearStr, monthStr, dayStr] = paramStr.split('|');
-  const year = Number(yearStr), month = Number(monthStr), day = Number(dayStr);
-  const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  const due = state.rndProjects.filter(p=>p.targetDate===dateStr);
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:480px;">
-      <h2>${esc(MONTH_NAMES[month-1])} ${day}, ${year}</h2>
-      <div class="sub">Products targeted for this date.</div>
-      <div style="margin-top:14px;">
-        ${due.length===0 ? `<div class="empty-state">Nothing due this day.</div>` : due.map(p=>`
-        <div class="card" style="margin-bottom:8px;cursor:pointer;" data-rnd-day-project="${p.id}">
-          <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
-          <div class="product">${esc(p.type||'New product')} · ${esc(RND_STAGES[p.stage])}</div>
-        </div>`).join('')}
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-      </div>
     </div>
   </div>`;
 }
@@ -8172,7 +8105,6 @@ function renderModal(){
     if(id==='new') return newRndProjectModal();
     return renderRndDrawer(id);
   }
-  if(type==='rnddaymodal') return rndDayModal(parts.slice(1).join(':'));
   if(type==='rndchemist') return rndChemistFormModal(id==='new'?null:id);
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
@@ -9880,21 +9812,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-rnd')) byIdEl('btn-new-rnd').onclick = ()=>openModal('rnd:new');
   if(byIdEl('btn-new-rnd-2')) byIdEl('btn-new-rnd-2').onclick = ()=>openModal('rnd:new');
   document.querySelectorAll('[data-rnd-view-mode]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = b.dataset.rndViewMode; render(); }));
-  function currentRndPeriod(){
-    const period = state.filters.rndCalPeriod;
-    if(period && /^\d{4}-\d{1,2}$/.test(period)) return period.split('-').map(Number);
-    const now = new Date(); return [now.getFullYear(), now.getMonth()+1];
-  }
-  if(byIdEl('btn-rnd-prev-month')) byIdEl('btn-rnd-prev-month').onclick = ()=>{
-    let [y,m] = currentRndPeriod(); m -= 1; if(m<1){ m=12; y-=1; }
-    state.filters.rndCalPeriod = y+'-'+m; render();
-  };
-  if(byIdEl('btn-rnd-next-month')) byIdEl('btn-rnd-next-month').onclick = ()=>{
-    let [y,m] = currentRndPeriod(); m += 1; if(m>12){ m=1; y+=1; }
-    state.filters.rndCalPeriod = y+'-'+m; render();
-  };
-  document.querySelectorAll('[data-rnd-day]').forEach(b=>b.addEventListener('click', ()=>openModal('rnddaymodal:'+b.dataset.rndDay)));
-  document.querySelectorAll('[data-rnd-day-project]').forEach(c=>c.addEventListener('click', ()=>openModal('rnd:'+c.dataset.rndDayProject)));
   document.querySelectorAll('.column-body[data-rnd-stage]').forEach(col=>{
     col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('drag-over'); });
     col.addEventListener('dragleave', ()=>col.classList.remove('drag-over'));

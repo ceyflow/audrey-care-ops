@@ -797,7 +797,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1915,6 +1915,8 @@ let state = {
   gmpChecklistEntries: [],
   blendBatches: [],
   rndProjects: [],
+  rndChemists: [],
+  rndAttendance: [],
   branding: {addons: []},
   navOrder: {},
   navExpanded: {blendingdept:true, customercare:true},
@@ -2781,7 +2783,7 @@ async function createRndProject(e){
   state.rndProjects.unshift(project);
   await save('rndProjects');
   closeModal();
-  showToast('R&D project added');
+  showToast('Product added');
 }
 async function advanceRndProject(id){
   const p = byId(state.rndProjects,id);
@@ -2790,7 +2792,7 @@ async function advanceRndProject(id){
   p.stage += 1;
   p.history.push({stage:p.stage, at:new Date().toISOString(), by:state.session.name});
   await save('rndProjects');
-  showToast(p.stage===lastStage ? 'Project marked completed' : 'Moved to '+RND_STAGES[p.stage]);
+  showToast(p.stage===lastStage ? 'Marked as completed' : 'Moved to '+RND_STAGES[p.stage]);
 }
 async function submitRndEdit(e){
   e.preventDefault();
@@ -2805,7 +2807,7 @@ async function submitRndEdit(e){
     notes: f.notes.value.trim(),
   });
   await save('rndProjects'); closeModal();
-  showToast('Project updated');
+  showToast('Product updated');
 }
 async function moveRndToStage(id, newStage){
   const p = byId(state.rndProjects, id); if(!p || p.stage===newStage || !canManageRnd()) return;
@@ -2817,8 +2819,8 @@ async function moveRndToStage(id, newStage){
 function deleteRndProject(id){
   if(!isAdmin()) return;
   openConfirmModal({
-    title: 'Delete R&D project', danger: true, confirmLabel: 'Delete',
-    message: 'Delete this project? This cannot be undone.',
+    title: 'Delete product', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this product? This cannot be undone.',
     onConfirm: async ()=>{
       state.rndProjects = state.rndProjects.filter(x=>x.id!==id);
       await save('rndProjects');
@@ -2844,6 +2846,72 @@ function rndDueInfo(p){
   if(p.targetDate === today) return {label:'Due today', color:'var(--s-rndreview)'};
   const days = Math.ceil((new Date(p.targetDate) - new Date(today)) / 86400000);
   return {label:`Due in ${days}d`, color:'var(--s-formulating)'};
+}
+
+/* ===================== R&D chemists & attendance ===================== */
+// Chemists are hired casually — they visit to develop/test a product, not fixed staff, so they
+// get their own small roster here instead of being added to the main Staff directory.
+async function submitRndChemistForm(e){
+  e.preventDefault();
+  const f = e.target;
+  const editId = f.dataset.editId;
+  const name = f.name.value.trim(); if(!name) return;
+  const phone = f.phone.value.trim();
+  if(editId){
+    const c = byId(state.rndChemists, editId); if(!c) return;
+    c.name = name; c.phone = phone;
+    await save('rndChemists'); closeModal();
+    showToast('Chemist updated');
+  } else {
+    state.rndChemists.unshift({id: uid('CHM'), name, phone, createdAt: new Date().toISOString()});
+    await save('rndChemists'); closeModal();
+    showToast('Chemist added');
+  }
+}
+function deleteRndChemist(id){
+  if(!isAdmin()) return;
+  openConfirmModal({
+    title: 'Delete chemist', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this chemist? Their past attendance stays on record, but they’ll no longer appear in the active list.',
+    onConfirm: async ()=>{
+      state.rndChemists = state.rndChemists.filter(x=>x.id!==id);
+      await save('rndChemists');
+    },
+  });
+}
+// One attendance record per chemist per calendar day — marking twice the same day is a no-op
+// toast, not a duplicate row, so "visits this month" stays an honest headcount.
+async function markRndAttendance(chemistId){
+  if(!canManageRnd()) return;
+  const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
+  const today = todayStr();
+  if(state.rndAttendance.find(a=>a.chemistId===chemistId && a.date===today)){
+    showToast(chemist.name+' is already marked present today');
+    return;
+  }
+  state.rndAttendance.unshift({id: uid('ATT'), chemistId, chemistName: chemist.name, date: today, at: new Date().toISOString(), by: state.session.name});
+  await save('rndAttendance');
+  showToast(chemist.name+' marked present today');
+}
+function rndAttendanceCountThisMonth(chemistId){
+  const now = new Date();
+  const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  return state.rndAttendance.filter(a=>a.chemistId===chemistId && a.date.slice(0,7)===ym).length;
+}
+function rndLastVisit(chemistId){
+  const entries = state.rndAttendance.filter(a=>a.chemistId===chemistId).sort((a,b)=>b.date.localeCompare(a.date));
+  return entries[0] || null;
+}
+// Keeps a chemist assigned to a product selectable even if they've since been removed from the
+// active roster — mirrors how customerFormModal handles a salesman no longer in the staff list.
+function rndChemistOptions(selectedName){
+  const matched = selectedName ? state.rndChemists.find(c=>c.name===selectedName) : null;
+  const unmatched = selectedName && !matched ? selectedName : null;
+  return `
+    <option value="">Unassigned</option>
+    ${unmatched ? `<option value="${esc(unmatched)}" selected>${esc(unmatched)} (not in chemist list)</option>` : ''}
+    ${state.rndChemists.map(c=>`<option value="${esc(c.name)}" ${matched&&matched.name===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
+  `;
 }
 
 /* ===================== Branding / template customization ===================== */
@@ -4425,7 +4493,7 @@ const PAGE_META = {
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Fill in and track the factory\'s cleaning checklists — no paper needed.'},
-  rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, and progress.'},
+  rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, chemist attendance, and progress.'},
   staff:{title:'Staff', sub:'People working across the pipeline.'},
   chat:{title:'Team chat', sub:'Message everyone signed in to the workspace.'},
   bulksms:{title:'Bulk SMS', sub:'Send one message to a list of customers at once.'},
@@ -4894,7 +4962,8 @@ function renderBlendCard(b){
 
 /* ===================== R&D page ===================== */
 function renderRndPage(){
-  const view = state.filters.rndView === 'calendar' ? 'calendar' : 'board';
+  const viewRaw = state.filters.rndView;
+  const view = viewRaw==='calendar' ? 'calendar' : (viewRaw==='chemists' ? 'chemists' : 'board');
   const now = new Date();
   let period = state.filters.rndCalPeriod;
   let year, month;
@@ -4903,10 +4972,13 @@ function renderRndPage(){
   return `
   <div class="toolbar" style="flex-wrap:wrap;">
     <div class="tabs">
-      <button type="button" class="tab ${view==='calendar'?'':'active'}" data-rnd-view-mode="board">Board</button>
+      <button type="button" class="tab ${view==='board'?'active':''}" data-rnd-view-mode="board">Products</button>
       <button type="button" class="tab ${view==='calendar'?'active':''}" data-rnd-view-mode="calendar">📅 Calendar</button>
+      <button type="button" class="tab ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">🧪 Chemists</button>
     </div>
-    ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd" style="margin-left:auto;">+ New project</button>` : ''}
+    ${view==='chemists'
+      ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
+      : (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd" style="margin-left:auto;">+ Add product</button>` : '')}
   </div>
   ${view==='calendar' ? `
   <div class="toolbar" style="justify-content:center;gap:8px;">
@@ -4915,14 +4987,14 @@ function renderRndPage(){
     <button type="button" class="btn btn-sm" id="btn-rnd-next-month">Next ›</button>
   </div>
   <div class="panel">
-    <div class="hint" style="margin-bottom:10px;">Each dot marks a project's target completion date — red means overdue, green means completed, gold means still on schedule. Click a date to see what's due.</div>
+    <div class="hint" style="margin-bottom:10px;">Each dot marks a product's target completion date — red means overdue, green means completed, gold means still on schedule. Click a date to see what's due.</div>
     ${renderRndCalendar(year, month)}
   </div>
-  ` : (state.rndProjects.length===0 ? `
+  ` : view==='chemists' ? renderRndChemistsTab() : (state.rndProjects.length===0 ? `
     <div class="empty-state">
-      <p style="font-size:15px;margin-bottom:14px;">No R&D projects yet.</p>
-      <div class="hint" style="margin-bottom:14px;">Track new product development and improvements to existing products here — formulas, sample tests, and a dated log.</div>
-      ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-2">+ Add the first project</button>` : ''}
+      <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
+      <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>
+      ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-2">+ Add the first product</button>` : ''}
     </div>
   ` : `
   <div class="board">
@@ -4997,7 +5069,7 @@ function rndDayModal(paramStr){
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:480px;">
       <h2>${esc(MONTH_NAMES[month-1])} ${day}, ${year}</h2>
-      <div class="sub">R&D projects targeted for this date.</div>
+      <div class="sub">Products targeted for this date.</div>
       <div style="margin-top:14px;">
         ${due.length===0 ? `<div class="empty-state">Nothing due this day.</div>` : due.map(p=>`
         <div class="card" style="margin-bottom:8px;cursor:pointer;" data-rnd-day-project="${p.id}">
@@ -5010,6 +5082,54 @@ function rndDayModal(paramStr){
       </div>
     </div>
   </div>`;
+}
+function renderRndChemistsTab(){
+  const chemists = state.rndChemists;
+  const today = todayStr();
+  if(chemists.length===0){
+    return `
+    <div class="empty-state">
+      <p style="font-size:15px;margin-bottom:14px;">No chemists added yet.</p>
+      <div class="hint" style="margin-bottom:14px;">Add your visiting chemists here so you can mark their attendance each time they come in to work on a product.</div>
+      ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist-2">+ Add the first chemist</button>` : ''}
+    </div>`;
+  }
+  return `
+  <div class="panel" style="margin-bottom:16px;">
+    <table class="data-table">
+      <thead><tr><th>Chemist</th><th>Phone</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
+      <tbody>
+        ${chemists.map(c=>{
+          const markedToday = state.rndAttendance.some(a=>a.chemistId===c.id && a.date===today);
+          const last = rndLastVisit(c.id);
+          return `
+          <tr>
+            <td>${esc(c.name)}</td>
+            <td>${c.phone?esc(c.phone):'—'}</td>
+            <td>${rndAttendanceCountThisMonth(c.id)}</td>
+            <td>${last?fmtDateTime(last.at):'Never'}</td>
+            <td style="white-space:nowrap;">
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                ${canManageRnd() ? `<button type="button" class="btn btn-sm ${markedToday?'':'btn-primary'}" data-mark-rnd-attendance="${c.id}" ${markedToday?'disabled':''}>${markedToday?'✓ Present today':'Mark present today'}</button>` : ''}
+                ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Recent attendance</h3></div>
+    ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Chemist</th><th>Marked by</th></tr></thead>
+      <tbody>
+        ${state.rndAttendance.slice(0,30).map(a=>`<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${esc(a.by)}</td></tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>
+  `;
 }
 
 /* ===================== Customers page ===================== */
@@ -8054,6 +8174,7 @@ function renderModal(){
     return renderRndDrawer(id);
   }
   if(type==='rnddaymodal') return rndDayModal(parts.slice(1).join(':'));
+  if(type==='rndchemist') return rndChemistFormModal(id==='new'?null:id);
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
@@ -8798,10 +8919,10 @@ function newRndProjectModal(){
   return `
   <div class="overlay" id="overlay">
     <div class="modal">
-      <h2>New R&D project</h2>
-      <div class="sub">Track a new product idea, or an improvement to an existing one.</div>
+      <h2>New product to develop</h2>
+      <div class="sub">Add it to the list — your chemist picks it up from here when they next visit.</div>
       <form id="form-new-rnd">
-        <div class="field"><label>Project name</label><input name="name" required autocomplete="off" placeholder="e.g. Aloevera Face Cleanser"></div>
+        <div class="field"><label>Product name</label><input name="name" required autocomplete="off" placeholder="e.g. Aloevera Face Cleanser"></div>
         <div class="field-row">
           <div class="field"><label>Type</label>
             <select name="type">${RND_PROJECT_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
@@ -8810,12 +8931,15 @@ function newRndProjectModal(){
         </div>
         <div class="field-row">
           <div class="field"><label>Related product</label><input name="relatedProduct" autocomplete="off" placeholder="If improving an existing product"></div>
-          <div class="field"><label>Chemist</label><input name="chemist" autocomplete="off" placeholder="Who's developing this"></div>
+          <div class="field"><label>Chemist</label>
+            <select name="chemist">${rndChemistOptions('')}</select>
+            ${state.rndChemists.length===0 ? `<div class="hint">No chemists added yet — add one from the Chemists tab.</div>` : ''}
+          </div>
         </div>
         <div class="field"><label>Notes</label><textarea name="notes" placeholder="Brief, target, anything worth noting"></textarea></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add project</button>
+          <button type="submit" class="btn btn-primary">Add product</button>
         </div>
       </form>
     </div>
@@ -8846,7 +8970,7 @@ function renderRndDrawer(id){
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
     <form id="form-rnd-edit" data-project-id="${p.id}">
-      <div class="field"><label>Project name</label><input name="name" value="${esc(p.name)}" ${roAttr}></div>
+      <div class="field"><label>Product name</label><input name="name" value="${esc(p.name)}" ${roAttr}></div>
       <div class="field-row">
         <div class="field"><label>Type</label>
           <select name="type" ${roAttr}>${RND_PROJECT_TYPES.map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
@@ -8855,7 +8979,9 @@ function renderRndDrawer(id){
       </div>
       <div class="field-row">
         <div class="field"><label>Related product</label><input name="relatedProduct" value="${esc(p.relatedProduct||'')}" ${roAttr}></div>
-        <div class="field"><label>Chemist</label><input name="chemist" value="${esc(p.chemist||'')}" ${roAttr}></div>
+        <div class="field"><label>Chemist</label>
+          <select name="chemist" ${roAttr}>${rndChemistOptions(p.chemist||'')}</select>
+        </div>
       </div>
       <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(p.notes||''))}</textarea></div>
 
@@ -8880,6 +9006,27 @@ function renderRndDrawer(id){
       </form>` : ''}
       ${log.length===0 ? `<div class="hint">No log entries yet.</div>` : `
       <div class="timeline">${log.map(l=>`<div class="item">${escBody(l.text)} <div class="t">${fmtDateTime(l.at)} · ${esc(l.by)}</div></div>`).join('')}</div>`}
+    </div>
+  </div>`;
+}
+function rndChemistFormModal(id){
+  const c = id ? byId(state.rndChemists, id) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${c?'Edit chemist':'Add chemist'}</h2>
+      <div class="sub">${c?'Update this chemist’s details.':'Add a chemist who visits to develop products — mark their attendance each time they come in.'}</div>
+      <form id="form-rnd-chemist" data-edit-id="${c?c.id:''}">
+        <div class="field"><label>Name</label><input name="name" required autocomplete="off" value="${c?esc(c.name):''}"></div>
+        <div class="field"><label>Phone</label><input name="phone" autocomplete="off" value="${c?esc(c.phone||''):''}"></div>
+        <div class="modal-actions" style="justify-content:space-between;">
+          <div>${c && isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd-chemist">Delete</button>` : ''}</div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">${c?'Save changes':'Add chemist'}</button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>`;
 }
@@ -9772,6 +9919,14 @@ function attachShellHandlers(){
   });
   if(byIdEl('btn-advance-rnd')) byIdEl('btn-advance-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceRndProject(id); };
   if(byIdEl('btn-delete-rnd')) byIdEl('btn-delete-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndProject(id); };
+
+  // R&D chemists & attendance
+  if(byIdEl('btn-new-rnd-chemist')) byIdEl('btn-new-rnd-chemist').onclick = ()=>openModal('rndchemist:new');
+  if(byIdEl('btn-new-rnd-chemist-2')) byIdEl('btn-new-rnd-chemist-2').onclick = ()=>openModal('rndchemist:new');
+  document.querySelectorAll('[data-edit-rnd-chemist]').forEach(b=>b.addEventListener('click', ()=>openModal('rndchemist:'+b.dataset.editRndChemist)));
+  document.querySelectorAll('[data-mark-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>markRndAttendance(b.dataset.markRndAttendance)));
+  if(byIdEl('form-rnd-chemist')) byIdEl('form-rnd-chemist').addEventListener('submit', submitRndChemistForm);
+  if(byIdEl('btn-delete-rnd-chemist')) byIdEl('btn-delete-rnd-chemist').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndChemist(id); };
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');

@@ -329,6 +329,13 @@
   .list-row .lr-avatar.empty{background:var(--border);color:var(--muted);}
   .list-row .lr-date{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap;}
 
+  /* ---------------- Section landing cards (e.g. Customer Care) ---------------- */
+  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:4px;}
+  .landing-card{position:relative;display:flex;align-items:center;gap:12px;background:var(--accent-grad);color:#fff;border:none;border-radius:10px;padding:20px 22px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
+  .landing-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(60,144,88,.28);}
+  .landing-card svg{width:22px;height:22px;flex-shrink:0;}
+  .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
+
   /* ---------------- Kanban (Orders) ---------------- */
   .board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:14px;align-items:start;}
   @media (max-width:1150px){.board{grid-auto-flow:column;grid-auto-columns:78%;overflow-x:auto;padding-bottom:8px;}}
@@ -1400,15 +1407,15 @@ const DEFAULT_AUTH = {
 const ROLES = ['Admin','Sub Admin','Blending','Packing','Customer Care','Orders Process'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','orderinquiry','blending','recipes','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
-  'Sub Admin': ['orders','blending','customers','complaints'],
-  Blending: ['blending','chat','recipes'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
+  Blending: ['blendingdept','blending','chat','recipes'],
   Packing: ['orders','chat'],
-  'Customer Care': ['complaints','orderinquiry','chat'],
+  'Customer Care': ['customercare','complaints','orderinquiry','chat'],
   'Orders Process': ['ordersprocess']
 };
 // Pages an Admin can toggle on/off for Blending and Packing from Settings → Page access.
-const ROLE_PAGE_TOGGLES = ['dashboard','orders','orderinquiry','blending','recipes','customers','suppliers','complaints','gmp','rnd','staff','chat','ratings'];
+const ROLE_PAGE_TOGGLES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','complaints','gmp','rnd','staff','chat','ratings'];
 function pagesForRole(role){
   const custom = state.auth.rolePages && state.auth.rolePages[role];
   return (Array.isArray(custom) && custom.length) ? custom : (ROLE_PAGES[role] || []);
@@ -1909,7 +1916,7 @@ let state = {
   rndProjects: [],
   branding: {addons: []},
   navOrder: {},
-  navExpanded: {blending:true, customercare:true},
+  navExpanded: {blendingdept:true, customercare:true},
   deliveryLines: [],
   staffCategories: [],
   complaintCategories: [],
@@ -4306,7 +4313,8 @@ const NAV = [
   {group:'Overview', items:[{id:'dashboard', label:'Dashboard', icon:'dashboard'}]},
   {group:'Operations', items:[
     {id:'orders', label:'Orders board', icon:'orders'},
-    {id:'blending', label:'Blending board', icon:'blender', children:[
+    {id:'blendingdept', label:'Blending Department', icon:'blender', children:[
+      {id:'blending', label:'Blending board'},
       {id:'recipes', label:'Production Guide'},
       {id:'costing', label:'Costing & recipe'},
     ]},
@@ -4397,7 +4405,9 @@ function navDragAfterElement(container, y){
 const PAGE_META = {
   dashboard:{title:'Dashboard', sub:"Here's what's happening today."},
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
+  customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
+  blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, or costing.'},
   blending:{title:'Blending board', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Batch recipes with step-by-step timers for the blending team.'},
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
@@ -4552,8 +4562,10 @@ function renderPage(){
   switch(state.page){
     case 'dashboard': return renderDashboard();
     case 'orders': return renderOrdersPage();
+    case 'customercare': return renderCustomerCarePage();
     case 'orderinquiry': return renderOrderInquiryPage();
     case 'ordersprocess': return renderOrdersProcessPage();
+    case 'blendingdept': return renderBlendingDeptPage();
     case 'blending': return renderBlendingBoardPage();
     case 'recipes': return renderRecipesPage();
     case 'costing': return renderCostingPage();
@@ -4746,6 +4758,25 @@ function renderCard(o){
   </div>`;
 }
 
+/* ===================== Customer Care landing ===================== */
+function renderCustomerCarePage(){
+  const openComplaints = state.complaints.filter(c=>c.status==='Open'||c.status==='In Progress').length;
+  const cards = [
+    {id:'orderinquiry', label:'Order inquiry', icon:'orders'},
+    {id:'complaints', label:'Complaints', icon:'headset', badge: openComplaints || null},
+  ].filter(c=>pageAllowed(c.id));
+  return `
+  <div class="landing-grid">
+    ${cards.map(c=>`
+    <button type="button" class="landing-card" data-nav="${c.id}">
+      ${c.badge ? `<span class="landing-card-badge">${c.badge}</span>` : ''}
+      ${icon(c.icon)}<span>${esc(c.label)}</span>
+    </button>`).join('')}
+  </div>
+  ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : ''}
+  `;
+}
+
 /* ===================== Order inquiry (delivered orders, read-only) ===================== */
 // Orders land here once they've auto-archived — 2 hours after being picked up by delivery
 // (see ORDER_ARCHIVE_AFTER_MS / archivedOrders()). Names only; click a row for the full,
@@ -4797,6 +4828,24 @@ function renderOrderInquiryPage(){
     }).join('')}
   </div>
   ${hiddenCount>0 ? `<div style="text-align:center;margin-top:14px;"><button type="button" class="btn" id="btn-order-inquiry-more">Show older orders (${hiddenCount} more)</button></div>` : ''}`}
+  `;
+}
+
+/* ===================== Blending Department landing ===================== */
+function renderBlendingDeptPage(){
+  const cards = [
+    {id:'blending', label:'Blending board', icon:'blender'},
+    {id:'recipes', label:'Production Guide', icon:'recipe'},
+    {id:'costing', label:'Costing & recipe', icon:'list'},
+  ].filter(c=>pageAllowed(c.id));
+  return `
+  <div class="landing-grid">
+    ${cards.map(c=>`
+    <button type="button" class="landing-card" data-nav="${c.id}">
+      ${icon(c.icon)}<span>${esc(c.label)}</span>
+    </button>`).join('')}
+  </div>
+  ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : ''}
   `;
 }
 

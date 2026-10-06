@@ -490,7 +490,7 @@
   }
 
   /* ---------------- Recipes / batch timer ---------------- */
-  .recipe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;}
+  .recipe-card{background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--accent);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;}
   .recipe-card .rc-title{font-weight:600;font-size:14.5px;}
   .recipe-card .rc-meta{font-size:12px;color:var(--muted);}
   .recipe-card.clickable-card:hover{background:var(--accent-soft);border-color:var(--accent);}
@@ -6704,7 +6704,7 @@ function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatc
 // ---- Rendering ----
 function renderRecipesPage(){
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn-text" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
+  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
@@ -6771,7 +6771,7 @@ function renderCostingProductGrid(){
   const admin = isAdmin();
   const products = state.costingProducts;
   return `
-  ${pageAllowed('blending') ? `<button type="button" class="btn-text" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
+  ${pageAllowed('blending') ? `<button type="button" class="btn btn-sm" data-nav="blending" style="margin-bottom:14px;">← Blending board</button>` : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Product costing</div>
     ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}
@@ -6966,7 +6966,7 @@ function renderCostingProductSheet(product, version){
     </div>` : ''}
   </div>
   ${sizes.length>0 && admin ? `
-  <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn-text" data-remove-costing-batchsize="${sz}" style="margin-right:12px;">${sz}kg ✕</button>`).join('')}</div>
+  <div class="hint" style="margin-top:4px;">Remove a batch size: ${sizes.map(sz=>`<button type="button" class="btn btn-sm" data-remove-costing-batchsize="${sz}" style="margin-right:8px;padding:3px 10px;font-size:12px;">${sz}kg ✕</button>`).join('')}</div>
   ` : ''}
   <div style="margin:2px 0 16px;">
     ${admin

@@ -7319,7 +7319,7 @@ function renderTemplateStepsModal(){
                   }
                   return `
                   <div class="prep-checklist-item">
-                    <input type="checkbox" disabled>
+                    <input type="checkbox">
                     <input type="text" id="tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
                     ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                   </div>`;
@@ -7510,7 +7510,7 @@ function recipeBatchSheetModal(recipeId){
                   }
                   return `
                   <div class="prep-checklist-item">
-                    <input type="checkbox" disabled>
+                    <input type="checkbox">
                     <input type="text" id="step-tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
                     ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                   </div>`;

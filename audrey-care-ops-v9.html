@@ -501,6 +501,8 @@
   .batch-card .batch-recipe-name{font-size:13px;opacity:.75;text-transform:uppercase;letter-spacing:.04em;}
   .batch-card .batch-step-title{font-size:22px;font-weight:600;margin:4px 0 2px;font-family:'Fraunces',serif;}
   .batch-card .batch-step-amount{font-size:14.5px;opacity:.9;}
+  .batch-prep-checklist{margin:10px 0;}
+  .batch-prep-checklist .bpc-row{font-size:14.5px;opacity:.9;padding:2px 0;}
   .batch-countdown{font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:18px 0 6px;letter-spacing:.01em;}
   .batch-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
@@ -567,6 +569,8 @@
   .batch-focus .bf-step-of{font-size:16px;opacity:.6;margin-bottom:18px;}
   .batch-focus .bf-ingredient{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(38px,7vw,88px);line-height:1.1;max-width:1000px;}
   .batch-focus .bf-amount{font-size:clamp(20px,3vw,34px);opacity:.9;margin-top:10px;}
+  .batch-focus .batch-prep-checklist{margin-top:14px;}
+  .batch-focus .batch-prep-checklist .bpc-row{font-size:clamp(16px,2vw,22px);opacity:.9;padding:4px 0;}
   .batch-focus .bf-countdown{font-size:clamp(70px,14vw,180px);font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:34px 0 8px;}
   .batch-focus .bf-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
   .batch-focus .bf-note{font-size:18px;opacity:.8;margin-bottom:26px;}
@@ -6119,6 +6123,18 @@ function playBatchAlertSound(){
   playAlertSoundById(currentAlertSound());
 }
 
+// Preparation/Checking steps have no ingredient/amount/waitMinutes — the batch runner (timer,
+// step cards, focus overlay) was built only for phrase steps and would otherwise crash
+// (new Date(NaN).toISOString()) or show "undefined" the moment one of these is first/reached.
+function batchStepWaitMinutes(step){ return step && step.type!=='preparation' ? (step.waitMinutes||0) : 0; }
+function batchStepLabel(step){ return step.type==='preparation' ? 'Preparation/Checking' : step.ingredient; }
+function batchStepChecklistHtml(step){
+  if(step.type!=='preparation') return '';
+  return `<div class="batch-prep-checklist">${(step.checklist||[]).map(c=> c.kind==='field'
+    ? `<div class="bpc-row">${esc(c.label)}: <strong>${esc(c.value)||'—'}</strong></div>`
+    : `<div class="bpc-row">☐ ${esc(c.text)}</div>`
+  ).join('')}</div>`;
+}
 function batchRemainingSeconds(){
   const b = state.activeBatch; if(!b) return 0;
   if(b.status==='paused') return b.remainingSecondsWhenPaused;
@@ -6536,7 +6552,7 @@ async function startBatch(recipeId, extra){
     productName: extra.productName || r.name, qty: extra.qty || '',
     batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '',
     steps: r.steps.map(s=>({...s})), currentStep: 0,
-    status: 'running', stepDeadline: new Date(Date.now()+first.waitMinutes*60000).toISOString(),
+    status: 'running', stepDeadline: new Date(Date.now()+batchStepWaitMinutes(first)*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
   };
   await saveActiveBatchVerified(); startBatchTicker();
@@ -6608,10 +6624,10 @@ async function nextBatchStep(){
   b.currentStep += 1;
   const step = b.steps[b.currentStep];
   b.status = 'running';
-  b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
+  b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
   await saveActiveBatchVerified();
-  showToast('Now: '+step.ingredient+(step.amount?(' — '+step.amount):''));
+  showToast('Now: '+batchStepLabel(step)+(step.amount?(' — '+step.amount):''));
 }
 async function prevBatchStep(){
   const b = state.activeBatch; if(!b || b.currentStep<=0) return;
@@ -6619,7 +6635,7 @@ async function prevBatchStep(){
   b.currentStep -= 1;
   const step = b.steps[b.currentStep];
   b.status = 'running';
-  b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
+  b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
   await saveActiveBatchVerified(); render();
 }
@@ -6628,7 +6644,7 @@ async function restartCurrentStep(){
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   const step = b.steps[b.currentStep];
   b.status = 'running';
-  b.stepDeadline = new Date(Date.now()+step.waitMinutes*60000).toISOString();
+  b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
   await saveActiveBatchVerified(); render();
 }
@@ -7167,8 +7183,9 @@ function renderActiveBatchCard(){
       <div class="batch-step-title">All ${b.steps.length} steps done 🎉</div>
       <div class="batch-step-amount">Started by ${esc(b.startedBy)} · ${fmtDateTime(b.startedAt)}</div>
     ` : `
-      <div class="batch-step-title">Step ${b.currentStep+1} of ${b.steps.length}: ${esc(step.ingredient)}</div>
+      <div class="batch-step-title">Step ${b.currentStep+1} of ${b.steps.length}: ${esc(batchStepLabel(step))}</div>
       ${step.amount ? `<div class="batch-step-amount">${esc(step.amount)}</div>` : ''}
+      ${batchStepChecklistHtml(step)}
       <div id="batch-countdown" class="batch-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
       <div id="batch-countdown-note" class="rc-meta" style="opacity:.85;">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'paused' : (remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step'))}</div>
     `}
@@ -7192,7 +7209,7 @@ function renderActiveBatchCard(){
         const cls = i<b.currentStep || (isDone) ? 'done' : (i===b.currentStep ? 'current' : '');
         return `<div class="bs-row ${cls}">
           <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
-          <span style="flex:1;">${esc(s.ingredient)}${s.amount?(' — '+esc(s.amount)):''}</span>
+          <span style="flex:1;">${esc(batchStepLabel(s))}${s.amount?(' — '+esc(s.amount)):''}</span>
           <span>${s.waitMinutes>0 ? s.waitMinutes+' min' : 'no wait'}</span>
         </div>`;
       }).join('')}
@@ -7213,8 +7230,9 @@ function renderBatchFocusOverlay(){
       <div class="bf-amount">${b.steps.length} of ${b.steps.length} steps complete</div>
     ` : `
       <div class="bf-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>
-      <div class="bf-ingredient">${esc(step.ingredient)}</div>
+      <div class="bf-ingredient">${esc(batchStepLabel(step))}</div>
       ${step.amount ? `<div class="bf-amount">${esc(step.amount)}</div>` : ''}
+      ${batchStepChecklistHtml(step)}
       <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
       <div class="bf-note">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — moving on…" : 'remaining on this step'))}</div>
     `}

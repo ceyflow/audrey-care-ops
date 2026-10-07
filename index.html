@@ -350,6 +350,11 @@
   .column-head .count{font-size:12px;font-weight:600;background:rgba(255,255,255,.6);padding:2px 8px;border-radius:999px;}
   .column-body{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;}
   .empty-col{color:var(--muted);font-size:12.5px;text-align:center;padding:18px 6px;border:1px dashed var(--border);border-radius:8px;}
+  .rnd-outcome-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .rnd-outcome-group:last-child{margin-bottom:0;}
+  .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);}
+  .rnd-outcome-success{background:var(--accent-soft);color:var(--accent-dark);}
+  .rnd-outcome-quarantined{background:var(--danger-soft);color:var(--danger);}
   .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:11px 12px;cursor:grab;transition:border-color .15s,box-shadow .18s ease,opacity .15s,transform .18s ease;}
   .card[data-order]{cursor:pointer;}
   .card:hover{border-color:var(--accent);box-shadow:0 10px 22px rgba(20,25,20,.1);transform:translateY(-3px);}
@@ -2840,6 +2845,7 @@ async function submitRndEdit(e){
     chemist: f.chemist.value.trim(),
     targetDate: f.targetDate.value || '',
     notes: f.notes.value.trim(),
+    outcome: f.outcome ? f.outcome.value : (p.outcome||''),
   });
   await save('rndProjects'); closeModal();
   showToast('Product updated');
@@ -5024,15 +5030,39 @@ function renderRndPage(){
 function renderRndColumn(stageName, i){
   const key = RND_STAGE_KEYS[i]; const style = RND_STAGE_STYLE[key];
   const projects = state.rndProjects.filter(p=>p.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const isCompleted = i === RND_STAGES.length-1;
   return `
   <div class="column">
     <div class="column-head" style="background:${style.bg};color:${style.c};">
       <span class="name">${stageName}</span><span class="count">${projects.length}</span>
     </div>
     <div class="column-body" data-rnd-stage="${i}">
-      ${projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join('')}
+      ${isCompleted ? renderRndCompletedGroups(projects) : (projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join(''))}
     </div>
   </div>`;
+}
+// Completed is split into two labeled sub-groups instead of one flat list, so a finished trial's
+// final disposition (approved for production, or held back) is visible at a glance on the board.
+function renderRndCompletedGroups(projects){
+  if(projects.length===0) return `<div class="empty-col">Nothing here</div>`;
+  const success = projects.filter(p=>p.outcome==='success');
+  const quarantined = projects.filter(p=>p.outcome==='quarantined');
+  const unset = projects.filter(p=>!p.outcome);
+  return `
+    <div class="rnd-outcome-group">
+      <div class="rnd-outcome-label rnd-outcome-success">✓ Success</div>
+      ${success.length===0 ? `<div class="empty-col">None yet</div>` : success.map(p=>renderRndCard(p)).join('')}
+    </div>
+    <div class="rnd-outcome-group">
+      <div class="rnd-outcome-label rnd-outcome-quarantined">⚠ Quarantined</div>
+      ${quarantined.length===0 ? `<div class="empty-col">None yet</div>` : quarantined.map(p=>renderRndCard(p)).join('')}
+    </div>
+    ${unset.length>0 ? `
+    <div class="rnd-outcome-group">
+      <div class="rnd-outcome-label">Not set</div>
+      ${unset.map(p=>renderRndCard(p)).join('')}
+    </div>` : ''}
+  `;
 }
 function renderRndCard(p){
   return `
@@ -8939,6 +8969,14 @@ function renderRndDrawer(id){
         </div>
       </div>
       <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(p.notes||''))}</textarea></div>
+      ${p.stage===RND_STAGES.length-1 ? `
+      <div class="field"><label>Outcome</label>
+        <select name="outcome" ${roAttr}>
+          <option value="" ${!p.outcome?'selected':''}>Not set</option>
+          <option value="success" ${p.outcome==='success'?'selected':''}>Success</option>
+          <option value="quarantined" ${p.outcome==='quarantined'?'selected':''}>Quarantined</option>
+        </select>
+      </div>` : ''}
 
       <div class="field"><label>Stage history</label>
         <div class="timeline">${p.history.map(h=>`<div class="item">${RND_STAGES[h.stage]} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>

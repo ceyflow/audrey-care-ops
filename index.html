@@ -114,6 +114,8 @@
   .chat-notice-icon{font-size:26px;line-height:1;margin-top:1px;}
   .chat-notice-sender{font-weight:700;font-size:14.5px;color:var(--accent-dark);margin-bottom:4px;}
   .chat-notice-text{font-size:15px;color:var(--ink);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+  .chat-notice-close{background:none;border:none;color:var(--muted);font-size:15px;line-height:1;padding:4px;margin:-4px -6px -4px 0;cursor:pointer;border-radius:6px;flex-shrink:0;}
+  .chat-notice-close:hover{background:var(--border);color:var(--ink);}
   @keyframes toast-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
   .chat-menu-btn{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:1px 4px;border-radius:4px;}
@@ -2412,7 +2414,11 @@ function showChatNotice(sender, text){
   state.chatUnread = true;
   render();
   clearTimeout(state._chatNoticeTimer);
-  state._chatNoticeTimer = setTimeout(()=>{ state.chatNotice = null; render(); }, 10000);
+  // Admin's popup for a new team chat message stays up until they dismiss it — everyone else
+  // still gets the usual auto-dismiss after a few seconds.
+  if(!isAdmin()){
+    state._chatNoticeTimer = setTimeout(()=>{ state.chatNotice = null; render(); }, 10000);
+  }
 }
 // Forces a full-screen panel in front of everything when Admin messages a Packing session — no
 // outside-click, Escape, or Close-button dismissal; the only way out is sending a reply.
@@ -4585,6 +4591,7 @@ function renderChatNotice(){
       <div class="chat-notice-sender">${esc(state.chatNotice.sender)}</div>
       <div class="chat-notice-text">${esc(state.chatNotice.preview)}</div>
     </div>
+    <button type="button" class="chat-notice-close" id="chat-notice-close" aria-label="Dismiss" title="Dismiss">✕</button>
   </div>`;
 }
 function renderAdminBroadcastPanel(){
@@ -9475,6 +9482,11 @@ function attachShellHandlers(){
   if(byIdEl('chat-notice-popup')) byIdEl('chat-notice-popup').addEventListener('click', ()=>{
     state.chatNotice = null; clearTimeout(state._chatNoticeTimer);
     if(pageAllowed('chat')) goTo('chat'); else render();
+  });
+  if(byIdEl('chat-notice-close')) byIdEl('chat-notice-close').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    state.chatNotice = null; clearTimeout(state._chatNoticeTimer);
+    render();
   });
   if(byIdEl('complaint-notice-popup')) byIdEl('complaint-notice-popup').addEventListener('click', ()=>{
     state.complaintNotice = null; clearTimeout(state._complaintNoticeTimer);

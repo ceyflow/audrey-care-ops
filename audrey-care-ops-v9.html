@@ -350,6 +350,8 @@
   .column-head .count{font-size:12px;font-weight:600;background:rgba(255,255,255,.6);padding:2px 8px;border-radius:999px;}
   .column-body{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;}
   .empty-col{color:var(--muted);font-size:12.5px;text-align:center;padding:18px 6px;border:1px dashed var(--border);border-radius:8px;}
+  .rnd-log-timeline{max-height:440px;overflow-y:auto;padding-right:6px;gap:14px;}
+  .rnd-log-timeline .item{padding:14px 16px;font-size:13.5px;line-height:1.55;}
   .rnd-outcome-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
   .rnd-outcome-group:last-child{margin-bottom:0;}
   .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);}
@@ -1664,12 +1666,11 @@ const RND_STAGE_STYLE = {
   rndreview:{c:'var(--s-rndreview)', bg:'var(--s-rndreview-soft)'},
   delivered:{c:'var(--s-delivered)', bg:'var(--s-delivered-soft)'}
 };
-const RND_NEXT_ACTION_LABEL = {0:'Start trial',1:'Send for review',2:'Mark completed'};
+const RND_NEXT_ACTION_LABEL = {0:'Transfer to '+RND_STAGES[1], 1:'Transfer to '+RND_STAGES[2], 2:'Transfer to '+RND_STAGES[3]};
 // The board used to have 5 stages (Idea/Formulating/Sample Testing/Review/Completed); Formulating
 // and Sample Testing merged into one "On Trial & Formulating" stage. Maps an old 0-4 stage index
 // to its new 0-3 one, for one-time migration of products/history saved under the old scheme.
 const RND_STAGE_MIGRATION_MAP = {0:0, 1:1, 2:1, 3:2, 4:3};
-const RND_PROJECT_TYPES = ['New product','Improvement'];
 function canManageRnd(){ return isAdmin(); }
 function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
 
@@ -2802,17 +2803,29 @@ function deleteBlendBatch(id){
 }
 
 /* ===================== R&D projects ===================== */
+// Sample codes are assigned, not typed — ACS-RD-YYMM-NN, sequential within each year-month
+// (e.g. ACS-RD-2610-01, ACS-RD-2610-02, ... for Oct 2026), never reused or re-ordered.
+function rndNextSampleCode(){
+  const now = new Date();
+  const prefix = `ACS-RD-${String(now.getFullYear()).slice(-2)}${String(now.getMonth()+1).padStart(2,'0')}-`;
+  const used = state.rndProjects
+    .map(p=>p.sampleCode||'')
+    .filter(c=>c.startsWith(prefix))
+    .map(c=>parseInt(c.slice(prefix.length),10))
+    .filter(n=>!isNaN(n));
+  const next = used.length ? Math.max(...used)+1 : 1;
+  return prefix + String(next).padStart(2,'0');
+}
 async function createRndProject(e){
   e.preventDefault();
   const f = e.target;
   const project = {
     id: uid('RND'),
     name: f.name.value.trim(),
-    type: f.type.value,
-    relatedProduct: f.relatedProduct.value.trim(),
+    priority: f.priority.value,
     chemist: f.chemist.value.trim(),
-    targetDate: f.targetDate.value || '',
-    notes: f.notes.value.trim(),
+    sampleDate: f.sampleDate.value || '',
+    sampleCode: f.sampleCode.value,
     stage: 0,
     createdAt: new Date().toISOString(),
     log: [],
@@ -2840,11 +2853,9 @@ async function submitRndEdit(e){
   const p = byId(state.rndProjects, id); if(!p) return;
   Object.assign(p, {
     name: f.name.value.trim() || p.name,
-    type: f.type.value,
-    relatedProduct: f.relatedProduct.value.trim(),
+    priority: f.priority.value,
     chemist: f.chemist.value.trim(),
-    targetDate: f.targetDate.value || '',
-    notes: f.notes.value.trim(),
+    sampleDate: f.sampleDate.value || '',
     outcome: f.outcome ? f.outcome.value : (p.outcome||''),
   });
   await save('rndProjects'); closeModal();
@@ -2879,17 +2890,6 @@ function todayStr(){
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function rndDueInfo(p){
-  if(!p.targetDate) return null;
-  const done = p.stage >= RND_STAGES.length-1;
-  const today = todayStr();
-  if(done) return {label:'Completed', color:'var(--s-delivered)'};
-  if(p.targetDate < today) return {label:'Overdue', color:'var(--danger)'};
-  if(p.targetDate === today) return {label:'Due today', color:'var(--s-rndreview)'};
-  const days = Math.ceil((new Date(p.targetDate) - new Date(today)) / 86400000);
-  return {label:`Due in ${days}d`, color:'var(--s-formulating)'};
-}
-
 /* ===================== R&D chemists & attendance ===================== */
 // Chemists are hired casually — they visit to develop/test a product, not fixed staff, so they
 // get their own small roster here instead of being added to the main Staff directory.
@@ -8909,19 +8909,18 @@ function newRndProjectModal(){
       <form id="form-new-rnd">
         <div class="field"><label>Product name</label><input name="name" required autocomplete="off" placeholder="e.g. Aloevera Face Cleanser"></div>
         <div class="field-row">
-          <div class="field"><label>Type</label>
-            <select name="type">${RND_PROJECT_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
+          <div class="field"><label>Priority</label>
+            <select name="priority">${PRIORITIES.map(p=>`<option ${p==='Medium'?'selected':''}>${p}</option>`).join('')}</select>
           </div>
-          <div class="field"><label>Target completion date</label><input type="date" name="targetDate"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Related product</label><input name="relatedProduct" autocomplete="off" placeholder="If improving an existing product"></div>
-          <div class="field"><label>Chemist</label>
+          <div class="field"><label>Assigned</label>
             <select name="chemist">${rndChemistOptions('')}</select>
             ${state.rndChemists.length===0 ? `<div class="hint">No chemists added yet — add one from the Chemists tab.</div>` : ''}
           </div>
         </div>
-        <div class="field"><label>Notes</label><textarea name="notes" placeholder="Brief, target, anything worth noting"></textarea></div>
+        <div class="field-row">
+          <div class="field"><label>Sample date</label><input type="date" name="sampleDate"></div>
+          <div class="field"><label>Sample Code</label><input name="sampleCode" value="${esc(rndNextSampleCode())}" readonly></div>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Add product</button>
@@ -8945,7 +8944,7 @@ function renderRndDrawer(id){
       <div>
         <button type="button" class="back" id="btn-drawer-back-close">← Back to board</button>
         <h2>${esc(p.name)}</h2>
-        <div class="sub">${esc(p.type||'New product')} · ${RND_STAGES[p.stage]} · created ${fmtDateTime(p.createdAt)}</div>
+        <div class="sub">${p.sampleCode?esc(p.sampleCode):'No sample code'} · ${RND_STAGES[p.stage]} · created ${fmtDateTime(p.createdAt)}</div>
       </div>
       <div class="stat-chip"><div class="k">Days in progress</div><div class="v">${daysAgo(p.createdAt)}</div></div>
     </div>
@@ -8955,20 +8954,19 @@ function renderRndDrawer(id){
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
     <form id="form-rnd-edit" data-project-id="${p.id}">
-      <div class="field"><label>Product name</label><input name="name" value="${esc(p.name)}" ${roAttr}></div>
+      <div class="field"><label>Product Name</label><input name="name" value="${esc(p.name)}" ${roAttr}></div>
       <div class="field-row">
-        <div class="field"><label>Type</label>
-          <select name="type" ${roAttr}>${RND_PROJECT_TYPES.map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+        <div class="field"><label>Priority</label>
+          <select name="priority" ${roAttr}>${PRIORITIES.map(pr=>`<option ${p.priority===pr?'selected':''}>${pr}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Target completion date</label><input type="date" name="targetDate" value="${esc(p.targetDate||'')}" ${roAttr}></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Related product</label><input name="relatedProduct" value="${esc(p.relatedProduct||'')}" ${roAttr}></div>
-        <div class="field"><label>Chemist</label>
+        <div class="field"><label>Assigned</label>
           <select name="chemist" ${roAttr}>${rndChemistOptions(p.chemist||'')}</select>
         </div>
       </div>
-      <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(p.notes||''))}</textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Sample date</label><input type="date" name="sampleDate" value="${esc(p.sampleDate||'')}" ${roAttr}></div>
+        <div class="field"><label>Sample Code</label><input name="sampleCode" value="${esc(p.sampleCode||'')}" readonly></div>
+      </div>
       ${p.stage===RND_STAGES.length-1 ? `
       <div class="field"><label>Outcome</label>
         <select name="outcome" ${roAttr}>
@@ -8978,7 +8976,7 @@ function renderRndDrawer(id){
         </select>
       </div>` : ''}
 
-      <div class="field"><label>Stage history</label>
+      <div class="field"><label>History</label>
         <div class="timeline">${p.history.map(h=>`<div class="item">${RND_STAGES[h.stage]} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
       </div>
 
@@ -8991,14 +8989,15 @@ function renderRndDrawer(id){
       </div>
     </form>
 
-    <div class="field" style="margin-top:6px;"><label>Development log</label>
+    <div class="field" style="margin-top:10px;">
+      <label>Log</label>
       ${!ro ? `
-      <form id="form-rnd-log" data-project-id="${p.id}" style="display:flex;gap:8px;margin-bottom:12px;">
-        <textarea name="logtext" placeholder="What happened — a formula tweak, a sample test result, anything worth logging" rows="2" style="flex:1;" required></textarea>
+      <form id="form-rnd-log" data-project-id="${p.id}" style="display:flex;gap:8px;margin-bottom:14px;">
+        <textarea name="logtext" placeholder="Type an update and press Enter to save — Shift+Enter for a new line" rows="3" style="flex:1;min-height:76px;" required></textarea>
         <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Add</button>
       </form>` : ''}
       ${log.length===0 ? `<div class="hint">No log entries yet.</div>` : `
-      <div class="timeline">${log.map(l=>`<div class="item">${escBody(l.text)} <div class="t">${fmtDateTime(l.at)} · ${esc(l.by)}</div></div>`).join('')}</div>`}
+      <div class="timeline rnd-log-timeline">${log.map(l=>`<div class="item">${escBody(l.text)} <div class="t">${fmtDateTime(l.at)} · ${esc(l.by)}</div></div>`).join('')}</div>`}
     </div>
   </div>`;
 }
@@ -9900,6 +9899,16 @@ function attachShellHandlers(){
     await addRndLogEntry(f.dataset.projectId, text);
     render();
   });
+  // Enter saves the log entry (matches a comment-bar feel); Shift+Enter still inserts a newline.
+  if(byIdEl('form-rnd-log')){
+    const logtextEl = byIdEl('form-rnd-log').querySelector('[name="logtext"]');
+    if(logtextEl) logtextEl.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && !e.shiftKey){
+        e.preventDefault();
+        byIdEl('form-rnd-log').requestSubmit();
+      }
+    });
+  }
   if(byIdEl('btn-advance-rnd')) byIdEl('btn-advance-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceRndProject(id); };
   if(byIdEl('btn-delete-rnd')) byIdEl('btn-delete-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndProject(id); };
 

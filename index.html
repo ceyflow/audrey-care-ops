@@ -859,7 +859,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -2549,6 +2549,29 @@ function selectRole(role){
   if(role==='Orders Process'){ enterBoardMode(); return; }
   state._pendingRole = role; render();
 }
+// Best-effort device summary from the user agent string — just enough to recognize "a phone"
+// vs "a laptop" at a glance, not a full parser. Never blocks or throws on an unrecognized string.
+function deviceSummaryFromUserAgent(ua){
+  if(!ua) return 'Unknown device';
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Unknown OS';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Unknown browser';
+  return os+' · '+browser;
+}
+// Fire-and-forget: never blocks login, and a failed IP lookup (offline, rate-limited, blocked)
+// still leaves a time+device record, just without the location fields.
+async function logLoginEvent(name, role){
+  let geo = {};
+  try{
+    const res = await fetch('https://ipapi.co/json/');
+    if(res.ok){
+      const data = await res.json();
+      if(!data.error) geo = {ip: data.ip, city: data.city, region: data.region, country: data.country_name};
+    }
+  }catch(e){}
+  const entry = {id: uid('LOGIN'), name, role, at: new Date().toISOString(), userAgent: navigator.userAgent, ...geo};
+  state.loginHistory = [...(state.loginHistory||[]), entry].sort((a,b)=>new Date(b.at)-new Date(a.at)).slice(0,200);
+  save('loginHistory').catch(()=>{});
+}
 async function confirmLogin(){
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
@@ -2586,6 +2609,7 @@ async function confirmLogin(){
   clearInterval(state._loginClockTimer);
   await saveSession();
   logActivity(`Logged in (${role})`);
+  logLoginEvent(sessionName, role);
   render();
 }
 // Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
@@ -2611,7 +2635,7 @@ async function confirmLoginV2(){
     passInput.value = ''; passInput.focus();
     return;
   }
-  if(role==='Orders Process'){ enterBoardMode(); return; }
+  if(role==='Orders Process'){ logLoginEvent(typedName, role); enterBoardMode(); return; }
   const profile = await supabaseFetchProfile(res.userId);
   const sessionRole = (profile && profile.role) || role;
   const sessionName = (profile && profile.staff_name) || typedName;
@@ -2622,6 +2646,7 @@ async function confirmLoginV2(){
   clearInterval(state._loginClockTimer);
   await saveSession();
   logActivity(`Logged in (${sessionRole})`);
+  logLoginEvent(sessionName, sessionRole);
   render();
 }
 async function logOut(){
@@ -6377,6 +6402,8 @@ function renderSettingsPage(){
 
   ${isAdmin() ? renderSecureAccountsPanel() : ''}
 
+  ${isAdmin() ? renderLoginActivityPanel() : ''}
+
   ${isAdmin() ? renderSmsTemplatesPanel() : ''}
   `;
 }
@@ -6583,6 +6610,33 @@ async function runAddSecureAccount(){
   state._addAcctForm = null;
   showToast(f.name.trim()+' can now sign in');
   render();
+}
+function renderLoginActivityPanel(){
+  // Sorted at render time, not relied on from storage — the sync/merge layer can reorder
+  // the stored array (it doesn't know this one is meant to stay newest-first).
+  const entries = [...(state.loginHistory||[])].sort((a,b)=>new Date(b.at)-new Date(a.at));
+  return `
+  <div class="panel">
+    <div class="panel-head"><h3>Login activity</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize. Location is approximate, based on the device's internet connection.</div>
+      ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Access</th><th>When</th><th>Location</th><th>IP</th><th>Device</th></tr></thead>
+        <tbody>
+          ${entries.slice(0,100).map(e=>`
+          <tr>
+            <td>${esc(e.name)}</td>
+            <td>${esc(e.role)}</td>
+            <td>${fmtDateTime(e.at)}</td>
+            <td>${e.city ? esc([e.city, e.region, e.country].filter(Boolean).join(', ')) : '<span class="hint">Unknown</span>'}</td>
+            <td>${e.ip ? esc(e.ip) : '<span class="hint">—</span>'}</td>
+            <td>${esc(deviceSummaryFromUserAgent(e.userAgent))}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+  </div>`;
 }
 async function runSecureAccountsMigration(){
   const form = state._secureAcctForm;

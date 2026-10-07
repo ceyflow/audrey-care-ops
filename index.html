@@ -1484,6 +1484,56 @@ function pagesForRole(role){
   const custom = state.auth.rolePages && state.auth.rolePages[role];
   return (Array.isArray(custom) && custom.length) ? custom : (ROLE_PAGES[role] || []);
 }
+// Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
+// mapped by reading every render function's state.* references. Drives the database-level
+// role_data_access table: a role only gets the keys its visible pages genuinely need.
+const PAGE_DATA_KEYS = {
+  dashboard: ['orders','complaints','customers'],
+  orders: ['orders','deliveryLines','customers'],
+  customercare: ['complaints'],
+  orderinquiry: ['orders'],
+  blendingdept: [],
+  blending: ['blendBatches'],
+  recipes: ['recipes','activeBatch','mixingStepTemplates'],
+  costing: ['costingProducts','suppliers','recipes'],
+  customers: ['customers','staff'],
+  suppliers: ['suppliers'],
+  complaints: ['complaints','complaintCategories','complaintPriorities','staff','customers'],
+  ordersprocess: ['orders','branding'],
+  gmp: ['gmpChecklistEntries'],
+  rnd: ['rndProjects','rndChemists','rndAttendance'],
+  staff: ['staff','staffCategories'],
+  chat: ['chat','staff'],
+  bulksms: ['bulkSmsTemplates','customers','smsCampaigns'],
+  ratings: ['orders'],
+  settings: ['templates','complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates'],
+};
+// Every mutating action across every page calls logActivity(), and the topbar's Activity log
+// viewer is available regardless of which page is open — so activityLog isn't tied to one page,
+// every role needs it.
+function dataKeysForRole(role){
+  const pages = pagesForRole(role);
+  const keys = new Set(['activityLog']);
+  pages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
+  return [...keys];
+}
+// Admin always has full access (granted directly in the database policy, no table row needed) —
+// every other role's allowed keys are pushed into role_data_access so the database enforces the
+// same boundaries as the Page access screen, not just the UI.
+const SYNCABLE_ROLES = ROLES.filter(r=>r!=='Admin');
+async function syncRoleDataAccess(role){
+  if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return;
+  const keys = dataKeysForRole(role);
+  await supabaseClient.from('role_data_access').delete().eq('role', role);
+  if(keys.length) await supabaseClient.from('role_data_access').insert(keys.map(k=>({role, data_key:k})));
+}
+async function syncAllRoleDataAccess(){
+  if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
+  try{
+    for(const role of SYNCABLE_ROLES) await syncRoleDataAccess(role);
+    return {ok:true};
+  }catch(e){ return {ok:false, error:e.message||'Sync failed — has the role_data_access table been created yet?'}; }
+}
 function pageAllowed(page){ return !!state.session && pagesForRole(state.session.role).includes(page); }
 const NEXT_ACTION_LABEL = {0:'Start processing',1:'Move to invoicing & checking',2:'Mark picked up by delivery'};
 const DEFAULT_COMPLAINT_CATEGORIES = ['Product quality issue','Delivery delay','Billing issue','Delivery damage','Product Damage','Wrong product','Other'];
@@ -6497,6 +6547,12 @@ function renderRolePagesPanel(){
           <button type="submit" class="btn btn-primary">Save page access</button>
         </div>
       </form>
+      ${state.auth.migratedToSupabaseAuth ? `
+      <div class="hint" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+        Saving above also updates the database's own permission rules automatically, so a role can never reach data its page doesn't use — not just the sidebar. Use this button once to set that up the first time, or any time you want to push the current settings again without changing anything.
+      </div>
+      <button type="button" class="btn btn-sm" id="btn-sync-role-data-access" style="margin-top:8px;">Sync database permissions now</button>
+      ` : ''}
     </div>
   </div>`;
 }
@@ -11275,6 +11331,7 @@ function attachShellHandlers(){
     state.orderSettings = {...state.orderSettings, dragEnabled: f.orderDragEnabled.value==='on'};
     await saveAuth();
     await save('orderSettings');
+    syncAllRoleDataAccess();
     showToast('Page access updated');
   });
 
@@ -11295,6 +11352,10 @@ function attachShellHandlers(){
   if(byIdEl('btn-secure-accounts-create')) byIdEl('btn-secure-accounts-create').onclick = runSecureAccountsMigration;
   if(byIdEl('btn-secure-accounts-activate')) byIdEl('btn-secure-accounts-activate').onclick = activateSecureAccounts;
   if(byIdEl('btn-secure-accounts-rollback')) byIdEl('btn-secure-accounts-rollback').onclick = rollbackSecureAccounts;
+  if(byIdEl('btn-sync-role-data-access')) byIdEl('btn-sync-role-data-access').onclick = async ()=>{
+    const res = await syncAllRoleDataAccess();
+    showToast(res.ok ? 'Database permissions synced' : (res.error||'Sync failed'));
+  };
   if(byIdEl('add-acct-name')) byIdEl('add-acct-name').addEventListener('input', e=>{ state._addAcctForm.name = e.target.value; });
   if(byIdEl('add-acct-role')) byIdEl('add-acct-role').addEventListener('change', e=>{ state._addAcctForm.role = e.target.value; });
   if(byIdEl('add-acct-password')) byIdEl('add-acct-password').addEventListener('input', e=>{ state._addAcctForm.password = e.target.value; });

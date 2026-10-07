@@ -357,6 +357,24 @@
   .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);}
   .rnd-outcome-success{background:var(--accent-soft);color:var(--accent-dark);}
   .rnd-outcome-quarantined{background:var(--danger-soft);color:var(--danger);}
+  .rnd-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px;}
+  .rnd-cal-month{font-weight:600;font-size:14px;}
+  .rnd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
+  .rnd-cal-wd{font-size:10.5px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0;}
+  .rnd-cal-cell{border:1px solid var(--border);border-radius:8px;min-height:52px;padding:4px 5px;cursor:pointer;transition:border-color .15s,background .15s;}
+  .rnd-cal-cell:hover{border-color:var(--accent);}
+  .rnd-cal-empty{border:none;cursor:default;}
+  .rnd-cal-empty:hover{border-color:transparent;}
+  .rnd-cal-daynum{font-size:11.5px;font-weight:600;color:var(--ink);}
+  .rnd-cal-today .rnd-cal-daynum{color:var(--accent-dark);}
+  .rnd-cal-selected{border-color:var(--accent);background:var(--accent-soft);}
+  .rnd-cal-marked{background:var(--bg);}
+  .rnd-cal-detail{display:flex;flex-direction:column;gap:1px;margin-top:3px;}
+  .rnd-cal-in,.rnd-cal-out{font-size:9.5px;font-weight:600;line-height:1.3;}
+  .rnd-cal-in{color:var(--accent-dark);}
+  .rnd-cal-out{color:var(--muted);}
+  .rnd-cal-detail-panel{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;background:var(--bg);}
+  .rnd-cal-detail-date{font-weight:600;font-size:13.5px;margin-bottom:10px;}
   .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:11px 12px;cursor:grab;transition:border-color .15s,box-shadow .18s ease,opacity .15s,transform .18s ease;}
   .card[data-order]{cursor:pointer;}
   .card:hover{border-color:var(--accent);box-shadow:0 10px 22px rgba(20,25,20,.1);transform:translateY(-3px);}
@@ -2302,6 +2320,7 @@ function fmtDateTime(iso){
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
 }
 function fmtDate(iso){ return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+function fmtTimeOnly(iso){ return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
 function isToday(iso){
   if(!iso) return false;
   const d = new Date(iso), now = new Date();
@@ -2575,7 +2594,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -2921,26 +2940,44 @@ function deleteRndChemist(id){
 // Attendance is its own explicit action, separate from product work — an admin reviewing or
 // transferring a product isn't proof the chemist was physically in that day, so marking it has
 // to be a deliberate button press when the chemist actually visits. One record per chemist per
-// calendar day; marking twice the same day is a no-op toast, not a duplicate row.
-async function markRndAttendance(chemistId){
+// calendar day, tracked as a login time and a logout time; logout is only available once a login
+// exists for that day. Older records only ever carried a plain `at` timestamp (from before login/
+// logout existed) — rndAttLoginAt() treats that as the login time so old data keeps working.
+function rndAttRecFor(chemistId, date){
+  return state.rndAttendance.find(a=>a.chemistId===chemistId && a.date===date) || null;
+}
+function rndAttLoginAt(rec){ return rec ? (rec.loginAt || rec.at || null) : null; }
+async function rndMarkLogin(chemistId, date){
   if(!canManageRnd()) return;
   const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
-  const today = todayStr();
-  if(state.rndAttendance.find(a=>a.chemistId===chemistId && a.date===today)){
-    showToast(chemist.name+' is already marked present today');
-    return;
+  let rec = rndAttRecFor(chemistId, date);
+  if(rndAttLoginAt(rec)){ showToast(chemist.name+' is already logged in for that day'); return; }
+  if(rec){ rec.loginAt = new Date().toISOString(); rec.by = state.session.name; }
+  else{
+    rec = {id: uid('ATT'), chemistId, chemistName: chemist.name, date, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
+    state.rndAttendance.unshift(rec);
   }
-  state.rndAttendance.unshift({id: uid('ATT'), chemistId, chemistName: chemist.name, date: today, at: new Date().toISOString(), by: state.session.name});
   await save('rndAttendance');
-  showToast(chemist.name+' marked present today');
+  showToast(chemist.name+' logged in');
+}
+async function rndMarkLogout(chemistId, date){
+  if(!canManageRnd()) return;
+  const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
+  const rec = rndAttRecFor(chemistId, date);
+  if(!rndAttLoginAt(rec)){ showToast('Log in first before marking logout'); return; }
+  if(rec.logoutAt){ showToast(chemist.name+' is already logged out for that day'); return; }
+  rec.logoutAt = new Date().toISOString();
+  rec.by = state.session.name;
+  await save('rndAttendance');
+  showToast(chemist.name+' logged out');
 }
 function rndAttendanceCountThisMonth(chemistId){
   const now = new Date();
   const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  return state.rndAttendance.filter(a=>a.chemistId===chemistId && a.date.slice(0,7)===ym).length;
+  return state.rndAttendance.filter(a=>a.chemistId===chemistId && a.date.slice(0,7)===ym && rndAttLoginAt(a)).length;
 }
 function rndLastVisit(chemistId){
-  const entries = state.rndAttendance.filter(a=>a.chemistId===chemistId).sort((a,b)=>b.date.localeCompare(a.date));
+  const entries = state.rndAttendance.filter(a=>a.chemistId===chemistId && rndAttLoginAt(a)).sort((a,b)=>b.date.localeCompare(a.date));
   return entries[0] || null;
 }
 // Keeps a chemist assigned to a product selectable even if they've since been removed from the
@@ -5088,17 +5125,17 @@ function renderRndChemistsTab(){
       <thead><tr><th>Chemist</th><th>Today</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
       <tbody>
         ${chemists.map(c=>{
-          const markedToday = state.rndAttendance.some(a=>a.chemistId===c.id && a.date===today);
+          const markedToday = !!rndAttLoginAt(rndAttRecFor(c.id, today));
           const last = rndLastVisit(c.id);
           return `
           <tr>
             <td>${esc(c.name)}</td>
             <td>${markedToday ? `<span class="pill pill-active">✓ Present</span>` : `<span class="hint">—</span>`}</td>
             <td>${rndAttendanceCountThisMonth(c.id)}</td>
-            <td>${last?fmtDateTime(last.at):'Never'}</td>
+            <td>${last?fmtDateTime(rndAttLoginAt(last)):'Never'}</td>
             <td style="white-space:nowrap;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
-                ${canManageRnd() ? `<button type="button" class="btn btn-sm ${markedToday?'':'btn-primary'}" data-mark-rnd-attendance="${c.id}" ${markedToday?'disabled':''}>${markedToday?'✓ Present today':'Mark attendance'}</button>` : ''}
+                ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
                 ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
               </div>
             </td>
@@ -5111,9 +5148,9 @@ function renderRndChemistsTab(){
     <div class="panel-head"><h3>Recent attendance</h3></div>
     ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
     <table class="data-table">
-      <thead><tr><th>Date</th><th>Chemist</th><th>Marked by</th></tr></thead>
+      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th></tr></thead>
       <tbody>
-        ${state.rndAttendance.slice(0,30).map(a=>`<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${esc(a.by)}</td></tr>`).join('')}
+        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td></tr>`; }).join('')}
       </tbody>
     </table>`}
   </div>
@@ -8162,6 +8199,7 @@ function renderModal(){
     return renderRndDrawer(id);
   }
   if(type==='rndchemist') return rndChemistFormModal(id==='new'?null:id);
+  if(type==='rndattendance') return rndAttendanceModal(id);
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
@@ -9021,6 +9059,74 @@ function rndChemistFormModal(id){
           </div>
         </div>
       </form>
+    </div>
+  </div>`;
+}
+function rndShiftMonth(ym, delta){
+  let [y,m] = ym.split('-').map(Number);
+  m += delta;
+  if(m<1){ m=12; y--; } else if(m>12){ m=1; y++; }
+  return y+'-'+String(m).padStart(2,'0');
+}
+function rndAttendanceModal(chemistId){
+  const c = byId(state.rndChemists, chemistId); if(!c) return '';
+  if(!state._rndAttCal || state._rndAttCal.chemistId!==chemistId){
+    state._rndAttCal = {chemistId, month: todayStr().slice(0,7), selectedDate: null};
+  }
+  const cal = state._rndAttCal;
+  const [y,m] = cal.month.split('-').map(Number);
+  const firstOfMonth = new Date(y, m-1, 1);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const startWeekday = firstOfMonth.getDay();
+  const monthLabel = firstOfMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const today = todayStr();
+
+  let cells = '';
+  for(let i=0;i<startWeekday;i++) cells += `<div class="rnd-cal-cell rnd-cal-empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${cal.month}-${String(d).padStart(2,'0')}`;
+    const rec = rndAttRecFor(chemistId, dateStr);
+    const inAt = rndAttLoginAt(rec);
+    const detail = inAt ? `<div class="rnd-cal-detail"><span class="rnd-cal-in">In ${fmtTimeOnly(inAt)}</span>${rec.logoutAt?`<span class="rnd-cal-out">Out ${fmtTimeOnly(rec.logoutAt)}</span>`:''}</div>` : '';
+    cells += `<div class="rnd-cal-cell ${dateStr===today?'rnd-cal-today':''} ${dateStr===cal.selectedDate?'rnd-cal-selected':''} ${inAt?'rnd-cal-marked':''}" data-rnd-cal-date="${dateStr}">
+      <div class="rnd-cal-daynum">${d}</div>
+      ${detail}
+    </div>`;
+  }
+  const weekdayHeaders = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w=>`<div class="rnd-cal-wd">${w}</div>`).join('');
+
+  const selRec = cal.selectedDate ? rndAttRecFor(chemistId, cal.selectedDate) : null;
+  const selInAt = rndAttLoginAt(selRec);
+  const canLogin = !!cal.selectedDate && !selInAt;
+  const canLogout = !!cal.selectedDate && !!selInAt && !(selRec && selRec.logoutAt);
+  const selDateLabel = cal.selectedDate ? (()=>{ const [sy,sm,sd]=cal.selectedDate.split('-').map(Number); return new Date(sy,sm-1,sd).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}); })() : '';
+
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:480px;">
+      <h2>Attendance — ${esc(c.name)}</h2>
+      <div class="sub">Click a date, then log in or log out.</div>
+      <div class="rnd-cal-nav">
+        <button type="button" class="btn btn-sm" id="btn-rnd-cal-prev">‹</button>
+        <div class="rnd-cal-month">${monthLabel}</div>
+        <button type="button" class="btn btn-sm" id="btn-rnd-cal-next">›</button>
+      </div>
+      <div class="rnd-cal-grid">
+        ${weekdayHeaders}
+        ${cells}
+      </div>
+      ${cal.selectedDate ? `
+      <div class="rnd-cal-detail-panel">
+        <div class="rnd-cal-detail-date">${selDateLabel}</div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn ${canLogin?'btn-primary':''}" id="btn-rnd-login" ${canLogin?'':'disabled'}>${selInAt ? '✓ Logged in '+fmtTimeOnly(selInAt) : 'Login'}</button>
+          <button type="button" class="btn ${canLogout?'btn-primary':''}" id="btn-rnd-logout" ${canLogout?'':'disabled'}>${selRec && selRec.logoutAt ? '✓ Logged out '+fmtTimeOnly(selRec.logoutAt) : 'Logout'}</button>
+        </div>
+        ${!selInAt ? `<div class="hint" style="margin-top:8px;">Log in first — logout unlocks once that day has a login.</div>` : ''}
+      </div>` : ''}
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+      </div>
     </div>
   </div>`;
 }
@@ -9918,9 +10024,17 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-rnd-chemist')) byIdEl('btn-new-rnd-chemist').onclick = ()=>openModal('rndchemist:new');
   if(byIdEl('btn-new-rnd-chemist-2')) byIdEl('btn-new-rnd-chemist-2').onclick = ()=>openModal('rndchemist:new');
   document.querySelectorAll('[data-edit-rnd-chemist]').forEach(b=>b.addEventListener('click', ()=>openModal('rndchemist:'+b.dataset.editRndChemist)));
-  document.querySelectorAll('[data-mark-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>markRndAttendance(b.dataset.markRndAttendance)));
+  document.querySelectorAll('[data-open-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>{
+    state._rndAttCal = {chemistId: b.dataset.openRndAttendance, month: todayStr().slice(0,7), selectedDate: null};
+    openModal('rndattendance:'+b.dataset.openRndAttendance);
+  }));
   if(byIdEl('form-rnd-chemist')) byIdEl('form-rnd-chemist').addEventListener('submit', submitRndChemistForm);
   if(byIdEl('btn-delete-rnd-chemist')) byIdEl('btn-delete-rnd-chemist').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndChemist(id); };
+  if(byIdEl('btn-rnd-cal-prev')) byIdEl('btn-rnd-cal-prev').onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, -1); render(); };
+  if(byIdEl('btn-rnd-cal-next')) byIdEl('btn-rnd-cal-next').onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, 1); render(); };
+  document.querySelectorAll('[data-rnd-cal-date]').forEach(cell=>cell.addEventListener('click', ()=>{ state._rndAttCal.selectedDate = cell.dataset.rndCalDate; render(); }));
+  if(byIdEl('btn-rnd-login')) byIdEl('btn-rnd-login').onclick = ()=>{ rndMarkLogin(state._rndAttCal.chemistId, state._rndAttCal.selectedDate); };
+  if(byIdEl('btn-rnd-logout')) byIdEl('btn-rnd-logout').onclick = ()=>{ rndMarkLogout(state._rndAttCal.chemistId, state._rndAttCal.selectedDate); };
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');

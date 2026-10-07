@@ -8977,10 +8977,6 @@ function renderRndDrawer(id){
           <option value="quarantined" ${p.outcome==='quarantined'?'selected':''}>Quarantined</option>
         </select>
       </div>` : ''}
-
-      <div class="field"><label>History</label>
-        <div class="timeline">${p.history.map(h=>`<div class="item">${RND_STAGES[h.stage]} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
-      </div>
     </form>
 
     <div class="field" style="margin-top:10px;">
@@ -8992,6 +8988,11 @@ function renderRndDrawer(id){
       </form>` : ''}
       ${log.length===0 ? `<div class="hint">No log entries yet.</div>` : `
       <div class="timeline rnd-log-timeline">${log.map(l=>`<div class="item">${escBody(l.text)} <div class="t">${fmtDateTime(l.at)} · ${esc(l.by)}</div></div>`).join('')}</div>`}
+    </div>
+
+    <div class="field" style="margin-top:10px;">
+      <label>History</label>
+      <div class="timeline">${p.history.map(h=>`<div class="item">${RND_STAGES[h.stage]} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
     </div>
 
     <div class="modal-actions" style="justify-content:space-between;margin-top:16px;">

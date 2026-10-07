@@ -1651,16 +1651,19 @@ const BLEND_NEXT_ACTION_LABEL = {0:'Send to 1st QC (Base)',1:'Approve — start 
 function canManageBlendBoard(){ return isAdmin() || (state.session && state.session.role==='Blending'); }
 function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < BLEND_STAGES.length-1; }
 
-const RND_STAGES = ['Idea','Formulating','Sample Testing','Review','Completed'];
-const RND_STAGE_KEYS = ['idea','formulating','sampletest','rndreview','delivered'];
+const RND_STAGES = ['R&D Trial List','On Trial & Formulating','Review','Completed'];
+const RND_STAGE_KEYS = ['idea','formulating','rndreview','delivered'];
 const RND_STAGE_STYLE = {
   idea:{c:'var(--s-idea)', bg:'var(--s-idea-soft)'},
   formulating:{c:'var(--s-formulating)', bg:'var(--s-formulating-soft)'},
-  sampletest:{c:'var(--s-sampletest)', bg:'var(--s-sampletest-soft)'},
   rndreview:{c:'var(--s-rndreview)', bg:'var(--s-rndreview-soft)'},
   delivered:{c:'var(--s-delivered)', bg:'var(--s-delivered-soft)'}
 };
-const RND_NEXT_ACTION_LABEL = {0:'Start formulating',1:'Send sample for testing',2:'Send for review',3:'Mark completed'};
+const RND_NEXT_ACTION_LABEL = {0:'Start trial',1:'Send for review',2:'Mark completed'};
+// The board used to have 5 stages (Idea/Formulating/Sample Testing/Review/Completed); Formulating
+// and Sample Testing merged into one "On Trial & Formulating" stage. Maps an old 0-4 stage index
+// to its new 0-3 one, for one-time migration of products/history saved under the old scheme.
+const RND_STAGE_MIGRATION_MAP = {0:0, 1:1, 2:1, 3:2, 4:3};
 const RND_PROJECT_TYPES = ['New product','Improvement'];
 function canManageRnd(){ return isAdmin(); }
 function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
@@ -1993,6 +1996,21 @@ async function loadAll(){
   if(state.navLabels && state.navLabels.blending === 'Blending Department'){
     delete state.navLabels.blending;
     kvSet('navLabels', state.navLabels).catch(e=>console.error('clear stale blending navLabel failed', e));
+  }
+  // One-time migration: the R&D board went from 5 stages to 4 (Formulating + Sample Testing
+  // merged into "On Trial & Formulating"). Remap any product/history stage index saved under the
+  // old 0-4 scheme to the new 0-3 one — guarded by _stageSchemaV2 so it only ever runs once per
+  // product, never re-applied to data already in the new scheme.
+  if(Array.isArray(state.rndProjects)){
+    let rndMigrated = false;
+    state.rndProjects.forEach(p=>{
+      if(p._stageSchemaV2) return;
+      if(typeof p.stage==='number') p.stage = RND_STAGE_MIGRATION_MAP[p.stage] ?? Math.min(p.stage,3);
+      if(Array.isArray(p.history)) p.history.forEach(h=>{ if(typeof h.stage==='number') h.stage = RND_STAGE_MIGRATION_MAP[h.stage] ?? Math.min(h.stage,3); });
+      p._stageSchemaV2 = true;
+      rndMigrated = true;
+    });
+    if(rndMigrated) kvSet('rndProjects', state.rndProjects).catch(e=>console.error('rnd stage migration failed', e));
   }
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
@@ -2794,6 +2812,7 @@ async function createRndProject(e){
     createdAt: new Date().toISOString(),
     log: [],
     history: [{stage:0, at:new Date().toISOString(), by:state.session.name}],
+    _stageSchemaV2: true,
   };
   state.rndProjects.unshift(project);
   await save('rndProjects');

@@ -5016,20 +5016,9 @@ function renderRndColumn(stageName, i){
   </div>`;
 }
 function renderRndCard(p){
-  const typeLabel = p.type || 'New product';
-  const due = rndDueInfo(p);
   return `
   <div class="card" draggable="${canManageRnd()?'true':'false'}" data-rnd="${p.id}">
-    <div class="top-row"><span class="customer">${esc(p.name)}</span><span class="order-id">${p.id}</span></div>
-    <div class="product">${esc(typeLabel)}${p.relatedProduct?(' · '+esc(p.relatedProduct)):''}</div>
-    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-      <span class="pill pill-medium">${esc(typeLabel)}</span>
-      ${due ? `<span class="pill" style="background:${due.color};color:#fff;">${esc(due.label)}</span>` : ''}
-    </div>
-    <div class="meta-row">
-      <span class="assignee ${p.chemist?'':'unassigned'}"><span class="dot"></span>${p.chemist ? esc(p.chemist) : 'No chemist assigned'}</span>
-      <span class="days">${daysAgo(p.createdAt)}</span>
-    </div>
+    <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
   </div>`;
 }
 function renderRndChemistsTab(){

@@ -6513,6 +6513,7 @@ function renderSecureAccountsPanel(){
       <div class="hint" style="margin-bottom:14px;">
         Right now the login screen only guards the app's front door — the database behind it doesn't check who's signed in, so costing and R&amp;D data aren't really protected. Pick a name, an access level and a starting password for each person below, then create the accounts and turn the new login on. Nothing changes for anyone until you do — and once it's live, each person can change their own password from the sidebar.
       </div>
+      <div class="hint" style="margin-bottom:8px;">Passwords must be at least 6 characters.</div>
       <table class="data-table">
         <thead><tr><th>Name</th><th>Access</th><th>New password</th><th>Confirm</th><th></th></tr></thead>
         <tbody>
@@ -6543,7 +6544,7 @@ async function runSecureAccountsMigration(){
   const form = state._secureAcctForm;
   for(const r of form){
     if(!r.name || !r.name.trim()){ showToast('Every row needs a name'); return; }
-    if(!r.password || r.password.length<4){ showToast('Every row needs a password (4+ characters)'); return; }
+    if(!r.password || r.password.length<6){ showToast('Every row needs a password of at least 6 characters'); return; }
     if(r.password !== r.confirm){ showToast(`Passwords don't match for ${r.name}`); return; }
   }
   const seen = new Set();
@@ -9822,6 +9823,7 @@ function attachShellHandlers(){
     const f = e.target;
     const errEl = byIdEl('change-password-error');
     if(!f.next.value){ if(errEl) errEl.textContent = 'Enter a new password.'; return; }
+    if(state.auth.migratedToSupabaseAuth && f.next.value.length<6){ if(errEl) errEl.textContent = 'New password must be at least 6 characters.'; return; }
     if(f.next.value !== f.repeat.value){ if(errEl) errEl.textContent = "New passwords don't match."; return; }
     if(state.auth.migratedToSupabaseAuth){
       const role = state.session.role;

@@ -2898,14 +2898,13 @@ async function submitRndChemistForm(e){
   const f = e.target;
   const editId = f.dataset.editId;
   const name = f.name.value.trim(); if(!name) return;
-  const phone = f.phone.value.trim();
   if(editId){
     const c = byId(state.rndChemists, editId); if(!c) return;
-    c.name = name; c.phone = phone;
+    c.name = name;
     await save('rndChemists'); closeModal();
     showToast('Chemist updated');
   } else {
-    state.rndChemists.unshift({id: uid('CHM'), name, phone, createdAt: new Date().toISOString()});
+    state.rndChemists.unshift({id: uid('CHM'), name, createdAt: new Date().toISOString()});
     await save('rndChemists'); closeModal();
     showToast('Chemist added');
   }
@@ -5085,7 +5084,7 @@ function renderRndChemistsTab(){
   <div class="hint" style="margin-bottom:12px;">Attendance is automatic — a chemist is marked present the day they advance a product's stage or add a log update, no check-in needed.</div>
   <div class="panel" style="margin-bottom:16px;">
     <table class="data-table">
-      <thead><tr><th>Chemist</th><th>Phone</th><th>Today</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
+      <thead><tr><th>Chemist</th><th>Today</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
       <tbody>
         ${chemists.map(c=>{
           const markedToday = state.rndAttendance.some(a=>a.chemistId===c.id && a.date===today);
@@ -5093,7 +5092,6 @@ function renderRndChemistsTab(){
           return `
           <tr>
             <td>${esc(c.name)}</td>
-            <td>${c.phone?esc(c.phone):'—'}</td>
             <td>${markedToday ? `<span class="pill pill-active">✓ Present</span>` : `<span class="hint">—</span>`}</td>
             <td>${rndAttendanceCountThisMonth(c.id)}</td>
             <td>${last?fmtDateTime(last.at):'Never'}</td>
@@ -9010,7 +9008,6 @@ function rndChemistFormModal(id){
       <div class="sub">${c?'Update this chemist’s details.':'Add a chemist who visits to develop products — attendance is tracked automatically once they’re assigned to one.'}</div>
       <form id="form-rnd-chemist" data-edit-id="${c?c.id:''}">
         <div class="field"><label>Name</label><input name="name" required autocomplete="off" value="${c?esc(c.name):''}"></div>
-        <div class="field"><label>Phone</label><input name="phone" autocomplete="off" value="${c?esc(c.phone||''):''}"></div>
         <div class="modal-actions" style="justify-content:space-between;">
           <div>${c && isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd-chemist">Delete</button>` : ''}</div>
           <div style="display:flex;gap:8px;">

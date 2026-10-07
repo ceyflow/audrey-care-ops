@@ -814,6 +814,41 @@ const SUPABASE_URL = 'https://mntnobzwbvqpvmaxqcuc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_pY4NxO1s9lbTWzz72OvWqg_0Pzk8FhC';
 const BACKEND_CONFIGURED = !SUPABASE_URL.includes('PASTE_') && !SUPABASE_ANON_KEY.includes('PASTE_');
 const supabaseClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// A second, independent Supabase client used only by the one-time "Secure accounts" migration
+// (creating real Supabase Auth accounts). Kept separate from supabaseClient so each signUp()
+// call during migration never clobbers the admin's own active login session.
+const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// Supabase Auth requires an email-shaped identifier even for an internal tool with no real
+// inboxes — this derives one deterministically from {role, name} so the same person/account
+// always maps to the same login. Staff never see this; they only ever type their name.
+function authEmailFor(role, name){
+  const slug = (role+'-'+name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
+  return slug + '@audreyops.internal';
+}
+async function supabaseSignIn(role, name, password){
+  if(!supabaseClient) return {ok:false, error:'Backend not configured'};
+  const {data, error} = await supabaseClient.auth.signInWithPassword({email: authEmailFor(role, name), password});
+  if(error) return {ok:false, error: error.message};
+  return {ok:true, userId: data.user.id};
+}
+async function supabaseFetchProfile(userId){
+  if(!supabaseClient) return null;
+  const {data, error} = await supabaseClient.from('profiles').select('role,staff_name').eq('id', userId).maybeSingle();
+  if(error || !data) return null;
+  return data;
+}
+// Creates one real Supabase Auth account + its profiles row, used only from the migration
+// screen. Runs on the isolated client so it never disturbs whoever is already signed in.
+async function supabaseSignUpForMigration(role, name, password){
+  if(!supabaseAuthMigrationClient) return {ok:false, error:'Backend not configured'};
+  const {data, error} = await supabaseAuthMigrationClient.auth.signUp({email: authEmailFor(role, name), password});
+  if(error) return {ok:false, error: error.message};
+  if(!data.user || !data.session) return {ok:false, error:'No session returned — check that "Confirm email" is turned off in Supabase → Authentication → Providers → Email.'};
+  const {error: profileError} = await supabaseAuthMigrationClient.from('profiles').insert({id: data.user.id, role, staff_name: name});
+  await supabaseAuthMigrationClient.auth.signOut();
+  if(profileError) return {ok:false, error: profileError.message};
+  return {ok:true};
+}
 // Must match the SMS_APP_SECRET set on the send-sms Edge Function (supabase/functions/send-sms).
 // Leave as 'PASTE_SMS_APP_SECRET' to disable the SMS feature entirely.
 const SMS_APP_SECRET = '6f2c9e7a-4b1d-4a3f-9c8e-1d7b5a2f6e3c-audrey';
@@ -2552,10 +2587,47 @@ async function confirmLogin(){
   logActivity(`Logged in (${role})`);
   render();
 }
+// Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
+// so the person's access level is looked up from the account roster rather than picked first.
+// The Orders Process board is a shared-device account like Blending/Packing — signing into it
+// goes straight to the public board display rather than a staff session (matching how "Staff
+// Login" on that board already expects to find nobody signed in and show the login screen).
+async function confirmLoginV2(){
+  const nameInput = document.getElementById('login-name');
+  const passInput = document.getElementById('login-password');
+  const errEl = document.getElementById('login-error');
+  const typedName = (nameInput ? nameInput.value : '').trim();
+  const password = (passInput.value||'');
+  const role = roleForLoginName(typedName);
+  if(!role){
+    if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
+    passInput.value = ''; passInput.focus();
+    return;
+  }
+  const res = await supabaseSignIn(role, typedName, password);
+  if(!res.ok){
+    if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
+    passInput.value = ''; passInput.focus();
+    return;
+  }
+  if(role==='Orders Process'){ enterBoardMode(); return; }
+  const profile = await supabaseFetchProfile(res.userId);
+  const sessionRole = (profile && profile.role) || role;
+  const sessionName = (profile && profile.staff_name) || typedName;
+  state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null};
+  state.page = (pagesForRole(sessionRole)||['dashboard'])[0] || 'dashboard';
+  state._justLoggedIn = true;
+  state.aiChat = [];
+  clearInterval(state._loginClockTimer);
+  await saveSession();
+  logActivity(`Logged in (${sessionRole})`);
+  render();
+}
 async function logOut(){
   state.session = null; state._pendingRole = null;
   state.aiChat = [];
   await saveSession();
+  if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
   render();
 }
 // These pages are only ever opened from their department hub's cards (Blending Department /
@@ -4366,6 +4438,7 @@ function renderBackendSetupScreen(){
 
 /* ===================== Login ===================== */
 function renderLogin(){
+  const migrated = !!state.auth.migratedToSupabaseAuth;
   const role = state._pendingRole;
   const roles = ROLES;
   const logins = role && state.auth.roleLogins && state.auth.roleLogins[role];
@@ -4390,6 +4463,21 @@ function renderLogin(){
         <h1 class="login-title">Sign in</h1>
         <div class="lead">Welcome back!</div>
 
+        ${migrated ? `
+        <div class="field">
+          <label>Name</label>
+          <input id="login-name" type="text" placeholder="Type your name" autocomplete="off" autocapitalize="words" autofocus>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="password-field-wrap">
+            <input id="login-password" type="password" placeholder="Enter your password" autocomplete="off">
+            <button type="button" class="password-toggle-btn" id="btn-toggle-login-password" tabindex="-1" title="Show password">👁</button>
+          </div>
+          <div class="hint" id="login-error" style="color:var(--danger);"></div>
+        </div>
+        <button class="btn btn-primary login-submit" id="login-confirm">Log in</button>
+        ` : `
         <div class="field">
           <label>Account</label>
           <div class="role-grid role-grid-4">
@@ -4411,6 +4499,7 @@ function renderLogin(){
           <div class="hint" id="login-error" style="color:var(--danger);"></div>
         </div>
         <button class="btn btn-primary login-submit" id="login-confirm">Log in</button>` : ''}
+        `}
       </div>
     </div>
   </div>`;
@@ -4431,11 +4520,12 @@ function attachLoginHandlers(){
   state._loginClockTimer = setInterval(updateLoginClock, 1000);
   const confirmBtn = document.getElementById('login-confirm');
   if(confirmBtn){
-    confirmBtn.addEventListener('click', confirmLogin);
+    const doLogin = state.auth.migratedToSupabaseAuth ? confirmLoginV2 : confirmLogin;
+    confirmBtn.addEventListener('click', doLogin);
     const passEl = document.getElementById('login-password');
     if(passEl){
-      passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmLogin(); });
-      passEl.focus();
+      passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+      if(!state.auth.migratedToSupabaseAuth) passEl.focus();
     }
   }
   const toggleBtn = document.getElementById('btn-toggle-login-password');
@@ -6284,6 +6374,8 @@ function renderSettingsPage(){
 
   ${isAdmin() ? renderRolePagesPanel() : ''}
 
+  ${isAdmin() ? renderSecureAccountsPanel() : ''}
+
   ${isAdmin() ? renderSmsTemplatesPanel() : ''}
   `;
 }
@@ -6379,6 +6471,116 @@ function renderRolePagesPanel(){
       </form>
     </div>
   </div>`;
+}
+// Sub Admin excluded for now, per instruction. Every row's access level is a free choice —
+// Admin decides who gets what, rather than the tool assuming it from the old role-chip data.
+const SECURE_ACCOUNT_ROLES = ['Admin','Customer Care','Blending','Packing','Orders Process'];
+function buildMigrationRoster(){
+  const roster = [];
+  ['Admin','Customer Care'].forEach(role=>{
+    const named = (state.auth.roleLogins && state.auth.roleLogins[role]) || [];
+    if(named.length) named.forEach(l=>roster.push({role, name:l.name}));
+    else roster.push({role, name: role});
+  });
+  ['Blending','Packing','Orders Process'].forEach(role=>roster.push({role, name: role}));
+  return roster;
+}
+// The new sign-in screen only asks for a name (no role picker) — this looks up which access
+// level that name was given when the account was created, so the right Supabase Auth email can
+// be derived before signing in. Case-insensitive so "vihanga" and "Vihanga" both match.
+function roleForLoginName(typedName){
+  const lower = (typedName||'').trim().toLowerCase();
+  if(!lower) return null;
+  const roster = state.auth.secureAccounts || [];
+  const match = roster.find(r=>r.name.toLowerCase()===lower);
+  return match ? match.role : null;
+}
+function renderSecureAccountsPanel(){
+  if(!state._secureAcctForm) state._secureAcctForm = buildMigrationRoster().map(r=>({...r, password:'', confirm:''}));
+  const form = state._secureAcctForm;
+  const migrated = !!state.auth.migratedToSupabaseAuth;
+  const results = state._secureAcctResults;
+  const running = !!state._secureAcctRunning;
+  const allOk = results && results.length>0 && results.every(r=>r.ok);
+  return `
+  <div class="panel">
+    <div class="panel-head"><h3>Secure accounts</h3>${migrated?`<span class="pill pill-active">Active</span>`:''}</div>
+    <div class="panel-body">
+      ${migrated ? `
+      <div class="hint" style="margin-bottom:14px;">Real database-backed logins are active. Costing and R&amp;D data now require a genuine signed-in Admin account — not just the app's own password screen.</div>
+      <button type="button" class="btn btn-sm btn-danger" id="btn-secure-accounts-rollback">Turn off (revert to the old login)</button>
+      ` : `
+      <div class="hint" style="margin-bottom:14px;">
+        Right now the login screen only guards the app's front door — the database behind it doesn't check who's signed in, so costing and R&amp;D data aren't really protected. Pick a name, an access level and a starting password for each person below, then create the accounts and turn the new login on. Nothing changes for anyone until you do — and once it's live, each person can change their own password from the sidebar.
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Access</th><th>New password</th><th>Confirm</th><th></th></tr></thead>
+        <tbody>
+          ${form.map((r,i)=>`
+          <tr>
+            <td><input data-secure-acct-field="name" data-secure-acct-idx="${i}" value="${escAttr(r.name)}"></td>
+            <td><select data-secure-acct-field="role" data-secure-acct-idx="${i}">${SECURE_ACCOUNT_ROLES.map(role=>`<option value="${role}" ${r.role===role?'selected':''}>${role}</option>`).join('')}</select></td>
+            <td><input type="password" data-secure-acct-field="password" data-secure-acct-idx="${i}" value="${escAttr(r.password)}" autocomplete="new-password"></td>
+            <td><input type="password" data-secure-acct-field="confirm" data-secure-acct-idx="${i}" value="${escAttr(r.confirm)}" autocomplete="new-password"></td>
+            <td><button type="button" class="btn btn-sm btn-danger" data-secure-acct-remove="${i}">Remove</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <button type="button" class="btn btn-sm" id="btn-secure-accounts-add" style="margin-top:8px;">+ Add person</button>
+      ${results ? `
+      <div class="hint" style="margin:14px 0;">
+        ${results.map(r=>`<div>${r.ok?'✓':'✗'} ${esc(r.role)} — ${esc(r.name)}${r.ok?' created':': '+esc(r.error||'failed')}</div>`).join('')}
+      </div>` : ''}
+      <div class="modal-actions" style="justify-content:flex-start;margin-top:16px;gap:8px;">
+        <button type="button" class="btn btn-primary" id="btn-secure-accounts-create" ${running?'disabled':''}>${running?'Creating…':'Create accounts'}</button>
+        ${allOk ? `<button type="button" class="btn" id="btn-secure-accounts-activate">Activate new login</button>` : ''}
+      </div>
+      `}
+    </div>
+  </div>`;
+}
+async function runSecureAccountsMigration(){
+  const form = state._secureAcctForm;
+  for(const r of form){
+    if(!r.name || !r.name.trim()){ showToast('Every row needs a name'); return; }
+    if(!r.password || r.password.length<4){ showToast('Every row needs a password (4+ characters)'); return; }
+    if(r.password !== r.confirm){ showToast(`Passwords don't match for ${r.name}`); return; }
+  }
+  const seen = new Set();
+  for(const r of form){
+    const key = r.name.trim().toLowerCase();
+    if(seen.has(key)){ showToast(`"${r.name}" is used twice — the sign-in screen only asks for a name, so each name must be unique across every row`); return; }
+    seen.add(key);
+  }
+  state._secureAcctRunning = true; render();
+  const results = [];
+  for(const r of form){
+    const res = await supabaseSignUpForMigration(r.role, r.name, r.password);
+    results.push({role:r.role, name:r.name, ok:res.ok, error:res.error});
+  }
+  state._secureAcctRunning = false;
+  state._secureAcctResults = results;
+  render();
+  showToast(results.every(r=>r.ok) ? 'All accounts created — review, then Activate new login.' : 'Some accounts failed — fix and try again.');
+}
+async function activateSecureAccounts(){
+  const roster = state._secureAcctForm.map(r=>({role:r.role, name:r.name}));
+  state.auth = {...state.auth, migratedToSupabaseAuth:true, secureAccounts: roster};
+  await saveAuth();
+  state._secureAcctForm = null; state._secureAcctResults = null;
+  showToast('New login is now active.');
+  render();
+}
+function rollbackSecureAccounts(){
+  openConfirmModal({
+    title:'Turn off real logins', danger:true, confirmLabel:'Turn off',
+    message:'Everyone goes back to the old role-password login. Do this only if something looks wrong with the new one.',
+    onConfirm: async ()=>{
+      state.auth = {...state.auth, migratedToSupabaseAuth:false};
+      await saveAuth();
+      showToast('Reverted to the old login.');
+    },
+  });
 }
 async function submitTemplate(e){
   e.preventDefault();
@@ -9619,14 +9821,25 @@ function attachShellHandlers(){
     e.preventDefault();
     const f = e.target;
     const errEl = byIdEl('change-password-error');
+    if(!f.next.value){ if(errEl) errEl.textContent = 'Enter a new password.'; return; }
+    if(f.next.value !== f.repeat.value){ if(errEl) errEl.textContent = "New passwords don't match."; return; }
+    if(state.auth.migratedToSupabaseAuth){
+      const role = state.session.role;
+      const name = state.session.staffName || role;
+      const check = await supabaseSignIn(role, name, f.current.value);
+      if(!check.ok){ if(errEl) errEl.textContent = 'Current password is incorrect.'; return; }
+      const {error} = await supabaseClient.auth.updateUser({password: f.next.value});
+      if(error){ if(errEl) errEl.textContent = error.message; return; }
+      closeModal();
+      showToast('Password changed');
+      return;
+    }
     const role = state.session.role;
     const logins = state.auth.roleLogins && state.auth.roleLogins[role];
     const entry = logins && logins.find(l=>l.name===state.session.staffName);
     if(!entry){ if(errEl) errEl.textContent = 'Could not find your login — contact Admin.'; return; }
     const ok = await passwordMatches(f.current.value, entry.password);
     if(!ok){ if(errEl) errEl.textContent = 'Current password is incorrect.'; return; }
-    if(!f.next.value){ if(errEl) errEl.textContent = 'Enter a new password.'; return; }
-    if(f.next.value !== f.repeat.value){ if(errEl) errEl.textContent = "New passwords don't match."; return; }
     entry.password = await sha256Hex(f.next.value);
     await saveAuth();
     closeModal();
@@ -10964,6 +11177,24 @@ function attachShellHandlers(){
     await save('orderSettings');
     showToast('Page access updated');
   });
+
+  // Secure accounts migration
+  document.querySelectorAll('[data-secure-acct-field]').forEach(inp=>{
+    const apply = ()=>{ state._secureAcctForm[Number(inp.dataset.secureAcctIdx)][inp.dataset.secureAcctField] = inp.value; };
+    inp.addEventListener('input', apply);
+    inp.addEventListener('change', apply);
+  });
+  document.querySelectorAll('[data-secure-acct-remove]').forEach(b=>b.addEventListener('click', ()=>{
+    state._secureAcctForm.splice(Number(b.dataset.secureAcctRemove), 1);
+    render();
+  }));
+  if(byIdEl('btn-secure-accounts-add')) byIdEl('btn-secure-accounts-add').onclick = ()=>{
+    state._secureAcctForm.push({role:'Customer Care', name:'', password:'', confirm:''});
+    render();
+  };
+  if(byIdEl('btn-secure-accounts-create')) byIdEl('btn-secure-accounts-create').onclick = runSecureAccountsMigration;
+  if(byIdEl('btn-secure-accounts-activate')) byIdEl('btn-secure-accounts-activate').onclick = activateSecureAccounts;
+  if(byIdEl('btn-secure-accounts-rollback')) byIdEl('btn-secure-accounts-rollback').onclick = rollbackSecureAccounts;
 
   if(byIdEl('form-sms-settings')) byIdEl('form-sms-settings').addEventListener('submit', async (e)=>{
     e.preventDefault();

@@ -4797,7 +4797,7 @@ function renderShell(freshPage){
           </div>
           <button class="btn btn-sm" id="btn-open-aibot" title="Ask the workspace assistant" style="display:flex;align-items:center;gap:6px;">${icon('bot')} Assistant</button>
           ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
-          ${state.session.staffName ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
+          ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
           <button class="btn-text" id="btn-switch-role">Log out</button>
         </div>
       </header>

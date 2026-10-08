@@ -6565,7 +6565,7 @@ function renderRolePagesPanel(){
 }
 // Sub Admin excluded for now, per instruction. Every row's access level is a free choice —
 // Admin decides who gets what, rather than the tool assuming it from the old role-chip data.
-const SECURE_ACCOUNT_ROLES = ['Admin','Customer Care','Blending','Packing','Orders Process','R&D'];
+const SECURE_ACCOUNT_ROLES = ['Admin','Sub Admin','Customer Care','Blending','Packing','Orders Process','R&D'];
 function buildMigrationRoster(){
   const roster = [];
   ['Admin','Customer Care'].forEach(role=>{
@@ -6600,9 +6600,9 @@ function renderSecureAccountsPanel(){
       ${migrated ? `
       <div class="hint" style="margin-bottom:14px;">Real database-backed logins are active. Costing and R&amp;D data now require a genuine signed-in Admin account — not just the app's own password screen.</div>
       <table class="data-table" style="margin-bottom:14px;">
-        <thead><tr><th>Name</th><th>Access</th></tr></thead>
+        <thead><tr><th>Name</th><th>Access</th><th></th></tr></thead>
         <tbody>
-          ${(state.auth.secureAccounts||[]).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.role)}</td></tr>`).join('')}
+          ${(state.auth.secureAccounts||[]).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.role)}</td><td><button type="button" class="btn btn-sm btn-danger" data-remove-secure-account="${escAttr(r.name)}">Remove</button></td></tr>`).join('')}
         </tbody>
       </table>
       ${renderAddSecureAccountForm()}
@@ -6673,6 +6673,20 @@ async function runAddSecureAccount(){
   state._addAcctForm = null;
   showToast(f.name.trim()+' can now sign in');
   render();
+}
+// Removing someone from the roster only takes away their ability to sign in (roleForLoginName()
+// won't find them anymore) — it doesn't delete the underlying Supabase Auth account, since that
+// needs admin API access this app doesn't have. Harmless to leave behind: unreachable, unused.
+function removeSecureAccount(name){
+  openConfirmModal({
+    title: 'Remove account', danger: true, confirmLabel: 'Remove',
+    message: `${name} will no longer be able to sign in. You can add them back anytime with a new password.`,
+    onConfirm: async ()=>{
+      state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).filter(r=>r.name!==name)};
+      await saveAuth();
+      showToast(name+' removed');
+    },
+  });
 }
 function renderLoginActivityPanel(){
   // Sorted at render time, not relied on from storage — the sync/merge layer can reorder
@@ -11373,6 +11387,7 @@ function attachShellHandlers(){
   if(byIdEl('add-acct-password')) byIdEl('add-acct-password').addEventListener('input', e=>{ state._addAcctForm.password = e.target.value; });
   if(byIdEl('add-acct-confirm')) byIdEl('add-acct-confirm').addEventListener('input', e=>{ state._addAcctForm.confirm = e.target.value; });
   if(byIdEl('btn-add-secure-account')) byIdEl('btn-add-secure-account').onclick = runAddSecureAccount;
+  document.querySelectorAll('[data-remove-secure-account]').forEach(b=>b.addEventListener('click', ()=>removeSecureAccount(b.dataset.removeSecureAccount)));
 
   if(byIdEl('form-sms-settings')) byIdEl('form-sms-settings').addEventListener('submit', async (e)=>{
     e.preventDefault();

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008095124">
+<meta name="app-build" content="20261008101353">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -337,6 +337,7 @@
   .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
   .landing-card{position:relative;display:flex;align-items:center;gap:8px;background:var(--accent-grad);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
   .landing-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(60,144,88,.28);}
+  .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(60,144,88,.28);}
   .landing-card svg{width:15px;height:15px;flex-shrink:0;}
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
 
@@ -6329,31 +6330,8 @@ function renderRatingsPage(){
   </div>
   `;
 }
-function renderSettingsPage(){
-  const jumpCards = [
-    {id:'settings-task-templates', label:'Task templates', icon:'list'},
-    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints'},
-    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard'},
-    {id:'settings-template-customization', label:'Template customization', icon:'settings'},
-    {id:'settings-appearance', label:'Appearance', icon:'star'},
-    {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
-    {id:'settings-team-logins', label:'Team logins', icon:'staff'},
-    {id:'settings-page-access', label:'Page access', icon:'settings'},
-    {id:'settings-secure-accounts', label:'Secure accounts', icon:'customers'},
-    {id:'settings-login-activity', label:'Login activity', icon:'search'},
-    {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
-  ].filter(c => c.id==='settings-task-templates' || isAdmin());
+function renderTaskTemplatesPanel(){
   return `
-  <div class="landing-section">
-    <div class="landing-section-title">Jump to</div>
-    <div class="landing-grid">
-      ${jumpCards.map(c=>`
-      <button type="button" class="landing-card" data-settings-jump="${c.id}">
-        ${icon(c.icon)}<span>${esc(c.label)}</span>
-      </button>`).join('')}
-    </div>
-  </div>
-
   <div class="panel" id="settings-task-templates">
     <div class="panel-head"><h3>Task templates</h3>${isAdmin()?`<button class="btn btn-primary btn-sm" id="btn-new-template">+ New template</button>`:''}</div>
     <div class="panel-body" style="padding:0;">
@@ -6372,13 +6350,10 @@ function renderSettingsPage(){
         </tbody>
       </table>`}
     </div>
-  </div>
-
-  ${isAdmin() ? renderComplaintAccessPanel() : ''}
-
-  ${isAdmin() ? renderSidebarOrderPanel() : ''}
-
-  ${isAdmin() ? `
+  </div>`;
+}
+function renderTemplateCustomizationPanel(){
+  return `
   <div class="panel" id="settings-template-customization">
     <div class="panel-head"><h3>Template customization</h3><button class="btn btn-primary btn-sm" id="btn-brand-add-addon">+ Add addon</button></div>
     <div class="panel-body" style="padding:0;">
@@ -6444,9 +6419,10 @@ function renderSettingsPage(){
         </tbody>
       </table>
     </div>
-  </div>` : ''}
-
-  ${isAdmin() ? `
+  </div>`;
+}
+function renderAppearancePanel(){
+  return `
   <div class="panel" id="settings-appearance">
     <div class="panel-head"><h3>Appearance</h3></div>
     <div class="panel-body">
@@ -6459,9 +6435,10 @@ function renderSettingsPage(){
         </button>`).join('')}
       </div>
     </div>
-  </div>` : ''}
-
-  ${isAdmin() ? `
+  </div>`;
+}
+function renderTimerAlertSoundPanel(){
+  return `
   <div class="panel" id="settings-timer-alert-sound">
     <div class="panel-head"><h3>Timer alert sound</h3></div>
     <div class="panel-body">
@@ -6488,17 +6465,53 @@ function renderSettingsPage(){
         </div>
       </form>
     </div>
-  </div>` : ''}
+  </div>`;
+}
+// Settings grew into 11 panels, each one long — rather than a page you scroll through to find
+// one, the jump cards act as accordion tabs: clicking a card shows only that panel below, no
+// scrolling past everything else needed. state._settingsOpenPanel remembers which one, defaulting
+// to the first card so the page never opens looking empty.
+const SETTINGS_PANEL_RENDERERS = {
+  'settings-task-templates': renderTaskTemplatesPanel,
+  'settings-complaint-access': renderComplaintAccessPanel,
+  'settings-sidebar-order': renderSidebarOrderPanel,
+  'settings-template-customization': renderTemplateCustomizationPanel,
+  'settings-appearance': renderAppearancePanel,
+  'settings-timer-alert-sound': renderTimerAlertSoundPanel,
+  'settings-team-logins': renderRoleLoginsPanel,
+  'settings-page-access': renderRolePagesPanel,
+  'settings-secure-accounts': renderSecureAccountsPanel,
+  'settings-login-activity': renderLoginActivityPanel,
+  'settings-sms-settings': renderSmsTemplatesPanel,
+};
+function renderSettingsPage(){
+  const jumpCards = [
+    {id:'settings-task-templates', label:'Task templates', icon:'list'},
+    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints'},
+    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard'},
+    {id:'settings-template-customization', label:'Template customization', icon:'settings'},
+    {id:'settings-appearance', label:'Appearance', icon:'star'},
+    {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
+    {id:'settings-team-logins', label:'Team logins', icon:'staff'},
+    {id:'settings-page-access', label:'Page access', icon:'settings'},
+    {id:'settings-secure-accounts', label:'Secure accounts', icon:'customers'},
+    {id:'settings-login-activity', label:'Login activity', icon:'search'},
+    {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
+  ].filter(c => c.id==='settings-task-templates' || isAdmin());
+  const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : jumpCards[0].id;
+  const renderOpenPanel = SETTINGS_PANEL_RENDERERS[openId];
+  return `
+  <div class="landing-section">
+    <div class="landing-section-title">Jump to</div>
+    <div class="landing-grid">
+      ${jumpCards.map(c=>`
+      <button type="button" class="landing-card ${openId===c.id?'landing-card-selected':''}" data-settings-jump="${c.id}">
+        ${icon(c.icon)}<span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>
+  </div>
 
-  ${isAdmin() ? renderRoleLoginsPanel() : ''}
-
-  ${isAdmin() ? renderRolePagesPanel() : ''}
-
-  ${isAdmin() ? renderSecureAccountsPanel() : ''}
-
-  ${isAdmin() ? renderLoginActivityPanel() : ''}
-
-  ${isAdmin() ? renderSmsTemplatesPanel() : ''}
+  ${renderOpenPanel ? renderOpenPanel() : ''}
   `;
 }
 function renderSmsTemplatesPanel(){
@@ -10008,12 +10021,12 @@ function attachShellHandlers(){
     e.preventDefault();
     goTo(el.dataset.nav);
   }));
-  // Settings has grown into a long page of stacked panels — these jump cards scroll straight to
-  // one instead of making someone hunt for it by scrolling past everything above it.
+  // Settings has grown into 11 panels — these cards act as accordion tabs, swapping which one
+  // shows below instead of making someone scroll past the others to find it.
   document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
-    const target = document.getElementById(el.dataset.settingsJump);
-    if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+    state._settingsOpenPanel = el.dataset.settingsJump;
+    render();
   }));
   document.querySelectorAll('[data-nav-toggle]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();

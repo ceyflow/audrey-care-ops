@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008085832">
+<meta name="app-build" content="20261008090858">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -2136,6 +2136,35 @@ function hideDataLoadWarning(){
   const bar = document.getElementById('data-load-warning');
   if(bar) bar.remove();
 }
+const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
+const _fetchSyncedKeys = () => Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
+// Fetches every SYNCED_KEY and applies it to state — used both by loadAll() at page bootstrap
+// (which may run before anyone is signed in at all) and, critically, right after a successful
+// login. A login handler only sets state.session and re-renders; it was never re-running this
+// fetch, so a browser with no pre-existing Supabase session (a genuinely fresh login — reliably
+// reproduced in a private/incognito window, since that's the one case guaranteed to have none)
+// would permanently render whatever loadAll() saw before anyone was authenticated: nothing. That
+// was mistaken for a timing race for a long time because most normal-browser sessions restore an
+// existing login from localStorage, so loadAll() usually already has a session by the time it
+// first runs — incognito is just the one case that can never have that head start.
+// knownAuthenticated skips the extra "wait for a session to confirm it's really there" dance —
+// pass true when called right after a login call already succeeded.
+async function refreshAppData(knownAuthenticated){
+  let loadedValues = await _fetchSyncedKeys();
+  if(knownAuthenticated){
+    const sentinelKeys = ['orders','customers','staff'];
+    const looksEmpty = () => sentinelKeys.every(k=>{ const v = loadedValues[SYNCED_KEYS.indexOf(k)]; return !v || (Array.isArray(v) && v.length===0); });
+    const delays = [900, 2500, 5000];
+    for(let attempt=0; attempt<delays.length && looksEmpty(); attempt++){
+      console.warn(`refreshAppData: core data came back empty for a signed-in session — retry ${attempt+1}/${delays.length}`);
+      await new Promise(r=>setTimeout(r, delays[attempt]));
+      loadedValues = await _fetchSyncedKeys();
+    }
+    if(looksEmpty()) showDataLoadWarning(); else hideDataLoadWarning();
+  }
+  SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || _syncedKeyDefault(k); });
+  return loadedValues;
+}
 async function loadAll(){
   if(!BACKEND_CONFIGURED){ state.loaded = true; state.backendMissing = true; render(); return; }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
@@ -2162,28 +2191,7 @@ async function loadAll(){
       });
     }catch(e){}
   }
-  const defaultFor = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
-  const fetchSyncedKeys = () => Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
-  let loadedValues = await fetchSyncedKeys();
-  // Belt-and-suspenders on top of the wait above: if we're genuinely signed in (per Supabase's
-  // own auth state, not just the app's localStorage session flag — that one isn't restored until
-  // later below) but the keys a real, long-running workspace should never actually be empty for
-  // all came back blank, something still raced ahead of the database treating us as logged in.
-  // Retry a few times with backoff rather than rendering what looks like a wiped workspace — and
-  // if it's still empty after every attempt, say so loudly (hideDataLoadWarning/showDataLoadWarning
-  // below) instead of silently rendering a dashboard that reads as "you have zero orders", which
-  // for a real, active business is actively misleading rather than a harmless blank state.
-  if(_authSession){
-    const sentinelKeys = ['orders','customers','staff'];
-    const looksEmpty = () => sentinelKeys.every(k=>{ const v = loadedValues[SYNCED_KEYS.indexOf(k)]; return !v || (Array.isArray(v) && v.length===0); });
-    const delays = [900, 2500, 5000];
-    for(let attempt=0; attempt<delays.length && looksEmpty(); attempt++){
-      console.warn(`loadAll: core data came back empty for a signed-in session — retry ${attempt+1}/${delays.length}`);
-      await new Promise(r=>setTimeout(r, delays[attempt]));
-      loadedValues = await fetchSyncedKeys();
-    }
-    if(looksEmpty()) showDataLoadWarning(); else hideDataLoadWarning();
-  }
+  const loadedValues = await refreshAppData(!!_authSession);
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
   // for that key yet, i.e. the raw load came back null/undefined). That's different from the
   // key existing but currently not containing the named example — e.g. an admin who deliberately
@@ -2191,7 +2199,6 @@ async function loadAll(){
   // instead of "was this ever saved before" would silently resurrect it on every later refresh.
   const recipesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('recipes')] == null;
   const mixingStepTemplatesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('mixingStepTemplates')] == null;
-  SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || defaultFor(k); });
   if(!state.branding || !Array.isArray(state.branding.addons)) state.branding = {addons: []};
   if(!state.navOrder || typeof state.navOrder !== 'object' || Array.isArray(state.navOrder)) state.navOrder = {};
   // One-time cleanup: 'blending' used to be the top-level sidebar group id (label "Blending
@@ -2759,6 +2766,10 @@ async function confirmLogin(){
   await saveSession();
   logActivity(`Logged in (${role})`);
   logLoginEvent(sessionName, role);
+  // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
+  // before anyone was signed in — re-fetch now that we actually are, rather than rendering
+  // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see.
+  await refreshAppData(true);
   render();
 }
 // Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
@@ -2788,7 +2799,7 @@ async function confirmLoginV2(){
     passInput.value = ''; passInput.focus();
     return;
   }
-  if(role==='Orders Process'){ logLoginEvent(typedName, role); enterBoardMode(); return; }
+  if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
   const profile = await supabaseFetchProfile(res.userId);
   const sessionRole = (profile && profile.role) || role;
   const sessionName = (profile && profile.staff_name) || typedName;
@@ -2800,6 +2811,13 @@ async function confirmLoginV2(){
   await saveSession();
   logActivity(`Logged in (${sessionRole})`);
   logLoginEvent(sessionName, sessionRole);
+  // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
+  // before anyone was signed in — re-fetch now that we actually are, rather than rendering
+  // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see. This is
+  // the fix for the incognito-dashboard-shows-zero-orders bug: that scenario is guaranteed to
+  // have no pre-existing session, so loadAll()'s one and only fetch always ran unauthenticated,
+  // and nothing used to ever re-fetch after the login that followed it.
+  await refreshAppData(true);
   render();
 }
 async function logOut(){

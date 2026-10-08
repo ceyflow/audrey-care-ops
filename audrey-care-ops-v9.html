@@ -1467,7 +1467,7 @@ const DEFAULT_AUTH = {
   // A role missing here, or mapped to an empty array, falls back to ROLE_PAGES below.
   rolePages: {}
 };
-const ROLES = ['Admin','Sub Admin','Blending','Packing','Customer Care','Orders Process','R&D'];
+const ROLES = ['Admin','Sub Admin','Dashboard','Blending','Packing','Customer Care','Orders Process','R&D'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
   Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
@@ -1477,6 +1477,7 @@ const ROLE_PAGES = {
   'Customer Care': ['customercare','complaints','orderinquiry','chat'],
   'Orders Process': ['ordersprocess'],
   'R&D': ['rnd','chat'],
+  Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can toggle on/off for Blending and Packing from Settings → Page access.
 const ROLE_PAGE_TOGGLES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','complaints','gmp','rnd','staff','chat','ratings'];
@@ -6525,7 +6526,7 @@ function renderRoleLoginsPanel(){
   </div>`;
 }
 function renderRolePagesPanel(){
-  const roles = ['Sub Admin','Blending','Packing','Customer Care'];
+  const roles = ['Dashboard','Blending','Packing','Customer Care'];
   return `
   <div class="panel">
     <div class="panel-head"><h3>Page access</h3></div>
@@ -6563,9 +6564,12 @@ function renderRolePagesPanel(){
     </div>
   </div>`;
 }
-// Sub Admin excluded for now, per instruction. Every row's access level is a free choice —
-// Admin decides who gets what, rather than the tool assuming it from the old role-chip data.
-const SECURE_ACCOUNT_ROLES = ['Admin','Sub Admin','Customer Care','Blending','Packing','Orders Process','R&D'];
+// Sub Admin isn't offered here — it carries broader built-in permissions (complaint handling,
+// etc.) that shouldn't be handed out casually from this screen. "Dashboard" is the minimal,
+// fixed access level (Dashboard + Team chat only) for people who just need visibility.
+// Every row's access level is a free choice — Admin decides who gets what, rather than the
+// tool assuming it from the old role-chip data.
+const SECURE_ACCOUNT_ROLES = ['Admin','Dashboard','Customer Care','Blending','Packing','Orders Process','R&D'];
 function buildMigrationRoster(){
   const roster = [];
   ['Admin','Customer Care'].forEach(role=>{
@@ -11342,7 +11346,7 @@ function attachShellHandlers(){
   if(byIdEl('form-role-pages')) byIdEl('form-role-pages').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;
-    const roles = ['Sub Admin','Blending','Packing','Customer Care'];
+    const roles = ['Dashboard','Blending','Packing','Customer Care'];
     const next = {};
     for(const role of roles){
       const key = role.replace(/\s+/g,'_');

@@ -4,7 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008110027">
+<meta name="app-build" content="20261008120000">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style>
+/* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
+   script below (right before </head>... actually right after <body>) only removes this if
+   the page confirms it's NOT inside someone else's iframe. Modern Chrome silently blocks a
+   cross-origin iframe from force-navigating window.top unless there's a user gesture (see
+   https://www.chromestatus.com/feature/5851021045661696), so a navigation-only frame-buster
+   is not reliable anymore — this CSS hide is the part that actually still works every time. */
+html{ visibility:hidden; }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -752,6 +762,24 @@
 </style>
 </head>
 <body>
+<script>
+// Clickjacking defense, part 2: GitHub Pages can't send an X-Frame-Options or CSP
+// frame-ancestors header (it's a static host with no way to set custom response headers at
+// all), so this plus the `html{visibility:hidden}` rule in <head> is the only mitigation
+// available without moving hosts or adding a proxy in front of it.
+// If NOT framed, reveal the page immediately. If framed, try to bust out to the top window —
+// this still works for a same-origin frame or after a user gesture, but modern Chrome blocks
+// a cross-origin iframe from force-navigating window.top without one, silently (no exception,
+// just a console warning) — so the real defense against a cross-origin clickjacking overlay
+// is that the CSS hide above is never lifted and the app stays invisible underneath it.
+try{
+  if(window.top === window.self){
+    document.documentElement.style.visibility = 'visible';
+  }else{
+    window.top.location = window.self.location.href;
+  }
+}catch(e){}
+</script>
 <div id="app"></div>
 <div id="print-area"></div>
 

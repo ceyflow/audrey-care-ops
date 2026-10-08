@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008090858">
+<meta name="app-build" content="20261008093422">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -821,21 +821,31 @@ const supabaseClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABAS
 const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 // Best-effort private/incognito browsing detection, checked before every login attempt. There is
 // no official API for this, and Chrome in particular has been deliberately closing this off: the
-// storage-quota gap this used to rely on is being replaced with an artificial quota specifically
-// so sites like this one can't tell incognito apart from a normal window — confirmed still true
-// as of current Chrome, where this check does NOT reliably catch incognito anymore. It's kept
-// because it still has a chance against Firefox private windows and older/other Chromium builds,
-// but treat it as a weak deterrent only — NOT something to rely on for actually keeping anyone
-// out. The Login activity panel (Settings) is the real tool for this: it can't be evaded the way
-// client-side detection can, since it logs every real sign-in's device/IP/location after the fact.
+// old storage-quota gap this used to rely on (incognito capped to a small fixed ceiling) was
+// replaced specifically to defeat checks like it, with quota reported as usage + exactly 10GiB
+// instead of a number tied to real free disk space — this now checks for THAT signature too.
+// Still a cat-and-mouse game against a browser vendor actively trying to prevent detection, so
+// treat it as a deterrent only, never a guarantee — if Chrome ships yet another countermeasure
+// this stops catching, that's expected, not a bug to keep re-patching indefinitely. The Login
+// activity panel (Settings) is the one thing here that can't be evaded this way, since it logs
+// every real sign-in's device/IP/location after the fact rather than trying to block beforehand.
 async function isLikelyPrivateBrowsing(){
   try{
-    // Chromium (Chrome/Edge/Brave/Opera): Incognito caps the Storage Quota API far below the
-    // device's real free disk space — normal windows report a quota in the gigabytes on any
-    // modern device, incognito reports well under 200MB regardless of actual free space.
     if(navigator.storage && navigator.storage.estimate){
-      const {quota} = await navigator.storage.estimate();
-      if(typeof quota === 'number' && quota > 0 && quota < 200 * 1024 * 1024) return true;
+      const {quota, usage} = await navigator.storage.estimate();
+      if(typeof quota === 'number' && quota > 0){
+        // Older Chromium: Incognito capped the Storage Quota API to a small fixed ceiling far
+        // below the device's real free disk space.
+        if(quota < 200 * 1024 * 1024) return true;
+        // Current Chromium: that gap got closed specifically to defeat checks like the one
+        // above, by reporting an artificial quota of usage + exactly 10GiB instead. A real,
+        // normal-mode quota is derived from actual free disk space and is essentially never
+        // that same round number relative to usage — so quota landing within a few MB of
+        // usage+10GiB on both sides is the replacement tell for current Chrome's incognito.
+        const TEN_GIB = 10 * 1024 * 1024 * 1024;
+        const TOLERANCE = 64 * 1024 * 1024;
+        if(typeof usage === 'number' && Math.abs((quota - usage) - TEN_GIB) < TOLERANCE) return true;
+      }
     }
   }catch(e){}
   try{

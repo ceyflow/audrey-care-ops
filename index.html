@@ -2087,6 +2087,13 @@ const _complaintRequestedId = _trackRequestedId;
 /* ===================== Storage ===================== */
 async function loadAll(){
   if(!BACKEND_CONFIGURED){ state.loaded = true; state.backendMissing = true; render(); return; }
+  // supabaseClient restores a saved login session from localStorage in the background as soon as
+  // it's created — that restore isn't finished yet the instant the page loads. Without waiting
+  // for it here, the very first kvGet() calls below can race ahead of it and go out with no
+  // session attached, which the database now treats as a logged-out request (blocked, empty
+  // result) instead of this browser's real signed-in user — the "sometimes no data on refresh"
+  // flakiness. Awaiting getSession() blocks until that restore (or "no session") is settled.
+  if(supabaseClient){ try{ await supabaseClient.auth.getSession(); }catch(e){} }
   const defaultFor = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
   const loadedValues = await Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved

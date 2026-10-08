@@ -11325,7 +11325,12 @@ function attachShellHandlers(){
     const next = {};
     for(const role of roles){
       const key = role.replace(/\s+/g,'_');
-      next[role] = ROLE_PAGE_TOGGLES.filter(id => f['page_'+key+'_'+id] && f['page_'+key+'_'+id].checked);
+      const checked = ROLE_PAGE_TOGGLES.filter(id => f['page_'+key+'_'+id] && f['page_'+key+'_'+id].checked);
+      // Checking a sub-page (e.g. Order inquiry) without its hub (Customer Care) leaves that hub's
+      // own sidebar link clickable but silently dead — pageAllowed() blocks the hub page itself
+      // even though a child of it is allowed. Auto-include the hub so this can't happen.
+      const hubs = new Set(checked.map(id => SUBPAGE_PARENT_HUB[id]).filter(Boolean));
+      next[role] = [...new Set([...checked, ...hubs])];
     }
     state.auth = {...state.auth, rolePages: {...(state.auth.rolePages||{}), ...next}};
     state.orderSettings = {...state.orderSettings, dragEnabled: f.orderDragEnabled.value==='on'};

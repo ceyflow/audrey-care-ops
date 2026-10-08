@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008101353">
+<meta name="app-build" content="20261008104340">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -818,49 +818,14 @@ const supabaseClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABAS
 // (creating real Supabase Auth accounts). Kept separate from supabaseClient so each signUp()
 // call during migration never clobbers the admin's own active login session.
 const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-// Best-effort private/incognito browsing detection, checked before every login attempt. There is
-// no official API for this, and Chrome in particular has been deliberately closing this off: the
-// old storage-quota gap this used to rely on (incognito capped to a small fixed ceiling) was
-// replaced specifically to defeat checks like it, with quota reported as usage + exactly 10GiB
-// instead of a number tied to real free disk space — this now checks for THAT signature too.
-// Still a cat-and-mouse game against a browser vendor actively trying to prevent detection, so
-// treat it as a deterrent only, never a guarantee — if Chrome ships yet another countermeasure
-// this stops catching, that's expected, not a bug to keep re-patching indefinitely. The Login
-// activity panel (Settings) is the one thing here that can't be evaded this way, since it logs
-// every real sign-in's device/IP/location after the fact rather than trying to block beforehand.
-async function isLikelyPrivateBrowsing(){
-  try{
-    if(navigator.storage && navigator.storage.estimate){
-      const {quota, usage} = await navigator.storage.estimate();
-      if(typeof quota === 'number' && quota > 0){
-        // Older Chromium: Incognito capped the Storage Quota API to a small fixed ceiling far
-        // below the device's real free disk space.
-        if(quota < 200 * 1024 * 1024) return true;
-        // Current Chromium: that gap got closed specifically to defeat checks like the one
-        // above, by reporting an artificial quota of usage + exactly 10GiB instead. A real,
-        // normal-mode quota is derived from actual free disk space and is essentially never
-        // that same round number relative to usage — so quota landing within a few MB of
-        // usage+10GiB on both sides is the replacement tell for current Chrome's incognito.
-        const TEN_GIB = 10 * 1024 * 1024 * 1024;
-        const TOLERANCE = 64 * 1024 * 1024;
-        if(typeof usage === 'number' && Math.abs((quota - usage) - TEN_GIB) < TOLERANCE) return true;
-      }
-    }
-  }catch(e){}
-  try{
-    // Firefox private windows: IndexedDB is unavailable outright — opening a database throws
-    // (older versions) or the open request errors out, where a normal window just succeeds.
-    if(window.indexedDB){
-      await new Promise((resolve, reject)=>{
-        let req;
-        try{ req = indexedDB.open('__audrey_private_probe__'); }catch(e){ reject(e); return; }
-        req.onerror = () => reject(req.error || new Error('indexedDB blocked'));
-        req.onsuccess = () => { try{ req.result.close(); indexedDB.deleteDatabase('__audrey_private_probe__'); }catch(e){} resolve(); };
-      });
-    }
-  }catch(e){ return true; }
-  return false;
-}
+// Private/incognito-browsing detection was tried here and retired: the storage-quota signal it
+// depended on turned out to be the same on current Chrome whether or not the window was actually
+// incognito (Chrome deliberately unified the two specifically so sites can't tell them apart),
+// which meant the check was blocking real logins from completely normal browser windows — far
+// worse than the thing it was meant to stop. There is no reliable client-side way to detect this
+// at all right now. The Login activity panel (Settings) is the real tool for catching an
+// unexpected sign-in: it logs every real login's device/IP/location after the fact, which can't
+// be evaded the way client-side detection could never quite achieve in the first place.
 // Supabase Auth requires an email-shaped identifier even for an internal tool with no real
 // inboxes — this derives one deterministically from {role, name} so the same person/account
 // always maps to the same login. Staff never see this; they only ever type their name.
@@ -2736,10 +2701,6 @@ async function logLoginEvent(name, role){
 async function confirmLogin(){
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
-  if(await isLikelyPrivateBrowsing()){
-    if(errEl) errEl.textContent = "Signing in from a private/incognito window isn't allowed here — open this in a normal browser window.";
-    return;
-  }
   const password = (passInput.value||'');
   const role = state._pendingRole;
   const logins = state.auth.roleLogins && state.auth.roleLogins[role];
@@ -2790,10 +2751,6 @@ async function confirmLoginV2(){
   const nameInput = document.getElementById('login-name');
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
-  if(await isLikelyPrivateBrowsing()){
-    if(errEl) errEl.textContent = "Signing in from a private/incognito window isn't allowed here — open this in a normal browser window.";
-    return;
-  }
   const typedName = (nameInput ? nameInput.value : '').trim();
   const password = (passInput.value||'');
   const role = roleForLoginName(typedName);

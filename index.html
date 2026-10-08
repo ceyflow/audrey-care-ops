@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008094631">
+<meta name="app-build" content="20261008095124">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -6012,7 +6012,7 @@ function renderSidebarOrderPanel(){
     .map(g => ({ ...g, items: orderedNavItems(g.group, g.items) }))
     .filter(g => g.items.length > 1);
   return `
-  <div class="panel">
+  <div class="panel" id="settings-sidebar-order">
     <div class="panel-head"><h3>Sidebar order</h3><button type="button" class="btn btn-primary btn-sm" id="btn-save-nav-order">Save order</button></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:14px;">Drag items to change the order they appear in the sidebar for everyone, then save.</div>
@@ -6162,7 +6162,7 @@ function renderComplaintAccessPanel(){
   const reasons = state.complaintCategories.length ? state.complaintCategories : DEFAULT_COMPLAINT_CATEGORIES;
   const priorities = state.complaintPriorities.length ? state.complaintPriorities : DEFAULT_COMPLAINT_PRIORITIES;
   return `
-  <div class="panel">
+  <div class="panel" id="settings-complaint-access">
     <div class="panel-head"><h3>Complaint access</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:14px;">Add, rename, reorder, or remove the reasons and priority levels available when logging a complaint. Renaming one updates it everywhere it's already been used; deleting one that's still in use is blocked until it's no longer referenced.</div>
@@ -6330,8 +6330,31 @@ function renderRatingsPage(){
   `;
 }
 function renderSettingsPage(){
+  const jumpCards = [
+    {id:'settings-task-templates', label:'Task templates', icon:'list'},
+    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints'},
+    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard'},
+    {id:'settings-template-customization', label:'Template customization', icon:'settings'},
+    {id:'settings-appearance', label:'Appearance', icon:'star'},
+    {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
+    {id:'settings-team-logins', label:'Team logins', icon:'staff'},
+    {id:'settings-page-access', label:'Page access', icon:'settings'},
+    {id:'settings-secure-accounts', label:'Secure accounts', icon:'customers'},
+    {id:'settings-login-activity', label:'Login activity', icon:'search'},
+    {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
+  ].filter(c => c.id==='settings-task-templates' || isAdmin());
   return `
-  <div class="panel">
+  <div class="landing-section">
+    <div class="landing-section-title">Jump to</div>
+    <div class="landing-grid">
+      ${jumpCards.map(c=>`
+      <button type="button" class="landing-card" data-settings-jump="${c.id}">
+        ${icon(c.icon)}<span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>
+  </div>
+
+  <div class="panel" id="settings-task-templates">
     <div class="panel-head"><h3>Task templates</h3>${isAdmin()?`<button class="btn btn-primary btn-sm" id="btn-new-template">+ New template</button>`:''}</div>
     <div class="panel-body" style="padding:0;">
       ${state.templates.length===0 ? `<div class="empty-state">No task templates yet. ${isAdmin()?'Create one to control which fields show up on tasks.':''}</div>` : `
@@ -6356,7 +6379,7 @@ function renderSettingsPage(){
   ${isAdmin() ? renderSidebarOrderPanel() : ''}
 
   ${isAdmin() ? `
-  <div class="panel">
+  <div class="panel" id="settings-template-customization">
     <div class="panel-head"><h3>Template customization</h3><button class="btn btn-primary btn-sm" id="btn-brand-add-addon">+ Add addon</button></div>
     <div class="panel-body" style="padding:0;">
       <div class="hint" style="padding:14px 16px 0;">Manage the logo and other visual assets used across the site. Change the logo any time — it updates on the sign-in page and sidebar immediately, no need to ask for a new build.</div>
@@ -6424,7 +6447,7 @@ function renderSettingsPage(){
   </div>` : ''}
 
   ${isAdmin() ? `
-  <div class="panel">
+  <div class="panel" id="settings-appearance">
     <div class="panel-head"><h3>Appearance</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:14px;">Pick a color palette for the whole workspace — the sidebar highlight, buttons, dashboard charts, and board accents all switch immediately.</div>
@@ -6439,7 +6462,7 @@ function renderSettingsPage(){
   </div>` : ''}
 
   ${isAdmin() ? `
-  <div class="panel">
+  <div class="panel" id="settings-timer-alert-sound">
     <div class="panel-head"><h3>Timer alert sound</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px;">Choose the sound played when a recipe batch timer finishes — heard by everyone watching that batch (Admin &amp; Blending). Preview any option, pick one, then save.</div>
@@ -6480,7 +6503,7 @@ function renderSettingsPage(){
 }
 function renderSmsTemplatesPanel(){
   return `
-  <div class="panel">
+  <div class="panel" id="settings-sms-settings">
     <div class="panel-head"><h3>SMS settings</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px;">${SMS_CONFIGURED ? 'Controls for automatic customer text messages, and the exact wording each one sends.' : 'SMS sending is not set up yet (see SMS_APP_SECRET in the code), but you can still edit the settings and wording here for when it is.'}</div>
@@ -6510,7 +6533,7 @@ function renderSmsTemplatesPanel(){
 function renderRoleLoginsPanel(){
   const roles = ['Admin','Customer Care','Sub Admin'];
   return `
-  <div class="panel">
+  <div class="panel" id="settings-team-logins">
     <div class="panel-head"><h3>Team logins</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px;">Names for Admin, Customer Care and Sub Admin sign-in. Each person sets and changes their own password from "Change password" next to Log out — Admin can't view or change it, only remove the login entirely so they can be re-added with a fresh one.</div>
@@ -6541,7 +6564,7 @@ function renderRoleLoginsPanel(){
 function renderRolePagesPanel(){
   const roles = ['Dashboard','Blending','Packing','Customer Care'];
   return `
-  <div class="panel">
+  <div class="panel" id="settings-page-access">
     <div class="panel-head"><h3>Page access</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px;">Choose which pages show in the sidebar for each role. Admin always has access to everything. Leaving a role with nothing checked resets it back to its default pages.</div>
@@ -6611,7 +6634,7 @@ function renderSecureAccountsPanel(){
   const running = !!state._secureAcctRunning;
   const allOk = results && results.length>0 && results.every(r=>r.ok);
   return `
-  <div class="panel">
+  <div class="panel" id="settings-secure-accounts">
     <div class="panel-head"><h3>Secure accounts</h3>${migrated?`<span class="pill pill-active">Active</span>`:''}</div>
     <div class="panel-body">
       ${migrated ? `
@@ -6710,7 +6733,7 @@ function renderLoginActivityPanel(){
   // the stored array (it doesn't know this one is meant to stay newest-first).
   const entries = [...(state.loginHistory||[])].sort((a,b)=>new Date(b.at)-new Date(a.at));
   return `
-  <div class="panel">
+  <div class="panel" id="settings-login-activity">
     <div class="panel-head"><h3>Login activity</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize. Location is approximate, based on the device's internet connection.</div>
@@ -9984,6 +10007,13 @@ function attachShellHandlers(){
     if(el.tagName==='A' && (e.ctrlKey||e.metaKey||e.shiftKey)) return; // let the browser open it in a new tab/window
     e.preventDefault();
     goTo(el.dataset.nav);
+  }));
+  // Settings has grown into a long page of stacked panels — these jump cards scroll straight to
+  // one instead of making someone hunt for it by scrolling past everything above it.
+  document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const target = document.getElementById(el.dataset.settingsJump);
+    if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
   }));
   document.querySelectorAll('[data-nav-toggle]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();

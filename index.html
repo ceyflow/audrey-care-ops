@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
+<meta name="app-build" content="20261008083857">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -818,6 +819,36 @@ const supabaseClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABAS
 // (creating real Supabase Auth accounts). Kept separate from supabaseClient so each signUp()
 // call during migration never clobbers the admin's own active login session.
 const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// Best-effort private/incognito browsing detection, checked before every login attempt. There is
+// no official API for this — browser vendors treat reliable detection as a fingerprinting risk
+// and have deliberately patched out most of the old tricks — so this combines the two signals
+// that still hold up in current Chromium and Firefox rather than any single one. It can be wrong
+// in either direction on a browser/version this wasn't tested against; it's a deterrent against
+// casual sneaking (the original ask), not a hard security boundary.
+async function isLikelyPrivateBrowsing(){
+  try{
+    // Chromium (Chrome/Edge/Brave/Opera): Incognito caps the Storage Quota API far below the
+    // device's real free disk space — normal windows report a quota in the gigabytes on any
+    // modern device, incognito reports well under 200MB regardless of actual free space.
+    if(navigator.storage && navigator.storage.estimate){
+      const {quota} = await navigator.storage.estimate();
+      if(typeof quota === 'number' && quota > 0 && quota < 200 * 1024 * 1024) return true;
+    }
+  }catch(e){}
+  try{
+    // Firefox private windows: IndexedDB is unavailable outright — opening a database throws
+    // (older versions) or the open request errors out, where a normal window just succeeds.
+    if(window.indexedDB){
+      await new Promise((resolve, reject)=>{
+        let req;
+        try{ req = indexedDB.open('__audrey_private_probe__'); }catch(e){ reject(e); return; }
+        req.onerror = () => reject(req.error || new Error('indexedDB blocked'));
+        req.onsuccess = () => { try{ req.result.close(); indexedDB.deleteDatabase('__audrey_private_probe__'); }catch(e){} resolve(); };
+      });
+    }
+  }catch(e){ return true; }
+  return false;
+}
 // Supabase Auth requires an email-shaped identifier even for an internal tool with no real
 // inboxes — this derives one deterministically from {role, name} so the same person/account
 // always maps to the same login. Staff never see this; they only ever type their name.
@@ -2093,10 +2124,42 @@ async function loadAll(){
   // for it here, the very first kvGet() calls below can race ahead of it and go out with no
   // session attached, which the database now treats as a logged-out request (blocked, empty
   // result) instead of this browser's real signed-in user — the "sometimes no data on refresh"
-  // flakiness. Awaiting getSession() blocks until that restore (or "no session") is settled.
-  if(supabaseClient){ try{ await supabaseClient.auth.getSession(); }catch(e){} }
+  // flakiness. getSession() alone wasn't always enough (still seen after that fix shipped), so
+  // this also gates on auth's own "INITIAL_SESSION" event — the signal Supabase recommends
+  // specifically for "has the client finished deciding the starting auth state yet" — and keeps
+  // whichever settles the race (both ultimately resolve to the same session, or null).
+  let _authSession = null;
+  if(supabaseClient){
+    try{
+      _authSession = await new Promise(resolve=>{
+        let settled = false;
+        let sub = null;
+        try{
+          ({ data: { subscription: sub } } = supabaseClient.auth.onAuthStateChange((event, session)=>{
+            if(event==='INITIAL_SESSION' && !settled){ settled = true; if(sub) sub.unsubscribe(); resolve(session); }
+          }));
+        }catch(e){}
+        supabaseClient.auth.getSession().then(({data})=>{ if(!settled){ settled = true; if(sub) sub.unsubscribe(); resolve(data.session); } }).catch(()=>{ if(!settled){ settled = true; resolve(null); } });
+      });
+    }catch(e){}
+  }
   const defaultFor = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
-  const loadedValues = await Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
+  const fetchSyncedKeys = () => Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
+  let loadedValues = await fetchSyncedKeys();
+  // Belt-and-suspenders on top of the wait above: if we're genuinely signed in (per Supabase's
+  // own auth state, not just the app's localStorage session flag — that one isn't restored until
+  // later below) but the keys a real, long-running workspace should never actually be empty for
+  // all came back blank, something still raced ahead of the database treating us as logged in.
+  // Re-fetch once after a short pause rather than rendering what looks like a wiped workspace.
+  if(_authSession){
+    const sentinelKeys = ['orders','customers','staff'];
+    const looksEmpty = k => { const v = loadedValues[SYNCED_KEYS.indexOf(k)]; return !v || (Array.isArray(v) && v.length===0); };
+    if(sentinelKeys.every(looksEmpty)){
+      console.warn('loadAll: core data came back empty for a signed-in session — retrying once');
+      await new Promise(r=>setTimeout(r, 900));
+      loadedValues = await fetchSyncedKeys();
+    }
+  }
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
   // for that key yet, i.e. the raw load came back null/undefined). That's different from the
   // key existing but currently not containing the named example — e.g. an admin who deliberately
@@ -2633,6 +2696,10 @@ async function logLoginEvent(name, role){
 async function confirmLogin(){
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
+  if(await isLikelyPrivateBrowsing()){
+    if(errEl) errEl.textContent = "Signing in from a private/incognito window isn't allowed here — open this in a normal browser window.";
+    return;
+  }
   const password = (passInput.value||'');
   const role = state._pendingRole;
   const logins = state.auth.roleLogins && state.auth.roleLogins[role];
@@ -2679,6 +2746,10 @@ async function confirmLoginV2(){
   const nameInput = document.getElementById('login-name');
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
+  if(await isLikelyPrivateBrowsing()){
+    if(errEl) errEl.textContent = "Signing in from a private/incognito window isn't allowed here — open this in a normal browser window.";
+    return;
+  }
   const typedName = (nameInput ? nameInput.value : '').trim();
   const password = (passInput.value||'');
   const role = roleForLoginName(typedName);
@@ -11496,6 +11567,45 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register(swBlobUrl).catch(()=>{ /* best-effort */ });
   });
 }
+
+// ===================== Update detection: catch browsers stuck on an old deploy =====================
+// The service worker above should already keep this fresh, but different browsers/devices have
+// been seen showing an old version after a deploy anyway — belt-and-suspenders, independent of
+// whatever the service worker is or isn't doing. Compares the <meta name="app-build"> this page
+// was actually served with against a forced fresh fetch of the same page; a mismatch means a
+// newer deploy exists. Never force-reloads on its own — an unsaved form field is more costly to
+// lose than a stale screen is to leave a moment longer — it just offers a one-click refresh.
+(function(){
+  if(!BACKEND_CONFIGURED) return;
+  const currentBuild = (document.querySelector('meta[name="app-build"]') || {}).content || '';
+  function showUpdateBanner(){
+    if(document.getElementById('app-update-banner')) return;
+    const bar = document.createElement('div');
+    bar.id = 'app-update-banner';
+    bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:99999;background:#111827;color:#fff;padding:10px 12px 10px 18px;border-radius:999px;display:flex;gap:12px;align-items:center;font:14px/1.3 system-ui,-apple-system,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);';
+    bar.innerHTML = '<span>A newer version of this app is available.</span>'
+      + '<button type="button" id="app-update-reload" style="background:#4CAF6D;color:#07220f;border:none;border-radius:999px;padding:7px 16px;font-weight:600;font-size:13px;cursor:pointer;">Refresh now</button>'
+      + '<button type="button" id="app-update-dismiss" aria-label="Dismiss" style="background:transparent;color:#9ca3af;border:none;font-size:18px;line-height:1;cursor:pointer;padding:0 2px;">&times;</button>';
+    document.body.appendChild(bar);
+    document.getElementById('app-update-reload').addEventListener('click', ()=> location.reload());
+    document.getElementById('app-update-dismiss').addEventListener('click', ()=> bar.remove());
+  }
+  async function checkForUpdate(){
+    try{
+      const res = await fetch(location.pathname + '?_=' + Date.now(), {cache:'no-store'});
+      if(!res.ok) return;
+      const html = await res.text();
+      const m = html.match(/<meta name="app-build" content="([^"]*)"/);
+      const liveBuild = m ? m[1] : '';
+      if(liveBuild && liveBuild !== currentBuild) showUpdateBanner();
+    }catch(e){ /* offline, or blocked — just try again next interval */ }
+  }
+  window.addEventListener('load', () => {
+    setTimeout(checkForUpdate, 8000);
+    setInterval(checkForUpdate, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') checkForUpdate(); });
+  });
+})();
 </script>
 </body>
 </html>

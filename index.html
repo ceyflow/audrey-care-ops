@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008104340">
+<meta name="app-build" content="20261008110027">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#4CAF6D">
@@ -1293,7 +1293,7 @@ function subscribeRealtime(){
         state.auth = incoming; render(); return;
       }
       if(SYNCED_KEYS.includes(k)){
-        const incoming = payload.new ? payload.new.value : (k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : []))))))));
+        const incoming = payload.new ? payload.new.value : _syncedKeyDefault(k);
         if(stableStringify(state[k])===stableStringify(incoming) || recentlySavedByUs(k)) return;
         const prevChatLen = (k==='chat' && Array.isArray(state.chat)) ? state.chat.length : null;
         const prevComplaintsById = (k==='complaints' && Array.isArray(state.complaints)) ? new Map(state.complaints.map(c=>[c.id,c])) : null;
@@ -2132,7 +2132,11 @@ async function refreshAppData(knownAuthenticated){
     for(let attempt=0; attempt<delays.length && looksEmpty(); attempt++){
       console.warn(`refreshAppData: core data came back empty for a signed-in session — retry ${attempt+1}/${delays.length}`);
       await new Promise(r=>setTimeout(r, delays[attempt]));
-      loadedValues = await _fetchSyncedKeys();
+      const retried = await _fetchSyncedKeys();
+      // Merge rather than replace: a transient failure on ONE key during a retry (while every
+      // other key fetches fine) shouldn't discard data a previous attempt already got
+      // successfully — only overwrite a key where this attempt actually returned something.
+      loadedValues = loadedValues.map((prev, i) => retried[i] != null ? retried[i] : prev);
     }
     if(looksEmpty()) showDataLoadWarning(); else hideDataLoadWarning();
   }
@@ -2675,6 +2679,24 @@ function selectRole(role){
   if(role==='Orders Process'){ enterBoardMode(); return; }
   state._pendingRole = role; render();
 }
+// Roles added for the new Supabase-Auth-backed login (Dashboard, R&D, Orders Process) never got
+// a legacy shared password of their own. The old role grid used to render every ROLES entry
+// uniformly, and the password check below used to fall through its final "else" straight to
+// packingPassword for any role it didn't explicitly recognize — so picking "Dashboard" or "R&D"
+// on the legacy login and typing the Packing floor password would silently log you in as that
+// role. Centralizing the lookup here means a role with no entry gets back undefined, which no
+// typed password can ever equal, instead of quietly defaulting to Packing's.
+const LEGACY_LOGIN_ROLES = ['Admin','Sub Admin','Blending','Customer Care','Packing'];
+function legacySharedPasswordFor(role){
+  switch(role){
+    case 'Admin': return state.auth.adminPassword;
+    case 'Sub Admin': return state.auth.subAdminPassword;
+    case 'Blending': return state.auth.blendingPassword;
+    case 'Customer Care': return state.auth.customerCarePassword;
+    case 'Packing': return state.auth.packingPassword;
+    default: return undefined;
+  }
+}
 // Best-effort device summary from the user agent string — just enough to recognize "a phone"
 // vs "a laptop" at a glance, not a full parser. Never blocks or throws on an unrecognized string.
 function deviceSummaryFromUserAgent(ua){
@@ -2721,7 +2743,7 @@ async function confirmLogin(){
       kvSet('auth', state.auth).catch(e=>console.error('lazy password hash upgrade failed', e));
     }
   } else {
-    const expected = role==='Admin' ? state.auth.adminPassword : (role==='Sub Admin' ? state.auth.subAdminPassword : (role==='Blending' ? state.auth.blendingPassword : (role==='Customer Care' ? state.auth.customerCarePassword : state.auth.packingPassword)));
+    const expected = legacySharedPasswordFor(role);
     if(password !== expected){
       if(errEl) errEl.textContent = 'Incorrect password — try again.';
       passInput.value = ''; passInput.focus();
@@ -4603,7 +4625,10 @@ function renderBackendSetupScreen(){
 function renderLogin(){
   const migrated = !!state.auth.migratedToSupabaseAuth;
   const role = state._pendingRole;
-  const roles = ROLES;
+  // Dashboard/R&D/Orders Process only ever exist via the new Supabase-Auth accounts system —
+  // they have no legacy shared password, so they're left off this (pre-migration-only) grid
+  // rather than showing a button that can never actually log in.
+  const roles = LEGACY_LOGIN_ROLES;
   const logins = role && state.auth.roleLogins && state.auth.roleLogins[role];
   return `
   <div class="login-screen">
@@ -9032,12 +9057,23 @@ function confirmActionModal(){
 // they just typed — used to re-confirm identity before a destructive action goes through.
 async function verifyCurrentUserPassword(password){
   const role = state.session.role;
+  // Once migrated, every password live in Supabase Auth — state.auth's legacy password fields
+  // are frozen at whatever they were right before the cutover and never updated again (the
+  // "Change password" flow above only calls supabase.auth.updateUser() now). Checking against
+  // them here would verify a stale, possibly long-since-changed password instead of the real
+  // one — silently wrong for every destructive action gated by requirePassword (costing delete/
+  // archive among them). Reuse the exact same real-auth check the password-change form uses.
+  if(state.auth.migratedToSupabaseAuth){
+    const name = state.session.staffName || role;
+    const check = await supabaseSignIn(role, name, password);
+    return !!check.ok;
+  }
   const logins = state.auth.roleLogins && state.auth.roleLogins[role];
   if(logins && logins.length){
     const match = logins.find(l=>l.name.toLowerCase()===(state.session.name||'').toLowerCase());
     return !!match && await passwordMatches(password, match.password);
   }
-  const expected = role==='Admin' ? state.auth.adminPassword : (role==='Sub Admin' ? state.auth.subAdminPassword : (role==='Blending' ? state.auth.blendingPassword : (role==='Customer Care' ? state.auth.customerCarePassword : state.auth.packingPassword)));
+  const expected = legacySharedPasswordFor(role);
   return password === expected;
 }
 async function runConfirmedAction(){

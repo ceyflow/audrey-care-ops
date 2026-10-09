@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009133000">
+<meta name="app-build" content="20261009140000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1506,17 +1506,17 @@ const DEFAULT_AUTH = {
 const ROLES = ['Admin','Sub Admin','Dashboard','Blending','Packing','Customer Care','Orders Process','R&D'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
   Blending: ['blendingdept','blending','chat','recipes'],
-  Packing: ['orders','chat'],
+  Packing: ['orders','stickerstock','chat'],
   'Customer Care': ['customercare','complaints','orderinquiry','chat'],
   'Orders Process': ['ordersprocess'],
   'R&D': ['rnd','chat'],
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can toggle on/off for Blending and Packing from Settings → Page access.
-const ROLE_PAGE_TOGGLES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','complaints','gmp','rnd','staff','chat','ratings'];
+const ROLE_PAGE_TOGGLES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','ratings'];
 function pagesForRole(role){
   const custom = state.auth.rolePages && state.auth.rolePages[role];
   return (Array.isArray(custom) && custom.length) ? custom : (ROLE_PAGES[role] || []);
@@ -4855,6 +4855,7 @@ const NAV = [
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
     {id:'suppliers', label:'Suppliers', icon:'suppliers'},
+    {id:'stickerstock', label:'Sticker stock', icon:'bottle'},
     {id:'ordersprocess', label:'Orders Process', icon:'list'},
   ]},
   {group:'GMP', items:[
@@ -4944,6 +4945,7 @@ const PAGE_META = {
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
+  stickerstock:{title:'Sticker stock', sub:'5L can sticker counts by fragrance, so Packing always knows what\'s left.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Fill in and track the factory\'s cleaning checklists — no paper needed.'},
@@ -5085,6 +5087,7 @@ function renderPage(){
     case 'costing': return renderCostingPage();
     case 'customers': return renderCustomersPage();
     case 'suppliers': return renderSuppliersPage();
+    case 'stickerstock': return renderStickerStockPage();
     case 'complaints': return renderComplaintsPage();
     case 'gmp': return renderGmpPage();
     case 'rnd': return renderRndPage();
@@ -5168,7 +5171,6 @@ function renderOrdersPage(){
       ${isAdmin() ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
-      ${(isAdmin() || isPacking()) ? `<button type="button" class="btn-text" id="btn-sticker-stock">📦 Sticker stock</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
@@ -8741,7 +8743,6 @@ function renderModal(){
   if(type==='brandnew') return brandingAddAddonModal();
   if(type==='brandcrop') return brandCropModal();
   if(type==='managelines') return manageDeliveryLinesModal();
-  if(type==='stickerstock') return stickerStockModal();
   if(type==='managestaffcategories') return manageStaffCategoriesModal();
   if(type==='complaintreasons') return manageComplaintReasonsModal();
   if(type==='complaintpriorities') return manageComplaintPrioritiesModal();
@@ -8887,41 +8888,47 @@ function manageDeliveryLinesModal(){
   </div>`;
 }
 
-function stickerStockModal(){
-  const rows = state.stickerStock || [];
+// Matches the column order on the team's Notion board exactly, independent of whatever order
+// products happen to be stored in on the Costing page (new products not on this list — added
+// later, in Costing — just land at the end instead of being hidden).
+const STICKER_STOCK_COLUMN_ORDER = ['Shampoo','Shower Gel','Body Lotion','Conditioner','Hand Wash','Air Freshener','Bubble Bath'];
+function stickerStockDisplayProducts(){
   const products = state.costingProducts || [];
+  return [...products].sort((a,b)=>{
+    const ia = STICKER_STOCK_COLUMN_ORDER.indexOf(a.name); const ib = STICKER_STOCK_COLUMN_ORDER.indexOf(b.name);
+    return (ia===-1 ? STICKER_STOCK_COLUMN_ORDER.length : ia) - (ib===-1 ? STICKER_STOCK_COLUMN_ORDER.length : ib);
+  });
+}
+function renderStickerStockPage(){
+  const rows = state.stickerStock || [];
+  const products = stickerStockDisplayProducts();
   return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:900px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <h2 style="margin:0;">Sticker stock</h2>
-        <button type="button" class="btn-text" id="btn-add-sticker-fragrance">+ Add fragrance</button>
-      </div>
-      <div class="sub">5L can sticker counts by fragrance. Type a new number and press Enter or click away to save.</div>
-      ${rows.length===0 ? `<div class="empty-state">No fragrances yet — click "+ Add fragrance" to start.</div>` : `
-      <div style="overflow-x:auto;">
-        <table class="data-table" style="min-width:600px;">
-          <thead><tr>
-            <th>Fragrance</th>
-            ${products.map(p=>`<th>${esc(p.name)}</th>`).join('')}
-            <th></th>
-          </tr></thead>
-          <tbody>
-            ${rows.map(r=>`
-            <tr>
-              <td>${esc(r.name)}</td>
-              ${products.map(p=>`<td><input type="number" min="0" class="sticker-count-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" value="${(r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0}" style="width:70px;"></td>`).join('')}
-              <td><button type="button" class="btn btn-sm btn-danger" data-delete-sticker-row="${r.id}" title="Delete">🗑️</button></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-      `}
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-      </div>
+  <div class="toolbar">
+    <div class="tabs"></div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button type="button" class="btn btn-primary" id="btn-add-sticker-fragrance">+ Add fragrance</button>
     </div>
-  </div>`;
+  </div>
+  ${rows.length===0 ? `<div class="empty-state">No fragrances yet — click "+ Add fragrance" to start.</div>` : `
+  <div class="panel" style="overflow-x:auto;">
+    <table class="data-table" style="min-width:700px;">
+      <thead><tr>
+        <th>Fragrance</th>
+        ${products.map(p=>`<th>${esc(p.name)}</th>`).join('')}
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r=>`
+        <tr>
+          <td style="font-weight:600;">${esc(r.name)}</td>
+          ${products.map(p=>`<td><input type="number" min="0" class="sticker-count-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" value="${(r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0}" style="width:70px;"></td>`).join('')}
+          <td><button type="button" class="btn btn-sm btn-danger" data-delete-sticker-row="${r.id}" title="Delete">🗑️</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  `}
+  `;
 }
 
 
@@ -10383,8 +10390,7 @@ function attachShellHandlers(){
     showToast('Lists updated');
   };
 
-  // Sticker stock (Packing)
-  if(byIdEl('btn-sticker-stock')) byIdEl('btn-sticker-stock').onclick = ()=> openModal('stickerstock');
+  // Sticker stock (full page — Packing and Admin)
   if(byIdEl('btn-add-sticker-fragrance')) byIdEl('btn-add-sticker-fragrance').onclick = ()=>{
     openPromptModal({
       title: 'New fragrance', label: 'Fragrance name', confirmLabel: 'Add',
@@ -10392,7 +10398,7 @@ function attachShellHandlers(){
         const name = (value||'').trim();
         if(!name) return;
         if(state.stickerStock.some(r=>r.name.toLowerCase()===name.toLowerCase())){
-          openAlertModal({title:"Can't add", message:'A fragrance with that name already exists.', _returnTo:'stickerstock'});
+          openAlertModal({title:"Can't add", message:'A fragrance with that name already exists.'});
           return;
         }
         state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts:{}}];
@@ -10404,7 +10410,7 @@ function attachShellHandlers(){
     const id = b.dataset.deleteStickerRow;
     const row = state.stickerStock.find(r=>r.id===id); if(!row) return;
     openConfirmModal({
-      title: 'Delete fragrance', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      title: 'Delete fragrance', danger: true, confirmLabel: 'Delete',
       message: `Delete "${row.name}" from sticker stock? This cannot be undone.`,
       onConfirm: async ()=>{
         state.stickerStock = state.stickerStock.filter(r=>r.id!==id);

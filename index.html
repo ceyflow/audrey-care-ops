@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009150500">
+<meta name="app-build" content="20261009153000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -266,6 +266,17 @@ html{ visibility:hidden; }
   }
   table.sticker-table input.sticker-count-input:focus{border-color:var(--accent);outline:none;}
   table.sticker-table button.btn-danger{width:36px;height:36px;padding:0;}
+  .sticker-category-card{
+    display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);
+    border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--ink);
+    cursor:pointer;transition:border-color .15s,background .15s;
+  }
+  .sticker-category-card:hover{border-color:var(--accent);}
+  .sticker-category-card.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark);}
+  .sticker-category-count{
+    background:var(--bg);border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;color:var(--muted);
+  }
+  .sticker-category-card.active .sticker-category-count{background:#fff;color:var(--accent-dark);}
   /* Costing sheets run wide (many batch-size columns) and tall (many raw materials) — a plain
      hairline between rows gets lost when your eye is tracking sideways across the table, so
      every row gets a light tint and a firmer divider instead of just the thin default border. */
@@ -2315,6 +2326,39 @@ async function loadAll(){
     state.costingProducts = DEFAULT_COSTING_PRODUCTS.map(name => ({id:uid('CPROD'), name, versions:[]}));
     kvSet('costingProducts', state.costingProducts).catch(e=>console.error('seed costingProducts failed', e));
   }
+  // Costing sheets used to store one flat {materials, batchSizes} per product — now each
+  // product holds named, dated versions so past formulations stay on record. Wrap any still-flat
+  // product into a single "Version 1", and migrate each raw material's old single `supplier`
+  // string into the new `suppliers` array (up to two suppliers per material). Runs here, before
+  // anything below reads state.costingProducts, so every later block (including the sticker
+  // stock seeds, which look up product ids by name) sees the fully-migrated shape rather than
+  // racing a second, separately-fired kvSet('costingProducts', ...) write against this one.
+  {
+    let migrated = false;
+    state.costingProducts.forEach(p=>{
+      if(!Array.isArray(p.versions)){
+        const hasData = (p.materials && p.materials.length) || (p.batchSizes && p.batchSizes.length);
+        p.versions = hasData ? [{
+          id: uid('CVER'), name: 'Version 1',
+          materials: p.materials || [], batchSizes: p.batchSizes || [],
+          createdBy: '—', createdAt: p.createdAt || new Date().toISOString(),
+          editedBy: '—', editedAt: new Date().toISOString(),
+        }] : [];
+        delete p.materials; delete p.batchSizes;
+        migrated = true;
+      }
+      (p.versions||[]).forEach(v=>{
+        (v.materials||[]).forEach(m=>{
+          if(!Array.isArray(m.suppliers)){
+            m.suppliers = m.supplier ? [m.supplier] : [];
+            delete m.supplier;
+            migrated = true;
+          }
+        });
+      });
+    });
+    if(migrated) kvSet('costingProducts', state.costingProducts).catch(e=>console.error('migrate costingProducts failed', e));
+  }
   // Packing's 5L sticker stock — one row per fragrance, one count per existing costing product
   // (so it always lines up with whatever products Costing actually has, instead of keeping its
   // own separate product list). Seeded once from the real counts on the team's Notion board at
@@ -2415,35 +2459,16 @@ async function loadAll(){
     });
     kvSet('stickerStock', state.stickerStock).catch(e=>console.error('third-pass stickerStock seed failed', e));
   }
-  // Costing sheets used to store one flat {materials, batchSizes} per product — now each
-  // product holds named, dated versions so past formulations stay on record. Wrap any still-flat
-  // product into a single "Version 1", and migrate each raw material's old single `supplier`
-  // string into the new `suppliers` array (up to two suppliers per material).
-  {
-    let migrated = false;
-    state.costingProducts.forEach(p=>{
-      if(!Array.isArray(p.versions)){
-        const hasData = (p.materials && p.materials.length) || (p.batchSizes && p.batchSizes.length);
-        p.versions = hasData ? [{
-          id: uid('CVER'), name: 'Version 1',
-          materials: p.materials || [], batchSizes: p.batchSizes || [],
-          createdBy: '—', createdAt: p.createdAt || new Date().toISOString(),
-          editedBy: '—', editedAt: new Date().toISOString(),
-        }] : [];
-        delete p.materials; delete p.batchSizes;
-        migrated = true;
-      }
-      (p.versions||[]).forEach(v=>{
-        (v.materials||[]).forEach(m=>{
-          if(!Array.isArray(m.suppliers)){
-            m.suppliers = m.supplier ? [m.supplier] : [];
-            delete m.supplier;
-            migrated = true;
-          }
-        });
-      });
+  // Groups the sticker stock rows into cards (Dallin 5L Stickers, Vas Ceylon, Fabric Care, …) —
+  // the client-specific batches were only ever single rows, so each is its own one-row category;
+  // every fragrance-named row belongs to the main Dallin line.
+  if(state.stickerStock.some(r=>!r.category)){
+    const CLIENT_BATCH_NAMES = ['Vas Ceylon 5L Stickers','Fabric Care 5L Stckers','Raawana 5L Stickers (Ceydora)','Ventina 5L Stickers','MDS 5L Stickers','Jaichem','Icon','Comfort'];
+    state.stickerStock.forEach(r=>{
+      if(r.category) return;
+      r.category = CLIENT_BATCH_NAMES.includes(r.name) ? r.name : 'Dallin 5L Stickers';
     });
-    if(migrated) kvSet('costingProducts', state.costingProducts).catch(e=>console.error('migrate costingProducts failed', e));
+    kvSet('stickerStock', state.stickerStock).catch(e=>console.error('categorize stickerStock failed', e));
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -8947,8 +8972,26 @@ function stickerStockDisplayProducts(){
     return (ia===-1 ? STICKER_STOCK_COLUMN_ORDER.length : ia) - (ib===-1 ? STICKER_STOCK_COLUMN_ORDER.length : ib);
   });
 }
+// Dallin 5L Stickers first (the main fragrance line), then every client-batch category in
+// whatever order those rows were first seen — stable and predictable without hand-maintaining
+// a separate list every time a new client batch gets added.
+function stickerStockCategories(){
+  const seen = [];
+  (state.stickerStock||[]).forEach(r=>{
+    const c = r.category || 'Dallin 5L Stickers';
+    if(!seen.includes(c)) seen.push(c);
+  });
+  seen.sort((a,b)=> a==='Dallin 5L Stickers' ? -1 : b==='Dallin 5L Stickers' ? 1 : 0);
+  return seen;
+}
 function renderStickerStockPage(){
-  const rows = state.stickerStock || [];
+  const allRows = state.stickerStock || [];
+  const categories = stickerStockCategories();
+  if(!state._stickerStockCategory || !categories.includes(state._stickerStockCategory)){
+    state._stickerStockCategory = categories[0] || 'Dallin 5L Stickers';
+  }
+  const activeCategory = state._stickerStockCategory;
+  const rows = allRows.filter(r=>(r.category||'Dallin 5L Stickers')===activeCategory);
   const products = stickerStockDisplayProducts();
   return `
   <div class="toolbar">
@@ -8956,6 +8999,15 @@ function renderStickerStockPage(){
     <div style="display:flex;align-items:center;gap:14px;">
       <button type="button" class="btn btn-primary" id="btn-add-sticker-fragrance">+ Add fragrance</button>
     </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+    ${categories.map(c=>{
+      const count = allRows.filter(r=>(r.category||'Dallin 5L Stickers')===c).length;
+      const active = c===activeCategory;
+      return `<button type="button" class="sticker-category-card ${active?'active':''}" data-sticker-category="${escAttr(c)}">
+        <span>${esc(c)}</span><span class="sticker-category-count">${count}</span>
+      </button>`;
+    }).join('')}
   </div>
   ${rows.length===0 ? `<div class="empty-state">No fragrances yet — click "+ Add fragrance" to start.</div>` : `
   <div class="panel" style="overflow-x:auto;">
@@ -10440,6 +10492,10 @@ function attachShellHandlers(){
 
   // Sticker stock (full page — Packing and Admin)
   if(byIdEl('btn-sticker-stock-link')) byIdEl('btn-sticker-stock-link').onclick = ()=>{ state.page = 'stickerstock'; render(); };
+  document.querySelectorAll('[data-sticker-category]').forEach(b=>b.addEventListener('click', ()=>{
+    state._stickerStockCategory = b.dataset.stickerCategory;
+    render();
+  }));
   if(byIdEl('btn-add-sticker-fragrance')) byIdEl('btn-add-sticker-fragrance').onclick = ()=>{
     openPromptModal({
       title: 'New fragrance', label: 'Fragrance name', confirmLabel: 'Add',
@@ -10450,7 +10506,8 @@ function attachShellHandlers(){
           openAlertModal({title:"Can't add", message:'A fragrance with that name already exists.'});
           return;
         }
-        state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts:{}}];
+        const category = state._stickerStockCategory || 'Dallin 5L Stickers';
+        state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts:{}, category}];
         await save('stickerStock');
       },
     });

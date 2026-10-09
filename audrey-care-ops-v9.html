@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009123000">
+<meta name="app-build" content="20261009133000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2332,6 +2332,40 @@ async function loadAll(){
       return {id: uid('STICK'), name, counts: byProductId};
     });
     kvSet('stickerStock', state.stickerStock).catch(e=>console.error('seed stickerStock failed', e));
+  }
+  // The initial sticker-stock seed above left out Air Freshener (not a Costing product yet at
+  // the time) and three fragrance rows (Strawberry, Lavender, Apple) that weren't visible in the
+  // first pass of the team's Notion board. Add the product and backfill the real counts — this
+  // runs every load so it also fixes installs that already seeded the incomplete version above.
+  {
+    let airFreshener = state.costingProducts.find(p=>p.name==='Air Freshener');
+    if(!airFreshener){
+      airFreshener = {id: uid('CPROD'), name:'Air Freshener', versions:[]};
+      state.costingProducts = [...state.costingProducts, airFreshener];
+      kvSet('costingProducts', state.costingProducts).catch(e=>console.error('add Air Freshener product failed', e));
+    }
+    let stickerBackfilled = false;
+    const cinnamonRow = state.stickerStock.find(r=>r.name==='Cinnamon');
+    if(cinnamonRow && cinnamonRow.counts[airFreshener.id]==null){
+      cinnamonRow.counts = {...cinnamonRow.counts, [airFreshener.id]: 24};
+      stickerBackfilled = true;
+    }
+    const MISSING_FRAGRANCE_SEED = [
+      ['Strawberry', {'Hand Wash':20}],
+      ['Lavender',   {Shampoo:21, 'Shower Gel':28, 'Body Lotion':17, Conditioner:28, 'Air Freshener':11}],
+      ['Apple',      {'Hand Wash':20, 'Air Freshener':12}],
+    ];
+    MISSING_FRAGRANCE_SEED.forEach(([name, counts])=>{
+      if(state.stickerStock.some(r=>r.name===name)) return;
+      const byProductId = {};
+      Object.entries(counts).forEach(([productName, qty])=>{
+        const p = state.costingProducts.find(p=>p.name===productName);
+        if(p) byProductId[p.id] = qty;
+      });
+      state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts: byProductId}];
+      stickerBackfilled = true;
+    });
+    if(stickerBackfilled) kvSet('stickerStock', state.stickerStock).catch(e=>console.error('backfill stickerStock failed', e));
   }
   // Costing sheets used to store one flat {materials, batchSizes} per product — now each
   // product holds named, dated versions so past formulations stay on record. Wrap any still-flat
@@ -5132,9 +5166,9 @@ function renderOrdersPage(){
   <div class="toolbar">
     <div class="tabs" style="align-items:center;">
       ${isAdmin() ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
-      ${isPacking() ? `<button type="button" class="btn-text" id="btn-sticker-stock">📦 Sticker stock</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
+      ${(isAdmin() || isPacking()) ? `<button type="button" class="btn-text" id="btn-sticker-stock">📦 Sticker stock</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>

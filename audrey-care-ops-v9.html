@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009160000">
+<meta name="app-build" content="20261009162500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -260,18 +260,35 @@ html{ visibility:hidden; }
   table.sticker-table tbody tr:nth-child(even){background:var(--bg);}
   table.sticker-table tbody tr:hover{background:var(--accent-soft);}
   table.sticker-table td:first-child{font-weight:700;font-size:14.5px;}
-  /* Each cell is two boxes: left types how many were issued today (subtracts from the total),
-     right shows the resulting total and can't be typed into directly — the total only ever
-     changes by going through the left box, never by overtyping it. */
-  .sticker-cell{display:flex;gap:5px;align-items:center;}
-  table.sticker-table .sticker-issue-input, table.sticker-table .sticker-total-display{
-    width:58px;height:38px;font-size:14px;text-align:center;border-radius:8px;
-    border:1.5px solid var(--border);
+  /* Three clearly different-looking pieces per cell, not two boxes that happen to sit side by
+     side: a reddish "subtract" field with its own − sign (type how many were issued, it comes
+     off the total), a plain bold number in the middle that's the real total and looks nothing
+     like an input (no border, nothing inviting a click), and a round green + button that's the
+     only way to add stock back (new rolls arriving) — not a hidden trick like a negative number. */
+  .sticker-cell{display:flex;gap:6px;align-items:center;}
+  .sticker-issue-wrap{
+    position:relative;width:62px;height:38px;border-radius:8px;
+    border:1.5px solid #E4C6C2;background:var(--danger-soft);
   }
-  table.sticker-table .sticker-issue-input{color:var(--danger);font-weight:600;}
-  table.sticker-table .sticker-issue-input::placeholder{color:var(--muted);font-weight:400;opacity:.6;}
-  table.sticker-table .sticker-issue-input:focus{border-color:var(--accent);outline:none;}
-  table.sticker-table .sticker-total-display{background:var(--bg);color:var(--muted);font-weight:700;cursor:not-allowed;}
+  .sticker-issue-sign{
+    position:absolute;left:8px;top:50%;transform:translateY(-50%);
+    color:var(--danger);font-weight:700;font-size:15px;pointer-events:none;
+  }
+  table.sticker-table .sticker-issue-input{
+    width:100%;height:100%;border:none;background:transparent;
+    padding-left:20px;font-size:13px;color:var(--danger);font-weight:600;text-align:left;
+  }
+  table.sticker-table .sticker-issue-input::placeholder{color:var(--danger);opacity:.45;font-weight:400;}
+  table.sticker-table .sticker-issue-input:focus{outline:2px solid var(--danger);outline-offset:1px;border-radius:7px;}
+  table.sticker-table .sticker-total-box{
+    min-width:32px;text-align:center;font-size:15px;font-weight:800;color:var(--ink);
+  }
+  .sticker-add-btn{
+    width:26px;height:26px;border-radius:999px;border:none;background:var(--accent);color:#fff;
+    font-size:16px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .sticker-add-btn:hover{background:var(--accent-dark);}
   table.sticker-table button.btn-danger{width:36px;height:36px;padding:0;}
   .sticker-category-card{
     display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);
@@ -9032,8 +9049,12 @@ function renderStickerStockPage(){
             const total = (r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0;
             return `<td>
               <div class="sticker-cell">
-                <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" placeholder="0" title="Issued today — subtracts from the total on the right">
-                <input type="number" class="sticker-total-display" value="${total}" readonly tabindex="-1" title="Current total — type an issued amount on the left to change it">
+                <div class="sticker-issue-wrap">
+                  <span class="sticker-issue-sign">−</span>
+                  <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" placeholder="issue" title="Issued today — subtracts from the total">
+                </div>
+                <div class="sticker-total-box" title="Current total">${total}</div>
+                <button type="button" class="sticker-add-btn" data-sticker-row="${r.id}" data-sticker-product="${p.id}" data-sticker-name="${escAttr(r.name)}" data-sticker-product-name="${escAttr(p.name)}" title="Add stock (new rolls arrived)">+</button>
               </div>
             </td>`;
           }).join('')}
@@ -10539,12 +10560,12 @@ function attachShellHandlers(){
       },
     });
   }));
-  // Left box is "how many were issued today" — never a value on its own, just an amount that
-  // gets subtracted from the real total (right box, read-only) on commit, then clears itself so
-  // it's ready for the next entry. Typing a negative number adds stock back instead (a new roll
-  // arriving), since the right box can't be edited directly — this is the only way to change it.
+  // The − field is "how many were issued today" — never a value on its own, just an amount
+  // that gets subtracted from the real total on commit, then clears itself so it's ready for
+  // the next entry. Only ever subtracts; adding stock back goes through the explicit + button
+  // below instead of a hidden negative-number trick.
   document.querySelectorAll('.sticker-issue-input').forEach(input=>input.addEventListener('change', async ()=>{
-    const issued = parseInt(input.value, 10) || 0;
+    const issued = Math.max(0, parseInt(input.value, 10) || 0);
     if(issued===0){ input.value = ''; return; }
     const rowId = input.dataset.stickerRow;
     const productId = input.dataset.stickerProduct;
@@ -10554,6 +10575,25 @@ function attachShellHandlers(){
     row.counts = {...(row.counts||{}), [productId]: newTotal};
     await save('stickerStock');
     render();
+  }));
+  // The + button is the only way to add stock back (new rolls arriving) — asks how many, adds
+  // that to the current total. Kept as a small prompt rather than an always-open input since
+  // this happens far less often than issuing.
+  document.querySelectorAll('.sticker-add-btn').forEach(btn=>btn.addEventListener('click', ()=>{
+    const rowId = btn.dataset.stickerRow;
+    const productId = btn.dataset.stickerProduct;
+    openPromptModal({
+      title: 'Add stock', label: `${btn.dataset.stickerName} — ${btn.dataset.stickerProductName}`,
+      inputType: 'number', placeholder: 'How many arrived?', confirmLabel: 'Add',
+      onSubmit: async (value)=>{
+        const added = Math.max(0, parseInt(value, 10) || 0);
+        if(added===0) return;
+        const row = state.stickerStock.find(r=>r.id===rowId); if(!row) return;
+        const current = (row.counts && row.counts[productId]!=null) ? row.counts[productId] : 0;
+        row.counts = {...(row.counts||{}), [productId]: current + added};
+        await save('stickerStock');
+      },
+    });
   }));
 
   // Manage categories (Staff)

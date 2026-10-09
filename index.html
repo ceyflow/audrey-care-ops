@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009144500">
+<meta name="app-build" content="20261009150500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2382,6 +2382,38 @@ async function loadAll(){
       stickerBackfilled = true;
     });
     if(stickerBackfilled) kvSet('stickerStock', state.stickerStock).catch(e=>console.error('backfill stickerStock failed', e));
+  }
+  // A third pass over the team's Notion board turned up more rows below what the first two
+  // passes captured: two the team's own table never named differently (Ocean Breeze, Lemon),
+  // a second row genuinely named "Rose" with its own different counts (not a typo to merge —
+  // imported as-is), and several client-specific custom-sticker batches that live as ordinary
+  // rows in the same Fragrance column rather than a separate table. Gated on 'Ocean Breeze' —
+  // a name that can't collide with a future real entry the way re-checking "Rose" would — so
+  // this whole batch (duplicate Rose included) only gets added once.
+  if(!state.stickerStock.some(r=>r.name==='Ocean Breeze')){
+    const idFor = name => { const p = state.costingProducts.find(p=>p.name===name); return p ? p.id : null; };
+    const THIRD_PASS_SEED = [
+      ['Ocean Breeze', {'Air Freshener':20}],
+      ['Lemon',        {'Hand Wash':23}],
+      ['Rose',         {Shampoo:30, 'Shower Gel':17, 'Body Lotion':18, 'Hand Wash':27}],
+      ['Vas Ceylon 5L Stickers',         {Shampoo:41, 'Body Lotion':50, Conditioner:73}],
+      ['Fabric Care 5L Stckers',         {Shampoo:32, 'Shower Gel':5, Conditioner:18}],
+      ['Raawana 5L Stickers (Ceydora)',  {Shampoo:49, 'Shower Gel':29, 'Body Lotion':73, Conditioner:69, 'Hand Wash':15, 'Air Freshener':30, 'Bubble Bath':1}],
+      ['Ventina 5L Stickers',            {Shampoo:16, 'Shower Gel':12, 'Body Lotion':2, Conditioner:3}],
+      ['MDS 5L Stickers',                {Shampoo:28, 'Shower Gel':15, 'Body Lotion':44, Conditioner:44}],
+      ['Jaichem',                        {Shampoo:11, 'Shower Gel':17, 'Body Lotion':3, Conditioner:2}],
+      ['Icon',                           {Shampoo:4, 'Body Lotion':4}],
+      ['Comfort',                        {Conditioner:3}],
+    ];
+    THIRD_PASS_SEED.forEach(([name, counts])=>{
+      const byProductId = {};
+      Object.entries(counts).forEach(([productName, qty])=>{
+        const pid = idFor(productName);
+        if(pid) byProductId[pid] = qty;
+      });
+      state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts: byProductId}];
+    });
+    kvSet('stickerStock', state.stickerStock).catch(e=>console.error('third-pass stickerStock seed failed', e));
   }
   // Costing sheets used to store one flat {materials, batchSizes} per product — now each
   // product holds named, dated versions so past formulations stay on record. Wrap any still-flat

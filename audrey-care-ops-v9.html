@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261008120000">
+<meta name="app-build" content="20261009123000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -895,7 +895,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory','stickerStock'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1533,6 +1533,7 @@ const PAGE_DATA_KEYS = {
   blending: ['blendBatches'],
   recipes: ['recipes','activeBatch','mixingStepTemplates'],
   costing: ['costingProducts','suppliers','recipes'],
+  stickerstock: ['stickerStock','costingProducts'],
   customers: ['customers','staff'],
   suppliers: ['suppliers'],
   complaints: ['complaints','complaintCategories','complaintPriorities','staff','customers'],
@@ -2077,6 +2078,7 @@ let state = {
   complaintCategories: [],
   complaintPriorities: [],
   costingProducts: [],
+  stickerStock: [],
   activityLog: [],
   _costingOpenProductId: null,
   _costingOpenVersionId: null,
@@ -2296,6 +2298,40 @@ async function loadAll(){
     const DEFAULT_COSTING_PRODUCTS = ['Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Hand Wash', 'Bubble Bath'];
     state.costingProducts = DEFAULT_COSTING_PRODUCTS.map(name => ({id:uid('CPROD'), name, versions:[]}));
     kvSet('costingProducts', state.costingProducts).catch(e=>console.error('seed costingProducts failed', e));
+  }
+  // Packing's 5L sticker stock — one row per fragrance, one count per existing costing product
+  // (so it always lines up with whatever products Costing actually has, instead of keeping its
+  // own separate product list). Seeded once from the real counts on the team's Notion board at
+  // the time this feature was added; after that it's just whatever Packing enters.
+  if(!Array.isArray(state.stickerStock)) state.stickerStock = [];
+  if(state.stickerStock.length===0){
+    const idFor = name => { const p = state.costingProducts.find(p=>p.name===name); return p ? p.id : null; };
+    const STICKER_SEED = [
+      ['Alovera',      {Shampoo:45, 'Shower Gel':119, 'Body Lotion':6,  Conditioner:53, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Cinnamon',     {Shampoo:97, 'Shower Gel':51,  'Body Lotion':0,  Conditioner:0,  'Hand Wash':21, 'Bubble Bath':0}],
+      ['Sandalwood',   {Shampoo:30, 'Shower Gel':29,  'Body Lotion':9,  Conditioner:24, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Aqua',         {Shampoo:66, 'Shower Gel':3,   'Body Lotion':51, Conditioner:36, 'Hand Wash':16, 'Bubble Bath':0}],
+      ['Coconut',      {Shampoo:35, 'Shower Gel':36,  'Body Lotion':17, Conditioner:30, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Araliya',      {Shampoo:19, 'Shower Gel':18,  'Body Lotion':19, Conditioner:25, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Rose',         {Shampoo:30, 'Shower Gel':18,  'Body Lotion':21, Conditioner:0,  'Hand Wash':29, 'Bubble Bath':0}],
+      ['Green Tea',    {Shampoo:14, 'Shower Gel':19,  'Body Lotion':20, Conditioner:23, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Lotus',        {Shampoo:23, 'Shower Gel':12,  'Body Lotion':77, Conditioner:36, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Citrus',       {Shampoo:23, 'Shower Gel':26,  'Body Lotion':43, Conditioner:12, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Jasmine',      {Shampoo:34, 'Shower Gel':33,  'Body Lotion':14, Conditioner:17, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Mango',        {Shampoo:0,  'Shower Gel':0,   'Body Lotion':50, Conditioner:0,  'Hand Wash':0,  'Bubble Bath':0}],
+      ['Lemon Grass',  {Shampoo:34, 'Shower Gel':32,  'Body Lotion':15, Conditioner:10, 'Hand Wash':0,  'Bubble Bath':0}],
+      ['Papaya',       {Shampoo:23, 'Shower Gel':32,  'Body Lotion':13, Conditioner:0,  'Hand Wash':0,  'Bubble Bath':0}],
+      ['Ceylon Tea',   {Shampoo:62, 'Shower Gel':25,  'Body Lotion':0,  Conditioner:0,  'Hand Wash':0,  'Bubble Bath':0}],
+    ];
+    state.stickerStock = STICKER_SEED.map(([name, counts]) => {
+      const byProductId = {};
+      Object.entries(counts).forEach(([productName, qty]) => {
+        const pid = idFor(productName);
+        if(pid) byProductId[pid] = qty;
+      });
+      return {id: uid('STICK'), name, counts: byProductId};
+    });
+    kvSet('stickerStock', state.stickerStock).catch(e=>console.error('seed stickerStock failed', e));
   }
   // Costing sheets used to store one flat {materials, batchSizes} per product — now each
   // product holds named, dated versions so past formulations stay on record. Wrap any still-flat
@@ -5096,6 +5132,7 @@ function renderOrdersPage(){
   <div class="toolbar">
     <div class="tabs" style="align-items:center;">
       ${isAdmin() ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
+      ${isPacking() ? `<button type="button" class="btn-text" id="btn-sticker-stock">📦 Sticker stock</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
@@ -8670,6 +8707,7 @@ function renderModal(){
   if(type==='brandnew') return brandingAddAddonModal();
   if(type==='brandcrop') return brandCropModal();
   if(type==='managelines') return manageDeliveryLinesModal();
+  if(type==='stickerstock') return stickerStockModal();
   if(type==='managestaffcategories') return manageStaffCategoriesModal();
   if(type==='complaintreasons') return manageComplaintReasonsModal();
   if(type==='complaintpriorities') return manageComplaintPrioritiesModal();
@@ -8810,6 +8848,43 @@ function manageDeliveryLinesModal(){
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
         <button type="button" class="btn btn-primary" id="btn-save-delivery-lines">Done</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function stickerStockModal(){
+  const rows = state.stickerStock || [];
+  const products = state.costingProducts || [];
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:900px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h2 style="margin:0;">Sticker stock</h2>
+        <button type="button" class="btn-text" id="btn-add-sticker-fragrance">+ Add fragrance</button>
+      </div>
+      <div class="sub">5L can sticker counts by fragrance. Type a new number and press Enter or click away to save.</div>
+      ${rows.length===0 ? `<div class="empty-state">No fragrances yet — click "+ Add fragrance" to start.</div>` : `
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="min-width:600px;">
+          <thead><tr>
+            <th>Fragrance</th>
+            ${products.map(p=>`<th>${esc(p.name)}</th>`).join('')}
+            <th></th>
+          </tr></thead>
+          <tbody>
+            ${rows.map(r=>`
+            <tr>
+              <td>${esc(r.name)}</td>
+              ${products.map(p=>`<td><input type="number" min="0" class="sticker-count-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" value="${(r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0}" style="width:70px;"></td>`).join('')}
+              <td><button type="button" class="btn btn-sm btn-danger" data-delete-sticker-row="${r.id}" title="Delete">🗑️</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      `}
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
       </div>
     </div>
   </div>`;
@@ -10273,6 +10348,44 @@ function attachShellHandlers(){
     closeModal();
     showToast('Lists updated');
   };
+
+  // Sticker stock (Packing)
+  if(byIdEl('btn-sticker-stock')) byIdEl('btn-sticker-stock').onclick = ()=> openModal('stickerstock');
+  if(byIdEl('btn-add-sticker-fragrance')) byIdEl('btn-add-sticker-fragrance').onclick = ()=>{
+    openPromptModal({
+      title: 'New fragrance', label: 'Fragrance name', confirmLabel: 'Add',
+      onSubmit: async (value)=>{
+        const name = (value||'').trim();
+        if(!name) return;
+        if(state.stickerStock.some(r=>r.name.toLowerCase()===name.toLowerCase())){
+          openAlertModal({title:"Can't add", message:'A fragrance with that name already exists.', _returnTo:'stickerstock'});
+          return;
+        }
+        state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts:{}}];
+        await save('stickerStock');
+      },
+    });
+  };
+  document.querySelectorAll('[data-delete-sticker-row]').forEach(b=>b.addEventListener('click', ()=>{
+    const id = b.dataset.deleteStickerRow;
+    const row = state.stickerStock.find(r=>r.id===id); if(!row) return;
+    openConfirmModal({
+      title: 'Delete fragrance', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      message: `Delete "${row.name}" from sticker stock? This cannot be undone.`,
+      onConfirm: async ()=>{
+        state.stickerStock = state.stickerStock.filter(r=>r.id!==id);
+        await save('stickerStock');
+      },
+    });
+  }));
+  document.querySelectorAll('.sticker-count-input').forEach(input=>input.addEventListener('change', async ()=>{
+    const rowId = input.dataset.stickerRow;
+    const productId = input.dataset.stickerProduct;
+    const row = state.stickerStock.find(r=>r.id===rowId); if(!row) return;
+    const qty = Math.max(0, parseInt(input.value, 10) || 0);
+    row.counts = {...(row.counts||{}), [productId]: qty};
+    await save('stickerStock');
+  }));
 
   // Manage categories (Staff)
   if(byIdEl('btn-manage-staff-categories')) byIdEl('btn-manage-staff-categories').onclick = ()=>{

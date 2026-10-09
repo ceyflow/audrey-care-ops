@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009153000">
+<meta name="app-build" content="20261009160000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -260,11 +260,18 @@ html{ visibility:hidden; }
   table.sticker-table tbody tr:nth-child(even){background:var(--bg);}
   table.sticker-table tbody tr:hover{background:var(--accent-soft);}
   table.sticker-table td:first-child{font-weight:700;font-size:14.5px;}
-  table.sticker-table input.sticker-count-input{
-    width:76px;height:38px;font-size:14px;text-align:center;border-radius:8px;
+  /* Each cell is two boxes: left types how many were issued today (subtracts from the total),
+     right shows the resulting total and can't be typed into directly — the total only ever
+     changes by going through the left box, never by overtyping it. */
+  .sticker-cell{display:flex;gap:5px;align-items:center;}
+  table.sticker-table .sticker-issue-input, table.sticker-table .sticker-total-display{
+    width:58px;height:38px;font-size:14px;text-align:center;border-radius:8px;
     border:1.5px solid var(--border);
   }
-  table.sticker-table input.sticker-count-input:focus{border-color:var(--accent);outline:none;}
+  table.sticker-table .sticker-issue-input{color:var(--danger);font-weight:600;}
+  table.sticker-table .sticker-issue-input::placeholder{color:var(--muted);font-weight:400;opacity:.6;}
+  table.sticker-table .sticker-issue-input:focus{border-color:var(--accent);outline:none;}
+  table.sticker-table .sticker-total-display{background:var(--bg);color:var(--muted);font-weight:700;cursor:not-allowed;}
   table.sticker-table button.btn-danger{width:36px;height:36px;padding:0;}
   .sticker-category-card{
     display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);
@@ -9021,7 +9028,15 @@ function renderStickerStockPage(){
         ${rows.map(r=>`
         <tr>
           <td>${esc(r.name)}</td>
-          ${products.map(p=>`<td><input type="number" min="0" class="sticker-count-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" value="${(r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0}"></td>`).join('')}
+          ${products.map(p=>{
+            const total = (r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0;
+            return `<td>
+              <div class="sticker-cell">
+                <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" placeholder="0" title="Issued today — subtracts from the total on the right">
+                <input type="number" class="sticker-total-display" value="${total}" readonly tabindex="-1" title="Current total — type an issued amount on the left to change it">
+              </div>
+            </td>`;
+          }).join('')}
           <td><button type="button" class="btn btn-sm btn-danger" data-delete-sticker-row="${r.id}" title="Delete">🗑️</button></td>
         </tr>`).join('')}
       </tbody>
@@ -10524,13 +10539,21 @@ function attachShellHandlers(){
       },
     });
   }));
-  document.querySelectorAll('.sticker-count-input').forEach(input=>input.addEventListener('change', async ()=>{
+  // Left box is "how many were issued today" — never a value on its own, just an amount that
+  // gets subtracted from the real total (right box, read-only) on commit, then clears itself so
+  // it's ready for the next entry. Typing a negative number adds stock back instead (a new roll
+  // arriving), since the right box can't be edited directly — this is the only way to change it.
+  document.querySelectorAll('.sticker-issue-input').forEach(input=>input.addEventListener('change', async ()=>{
+    const issued = parseInt(input.value, 10) || 0;
+    if(issued===0){ input.value = ''; return; }
     const rowId = input.dataset.stickerRow;
     const productId = input.dataset.stickerProduct;
     const row = state.stickerStock.find(r=>r.id===rowId); if(!row) return;
-    const qty = Math.max(0, parseInt(input.value, 10) || 0);
-    row.counts = {...(row.counts||{}), [productId]: qty};
+    const current = (row.counts && row.counts[productId]!=null) ? row.counts[productId] : 0;
+    const newTotal = Math.max(0, current - issued);
+    row.counts = {...(row.counts||{}), [productId]: newTotal};
     await save('stickerStock');
+    render();
   }));
 
   // Manage categories (Staff)

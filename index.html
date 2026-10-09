@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009162500">
+<meta name="app-build" content="20261009164500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -254,45 +254,45 @@ html{ visibility:hidden; }
      editable at once, by request) but with visibly separated, larger rows instead of a cramped
      hairline grid — easier to scan across 7 columns and tap the right cell on a factory-floor
      tablet. */
-  table.sticker-table{font-size:14px;}
-  table.sticker-table th{padding:14px 16px;font-size:12.5px;}
-  table.sticker-table td{padding:14px 16px;}
+  table.sticker-table{font-size:16px;}
+  table.sticker-table th{padding:16px 14px;font-size:14px;}
+  table.sticker-table td{padding:16px 14px;}
   table.sticker-table tbody tr:nth-child(even){background:var(--bg);}
   table.sticker-table tbody tr:hover{background:var(--accent-soft);}
-  table.sticker-table td:first-child{font-weight:700;font-size:14.5px;}
+  table.sticker-table td:first-child{font-weight:700;font-size:17px;}
   /* Three clearly different-looking pieces per cell, not two boxes that happen to sit side by
      side: a reddish "subtract" field with its own − sign (type how many were issued, it comes
      off the total), a plain bold number in the middle that's the real total and looks nothing
      like an input (no border, nothing inviting a click), and a round green + button that's the
-     only way to add stock back (new rolls arriving) — not a hidden trick like a negative number. */
-  .sticker-cell{display:flex;gap:6px;align-items:center;}
+     only way to add stock back (new rolls arriving) — not a hidden trick like a negative number.
+     Sized up from the first pass — too small to read comfortably at a glance across 7 columns. */
+  .sticker-cell{display:flex;gap:8px;align-items:center;}
   .sticker-issue-wrap{
-    position:relative;width:62px;height:38px;border-radius:8px;
+    position:relative;width:52px;height:44px;border-radius:8px;
     border:1.5px solid #E4C6C2;background:var(--danger-soft);
   }
   .sticker-issue-sign{
-    position:absolute;left:8px;top:50%;transform:translateY(-50%);
-    color:var(--danger);font-weight:700;font-size:15px;pointer-events:none;
+    position:absolute;left:9px;top:50%;transform:translateY(-50%);
+    color:var(--danger);font-weight:700;font-size:19px;pointer-events:none;
   }
   table.sticker-table .sticker-issue-input{
     width:100%;height:100%;border:none;background:transparent;
-    padding-left:20px;font-size:13px;color:var(--danger);font-weight:600;text-align:left;
+    padding-left:22px;font-size:16px;color:var(--danger);font-weight:700;text-align:left;
   }
-  table.sticker-table .sticker-issue-input::placeholder{color:var(--danger);opacity:.45;font-weight:400;}
   table.sticker-table .sticker-issue-input:focus{outline:2px solid var(--danger);outline-offset:1px;border-radius:7px;}
   table.sticker-table .sticker-total-box{
-    min-width:32px;text-align:center;font-size:15px;font-weight:800;color:var(--ink);
+    min-width:40px;text-align:center;font-size:21px;font-weight:800;color:var(--ink);
   }
   .sticker-add-btn{
-    width:26px;height:26px;border-radius:999px;border:none;background:var(--accent);color:#fff;
-    font-size:16px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
+    width:32px;height:32px;border-radius:999px;border:none;background:var(--accent);color:#fff;
+    font-size:20px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;padding:0;
   }
   .sticker-add-btn:hover{background:var(--accent-dark);}
-  table.sticker-table button.btn-danger{width:36px;height:36px;padding:0;}
+  table.sticker-table button.btn-danger{width:40px;height:40px;padding:0;font-size:16px;}
   .sticker-category-card{
-    display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);
-    border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--ink);
+    display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid var(--border);
+    border-radius:10px;padding:12px 18px;font-size:15px;font-weight:600;color:var(--ink);
     cursor:pointer;transition:border-color .15s,background .15s;
   }
   .sticker-category-card:hover{border-color:var(--accent);}
@@ -9051,7 +9051,7 @@ function renderStickerStockPage(){
               <div class="sticker-cell">
                 <div class="sticker-issue-wrap">
                   <span class="sticker-issue-sign">−</span>
-                  <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" placeholder="issue" title="Issued today — subtracts from the total">
+                  <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" title="Issued today — subtracts from the total">
                 </div>
                 <div class="sticker-total-box" title="Current total">${total}</div>
                 <button type="button" class="sticker-add-btn" data-sticker-row="${r.id}" data-sticker-product="${p.id}" data-sticker-name="${escAttr(r.name)}" data-sticker-product-name="${escAttr(p.name)}" title="Add stock (new rolls arrived)">+</button>

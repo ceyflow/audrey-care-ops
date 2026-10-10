@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010134610">
+<meta name="app-build" content="20261010135608">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -402,6 +402,8 @@ html{ visibility:hidden; }
   .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(60,144,88,.28);}
   .landing-card svg{width:15px;height:15px;flex-shrink:0;}
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
+  #settings-jump-grid .landing-card{cursor:grab;}
+  #settings-jump-grid .landing-card.dragging{opacity:.4;cursor:grabbing;}
 
   /* ---------------- Kanban (Orders) ---------------- */
   .board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:14px;align-items:start;}
@@ -948,7 +950,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory','stickerStock'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1595,7 +1597,7 @@ const PAGE_DATA_KEYS = {
   chat: ['chat','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns'],
   ratings: ['orders'],
-  settings: ['templates','complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates'],
+  settings: ['templates','complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder'],
 };
 // Every mutating action across every page calls logActivity(), and the topbar's Activity log
 // viewer is available regardless of which page is open — so activityLog isn't tied to one page,
@@ -2124,6 +2126,7 @@ let state = {
   branding: {addons: []},
   navOrder: {},
   navExpanded: {blendingdept:true, customercare:true},
+  settingsCardOrder: [],
   deliveryLines: [],
   staffCategories: [],
   complaintCategories: [],
@@ -5041,6 +5044,21 @@ function navDragAfterElement(container, y){
     return closest;
   }, { offset: -Infinity, element: null }).element;
 }
+// Same idea as navDragAfterElement, but for a wrapping multi-column grid (the Settings jump
+// cards) instead of a single vertical list — nearest card by straight-line distance to the
+// pointer, then before/after it depending on which side of its center the pointer is on.
+function gridDragAfterElement(container, x, y){
+  const els = [...container.querySelectorAll('.landing-card:not(.dragging)')];
+  let closest = null, closestDist = Infinity;
+  els.forEach(child=>{
+    const box = child.getBoundingClientRect();
+    const dist = Math.hypot(x - (box.left+box.width/2), y - (box.top+box.height/2));
+    if(dist < closestDist){ closestDist = dist; closest = child; }
+  });
+  if(!closest) return null;
+  const box = closest.getBoundingClientRect();
+  return (x < box.left + box.width/2) ? closest : closest.nextElementSibling;
+}
 const PAGE_META = {
   dashboard:{title:'Dashboard', sub:"Here's what's happening today."},
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
@@ -6640,8 +6658,20 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-login-activity': renderLoginActivityPanel,
   'settings-sms-settings': renderSmsTemplatesPanel,
 };
+// Admin can drag these into whatever order matters to them (state.settingsCardOrder) — cards not
+// yet in that saved order (new ones, or on a first-ever load) just keep their default position.
+function orderedSettingsJumpCards(cards){
+  const saved = state.settingsCardOrder || [];
+  if(!saved.length) return cards;
+  return [...cards].sort((a,b)=>{
+    const ia = saved.indexOf(a.id), ib = saved.indexOf(b.id);
+    const ra = ia===-1 ? saved.length+cards.indexOf(a) : ia;
+    const rb = ib===-1 ? saved.length+cards.indexOf(b) : ib;
+    return ra-rb;
+  });
+}
 function renderSettingsPage(){
-  const jumpCards = [
+  const jumpCards = orderedSettingsJumpCards([
     {id:'settings-complaint-access', label:'Complaint access', icon:'complaints'},
     {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard'},
     {id:'settings-template-customization', label:'Template customization', icon:'settings'},
@@ -6650,15 +6680,15 @@ function renderSettingsPage(){
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers'},
     {id:'settings-login-activity', label:'Login activity', icon:'search'},
     {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
-  ].filter(c => isAdmin());
+  ].filter(c => isAdmin()));
   const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : jumpCards[0].id;
   const renderOpenPanel = SETTINGS_PANEL_RENDERERS[openId];
   return `
   <div class="landing-section">
-    <div class="landing-section-title">Jump to</div>
-    <div class="landing-grid">
+    <div class="landing-section-title">Jump to <span class="hint" style="font-weight:400;">— drag a card to reorder</span></div>
+    <div class="landing-grid" id="settings-jump-grid">
       ${jumpCards.map(c=>`
-      <button type="button" class="landing-card ${openId===c.id?'landing-card-selected':''}" data-settings-jump="${c.id}">
+      <button type="button" class="landing-card ${openId===c.id?'landing-card-selected':''}" draggable="true" data-settings-jump="${c.id}">
         ${icon(c.icon)}<span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>
@@ -10176,6 +10206,28 @@ function attachShellHandlers(){
     state._settingsOpenPanel = el.dataset.settingsJump;
     render();
   }));
+  document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{
+    card.addEventListener('dragstart', e=>{
+      card.classList.add('dragging');
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.dataset.settingsJump || ''); }
+    });
+    card.addEventListener('dragend', ()=>card.classList.remove('dragging'));
+  });
+  if(byIdEl('settings-jump-grid')){
+    const grid = byIdEl('settings-jump-grid');
+    grid.addEventListener('dragover', e=>{
+      const dragging = grid.querySelector('.landing-card.dragging');
+      if(!dragging) return;
+      e.preventDefault();
+      const after = gridDragAfterElement(grid, e.clientX, e.clientY);
+      if(after==null) grid.appendChild(dragging); else grid.insertBefore(dragging, after);
+    });
+    grid.addEventListener('drop', async e=>{
+      e.preventDefault();
+      state.settingsCardOrder = [...grid.querySelectorAll('[data-settings-jump]')].map(b=>b.dataset.settingsJump);
+      await save('settingsCardOrder');
+    });
+  }
   document.querySelectorAll('[data-nav-toggle]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();
     const id = el.dataset.navToggle;

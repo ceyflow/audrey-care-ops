@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010070515">
+<meta name="app-build" content="20261010134610">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -439,7 +439,7 @@ html{ visibility:hidden; }
   .rnd-cal-out{color:var(--muted);}
   .rnd-cal-detail-panel{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;background:var(--bg);}
   .rnd-cal-detail-date{font-weight:600;font-size:13.5px;margin-bottom:10px;}
-  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:11px 12px;cursor:grab;transition:border-color .15s,box-shadow .18s ease,opacity .15s,transform .18s ease;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:grab;transition:border-color .15s,box-shadow .18s ease,opacity .15s,transform .18s ease;}
   .card[data-order]{cursor:pointer;}
   .card:hover{border-color:var(--accent);box-shadow:0 10px 22px rgba(20,25,20,.1);transform:translateY(-3px);}
   .card.dragging{opacity:.45;}
@@ -451,14 +451,15 @@ html{ visibility:hidden; }
   .nav-order-row svg{width:17px;height:17px;color:var(--muted);flex-shrink:0;}
   .nav-order-handle{color:var(--muted);letter-spacing:-1px;font-size:13px;flex-shrink:0;}
   .card .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
-  .card .customer{font-weight:600;font-size:13.5px;}
-  .card .order-id{font-size:11px;color:var(--muted);}
+  .card .customer{font-weight:600;font-size:12.5px;}
+  .card .order-id{font-size:10.5px;color:var(--muted);}
   .card .product{font-size:12.5px;color:var(--muted);margin-top:2px;}
   .card .meta-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
   .card .assignee{font-size:11.5px;display:flex;align-items:center;gap:5px;color:var(--ink);}
   .card .assignee .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
   .card .unassigned{color:var(--clay);}
   .card .days{font-size:11px;color:var(--muted);}
+  .card .pill{font-size:10px;padding:2px 8px;}
 
   /* ---------------- Overlay / Modal ---------------- */
   @keyframes overlay-fade{from{opacity:0;}to{opacity:1;}}
@@ -5376,7 +5377,7 @@ function renderCard(o){
   return `
   <div class="card" data-order="${o.id}" draggable="${dragOn?'true':'false'}" ${dragOn?'style="cursor:grab;"':''}>
     <div class="top-row"><span class="customer">${esc(o.customer)}</span><span class="order-id">${esc(o.orderNumber||o.id)}</span></div>
-    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+    <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
       <span class="pill pill-${priority.toLowerCase()}">${priority}</span>
     </div>
   </div>`;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010151011">
+<meta name="app-build" content="20261010152943">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1581,6 +1581,103 @@ function pagesForRole(role){
   if(custom) return custom.status==='Active' && Array.isArray(custom.pages) ? custom.pages : [];
   return ROLE_PAGES[role] || [];
 }
+// Every fine-grained, non-page-level access decision in the app (which buttons/actions a role
+// can use within a page it can already open), as a flat registry grouped by department — drives
+// both the Settings → User roles checklist UI and roleCan() below. Adding a new gated behavior
+// later means adding one entry here and checking roleCan(state.session.role, 'id') at the gate;
+// nothing else needs to change.
+const PERMISSION_REGISTRY = [
+  // Orders board
+  {dept:'orders', deptLabel:'Orders board', id:'orders_drag', label:'Drag cards between stages'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_advance', label:'Advance an order to the next stage'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_create', label:'Create new orders'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_manage_lists', label:'Manage delivery lists'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_edit_full', label:'Edit full order details'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_edit_tracking_only', label:'Edit delivery tracking number only'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_delete', label:'Delete an order'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_archive_now', label:'Archive an order immediately'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_restore_archived', label:'Restore an archived order'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_bulk_delete_archive', label:'Bulk-select and delete from the Archive tab'},
+  // Order inquiry
+  {dept:'orderinquiry', deptLabel:'Order inquiry', id:'orderinquiry_resend_review', label:'Resend a review request after it was already sent'},
+  // Blending Department board
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage', label:'Create batches, drag cards, advance stage, use timer controls'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_delete', label:'Delete a batch'},
+  // Costing & Recipe / Production Guide
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit', label:'View and edit costing sheets'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_manage_templates', label:'Manage phrase / mixing-step templates'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_create_recipe', label:'Create new recipes'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_recipe', label:'Delete a recipe'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit_steps', label:'Edit recipe steps inline'},
+  // R&D
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_manage', label:'Create/advance projects, manage chemists, mark attendance'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_delete', label:'Delete a project or chemist'},
+  // Complaints
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_manage', label:'Open and work on complaints'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_edit_after_1hr', label:"Edit a complaint after the 1-hour window"},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_full_edit', label:'Edit category, priority and assignee (not just add updates)'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_delete_active', label:'Delete an active complaint'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_delete_archived', label:'Delete an archived complaint'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_restore', label:'Restore a resolved/closed complaint'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_bulk_delete', label:'Bulk-select and delete complaints'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_reset_archive', label:'Reset (wipe) the entire complaints archive'},
+  // Staff
+  {dept:'staff', deptLabel:'Staff', id:'staff_manage', label:'Add, edit and remove staff and categories'},
+  // Team chat
+  {dept:'chat', deptLabel:'Team chat', id:'chat_delete_history', label:'Delete chat history'},
+  // Customers
+  {dept:'customers', deptLabel:'Customers', id:'customers_manage', label:'Import, add, edit and delete customers'},
+  // Suppliers
+  {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_manage', label:'Import, add, edit and delete suppliers'},
+  // Customer ratings
+  {dept:'ratings', deptLabel:'Customer ratings', id:'ratings_bulk_delete', label:'Bulk-select and delete ratings'},
+  // Branding
+  {dept:'branding', deptLabel:'Branding', id:'branding_manage', label:'Upload, edit and delete brand assets'},
+  // Settings
+  {dept:'settings', deptLabel:'Settings', id:'settings_access', label:'Open the Settings page'},
+];
+// Every legacy or custom role, seeded to match exactly what that role could already do before this
+// permission system existed — a pure data snapshot of the hardcoded isAdmin()/isPacking()/etc.
+// checks at the time this was built, so turning it on changes nothing until an Admin edits a role.
+function buildRolePermissions(trueIds){
+  const perms = {};
+  PERMISSION_REGISTRY.forEach(p=>{ perms[p.id] = trueIds.includes(p.id); });
+  return perms;
+}
+const ALL_PERMISSION_IDS = PERMISSION_REGISTRY.map(p=>p.id);
+const LEGACY_ROLE_PERMISSIONS = {
+  Admin: ALL_PERMISSION_IDS,
+  'Sub Admin': ['complaints_manage','complaints_edit_after_1hr','complaints_full_edit','complaints_delete_active','complaints_restore','complaints_bulk_delete'],
+  Blending: ['blending_manage'],
+  Packing: ['orders_advance','orders_edit_tracking_only'],
+  'Customer Care': ['complaints_manage','complaints_edit_after_1hr'],
+  'Orders Process': [],
+  'R&D': ['rnd_manage'],
+  Dashboard: [],
+};
+// roleCan() is the one place every fine-grained gate should check. A role with a custom record in
+// state.userRoles uses its own permissions map (an Inactive role gets none); a role that's never
+// been opened in Settings → User roles yet falls back to the snapshot above, so nothing changes
+// for Blending/Packing/Orders Process/R&D/Dashboard/Customer Care until someone edits them there.
+function roleCan(role, permId){
+  const custom = (state.userRoles||[]).find(r=>r.name===role);
+  if(custom){
+    if(custom.status!=='Active') return false;
+    return !!(custom.permissions && custom.permissions[permId]);
+  }
+  return (LEGACY_ROLE_PERMISSIONS[role]||[]).includes(permId);
+}
+// Groups PERMISSION_REGISTRY into department sub-sections, in registry order, for the Settings →
+// User roles edit form's checklist.
+function permissionsByDepartment(){
+  const groups = [];
+  PERMISSION_REGISTRY.forEach(p=>{
+    let g = groups.find(x=>x.dept===p.dept);
+    if(!g){ g = {dept:p.dept, label:p.deptLabel, items:[]}; groups.push(g); }
+    g.items.push(p);
+  });
+  return groups;
+}
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -2519,13 +2616,28 @@ async function loadAll(){
   // custom roles.
   if(state.userRoles.length===0){
     state.userRoles = [
-      {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true},
-      {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true},
-      {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints']},
-      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes']},
-      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders and sticker stock for packing and dispatch.', status:'Active', pages:['orders','stickerstock']},
+      {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS.Admin)},
+      {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'])},
+      {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints'], permissions:buildRolePermissions(['complaints_manage','complaints_edit_after_1hr'])},
+      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes'], permissions:buildRolePermissions(['blending_manage'])},
+      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders and sticker stock for packing and dispatch.', status:'Active', pages:['orders','stickerstock'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'])},
     ];
     kvSet('userRoles', state.userRoles).catch(e=>console.error('seed userRoles failed', e));
+  } else if(state.userRoles.some(r=>!r.permissions)){
+    // Backfill for anyone who already had the 5 roles from before this permission system existed —
+    // same starting values as the fresh seed above, so this changes nothing until an Admin edits
+    // a role in Settings → User roles.
+    const NEW_ROLE_DEFAULTS = {
+      'Customer care representative': ['complaints_manage','complaints_edit_after_1hr'],
+      'Production Executive': ['blending_manage'],
+      'Dispatch officer': ['orders_advance','orders_edit_tracking_only'],
+    };
+    state.userRoles = state.userRoles.map(r=>{
+      if(r.permissions) return r;
+      const trueIds = LEGACY_ROLE_PERMISSIONS[r.name] || NEW_ROLE_DEFAULTS[r.name] || [];
+      return {...r, permissions: buildRolePermissions(trueIds)};
+    });
+    kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill role permissions failed', e));
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -6957,7 +7069,7 @@ function renderUserRolesPanel(){
     <div class="panel-body">
       <div class="hint" style="margin-bottom:14px;">Define who gets to see what. Each role picks exactly which pages it can open — set one to Inactive to lock it out without deleting it. Admin and Sub Admin are built in and can't be renamed or removed, since the app checks those names directly in a few places.</div>
       <table class="data-table" style="margin-bottom:14px;">
-        <thead><tr><th>Role</th><th>Description</th><th>Status</th><th>Pages</th><th></th></tr></thead>
+        <thead><tr><th>Role</th><th>Description</th><th>Status</th><th>Pages</th><th>Permissions</th><th></th></tr></thead>
         <tbody>
           ${state.userRoles.map(r=>`
           <tr>
@@ -6965,6 +7077,7 @@ function renderUserRolesPanel(){
             <td class="hint">${esc(r.description||'—')}</td>
             <td>${r.status==='Active' ? '<span class="pill pill-active">Active</span>' : '<span class="hint">Inactive</span>'}</td>
             <td>${(r.pages||[]).length}</td>
+            <td>${Object.values(r.permissions||{}).filter(Boolean).length} / ${ALL_PERMISSION_IDS.length}</td>
             <td class="row-actions">
               <button type="button" class="btn btn-sm" data-edit-role="${r.id}" title="Edit">✏️</button>
               ${r.locked ? '' : `<button type="button" class="btn btn-sm btn-danger" data-delete-role="${r.id}" title="Delete">🗑️</button>`}
@@ -6999,6 +7112,20 @@ function renderRoleEditForm(f){
           <input type="checkbox" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}> ${esc(PAGE_META[id].title)}
         </label>`).join('')}
       </div>
+    </div>
+    <div class="field">
+      <label>Fine-grained permissions</label>
+      <div class="hint" style="margin-bottom:10px;">Within a department this role can already open, choose exactly which actions it can take — drag-and-drop, delete, edit after the fact, bulk actions, and so on.</div>
+      ${permissionsByDepartment().map(g=>`
+      <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-weight:600;color:var(--ink);font-size:13px;margin-bottom:8px;">${esc(g.label)}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${g.items.map(p=>`
+          <label style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-weight:500;font-size:12.5px;">
+            <input type="checkbox" data-role-permission="${p.id}" ${f.permissions[p.id]?'checked':''}> ${esc(p.label)}
+          </label>`).join('')}
+        </div>
+      </div>`).join('')}
     </div>
     <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;gap:8px;">
       <button type="button" class="btn btn-primary" id="btn-save-role">${f.isNew ? 'Insert new role' : 'Save changes'}</button>
@@ -11746,12 +11873,12 @@ function attachShellHandlers(){
 
   // User roles
   if(byIdEl('btn-new-role')) byIdEl('btn-new-role').onclick = ()=>{
-    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], locked:false, isNew:true};
+    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], permissions:{}, locked:false, isNew:true};
     render();
   };
   document.querySelectorAll('[data-edit-role]').forEach(b=>b.addEventListener('click', ()=>{
     const r = state.userRoles.find(x=>x.id===b.dataset.editRole); if(!r) return;
-    state._roleEditForm = {...r, pages:[...(r.pages||[])], isNew:false};
+    state._roleEditForm = {...r, pages:[...(r.pages||[])], permissions:{...(r.permissions||{})}, isNew:false};
     render();
   }));
   document.querySelectorAll('[data-delete-role]').forEach(b=>b.addEventListener('click', ()=>{
@@ -11773,6 +11900,10 @@ function attachShellHandlers(){
     if(cb.checked){ if(!state._roleEditForm.pages.includes(id)) state._roleEditForm.pages.push(id); }
     else{ state._roleEditForm.pages = state._roleEditForm.pages.filter(p=>p!==id); }
   }));
+  document.querySelectorAll('[data-role-permission]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!state._roleEditForm) return;
+    state._roleEditForm.permissions[cb.dataset.rolePermission] = cb.checked;
+  }));
   if(byIdEl('role-form-name')) byIdEl('role-form-name').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.name = e.target.value; });
   if(byIdEl('role-form-description')) byIdEl('role-form-description').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.description = e.target.value; });
   if(byIdEl('role-form-status')) byIdEl('role-form-status').addEventListener('change', e=>{ if(state._roleEditForm) state._roleEditForm.status = e.target.value; });
@@ -11784,9 +11915,9 @@ function attachShellHandlers(){
     const dup = state.userRoles.some(r=>r.name.toLowerCase()===name.toLowerCase() && r.id!==f.id);
     if(dup){ showToast('A role with that name already exists'); return; }
     if(f.isNew){
-      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], locked:false}];
+      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, locked:false}];
     } else {
-      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages]} : r);
+      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}} : r);
     }
     await save('userRoles');
     syncAllRoleDataAccess();

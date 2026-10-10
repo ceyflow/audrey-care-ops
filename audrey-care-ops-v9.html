@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010135608">
+<meta name="app-build" content="20261010141524">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -950,7 +950,7 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles'];
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1555,10 +1555,10 @@ const DEFAULT_AUTH = {
     ]
   },
   // Admin-customized sidebar page lists for Blending/Packing (see pagesForRole()).
-  // A role missing here, or mapped to an empty array, falls back to ROLE_PAGES below.
+  // Unused now that custom roles (state.userRoles) own per-role page access — kept only so an
+  // old saved blob with this key doesn't error, never written to again.
   rolePages: {}
 };
-const ROLES = ['Admin','Sub Admin','Dashboard','Blending','Packing','Customer Care','Orders Process','R&D'];
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
   Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
@@ -1570,9 +1570,16 @@ const ROLE_PAGES = {
   'R&D': ['rnd','chat'],
   Dashboard: ['dashboard','chat'],
 };
+// Pages an Admin can hand out to a custom role from Settings → User roles.
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','ratings'];
+// A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
+// name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
+// above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
+// nobody has redefined there yet).
 function pagesForRole(role){
-  const custom = state.auth.rolePages && state.auth.rolePages[role];
-  return (Array.isArray(custom) && custom.length) ? custom : (ROLE_PAGES[role] || []);
+  const custom = (state.userRoles||[]).find(r=>r.name===role);
+  if(custom) return custom.status==='Active' && Array.isArray(custom.pages) ? custom.pages : [];
+  return ROLE_PAGES[role] || [];
 }
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
@@ -1597,7 +1604,7 @@ const PAGE_DATA_KEYS = {
   chat: ['chat','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns'],
   ratings: ['orders'],
-  settings: ['templates','complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder'],
+  settings: ['templates','complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles'],
 };
 // Every mutating action across every page calls logActivity(), and the topbar's Activity log
 // viewer is available regardless of which page is open — so activityLog isn't tied to one page,
@@ -1610,8 +1617,15 @@ function dataKeysForRole(role){
 }
 // Admin always has full access (granted directly in the database policy, no table row needed) —
 // every other role's allowed keys are pushed into role_data_access so the database enforces the
-// same boundaries as the Page access screen, not just the UI.
-const SYNCABLE_ROLES = ROLES.filter(r=>r!=='Admin');
+// same boundaries as the sidebar/page checks, not just the UI. Covers both the original hardcoded
+// roles (for anyone not yet given a custom role record) and every role defined in Settings →
+// User roles, so a brand-new custom role gets real database-level access too, not just a sidebar
+// entry that silently can't read anything.
+function syncableRoleNames(){
+  const legacy = ['Sub Admin','Dashboard','Blending','Packing','Customer Care','Orders Process','R&D'];
+  const custom = (state.userRoles||[]).map(r=>r.name).filter(n=>n!=='Admin');
+  return [...new Set([...legacy, ...custom])];
+}
 async function syncRoleDataAccess(role){
   if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return;
   const keys = dataKeysForRole(role);
@@ -1621,7 +1635,7 @@ async function syncRoleDataAccess(role){
 async function syncAllRoleDataAccess(){
   if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
   try{
-    for(const role of SYNCABLE_ROLES) await syncRoleDataAccess(role);
+    for(const role of syncableRoleNames()) await syncRoleDataAccess(role);
     return {ok:true};
   }catch(e){ return {ok:false, error:e.message||'Sync failed — has the role_data_access table been created yet?'}; }
 }
@@ -2127,6 +2141,7 @@ let state = {
   navOrder: {},
   navExpanded: {blendingdept:true, customercare:true},
   settingsCardOrder: [],
+  userRoles: [],
   deliveryLines: [],
   staffCategories: [],
   complaintCategories: [],
@@ -2496,6 +2511,21 @@ async function loadAll(){
       r.category = CLIENT_BATCH_NAMES.includes(r.name) ? r.name : 'Dallin 5L Stickers';
     });
     kvSet('stickerStock', state.stickerStock).catch(e=>console.error('categorize stickerStock failed', e));
+  }
+  // Settings → User roles: replaces the old fixed role list with Admin-defined ones. Admin and
+  // Sub Admin are seeded locked (their names are checked literally elsewhere — isAdmin()/
+  // isSubAdmin() — so renaming or deleting them here would silently break those) with their
+  // existing page lists carried over unchanged; the other three are the real, freely-editable
+  // custom roles.
+  if(state.userRoles.length===0){
+    state.userRoles = [
+      {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true},
+      {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true},
+      {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints']},
+      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes']},
+      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders and sticker stock for packing and dispatch.', status:'Active', pages:['orders','stickerstock']},
+    ];
+    kvSet('userRoles', state.userRoles).catch(e=>console.error('seed userRoles failed', e));
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -5296,7 +5326,7 @@ function renderOrdersPage(){
       ${isAdmin() ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
-      ${(isAdmin() || isPacking()) ? `<button type="button" class="btn-text" id="btn-sticker-stock-link" style="font-size:12px;color:var(--muted);">📦 Sticker stock</button>` : ''}
+      ${pageAllowed('stickerstock') ? `<button type="button" class="btn-text" id="btn-sticker-stock-link" style="font-size:12px;color:var(--muted);">📦 Sticker stock</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
@@ -6655,6 +6685,7 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-appearance': renderAppearancePanel,
   'settings-timer-alert-sound': renderTimerAlertSoundPanel,
   'settings-secure-accounts': renderSecureAccountsPanel,
+  'settings-user-roles': renderUserRolesPanel,
   'settings-login-activity': renderLoginActivityPanel,
   'settings-sms-settings': renderSmsTemplatesPanel,
 };
@@ -6678,6 +6709,7 @@ function renderSettingsPage(){
     {id:'settings-appearance', label:'Appearance', icon:'star'},
     {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers'},
+    {id:'settings-user-roles', label:'User roles', icon:'staff'},
     {id:'settings-login-activity', label:'Login activity', icon:'search'},
     {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
   ].filter(c => isAdmin()));
@@ -6726,12 +6758,15 @@ function renderSmsTemplatesPanel(){
     </div>
   </div>`;
 }
-// Sub Admin isn't offered here — it carries broader built-in permissions (complaint handling,
-// etc.) that shouldn't be handed out casually from this screen. "Dashboard" is the minimal,
-// fixed access level (Dashboard + Team chat only) for people who just need visibility.
-// Every row's access level is a free choice — Admin decides who gets what, rather than the
-// tool assuming it from the old role-chip data.
-const SECURE_ACCOUNT_ROLES = ['Admin','Dashboard','Customer Care','Blending','Packing','Orders Process','R&D'];
+// The access levels offered here are the original fixed roles (Blending/Packing/Orders Process/
+// R&D/Dashboard/Customer Care still work exactly as before — nobody's redefined them in Settings
+// → User roles yet) plus whatever's defined there (an Inactive one drops out of the list;
+// existing accounts already on it keep working, just can't be re-selected).
+const LEGACY_SECURE_ACCOUNT_ROLES = ['Admin','Dashboard','Customer Care','Blending','Packing','Orders Process','R&D'];
+function secureAccountRoleNames(){
+  const custom = (state.userRoles||[]).filter(r=>r.status==='Active').map(r=>r.name);
+  return [...new Set([...LEGACY_SECURE_ACCOUNT_ROLES, ...custom])];
+}
 function buildMigrationRoster(){
   const roster = [];
   ['Admin','Customer Care'].forEach(role=>{
@@ -6804,7 +6839,7 @@ function renderSecureAccountsPanel(){
           ${form.map((r,i)=>`
           <tr>
             <td><input data-secure-acct-field="name" data-secure-acct-idx="${i}" value="${escAttr(r.name)}"></td>
-            <td><select data-secure-acct-field="role" data-secure-acct-idx="${i}">${SECURE_ACCOUNT_ROLES.map(role=>`<option value="${role}" ${r.role===role?'selected':''}>${role}</option>`).join('')}</select></td>
+            <td><select data-secure-acct-field="role" data-secure-acct-idx="${i}">${secureAccountRoleNames().map(role=>`<option value="${role}" ${r.role===role?'selected':''}>${role}</option>`).join('')}</select></td>
             <td><input type="password" data-secure-acct-field="password" data-secure-acct-idx="${i}" value="${escAttr(r.password)}" autocomplete="new-password"></td>
             <td><input type="password" data-secure-acct-field="confirm" data-secure-acct-idx="${i}" value="${escAttr(r.confirm)}" autocomplete="new-password"></td>
             <td><button type="button" class="btn btn-sm btn-danger" data-secure-acct-remove="${i}">Remove</button></td>
@@ -6834,7 +6869,7 @@ function renderAddSecureAccountForm(){
   <div class="field-row">
     <div class="field"><label>Name</label><input id="add-acct-name" value="${escAttr(f.name)}"></div>
     <div class="field"><label>Access</label>
-      <select id="add-acct-role">${SECURE_ACCOUNT_ROLES.map(role=>`<option value="${role}" ${f.role===role?'selected':''}>${role}</option>`).join('')}</select>
+      <select id="add-acct-role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${f.role===role?'selected':''}>${role}</option>`).join('')}</select>
     </div>
   </div>
   <div class="field-row">
@@ -6886,7 +6921,7 @@ function editSecureAccountModal(){
       <form id="form-edit-secure-account">
         <div class="field">
           <label>Access level</label>
-          <select name="role">${SECURE_ACCOUNT_ROLES.map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
+          <select name="role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
@@ -6905,6 +6940,66 @@ async function submitEditSecureAccount(e){
   state._editSecureAccountName = null;
   closeModal();
   showToast('Access level updated');
+}
+// Settings → User roles: Admin-defined access levels (name, description, active/inactive, and
+// exactly which pages each one can open) — replaces the old fixed role list. These names also
+// drive the "Access level" choices in User account setup above (secureAccountRoleNames()).
+function renderUserRolesPanel(){
+  const f = state._roleEditForm;
+  return `
+  <div class="panel" id="settings-user-roles">
+    <div class="panel-head"><h3>User roles</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:14px;">Define who gets to see what. Each role picks exactly which pages it can open — set one to Inactive to lock it out without deleting it. Admin and Sub Admin are built in and can't be renamed or removed, since the app checks those names directly in a few places.</div>
+      <table class="data-table" style="margin-bottom:14px;">
+        <thead><tr><th>Role</th><th>Description</th><th>Status</th><th>Pages</th><th></th></tr></thead>
+        <tbody>
+          ${state.userRoles.map(r=>`
+          <tr>
+            <td style="font-weight:600;">${esc(r.name)}${r.locked?' <span class="hint">(built-in)</span>':''}</td>
+            <td class="hint">${esc(r.description||'—')}</td>
+            <td>${r.status==='Active' ? '<span class="pill pill-active">Active</span>' : '<span class="hint">Inactive</span>'}</td>
+            <td>${(r.pages||[]).length}</td>
+            <td class="row-actions">
+              <button type="button" class="btn btn-sm" data-edit-role="${r.id}" title="Edit">✏️</button>
+              ${r.locked ? '' : `<button type="button" class="btn btn-sm btn-danger" data-delete-role="${r.id}" title="Delete">🗑️</button>`}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      ${f ? renderRoleEditForm(f) : `<button type="button" class="btn btn-sm btn-primary" id="btn-new-role">+ New role</button>`}
+    </div>
+  </div>`;
+}
+function renderRoleEditForm(f){
+  return `
+  <div style="padding-top:14px;border-top:1px solid var(--border);">
+    <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:10px;">${f.isNew ? 'New role' : 'Edit role'}</div>
+    <div class="field-row">
+      <div class="field"><label>Role name</label><input id="role-form-name" value="${escAttr(f.name)}" ${f.locked?'disabled':''}></div>
+      <div class="field"><label>Status</label>
+        <select id="role-form-status">
+          <option value="Active" ${f.status==='Active'?'selected':''}>Active</option>
+          <option value="Inactive" ${f.status==='Inactive'?'selected':''}>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Description</label><input id="role-form-description" value="${escAttr(f.description)}" placeholder="What this role is for"></div>
+    <div class="field">
+      <label>Access — departments &amp; pages</label>
+      <div class="hint" style="margin-bottom:8px;">Choose exactly which pages this role can open.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${ASSIGNABLE_ROLE_PAGES.map(id=>`
+        <label style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-weight:500;font-size:13px;">
+          <input type="checkbox" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}> ${esc(PAGE_META[id].title)}
+        </label>`).join('')}
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;gap:8px;">
+      <button type="button" class="btn btn-primary" id="btn-save-role">${f.isNew ? 'Insert new role' : 'Save changes'}</button>
+      <button type="button" class="btn" id="btn-cancel-role-edit">Cancel</button>
+    </div>
+  </div>`;
 }
 function renderLoginActivityPanel(){
   // Sorted at render time, not relied on from storage — the sync/merge layer can reorder
@@ -11640,6 +11735,57 @@ function attachShellHandlers(){
     openModal('editsecureaccount');
   }));
   if(byIdEl('form-edit-secure-account')) byIdEl('form-edit-secure-account').addEventListener('submit', submitEditSecureAccount);
+
+  // User roles
+  if(byIdEl('btn-new-role')) byIdEl('btn-new-role').onclick = ()=>{
+    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], locked:false, isNew:true};
+    render();
+  };
+  document.querySelectorAll('[data-edit-role]').forEach(b=>b.addEventListener('click', ()=>{
+    const r = state.userRoles.find(x=>x.id===b.dataset.editRole); if(!r) return;
+    state._roleEditForm = {...r, pages:[...(r.pages||[])], isNew:false};
+    render();
+  }));
+  document.querySelectorAll('[data-delete-role]').forEach(b=>b.addEventListener('click', ()=>{
+    const r = state.userRoles.find(x=>x.id===b.dataset.deleteRole); if(!r || r.locked) return;
+    openConfirmModal({
+      title: 'Delete role', danger: true, confirmLabel: 'Delete',
+      message: `Delete "${r.name}"? Any account still set to this access level keeps working, but you won't be able to pick it again until you re-add it.`,
+      onConfirm: async ()=>{
+        state.userRoles = state.userRoles.filter(x=>x.id!==r.id);
+        await save('userRoles');
+        syncAllRoleDataAccess();
+        showToast('Role deleted');
+      },
+    });
+  }));
+  document.querySelectorAll('[data-role-page]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!state._roleEditForm) return;
+    const id = cb.dataset.rolePage;
+    if(cb.checked){ if(!state._roleEditForm.pages.includes(id)) state._roleEditForm.pages.push(id); }
+    else{ state._roleEditForm.pages = state._roleEditForm.pages.filter(p=>p!==id); }
+  }));
+  if(byIdEl('role-form-name')) byIdEl('role-form-name').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.name = e.target.value; });
+  if(byIdEl('role-form-description')) byIdEl('role-form-description').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.description = e.target.value; });
+  if(byIdEl('role-form-status')) byIdEl('role-form-status').addEventListener('change', e=>{ if(state._roleEditForm) state._roleEditForm.status = e.target.value; });
+  if(byIdEl('btn-cancel-role-edit')) byIdEl('btn-cancel-role-edit').onclick = ()=>{ state._roleEditForm = null; render(); };
+  if(byIdEl('btn-save-role')) byIdEl('btn-save-role').onclick = async ()=>{
+    const f = state._roleEditForm; if(!f) return;
+    const name = (f.name||'').trim();
+    if(!name){ showToast('Enter a role name'); return; }
+    const dup = state.userRoles.some(r=>r.name.toLowerCase()===name.toLowerCase() && r.id!==f.id);
+    if(dup){ showToast('A role with that name already exists'); return; }
+    if(f.isNew){
+      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], locked:false}];
+    } else {
+      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages]} : r);
+    }
+    await save('userRoles');
+    syncAllRoleDataAccess();
+    state._roleEditForm = null;
+    showToast(f.isNew ? 'Role added' : 'Role updated');
+    render();
+  };
 
   if(byIdEl('form-sms-settings')) byIdEl('form-sms-settings').addEventListener('submit', async (e)=>{
     e.preventDefault();

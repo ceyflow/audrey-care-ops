@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010154501">
+<meta name="app-build" content="20261010163032">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -910,17 +910,41 @@ const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createC
 // unexpected sign-in: it logs every real login's device/IP/location after the fact, which can't
 // be evaded the way client-side detection could never quite achieve in the first place.
 // Supabase Auth requires an email-shaped identifier even for an internal tool with no real
-// inboxes — this derives one deterministically from {role, name} so the same person/account
-// always maps to the same login. Staff never see this; they only ever type their name.
-function authEmailFor(role, name){
+// inboxes — this derives one deterministically from the person's name alone, so the same account
+// always maps to the same login no matter how their access level changes later. Staff never see
+// this; they only ever type their name.
+function authEmailFor(name){
+  const slug = (name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
+  return slug + '@audreyops.internal';
+}
+// The very first version of this scheme baked the role at signup into the email (role+name), so
+// changing someone's access level in User account setup afterward silently locked them out — the
+// stored password still worked, but the email the app now derived for them no longer matched any
+// real account. Kept only so supabaseSignIn below can still find an account created that way.
+function legacyAuthEmailFor(role, name){
   const slug = (role+'-'+name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
   return slug + '@audreyops.internal';
 }
 async function supabaseSignIn(role, name, password){
   if(!supabaseClient) return {ok:false, error:'Backend not configured'};
-  const {data, error} = await supabaseClient.auth.signInWithPassword({email: authEmailFor(role, name), password});
-  if(error) return {ok:false, error: error.message};
-  return {ok:true, userId: data.user.id};
+  // Try the stable, role-independent email first — this is what every account ends up on.
+  const stableEmail = authEmailFor(name);
+  const primary = await supabaseClient.auth.signInWithPassword({email: stableEmail, password});
+  if(!primary.error) return {ok:true, userId: primary.data.user.id};
+  // Not found (or wrong password) on the stable email — fall back through every role this
+  // account could have been originally created under on the old scheme, current role first
+  // (the common case) then every other known role. A match here means this is a pre-upgrade
+  // account whose role has since changed; migrate it to the stable email right away so every
+  // later login goes straight through the fast path above and this never has to happen again.
+  const candidateRoles = [...new Set([role, ...LEGACY_SECURE_ACCOUNT_ROLES, ...(state.userRoles||[]).map(r=>r.name)])];
+  for(const candidateRole of candidateRoles){
+    const { data, error } = await supabaseClient.auth.signInWithPassword({email: legacyAuthEmailFor(candidateRole, name), password});
+    if(!error){
+      supabaseClient.auth.updateUser({email: stableEmail}).catch(e=>console.error('stable-email migration failed', e));
+      return {ok:true, userId: data.user.id};
+    }
+  }
+  return {ok:false, error: primary.error.message};
 }
 async function supabaseFetchProfile(userId){
   if(!supabaseClient) return null;
@@ -932,7 +956,7 @@ async function supabaseFetchProfile(userId){
 // screen. Runs on the isolated client so it never disturbs whoever is already signed in.
 async function supabaseSignUpForMigration(role, name, password){
   if(!supabaseAuthMigrationClient) return {ok:false, error:'Backend not configured'};
-  const {data, error} = await supabaseAuthMigrationClient.auth.signUp({email: authEmailFor(role, name), password});
+  const {data, error} = await supabaseAuthMigrationClient.auth.signUp({email: authEmailFor(name), password});
   if(error) return {ok:false, error: error.message};
   if(!data.user || !data.session) return {ok:false, error:'No session returned — check that "Confirm email" is turned off in Supabase → Authentication → Providers → Email.'};
   const {error: profileError} = await supabaseAuthMigrationClient.from('profiles').insert({id: data.user.id, role, staff_name: name});
@@ -3137,8 +3161,12 @@ async function confirmLoginV2(){
     return;
   }
   if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
+  // The role on file in User account setup (secureAccounts, looked up above as `role`) is always
+  // current — it's what Admin actually edits. profiles.role is only ever set once, at signup, and
+  // never updated after, so it goes stale the moment someone's access level changes; it's only
+  // consulted here for the display name, never for which role they sign in as.
   const profile = await supabaseFetchProfile(res.userId);
-  const sessionRole = (profile && profile.role) || role;
+  const sessionRole = role;
   const sessionName = (profile && profile.staff_name) || typedName;
   state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null};
   state.page = (pagesForRole(sessionRole)||['dashboard'])[0] || 'dashboard';

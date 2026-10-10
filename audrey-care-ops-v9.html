@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010065712">
+<meta name="app-build" content="20261010070515">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1567,8 +1567,6 @@ const ROLE_PAGES = {
   'R&D': ['rnd','chat'],
   Dashboard: ['dashboard','chat'],
 };
-// Pages an Admin can toggle on/off for Blending and Packing from Settings → Page access.
-const ROLE_PAGE_TOGGLES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','ratings'];
 function pagesForRole(role){
   const custom = state.auth.rolePages && state.auth.rolePages[role];
   return (Array.isArray(custom) && custom.length) ? custom : (ROLE_PAGES[role] || []);
@@ -2527,11 +2525,22 @@ async function loadAll(){
   }
   try{ const s = localStorage.getItem('audrey_session'); state.session = s ? JSON.parse(s) : null; }
   catch(e){ state.session = null; }
+  let _rolePagesCleared = false;
   try{
     const a = await kvGet('auth');
     state.auth = a ? {...DEFAULT_AUTH, ...a} : {...DEFAULT_AUTH};
+    // Settings → Page access (the per-role sidebar override screen) is gone — clear out any
+    // custom overrides an Admin had saved there so every role falls back to its hardcoded
+    // ROLE_PAGES list. Re-synced below once the database row itself is saved.
+    if(state.auth.rolePages && Object.keys(state.auth.rolePages).length){
+      state.auth = {...state.auth, rolePages: {}};
+      _rolePagesCleared = true;
+    }
     await kvSet('auth', state.auth);
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
+  if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
+    syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));
+  }
   state.loaded = true;
   applyTheme();
   applyFavicon();
@@ -6626,7 +6635,6 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-template-customization': renderTemplateCustomizationPanel,
   'settings-appearance': renderAppearancePanel,
   'settings-timer-alert-sound': renderTimerAlertSoundPanel,
-  'settings-page-access': renderRolePagesPanel,
   'settings-secure-accounts': renderSecureAccountsPanel,
   'settings-login-activity': renderLoginActivityPanel,
   'settings-sms-settings': renderSmsTemplatesPanel,
@@ -6638,7 +6646,6 @@ function renderSettingsPage(){
     {id:'settings-template-customization', label:'Template customization', icon:'settings'},
     {id:'settings-appearance', label:'Appearance', icon:'star'},
     {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
-    {id:'settings-page-access', label:'Page access', icon:'settings'},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers'},
     {id:'settings-login-activity', label:'Login activity', icon:'search'},
     {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
@@ -6685,45 +6692,6 @@ function renderSmsTemplatesPanel(){
           <button type="submit" class="btn btn-primary">Save SMS settings</button>
         </div>
       </form>
-    </div>
-  </div>`;
-}
-function renderRolePagesPanel(){
-  const roles = ['Dashboard','Blending','Packing','Customer Care'];
-  return `
-  <div class="panel" id="settings-page-access">
-    <div class="panel-head"><h3>Page access</h3></div>
-    <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">Choose which pages show in the sidebar for each role. Admin always has access to everything. Leaving a role with nothing checked resets it back to its default pages.</div>
-      <form id="form-role-pages">
-        <table class="data-table">
-          <thead><tr><th>Page</th>${roles.map(role=>`<th style="text-align:center;">${esc(role)}</th>`).join('')}</tr></thead>
-          <tbody>
-            ${ROLE_PAGE_TOGGLES.map(id=>`
-            <tr>
-              <td>${esc(PAGE_META[id].title)}</td>
-              ${roles.map(role=>`<td style="text-align:center;"><input type="checkbox" name="page_${role.replace(/\s+/g,'_')}_${id}" ${pagesForRole(role).includes(id)?'checked':''}></td>`).join('')}
-            </tr>`).join('')}
-          </tbody>
-        </table>
-        <div class="field" style="max-width:360px;margin-top:16px;">
-          <label>Kanban drag &amp; drop</label>
-          <select name="orderDragEnabled">
-            <option value="off" ${!orderDragEnabled()?'selected':''}>Off — move orders with the Advance button only</option>
-            <option value="on" ${orderDragEnabled()?'selected':''}>On — drag cards between board columns</option>
-          </select>
-          <div class="hint">Off by default, so an order card can't be bumped to the wrong stage by an accidental drag.</div>
-        </div>
-        <div class="modal-actions" style="justify-content:flex-start;margin-top:16px;">
-          <button type="submit" class="btn btn-primary">Save page access</button>
-        </div>
-      </form>
-      ${state.auth.migratedToSupabaseAuth ? `
-      <div class="hint" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
-        Saving above also updates the database's own permission rules automatically, so a role can never reach data its page doesn't use — not just the sidebar. Use this button once to set that up the first time, or any time you want to push the current settings again without changing anything.
-      </div>
-      <button type="button" class="btn btn-sm" id="btn-sync-role-data-access" style="margin-top:8px;">Sync database permissions now</button>
-      ` : ''}
     </div>
   </div>`;
 }
@@ -11591,28 +11559,6 @@ function attachShellHandlers(){
 
   if(byIdEl('form-add-staff')) byIdEl('form-add-staff').addEventListener('submit', addStaffMember);
 
-  if(byIdEl('form-role-pages')) byIdEl('form-role-pages').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const f = e.target;
-    const roles = ['Dashboard','Blending','Packing','Customer Care'];
-    const next = {};
-    for(const role of roles){
-      const key = role.replace(/\s+/g,'_');
-      const checked = ROLE_PAGE_TOGGLES.filter(id => f['page_'+key+'_'+id] && f['page_'+key+'_'+id].checked);
-      // Checking a sub-page (e.g. Order inquiry) without its hub (Customer Care) leaves that hub's
-      // own sidebar link clickable but silently dead — pageAllowed() blocks the hub page itself
-      // even though a child of it is allowed. Auto-include the hub so this can't happen.
-      const hubs = new Set(checked.map(id => SUBPAGE_PARENT_HUB[id]).filter(Boolean));
-      next[role] = [...new Set([...checked, ...hubs])];
-    }
-    state.auth = {...state.auth, rolePages: {...(state.auth.rolePages||{}), ...next}};
-    state.orderSettings = {...state.orderSettings, dragEnabled: f.orderDragEnabled.value==='on'};
-    await saveAuth();
-    await save('orderSettings');
-    syncAllRoleDataAccess();
-    showToast('Page access updated');
-  });
-
   // Secure accounts migration
   document.querySelectorAll('[data-secure-acct-field]').forEach(inp=>{
     const apply = ()=>{ state._secureAcctForm[Number(inp.dataset.secureAcctIdx)][inp.dataset.secureAcctField] = inp.value; };
@@ -11630,10 +11576,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-secure-accounts-create')) byIdEl('btn-secure-accounts-create').onclick = runSecureAccountsMigration;
   if(byIdEl('btn-secure-accounts-activate')) byIdEl('btn-secure-accounts-activate').onclick = activateSecureAccounts;
   if(byIdEl('btn-secure-accounts-rollback')) byIdEl('btn-secure-accounts-rollback').onclick = rollbackSecureAccounts;
-  if(byIdEl('btn-sync-role-data-access')) byIdEl('btn-sync-role-data-access').onclick = async ()=>{
-    const res = await syncAllRoleDataAccess();
-    showToast(res.ok ? 'Database permissions synced' : (res.error||'Sync failed'));
-  };
   if(byIdEl('add-acct-name')) byIdEl('add-acct-name').addEventListener('input', e=>{ state._addAcctForm.name = e.target.value; });
   if(byIdEl('add-acct-role')) byIdEl('add-acct-role').addEventListener('change', e=>{ state._addAcctForm.role = e.target.value; });
   if(byIdEl('add-acct-password')) byIdEl('add-acct-password').addEventListener('input', e=>{ state._addAcctForm.password = e.target.value; });

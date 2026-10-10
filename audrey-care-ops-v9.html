@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010200141">
+<meta name="app-build" content="20261010200458">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4106,6 +4106,62 @@ function parseCsvText(text){
   if(field!=='' || row.length) { row.push(field); rows.push(row); }
   return rows;
 }
+// The write side of parseCsvText — quotes a field only when it actually needs it (contains a
+// comma, quote, or newline), matching how spreadsheet software writes CSV back out.
+function csvEscapeField(v){
+  const s = (v==null) ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function rowsToCsv(headers, rows){
+  const lines = [headers.map(csvEscapeField).join(',')];
+  rows.forEach(r => lines.push(r.map(csvEscapeField).join(',')));
+  return lines.join('\r\n');
+}
+// Triggers a real file save dialog via a throwaway <a download> link — the standard way to save
+// client-generated content without a backend endpoint to serve it from.
+function downloadFile(filename, content, mimeType){
+  const blob = new Blob([content], {type: mimeType});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+// Everything this workspace has saved, in one file — restorable, and complete enough to stand
+// in for the live database if it were ever needed. Admin-only (see settings-backup's adminOnly
+// flag): this is the one export that can see literally all of it at once.
+function downloadFullBackup(){
+  const data = {};
+  SYNCED_KEYS.forEach(k => { data[k] = state[k]; });
+  const payload = {app: 'Audrey Care Ops', exportedAt: new Date().toISOString(), data};
+  const stamp = new Date().toISOString().slice(0,10);
+  downloadFile(`audrey-care-ops-backup-${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
+  logActivity('Downloaded a full data backup');
+  showToast('Backup downloaded');
+}
+function downloadOrdersCsv(){
+  const headers = ['Order number','Customer','Phone','Address','Product / task','Stage','Priority','Delivery method','Tracking number','Start date','Due date','Created at','Archived'];
+  const rows = state.orders.map(o => [
+    o.orderNumber || o.id, o.customer||'', o.phone||'', o.address||'', stripTags(o.product||''),
+    STAGES[o.stage] || '', o.priority||'', o.courierService||'', o.courierNumber||'',
+    o.startDate||'', o.dueDate||'', fmtDateTime(o.createdAt), o.archived ? 'Yes' : 'No',
+  ]);
+  const stamp = new Date().toISOString().slice(0,10);
+  downloadFile(`audrey-care-ops-orders-${stamp}.csv`, rowsToCsv(headers, rows), 'text/csv');
+  logActivity('Exported orders to CSV');
+  showToast('Orders CSV downloaded');
+}
+function downloadCustomersCsv(){
+  const headers = ['Name','Short name','Branch','Phone','Address','City/Area','Email','Type','Status','Salesman','Created at'];
+  const rows = state.customers.map(c => [
+    c.name||'', c.shortName||'', c.branchName||'', c.phone||'', c.address||'', c.cityArea||'',
+    c.email||'', c.type||'', c.status||'', c.salesman||'', fmtDateTime(c.createdAt),
+  ]);
+  const stamp = new Date().toISOString().slice(0,10);
+  downloadFile(`audrey-care-ops-customers-${stamp}.csv`, rowsToCsv(headers, rows), 'text/csv');
+  logActivity('Exported customers to CSV');
+  showToast('Customers CSV downloaded');
+}
 // Some CSV exports (WordPress, some CRMs) HTML-encode punctuation, e.g. "Fisherman&#039;s Cove".
 // Decode it back so the stored value reads normally.
 function decodeHtmlEntities(str){
@@ -7024,6 +7080,7 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-user-roles': renderUserRolesPanel,
   'settings-login-activity': renderLoginActivityPanel,
   'settings-sms-settings': renderSmsTemplatesPanel,
+  'settings-backup': renderBackupPanel,
 };
 // Admin can drag these into whatever order matters to them (state.settingsCardOrder) — cards not
 // yet in that saved order (new ones, or on a first-ever load) just keep their default position.
@@ -7052,6 +7109,7 @@ function renderSettingsPage(){
     {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
     {id:'settings-login-activity', label:'Login activity', icon:'search', adminOnly:false},
     {id:'settings-sms-settings', label:'SMS settings', icon:'send', adminOnly:false},
+    {id:'settings-backup', label:'Backup & export', icon:'list', adminOnly:true},
   ].filter(c => c.adminOnly ? isAdmin() : (isAdmin() || canSettings)));
   const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : jumpCards[0].id;
   const renderOpenPanel = SETTINGS_PANEL_RENDERERS[openId];
@@ -7068,6 +7126,30 @@ function renderSettingsPage(){
 
   ${renderOpenPanel ? renderOpenPanel() : ''}
   `;
+}
+function renderBackupPanel(){
+  return `
+  <div class="panel" id="settings-backup">
+    <div class="panel-head"><h3>Backup &amp; export</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:16px;">Download a copy of your data — for safekeeping, or to hand off to an accountant. Admin only.</div>
+
+      <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;">
+        <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">Full backup</div>
+        <div class="hint" style="margin-bottom:10px;">Everything — orders, customers, suppliers, complaints, costing, recipes, staff, and every other setting — in one file.</div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-download-backup">⬇ Download full backup (.json)</button>
+      </div>
+
+      <div style="border:1px solid var(--border);border-radius:10px;padding:16px;">
+        <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">For an accountant</div>
+        <div class="hint" style="margin-bottom:10px;">Plain spreadsheet files (CSV), readable in Excel or Google Sheets.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" id="btn-export-orders-csv">⬇ Orders (.csv)</button>
+          <button type="button" class="btn btn-sm" id="btn-export-customers-csv">⬇ Customers (.csv)</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 function renderSmsTemplatesPanel(){
   return `
@@ -10739,6 +10821,9 @@ function attachShellHandlers(){
     state._loginMapFocusId = b.dataset.viewLoginPin;
     openModal('loginmap');
   }));
+  if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
+  if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;
+  if(byIdEl('btn-export-customers-csv')) byIdEl('btn-export-customers-csv').onclick = downloadCustomersCsv;
   if(byIdEl('activitylog-search')) byIdEl('activitylog-search').addEventListener('input', e=>{ state.filters.activityLogSearch = e.target.value; render(); });
   if(byIdEl('activitylog-month-filter')) byIdEl('activitylog-month-filter').addEventListener('change', e=>{ state.filters.activityLogMonth = e.target.value; render(); });
   if(byIdEl('activitylog-date-filter')) byIdEl('activitylog-date-filter').addEventListener('change', e=>{ state.filters.activityLogDate = e.target.value; render(); });

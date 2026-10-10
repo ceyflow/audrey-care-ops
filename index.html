@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010200458">
+<meta name="app-build" content="20261010200632">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7456,7 +7456,7 @@ function renderLoginActivityPanel(){
       ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
       <table class="data-table" style="margin:0;">
-        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>Location</th><th>IP</th><th>Device</th></tr></thead>
+        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>Location</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
         <tbody>
           ${entries.slice(0,100).map(e=>{
             const hasPin = typeof e.lat==='number' && typeof e.lng==='number';
@@ -7470,12 +7470,23 @@ function renderLoginActivityPanel(){
             <td>${hasPin ? `<button type="button" class="link-btn" data-view-login-pin="${e.id}" style="background:none;border:none;padding:0;color:var(--accent-dark);text-decoration:underline;cursor:pointer;font:inherit;">📍 ${loc}</button>${precisionBadge}` : loc}</td>
             <td>${e.ip ? esc(e.ip) : '<span class="hint">—</span>'}</td>
             <td>${esc(deviceSummaryFromUserAgent(e.userAgent))}</td>
+            ${isAdmin()?`<td><button type="button" class="btn btn-sm btn-danger" data-delete-login="${e.id}">🗑️</button></td>`:''}
           </tr>`;}).join('')}
         </tbody>
       </table>
       </div>`}
     </div>
   </div>`;
+}
+function deleteLoginEntry(id){
+  openConfirmModal({
+    title: 'Delete this sign-in record?', danger: true, confirmLabel: 'Delete',
+    message: "This removes it from the login activity log. It doesn't log anyone out or change their access.",
+    onConfirm: async ()=>{
+      state.loginHistory = (state.loginHistory||[]).filter(e=>e.id!==id);
+      await save('loginHistory');
+    },
+  });
 }
 function loginActivityMapModal(){
   const entries = [...(state.loginHistory||[])].filter(e=>typeof e.lat==='number' && typeof e.lng==='number');
@@ -10821,6 +10832,7 @@ function attachShellHandlers(){
     state._loginMapFocusId = b.dataset.viewLoginPin;
     openModal('loginmap');
   }));
+  document.querySelectorAll('[data-delete-login]').forEach(b=>b.addEventListener('click', ()=>deleteLoginEntry(b.dataset.deleteLogin)));
   if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;
   if(byIdEl('btn-export-customers-csv')) byIdEl('btn-export-customers-csv').onclick = downloadCustomersCsv;

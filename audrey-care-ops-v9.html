@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261009170000">
+<meta name="app-build" content="20261010065712">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6179,16 +6179,6 @@ function renderStaffPage(){
 }
 
 /* ===================== Settings ===================== */
-const TEMPLATE_OPTIONAL_FIELDS = [
-  {key:'orderNumber', label:'Order Number', hint:'Reference ID for the order'},
-  {key:'customerName', label:'Customer Name', hint:'Part of Customer Details'},
-  {key:'customerAddress', label:'Customer Address', hint:'Part of Customer Details'},
-  {key:'customerContact', label:'Customer Contact', hint:'Mobile number — part of Customer Details'},
-  {key:'costedProduct', label:'Costed Product', hint:'Link to product costing data'},
-  {key:'batchSizeRatio', label:'Batch Size Ratio', hint:'Selects specific batch size from available batches'},
-  {key:'courierNumber', label:'Courier Number', hint:'Tracking number for logistics'},
-  {key:'courierService', label:'Delivery Method', hint:'Vendor selection (e.g. DHL, FedEx)'},
-];
 function renderSidebarOrderPanel(){
   const groups = NAV
     .map(g => ({ ...g, items: orderedNavItems(g.group, g.items) }))
@@ -6511,28 +6501,6 @@ function renderRatingsPage(){
   </div>
   `;
 }
-function renderTaskTemplatesPanel(){
-  return `
-  <div class="panel" id="settings-task-templates">
-    <div class="panel-head"><h3>Task templates</h3>${isAdmin()?`<button class="btn btn-primary btn-sm" id="btn-new-template">+ New template</button>`:''}</div>
-    <div class="panel-body" style="padding:0;">
-      ${state.templates.length===0 ? `<div class="empty-state">No task templates yet. ${isAdmin()?'Create one to control which fields show up on tasks.':''}</div>` : `
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Phase</th><th>Optional fields</th><th>Default</th>${isAdmin()?'<th>Actions</th>':''}</tr></thead>
-        <tbody>
-          ${state.templates.map(t=>`
-          <tr>
-            <td>${esc(t.name)}</td>
-            <td>${t.phase!==''&&t.phase!=null ? esc(STAGES[t.phase]) : '<span class="hint">Any phase</span>'}</td>
-            <td>${(t.optionalFields||[]).length} selected</td>
-            <td>${t.isDefault?'<span class="pill pill-active">Default</span>':''}</td>
-            ${isAdmin()?`<td class="row-actions"><button class="btn btn-sm btn-danger" data-delete-template="${t.id}">Delete</button></td>`:''}
-          </tr>`).join('')}
-        </tbody>
-      </table>`}
-    </div>
-  </div>`;
-}
 function renderTemplateCustomizationPanel(){
   return `
   <div class="panel" id="settings-template-customization">
@@ -6653,13 +6621,11 @@ function renderTimerAlertSoundPanel(){
 // scrolling past everything else needed. state._settingsOpenPanel remembers which one, defaulting
 // to the first card so the page never opens looking empty.
 const SETTINGS_PANEL_RENDERERS = {
-  'settings-task-templates': renderTaskTemplatesPanel,
   'settings-complaint-access': renderComplaintAccessPanel,
   'settings-sidebar-order': renderSidebarOrderPanel,
   'settings-template-customization': renderTemplateCustomizationPanel,
   'settings-appearance': renderAppearancePanel,
   'settings-timer-alert-sound': renderTimerAlertSoundPanel,
-  'settings-team-logins': renderRoleLoginsPanel,
   'settings-page-access': renderRolePagesPanel,
   'settings-secure-accounts': renderSecureAccountsPanel,
   'settings-login-activity': renderLoginActivityPanel,
@@ -6667,18 +6633,16 @@ const SETTINGS_PANEL_RENDERERS = {
 };
 function renderSettingsPage(){
   const jumpCards = [
-    {id:'settings-task-templates', label:'Task templates', icon:'list'},
     {id:'settings-complaint-access', label:'Complaint access', icon:'complaints'},
     {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard'},
     {id:'settings-template-customization', label:'Template customization', icon:'settings'},
     {id:'settings-appearance', label:'Appearance', icon:'star'},
     {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
-    {id:'settings-team-logins', label:'Team logins', icon:'staff'},
     {id:'settings-page-access', label:'Page access', icon:'settings'},
-    {id:'settings-secure-accounts', label:'Secure accounts', icon:'customers'},
+    {id:'settings-secure-accounts', label:'User account setup', icon:'customers'},
     {id:'settings-login-activity', label:'Login activity', icon:'search'},
     {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
-  ].filter(c => c.id==='settings-task-templates' || isAdmin());
+  ].filter(c => isAdmin());
   const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : jumpCards[0].id;
   const renderOpenPanel = SETTINGS_PANEL_RENDERERS[openId];
   return `
@@ -6719,37 +6683,6 @@ function renderSmsTemplatesPanel(){
         </div>`).join('')}
         <div class="modal-actions" style="justify-content:flex-start;">
           <button type="submit" class="btn btn-primary">Save SMS settings</button>
-        </div>
-      </form>
-    </div>
-  </div>`;
-}
-function renderRoleLoginsPanel(){
-  const roles = ['Admin','Customer Care','Sub Admin'];
-  return `
-  <div class="panel" id="settings-team-logins">
-    <div class="panel-head"><h3>Team logins</h3></div>
-    <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">Names for Admin, Customer Care and Sub Admin sign-in. Each person sets and changes their own password from "Change password" next to Log out — Admin can't view or change it, only remove the login entirely so they can be re-added with a fresh one.</div>
-      <form id="form-role-logins">
-        ${roles.map(role => `
-        <div class="hint" style="font-weight:600;color:var(--ink);margin:14px 0 6px;">${esc(role)}</div>
-        ${(state.auth.roleLogins[role]||[]).length===0 ? `<div class="empty-state" style="padding:10px 0;">No named logins — ${esc(role)} currently signs in with the shared fallback password above.</div>` : `
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Password</th><th>Actions</th></tr></thead>
-          <tbody>
-            ${(state.auth.roleLogins[role]||[]).map((l,i)=>`
-            <tr>
-              <td><input name="loginName_${role.replace(/\s+/g,'_')}_${i}" value="${escAttr(l.name)}" placeholder="Name"></td>
-              <td><span class="hint">Set by ${esc(l.name)} — hidden from Admin</span></td>
-              <td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-remove-login="${escAttr(role+'|'+i)}">Remove</button></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`}
-        <button type="button" class="btn btn-sm" data-add-login="${escAttr(role)}" style="margin-top:8px;">+ Add ${esc(role)} login</button>
-        `).join('')}
-        <div class="modal-actions" style="justify-content:flex-start;margin-top:16px;">
-          <button type="submit" class="btn btn-primary">Save logins</button>
         </div>
       </form>
     </div>
@@ -6820,6 +6753,15 @@ function roleForLoginName(typedName){
   const match = roster.find(r=>r.name.toLowerCase()===lower);
   return match ? match.role : null;
 }
+// Most recent loginHistory entry for a name, so the account table can show a real "Last visit"
+// instead of inventing one — there's no separate per-account timestamp stored anywhere else.
+function lastVisitForLoginName(name){
+  const lower = (name||'').trim().toLowerCase();
+  if(!lower) return null;
+  const entries = (state.loginHistory||[]).filter(e=>(e.name||'').trim().toLowerCase()===lower);
+  if(!entries.length) return null;
+  return entries.reduce((latest,e)=> (!latest || new Date(e.at)>new Date(latest)) ? e.at : latest, null);
+}
 function renderSecureAccountsPanel(){
   if(!state._secureAcctForm) state._secureAcctForm = buildMigrationRoster().map(r=>({...r, password:'', confirm:''}));
   const form = state._secureAcctForm;
@@ -6829,14 +6771,25 @@ function renderSecureAccountsPanel(){
   const allOk = results && results.length>0 && results.every(r=>r.ok);
   return `
   <div class="panel" id="settings-secure-accounts">
-    <div class="panel-head"><h3>Secure accounts</h3>${migrated?`<span class="pill pill-active">Active</span>`:''}</div>
+    <div class="panel-head"><h3>User account setup</h3>${migrated?`<span class="pill pill-active">Active</span>`:''}</div>
     <div class="panel-body">
       ${migrated ? `
       <div class="hint" style="margin-bottom:14px;">Real database-backed logins are active. Costing and R&amp;D data now require a genuine signed-in Admin account — not just the app's own password screen.</div>
-      <table class="data-table" style="margin-bottom:14px;">
-        <thead><tr><th>Name</th><th>Access</th><th></th></tr></thead>
+      <table class="data-table secure-accounts-table" style="margin-bottom:14px;">
+        <thead><tr><th>User login</th><th>Access level</th><th>Last visit</th><th></th></tr></thead>
         <tbody>
-          ${(state.auth.secureAccounts||[]).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.role)}</td><td><button type="button" class="btn btn-sm btn-danger" data-remove-secure-account="${escAttr(r.name)}">Remove</button></td></tr>`).join('')}
+          ${(state.auth.secureAccounts||[]).map(r=>{
+            const last = lastVisitForLoginName(r.name);
+            return `<tr>
+              <td style="font-weight:600;">${esc(r.name)}</td>
+              <td>${esc(r.role)}</td>
+              <td>${last ? fmtDateTime(last) : '<span class="hint">Never signed in</span>'}</td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-sm" data-edit-secure-account="${escAttr(r.name)}" title="Change access level">✏️</button>
+                <button type="button" class="btn btn-sm btn-danger" data-remove-secure-account="${escAttr(r.name)}" title="Remove">🗑️</button>
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
       ${renderAddSecureAccountForm()}
@@ -6889,7 +6842,7 @@ function renderAddSecureAccountForm(){
     <div class="field"><label>Password</label><input type="password" id="add-acct-password" value="${escAttr(f.password)}" autocomplete="new-password"></div>
     <div class="field"><label>Confirm</label><input type="password" id="add-acct-confirm" value="${escAttr(f.confirm)}" autocomplete="new-password"></div>
   </div>
-  <button type="button" class="btn btn-sm btn-primary" id="btn-add-secure-account">+ Add person</button>
+  <button type="button" class="btn btn-sm btn-primary" id="btn-add-secure-account">+ Add new account</button>
   `;
 }
 async function runAddSecureAccount(){
@@ -6921,6 +6874,38 @@ function removeSecureAccount(name){
       showToast(name+' removed');
     },
   });
+}
+function editSecureAccountModal(){
+  const name = state._editSecureAccountName;
+  const current = (state.auth.secureAccounts||[]).find(r=>r.name===name);
+  if(!current) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>Change access level</h2>
+      <div class="sub">${esc(name)}</div>
+      <form id="form-edit-secure-account">
+        <div class="field">
+          <label>Access level</label>
+          <select name="role">${SECURE_ACCOUNT_ROLES.map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+async function submitEditSecureAccount(e){
+  e.preventDefault();
+  const name = state._editSecureAccountName;
+  const role = e.target.role.value;
+  state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role}:r)};
+  await saveAuth();
+  state._editSecureAccountName = null;
+  closeModal();
+  showToast('Access level updated');
 }
 function renderLoginActivityPanel(){
   // Sorted at render time, not relied on from storage — the sync/merge layer can reorder
@@ -6994,86 +6979,6 @@ function rollbackSecureAccounts(){
     },
   });
 }
-async function submitTemplate(e){
-  e.preventDefault();
-  const f = e.target;
-  const optionalFields = TEMPLATE_OPTIONAL_FIELDS.filter(fld=>f['opt_'+fld.key] && f['opt_'+fld.key].checked).map(fld=>fld.key);
-  const isDefault = f.isDefault.checked;
-  if(isDefault) state.templates.forEach(t=>t.isDefault=false);
-  const data = {
-    name: f.templateName.value.trim(), description: f.description.value.trim(),
-    optionalFields, phase: f.phase.value===''?null:Number(f.phase.value), isDefault
-  };
-  if(!data.name) return;
-  state.templates.unshift({id:uid('TPL'), ...data});
-  await save('templates'); closeModal();
-  showToast('Template created');
-}
-function deleteTemplate(id){
-  openConfirmModal({
-    title: 'Delete template', danger: true, confirmLabel: 'Delete',
-    message: 'Delete this task template?',
-    onConfirm: async ()=>{
-      state.templates = state.templates.filter(t=>t.id!==id);
-      await save('templates');
-    },
-  });
-}
-function templateFormModal(){
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:560px;">
-      <h2>Create Task Template</h2>
-      <form id="form-template">
-        <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:6px;">Template Information</div>
-        <div class="field-row">
-          <div class="field"><label>Template Name</label><input name="templateName" required placeholder="Enter template name"></div>
-          <div class="field"><label>Description</label><input name="description" placeholder="Template description (optional)"></div>
-        </div>
-
-        <div class="field" style="background:var(--accent-soft);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
-          <label style="color:var(--accent-dark);">Mandatory Core Fields (Fixed)</label>
-          <div class="hint" style="margin-bottom:8px;">These fields are always included in the task form and cannot be disabled.</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${['Task Name (Text Input)','Task Description (Text Area)','Assign To (User Selector)','Priority (Dropdown)','Start Date (Date Picker)','End Date (Date Picker)','Status (Dropdown)']
-              .map(t=>`<span class="pill" style="background:#fff;border:1px solid var(--border);color:var(--accent-dark);">${t}</span>`).join('')}
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Configurable Optional Fields (Selectable)</label>
-          <div class="hint" style="margin-bottom:8px;">Select which optional fields to include in this template.</div>
-          <div class="field-row">
-            ${TEMPLATE_OPTIONAL_FIELDS.map(fld=>`
-              <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin-bottom:10px;">
-                <input type="checkbox" name="opt_${fld.key}" style="margin-top:3px;">
-                <span><span style="display:block;font-weight:600;color:var(--ink);">${fld.label}</span><span class="hint">${fld.hint}</span></span>
-              </label>`).join('')}
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Assign to Phase</label>
-          <div class="hint" style="margin-bottom:6px;">Link this template to a specific phase. If not assigned, the default template will be used.</div>
-          <select name="phase">
-            <option value="">Select a phase (optional)</option>
-            ${STAGES.map((s,i)=>`<option value="${i}">${s}</option>`).join('')}
-          </select>
-        </div>
-
-        <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:14px 0;">
-          <input type="checkbox" name="isDefault"> Set as Default Template
-        </label>
-
-        <div class="modal-actions">
-          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create</button>
-        </div>
-      </form>
-    </div>
-  </div>`;
-}
-
 /* ===================== Recipes & batch timer ===================== */
 function formatCountdown(totalSeconds){
   const s = Math.max(0, Math.round(totalSeconds));
@@ -8820,7 +8725,6 @@ function renderModal(){
   if(type==='complaintcustomerview') return complaintCustomerViewModal(id);
   if(type==='complaintphotos') return complaintPhotosModal(id);
   if(type==='staff') return staffFormModal(id==='new'?null:id);
-  if(type==='template') return templateFormModal();
   if(type==='recipe') return recipeFormModal();
   if(type==='mixingtemplates') return renderMixingTemplatesModal();
   if(type==='mixingtemplatesteps') return renderTemplateStepsModal();
@@ -8834,6 +8738,7 @@ function renderModal(){
   if(type==='costingsaveas') return costingSaveAsModal();
   if(type==='costingrenameversion') return costingRenameVersionModal(id);
   if(type==='costingeditproduct') return costingEditProductModal(id);
+  if(type==='editsecureaccount') return editSecureAccountModal();
   if(type==='confirmaction') return confirmActionModal();
   if(type==='promptaction') return promptActionModal();
   if(type==='alertinfo') return alertInfoModal();
@@ -11108,11 +11013,6 @@ function attachShellHandlers(){
   }));
   document.querySelectorAll('[data-remove-staff-photo]').forEach(b=>b.addEventListener('click', ()=>removeStaffPhoto(b.dataset.removeStaffPhoto)));
 
-  // Settings / templates
-  if(byIdEl('btn-new-template')) byIdEl('btn-new-template').onclick = ()=>openModal('template:new');
-  if(byIdEl('form-template')) byIdEl('form-template').addEventListener('submit', submitTemplate);
-  document.querySelectorAll('[data-delete-template]').forEach(b=>b.addEventListener('click', ()=>deleteTemplate(b.dataset.deleteTemplate)));
-
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
   if(byIdEl('btn-mixing-templates')) byIdEl('btn-mixing-templates').onclick = openMixingTemplatesModal;
@@ -11691,60 +11591,6 @@ function attachShellHandlers(){
 
   if(byIdEl('form-add-staff')) byIdEl('form-add-staff').addEventListener('submit', addStaffMember);
 
-  if(byIdEl('form-role-logins')) byIdEl('form-role-logins').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const f = e.target;
-    const roles = ['Admin','Customer Care'];
-    const next = {};
-    for(const role of roles){
-      const key = role.replace(/\s+/g,'_');
-      next[role] = (state.auth.roleLogins[role]||[]).map((l,i)=>{
-        const input = f['loginName_'+key+'_'+i];
-        const name = input ? (input.value||'').trim() : l.name;
-        return name ? {...l, name} : null;
-      }).filter(Boolean);
-    }
-    state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, ...next}};
-    await saveAuth();
-    showToast('Logins updated');
-  });
-  document.querySelectorAll('[data-add-login]').forEach(b=>b.addEventListener('click', ()=>{
-    const role = b.dataset.addLogin;
-    openPromptModal({
-      title: 'New '+role+' login', label: 'Name', confirmLabel: 'Next',
-      onSubmit: (nameValue)=>{
-        const name = (nameValue||'').trim();
-        if(!name) return;
-        openPromptModal({
-          title: 'Temporary password', sub: name+' can change it themselves after logging in.', label: 'Password', confirmLabel: 'Add login',
-          onSubmit: async (passwordValue)=>{
-            const password = (passwordValue||'').trim();
-            if(!password) return;
-            const hashed = await sha256Hex(password);
-            state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: [...(state.auth.roleLogins[role]||[]), {name, password: hashed}]}};
-            await saveAuth();
-            showToast(name+' added');
-          },
-        });
-      },
-    });
-  }));
-  document.querySelectorAll('[data-remove-login]').forEach(b=>b.addEventListener('click', ()=>{
-    const [role, idxStr] = b.dataset.removeLogin.split('|');
-    const idx = Number(idxStr);
-    const entries = state.auth.roleLogins[role]||[];
-    const target = entries[idx];
-    openConfirmModal({
-      title: 'Remove login', danger: true, confirmLabel: 'Remove',
-      message: `Remove ${target?target.name:'this'} login?`,
-      onConfirm: async ()=>{
-        state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: entries.filter((_,i)=>i!==idx)}};
-        await saveAuth();
-        showToast('Login removed');
-      },
-    });
-  }));
-
   if(byIdEl('form-role-pages')) byIdEl('form-role-pages').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;
@@ -11794,6 +11640,11 @@ function attachShellHandlers(){
   if(byIdEl('add-acct-confirm')) byIdEl('add-acct-confirm').addEventListener('input', e=>{ state._addAcctForm.confirm = e.target.value; });
   if(byIdEl('btn-add-secure-account')) byIdEl('btn-add-secure-account').onclick = runAddSecureAccount;
   document.querySelectorAll('[data-remove-secure-account]').forEach(b=>b.addEventListener('click', ()=>removeSecureAccount(b.dataset.removeSecureAccount)));
+  document.querySelectorAll('[data-edit-secure-account]').forEach(b=>b.addEventListener('click', ()=>{
+    state._editSecureAccountName = b.dataset.editSecureAccount;
+    openModal('editsecureaccount');
+  }));
+  if(byIdEl('form-edit-secure-account')) byIdEl('form-edit-secure-account').addEventListener('submit', submitEditSecureAccount);
 
   if(byIdEl('form-sms-settings')) byIdEl('form-sms-settings').addEventListener('submit', async (e)=>{
     e.preventDefault();

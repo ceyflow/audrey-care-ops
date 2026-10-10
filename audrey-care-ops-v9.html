@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010191003">
+<meta name="app-build" content="20261010191709">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3087,7 +3087,7 @@ function deviceSummaryFromUserAgent(ua){
 // Asks the browser for the device's real GPS coordinates (the same permission prompt a maps
 // site would show). Resolves to null — never rejects — if the person denies it, the device has
 // no location hardware, or it just takes too long, so a caller never needs its own try/catch.
-function getPreciseLocation(timeoutMs=10000){
+function getPreciseLocation(timeoutMs=20000){
   return new Promise(resolve=>{
     if(!navigator.geolocation){ resolve(null); return; }
     let settled = false;

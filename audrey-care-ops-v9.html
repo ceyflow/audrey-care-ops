@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010150408">
+<meta name="app-build" content="20261010151011">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6868,11 +6868,9 @@ function renderAddSecureAccountForm(){
   const f = state._addAcctForm;
   return `
   <div class="hint" style="font-weight:600;color:var(--ink);margin:4px 0 10px;">Add new account</div>
-  <div class="field-row">
+  <div style="max-width:420px;">
     <div class="field"><label>User login</label><input id="add-acct-name" value="${escAttr(f.name)}" placeholder="What they type to sign in"></div>
     <div class="field"><label>Password</label><input type="password" id="add-acct-password" value="${escAttr(f.password)}" autocomplete="new-password"></div>
-  </div>
-  <div class="field-row">
     <div class="field"><label>Full name</label><input id="add-acct-fullname" value="${escAttr(f.fullName)}"></div>
     <div class="field"><label>Access level</label>
       <select id="add-acct-role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${f.role===role?'selected':''}>${role}</option>`).join('')}</select>
@@ -6922,11 +6920,10 @@ function editSecureAccountModal(){
       <h2>Edit account</h2>
       <div class="sub">User login: ${esc(name)} (can't be changed — it's what they sign in with)</div>
       <form id="form-edit-secure-account">
-        <div class="field-row">
-          <div class="field"><label>Full name</label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
-          <div class="field"><label>Access level</label>
-            <select name="role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
-          </div>
+        <div class="field"><label>Password</label><input type="password" value="••••••••" disabled></div>
+        <div class="field"><label>Full name</label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
+        <div class="field"><label>Access level</label>
+          <select name="role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>
         <div class="hint" style="margin:4px 0 10px;">Password isn't shown or changeable here — each person changes their own from "Change password" next to Log out.</div>
         <div class="modal-actions">

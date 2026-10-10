@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010163032">
+<meta name="app-build" content="20261010170940">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1595,7 +1595,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','ratings','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -7077,7 +7077,7 @@ function editSecureAccountModal(){
         <div class="field"><label>Password</label><input type="password" value="••••••••" disabled></div>
         <div class="field"><label>Full name</label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
         <div class="field"><label>Access level</label>
-          <select name="role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
+          <select name="role">${[...new Set([current.role, ...secureAccountRoleNames()])].map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>
         <div class="hint" style="margin:4px 0 10px;">Password isn't shown or changeable here — each person changes their own from "Change password" next to Log out.</div>
         <div class="modal-actions">
@@ -10608,6 +10608,7 @@ function attachShellHandlers(){
     render();
   };
   if(byIdEl('btn-delete-selected-orders')) byIdEl('btn-delete-selected-orders').onclick = ()=>{
+    if(!state.session || !roleCan(state.session.role, 'orders_bulk_delete_archive')) return;
     const n = state.selectedOrders.size;
     openConfirmModal({
       title: 'Delete orders', danger: true, confirmLabel: 'Delete',
@@ -11096,6 +11097,7 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-delete-selected-customers')) byIdEl('btn-delete-selected-customers').onclick = ()=>{
+    if(!state.session || !roleCan(state.session.role, 'customers_manage')) return;
     const n = state.selectedCustomers.size;
     openConfirmModal({
       title: 'Delete customers', danger: true, confirmLabel: 'Delete',
@@ -11128,6 +11130,7 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-delete-selected-ratings')) byIdEl('btn-delete-selected-ratings').onclick = ()=>{
+    if(!state.session || !roleCan(state.session.role, 'ratings_bulk_delete')) return;
     const n = state.selectedRatings.size;
     openConfirmModal({
       title: 'Delete ratings', danger: true, confirmLabel: 'Delete',
@@ -11181,6 +11184,7 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-delete-selected-suppliers')) byIdEl('btn-delete-selected-suppliers').onclick = ()=>{
+    if(!state.session || !roleCan(state.session.role, 'suppliers_manage')) return;
     const n = state.selectedSuppliers.size;
     openConfirmModal({
       title: 'Delete suppliers', danger: true, confirmLabel: 'Delete',
@@ -11233,6 +11237,8 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-delete-selected-complaints')) byIdEl('btn-delete-selected-complaints').onclick = ()=>{
+    const permId = state.complaintsView==='archive' ? 'complaints_delete_archived' : 'complaints_bulk_delete';
+    if(!state.session || !roleCan(state.session.role, permId)) return;
     const n = state.selectedComplaints.size;
     openConfirmModal({
       title: 'Delete complaints', danger: true, confirmLabel: 'Delete',

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010193823">
+<meta name="app-build" content="20261010195014">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1484,6 +1484,10 @@ function applyTheme(){
   // mixing/qc) stay fixed on purpose — they're a status-at-a-glance code, not decoration.
   root.setProperty('--s-delivered', p.accentDark);
   root.setProperty('--s-delivered-soft', p.accentSoft);
+  // Mirrored to localStorage so the sign-in screen — which can never read the real saved theme
+  // from Supabase, since RLS requires being logged in — still shows the last theme this browser
+  // actually saw, instead of always falling back to green. See _cachedThemeOrDefault() below.
+  try{ localStorage.setItem('audreyThemeCache', JSON.stringify({paletteId: p.id})); }catch(e){}
 }
 function currentLogo(){
   const addons = (state.branding && state.branding.addons) || [];
@@ -2336,7 +2340,20 @@ function hideDataLoadWarning(){
   const bar = document.getElementById('data-load-warning');
   if(bar) bar.remove();
 }
-const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? {paletteId:'green'} : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
+// The chosen theme is cached in localStorage (per-browser) alongside the real Supabase copy —
+// RLS requires authentication to read app_data at all, so a logged-out page load (the sign-in
+// screen itself) can never fetch the real saved theme; without this cache it would always fall
+// back to the hardcoded green default there, then "snap" to the real color only after login.
+// A plain default is still the final fallback: a browser that's never loaded this app before,
+// or has its storage cleared, correctly shows green until the first authenticated fetch.
+function _cachedThemeOrDefault(){
+  try{
+    const cached = JSON.parse(localStorage.getItem('audreyThemeCache')||'null');
+    if(cached && cached.paletteId) return cached;
+  }catch(e){}
+  return {paletteId:'green'};
+}
+const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
 const _fetchSyncedKeys = () => Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
 // Fetches every SYNCED_KEY and applies it to state — used both by loadAll() at page bootstrap
 // (which may run before anyone is signed in at all) and, critically, right after a successful

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010195014">
+<meta name="app-build" content="20261010200141">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2318,7 +2318,12 @@ let state = {
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
   complaintMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='complaint',
-  publicComplaintId: null, publicComplaintError: ''
+  publicComplaintId: null, publicComplaintError: '',
+  // Standalone geolocation diagnostic page (#geotest) — a bare page with nothing else running,
+  // so a failure there can only mean the browser/device itself, never anything about the login
+  // flow's own timing or async chain.
+  geoTestMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='geotest',
+  _geoTestResult: null,
 };
 const _trackRequestedId = ((location.hash||'').replace('#','').split('/')[1]) ? decodeURIComponent((location.hash||'').replace('#','').split('/')[1]) : null;
 const _complaintRequestedId = _trackRequestedId;
@@ -3128,6 +3133,56 @@ async function reverseGeocode(lat, lng){
     const place = data.locality || data.city || (data.localityInfo && data.localityInfo.administrative && data.localityInfo.administrative[0] && data.localityInfo.administrative[0].name) || '';
     return {city: place, region: data.principalSubdivision || '', country: data.countryName || ''};
   }catch(e){ return null; }
+}
+// A bare, standalone diagnostic page (#geotest) — intentionally outside the normal login flow,
+// so a tap here goes straight into navigator.geolocation with nothing else in between. If this
+// fails the same way the real login does, the cause is the browser/device, not our code's
+// timing. Shows the raw outcome (coordinates, or the exact error code+message) on screen, plus
+// the Permissions API's read of the CURRENT state where the browser supports asking for it
+// without triggering a fresh prompt.
+function renderGeoTestPage(){
+  const r = state._geoTestResult;
+  return `
+  <div style="max-width:520px;margin:40px auto;padding:0 20px;font-family:system-ui,-apple-system,sans-serif;">
+    <h2 style="margin-bottom:4px;">Location diagnostic</h2>
+    <div style="color:#666;margin-bottom:20px;font-size:14px;">Standalone test — nothing else on this page. Tap the button, then screenshot or copy what it says below.</div>
+    <div style="margin-bottom:14px;font-size:14px;"><b>navigator.geolocation exists:</b> ${('geolocation' in navigator) ? '✅ yes' : '❌ no'}</div>
+    <div style="margin-bottom:14px;font-size:14px;"><b>Secure context (HTTPS):</b> ${window.isSecureContext ? '✅ yes' : '❌ no — geolocation requires HTTPS'}</div>
+    <div id="geotest-permstate" style="margin-bottom:14px;font-size:14px;"><b>Current permission state:</b> checking…</div>
+    <button type="button" id="btn-geotest-run" style="padding:14px 24px;font-size:16px;font-weight:600;background:#3B82C4;color:#fff;border:none;border-radius:10px;cursor:pointer;width:100%;">📍 Test my location now</button>
+    <div style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:10px;font-family:monospace;font-size:13px;white-space:pre-wrap;word-break:break-word;min-height:60px;">${r ? esc(r) : 'Result will show here after you tap the button above.'}</div>
+  </div>`;
+}
+function attachGeoTestHandlers(){
+  if(navigator.permissions && navigator.permissions.query){
+    navigator.permissions.query({name:'geolocation'}).then(status=>{
+      const el = document.getElementById('geotest-permstate');
+      if(el) el.innerHTML = `<b>Current permission state:</b> ${esc(status.state)}`;
+    }).catch(()=>{
+      const el = document.getElementById('geotest-permstate');
+      if(el) el.innerHTML = `<b>Current permission state:</b> not readable on this browser`;
+    });
+  } else {
+    const el = document.getElementById('geotest-permstate');
+    if(el) el.innerHTML = `<b>Current permission state:</b> Permissions API not supported here`;
+  }
+  const btn = document.getElementById('btn-geotest-run');
+  if(btn) btn.addEventListener('click', ()=>{
+    state._geoTestResult = 'Requesting… (watch for a browser popup now)';
+    render();
+    const GEO_ERROR_NAMES = {1:'PERMISSION_DENIED', 2:'POSITION_UNAVAILABLE', 3:'TIMEOUT'};
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        state._geoTestResult = `SUCCESS\nlat: ${pos.coords.latitude}\nlng: ${pos.coords.longitude}\naccuracy: ${pos.coords.accuracy}m`;
+        render();
+      },
+      err=>{
+        state._geoTestResult = `ERROR\ncode: ${err.code} (${GEO_ERROR_NAMES[err.code]||'unknown'})\nmessage: ${err.message}`;
+        render();
+      },
+      {enableHighAccuracy: true, timeout: 20000, maximumAge: 0}
+    );
+  });
 }
 // Fire-and-forget: never blocks login, and a failed lookup (offline, rate-limited, blocked, or
 // location permission denied) still leaves a time+device record, just without the location
@@ -4820,6 +4875,7 @@ function renderInner(){
   if(state.boardMode){ app.innerHTML = renderBoardPage(); attachBoardHandlers(); return; }
   if(state.trackMode){ app.innerHTML = renderTrackPage(); attachTrackHandlers(); return; }
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
+  if(state.geoTestMode){ app.innerHTML = renderGeoTestPage(); attachGeoTestHandlers(); return; }
   if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
   if(!pageAllowed(state.page)){ state.page = (pagesForRole(state.session.role)||['dashboard'])[0] || 'dashboard'; }

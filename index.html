@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010152943">
+<meta name="app-build" content="20261010154501">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1330,7 +1330,7 @@ async function sendComplaintStatusSms(c){
 async function sendOrderReviewSms(orderId, platform){
   const o = byId(state.orders, orderId); if(!o) return;
   const sentField = platform==='google' ? 'reviewSentGoogleAt' : 'reviewSentFbAt';
-  if(!isAdmin() && o[sentField]){ showToast('Already sent — only Admin can send it again.'); return; }
+  if(!(state.session && roleCan(state.session.role, 'orderinquiry_resend_review')) && o[sentField]){ showToast('Already sent — you don\'t have permission to send it again.'); return; }
   if(!SMS_CONFIGURED){ showToast('SMS is not set up yet.'); return; }
   if(!o.phone){ showToast('No contact number on file — SMS not sent'); return; }
   if(platform==='google' && !GOOGLE_REVIEW_CONFIGURED){ showToast("Google review link isn't set up yet — add GOOGLE_REVIEW_LINK in the code."); return; }
@@ -1406,7 +1406,7 @@ function subscribeRealtime(){
           }
         }
         if(k==='complaints' && prevComplaintsById){
-          if(isAdmin() || isSubAdmin()){
+          if(state.session && roleCan(state.session.role, 'complaints_manage')){
             const justOpened = state.complaints.filter(c=>c.status==='Open' && !prevComplaintsById.has(c.id));
             if(justOpened.length) showComplaintNotice(justOpened[justOpened.length-1].customer);
           }
@@ -1571,7 +1571,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','ratings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','ratings','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -1961,7 +1961,7 @@ const BLEND_STAGE_STYLE = {
   dispatched:{c:'var(--s-delivered)', bg:'var(--s-delivered-soft)'}
 };
 const BLEND_NEXT_ACTION_LABEL = {0:'Send to 1st QC (Base)',1:'Approve — start mixing',2:'Send to 2nd QC',3:'Approve — start filling',4:'Send to 3rd QC',5:'Approve — dispatch to stock'};
-function canManageBlendBoard(){ return isAdmin() || (state.session && state.session.role==='Blending'); }
+function canManageBlendBoard(){ return !!state.session && roleCan(state.session.role, 'blending_manage'); }
 function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < BLEND_STAGES.length-1; }
 
 const RND_STAGES = ['R&D Trial List','On Trial & Formulating','Review','Completed'];
@@ -1977,7 +1977,7 @@ const RND_NEXT_ACTION_LABEL = {0:'Transfer to '+RND_STAGES[1], 1:'Transfer to '+
 // and Sample Testing merged into one "On Trial & Formulating" stage. Maps an old 0-4 stage index
 // to its new 0-3 one, for one-time migration of products/history saved under the old scheme.
 const RND_STAGE_MIGRATION_MAP = {0:0, 1:1, 2:1, 3:2, 4:3};
-function canManageRnd(){ return isAdmin() || (state.session && state.session.role==='R&D'); }
+function canManageRnd(){ return !!state.session && roleCan(state.session.role, 'rnd_manage'); }
 function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
 
 /* ===================== GMP checklists ===================== */
@@ -2720,7 +2720,7 @@ async function loadAll(){
     // A refresh while deep inside a costing recipe (product + version open) should land back
     // on that exact recipe sheet, not bounce out to the product grid — same drill-down the
     // sidebar page-level hash already gives every other page, one level deeper.
-    if(state.page==='costing' && isAdmin() && hashParts[1]){
+    if(state.page==='costing' && roleCan(state.session.role, 'costing_edit') && hashParts[1]){
       const product = byId(state.costingProducts, decodeURIComponent(hashParts[1]));
       if(product){
         state._costingOpenProductId = product.id;
@@ -2957,11 +2957,9 @@ function isCostingSuperAdmin(){
   const name = ((state.session && state.session.name) || '').trim().toLowerCase();
   return name==='vihanga' || name==='rumesh';
 }
-function isSubAdmin(){ return !!state.session && state.session.role === 'Sub Admin'; }
-function isPacking(){ return !!state.session && state.session.role === 'Packing'; }
-function canManageComplaints(){ return !!state.session && (isAdmin() || isSubAdmin() || state.session.role === 'Customer Care'); }
+function canManageComplaints(){ return !!state.session && roleCan(state.session.role, 'complaints_manage'); }
 function canAdvance(stageIdx){
-  return (isAdmin() || isPacking()) && stageIdx < STAGES.length-1;
+  return !!state.session && roleCan(state.session.role, 'orders_advance') && stageIdx < STAGES.length-1;
 }
 function byId(arr,id){ return arr.find(x=>x.id===id); }
 function showToast(text, duration){
@@ -3354,7 +3352,7 @@ async function updateOrderNotes(id, notes){
   o.notes = notes; await save('orders');
 }
 async function restoreOrder(id){
-  if(!isAdmin()) return;
+  if(!state.session || !roleCan(state.session.role, 'orders_restore_archived')) return;
   const o = byId(state.orders,id); if(!o || !o.archived) return;
   o.archived = false; o.archivedAt = null;
   await save('orders');
@@ -3418,7 +3416,7 @@ async function moveBlendToStage(id, newStage){
   showToast('Moved to '+BLEND_STAGES[newStage]);
 }
 function deleteBlendBatch(id){
-  if(!isAdmin()) return;
+  if(!state.session || !roleCan(state.session.role, 'blending_delete')) return;
   openConfirmModal({
     title: 'Delete batch', danger: true, confirmLabel: 'Delete',
     message: 'Delete this batch? This cannot be undone.',
@@ -3495,7 +3493,7 @@ async function moveRndToStage(id, newStage){
   showToast('Moved to '+RND_STAGES[newStage]);
 }
 function deleteRndProject(id){
-  if(!isAdmin()) return;
+  if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
   openConfirmModal({
     title: 'Delete product', danger: true, confirmLabel: 'Delete',
     message: 'Delete this product? This cannot be undone.',
@@ -3535,7 +3533,7 @@ async function submitRndChemistForm(e){
   }
 }
 function deleteRndChemist(id){
-  if(!isAdmin()) return;
+  if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
   openConfirmModal({
     title: 'Delete chemist', danger: true, confirmLabel: 'Delete',
     message: 'Delete this chemist? Their past attendance stays on record, but they’ll no longer appear in the active list.',
@@ -3610,7 +3608,7 @@ function fileToDataUrl(file){
   });
 }
 async function brandingChangeAddon(addonId, file){
-  if(!isAdmin() || !file) return;
+  if(!(state.session && roleCan(state.session.role, 'branding_manage')) || !file) return;
   let dataUrl;
   try{ dataUrl = await fileToDataUrl(file); }
   catch(e){ showToast('Could not read that file'); return; }
@@ -3757,7 +3755,7 @@ const BRAND_ADDON_NAMES = {
 };
 async function finishBrandCrop(dataUrl){
   const pc = state.pendingCrop;
-  if(!pc || !isAdmin()) return;
+  if(!pc || !(state.session && roleCan(state.session.role, 'branding_manage'))) return;
   const addons = state.branding.addons || (state.branding.addons = []);
   const existing = addons.find(a=>a.id===pc.addonId);
   const label = BRAND_ADDON_NAMES[pc.addonId] || pc.addonId;
@@ -3769,7 +3767,7 @@ async function finishBrandCrop(dataUrl){
 }
 async function brandingAddAddon(e){
   e.preventDefault();
-  if(!isAdmin()) return;
+  if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
   const f = e.target;
   const name = (f.addonName.value||'').trim();
   const file = f.addonFile.files[0];
@@ -3785,7 +3783,7 @@ async function brandingAddAddon(e){
   showToast('Addon added');
 }
 function brandingDeleteAddon(id){
-  if(!isAdmin() || id==='logo') return;
+  if(!(state.session && roleCan(state.session.role, 'branding_manage')) || id==='logo') return;
   openConfirmModal({
     title: 'Delete addon', danger: true, confirmLabel: 'Delete',
     message: 'Delete this addon?',
@@ -4122,7 +4120,7 @@ async function submitComplaint(e){
   if(editId){
     complaint = existing;
     if(!complaint) return;
-    if(isComplaintLocked(complaint)){ showToast('This complaint can only be edited by Admin now'); closeModal(); return; }
+    if(isComplaintLocked(complaint)){ showToast('This complaint is locked and can no longer be edited'); closeModal(); return; }
     // Assigning someone to a still-Open complaint moves it to the Assigned tab automatically,
     // unless the person saving also explicitly moved status further along in the same save.
     if(!complaint.assignedTo && data.assignedTo && data.status==='Open') data.status = 'Assigned';
@@ -4151,8 +4149,9 @@ async function submitComplaint(e){
 }
 function deleteComplaint(id){
   const c = byId(state.complaints, id);
-  const allowed = c && c.archived ? isAdmin() : (isAdmin() || isSubAdmin());
-  if(!allowed){ showToast(c && c.archived ? 'Only Admin can delete archived complaints' : 'Only Admin can delete complaints'); return; }
+  const role = state.session && state.session.role;
+  const allowed = !!role && roleCan(role, c && c.archived ? 'complaints_delete_archived' : 'complaints_delete_active');
+  if(!allowed){ showToast(c && c.archived ? "You don't have permission to delete archived complaints" : "You don't have permission to delete complaints"); return; }
   openConfirmModal({
     title: 'Delete complaint', danger: true, confirmLabel: 'Delete',
     message: 'Delete this complaint?',
@@ -4168,7 +4167,11 @@ function deleteComplaint(id){
 async function restoreComplaint(id){
   const c = byId(state.complaints, id);
   if(!c || (c.status!=='Resolved' && c.status!=='Closed')) return;
-  const allowed = c.archived ? isAdmin() : (isAdmin() || isSubAdmin());
+  const role = state.session && state.session.role;
+  if(!role) return;
+  // Restoring from the Archive tab needs the same elevated access as deleting an archived
+  // complaint (Admin-only by default); restoring from the regular tabs just needs complaints_restore.
+  const allowed = c.archived ? roleCan(role, 'complaints_delete_archived') : roleCan(role, 'complaints_restore');
   if(!allowed) return;
   c.status = 'In Progress';
   c.closedAt = null; c.archived = false; c.archivedAt = null;
@@ -4178,7 +4181,7 @@ async function restoreComplaint(id){
 async function addComplaintUpdate(id){
   const c = byId(state.complaints, id);
   if(!c) return;
-  if(isComplaintLocked(c)){ showToast('This complaint can only be edited by Admin now'); return; }
+  if(isComplaintLocked(c)){ showToast('This complaint is locked and can no longer be edited'); return; }
   const form = document.getElementById('form-complaint');
   const status = form.elements['customerUpdateStatus'].value.trim() || 'Not Updated';
   const note = form.elements['logUpdate'].value.trim();
@@ -4297,7 +4300,7 @@ async function sendChatMessage(e){
   await save('chat');
 }
 function deleteChatHistory(){
-  if(!isAdmin()) return;
+  if(!(state.session && roleCan(state.session.role, 'chat_delete_history'))) return;
   openConfirmModal({
     title: 'Delete chat history', danger: true, confirmLabel: 'Delete',
     message: 'Delete the entire team chat history? This clears it for everyone and cannot be undone.',
@@ -5432,18 +5435,20 @@ function renderOrdersPage(){
   const active = activeOrders();
   const archived = archivedOrders();
   if(state.ordersView==='archive') return renderOrdersArchivePage(archived);
+  const canManageLists = state.session && roleCan(state.session.role, 'orders_manage_lists');
+  const canCreate = state.session && roleCan(state.session.role, 'orders_create');
   return `
   <div class="toolbar">
     <div class="tabs" style="align-items:center;">
-      ${isAdmin() ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
+      ${canManageLists ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
       ${pageAllowed('stickerstock') ? `<button type="button" class="btn-text" id="btn-sticker-stock-link" style="font-size:12px;color:var(--muted);">📦 Sticker stock</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
-      ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
+      ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
   </div>
-  ${active.length===0 && isAdmin() ? `<div class="hint" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
+  ${active.length===0 && canCreate ? `<div class="hint" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
   ${state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryBoardSection(line, active)).join('')}
   ${renderUnassignedBoardSection(active)}
   `;
@@ -5468,7 +5473,7 @@ function renderDeliveryBoardSection(line, active){
   <div class="board-section">
     <div class="board-section-title" style="display:flex;align-items:center;gap:14px;">
       <span>${esc(line.label)}</span>
-      ${isAdmin() ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">+ New order</button>` : ''}
+      ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">+ New order</button>` : ''}
     </div>
     <div class="board">
       ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, line.key)).join('')}
@@ -5484,17 +5489,19 @@ function renderOrdersArchivePage(archived){
   const rows = archived.slice(0, limit);
   const hiddenCount = archived.length - rows.length;
   const allArchivedSelected = rows.length>0 && rows.every(o=>state.selectedOrders.has(o.id));
+  const canBulkDelete = state.session && roleCan(state.session.role, 'orders_bulk_delete_archive');
+  const canRestore = state.session && roleCan(state.session.role, 'orders_restore_archived');
   return `
   <div class="toolbar">
     <div class="tabs">
       <button class="tab active" data-orders-view="kanban">${icon('orders')} Kanban</button>
     </div>
     <div style="display:flex;gap:14px;align-items:center;">
-      ${isAdmin() && archived.length>0 ? `
+      ${canBulkDelete && archived.length>0 ? `
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin:0;">
         <input type="checkbox" id="order-archive-select-all" ${allArchivedSelected?'checked':''}> Select all
       </label>` : ''}
-      ${isAdmin() && state.selectedOrders.size>0 ? `
+      ${canBulkDelete && state.selectedOrders.size>0 ? `
       <span class="hint">${state.selectedOrders.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-orders">Delete selected</button>
       ` : ''}
@@ -5506,12 +5513,12 @@ function renderOrdersArchivePage(archived){
   <div class="panel">
     ${rows.map(o=>`
     <div class="list-row" data-order-row="${o.id}">
-      ${isAdmin() ? `<span onclick="event.stopPropagation()"><input type="checkbox" class="order-select-row" data-order-id="${o.id}" ${state.selectedOrders.has(o.id)?'checked':''}></span>` : ''}
+      ${canBulkDelete ? `<span onclick="event.stopPropagation()"><input type="checkbox" class="order-select-row" data-order-id="${o.id}" ${state.selectedOrders.has(o.id)?'checked':''}></span>` : ''}
       <span class="lr-avatar empty">${initials(o.customer||'?')}</span>
       <span class="lr-name">${esc(o.customer)} <span style="font-weight:400;color:var(--muted);">· ${richText(o.product)}</span></span>
       <span class="hint">${esc(o.orderNumber||o.id)}</span>
       <span class="lr-date">📦 Archived ${daysAgo(o.archivedAt||o.completedAt)} ago</span>
-      ${isAdmin() ? `<button type="button" class="btn btn-sm" data-restore-order="${o.id}" onclick="event.stopPropagation()">Restore</button>` : ''}
+      ${canRestore ? `<button type="button" class="btn btn-sm" data-restore-order="${o.id}" onclick="event.stopPropagation()">Restore</button>` : ''}
     </div>`).join('')}
   </div>
   ${hiddenCount>0 ? `<div style="text-align:center;margin-top:14px;"><button type="button" class="btn" id="btn-order-archive-more">Show older orders (${hiddenCount} more)</button></div>` : ''}`}
@@ -5533,7 +5540,7 @@ function renderColumn(stageName, i, sourceOrders, courierKey){
 }
 function renderCard(o){
   const priority = o.priority || 'Medium';
-  const dragOn = isAdmin() && orderDragEnabled();
+  const dragOn = state.session && roleCan(state.session.role, 'orders_drag') && orderDragEnabled();
   return `
   <div class="card" data-order="${o.id}" draggable="${dragOn?'true':'false'}" ${dragOn?'style="cursor:grab;"':''}>
     <div class="top-row"><span class="customer">${esc(o.customer)}</span><span class="order-id">${esc(o.orderNumber||o.id)}</span></div>
@@ -5592,12 +5599,12 @@ function renderOrderInquiryPage(){
   ${rows.length===0 ? `<div class="empty-state">${q?'No matching orders.':'Nothing here yet — orders show up 2 hours after being picked up by delivery.'}</div>` : `
   <div class="panel">
     ${rows.map(o=>{
-      const admin = isAdmin();
+      const canResend = !!state.session && roleCan(state.session.role, 'orderinquiry_resend_review');
       const fbSent = !!o.reviewSentFbAt, googleSent = !!o.reviewSentGoogleAt;
-      const fbLocked = fbSent && !admin, googleLocked = googleSent && !admin;
+      const fbLocked = fbSent && !canResend, googleLocked = googleSent && !canResend;
       const onHold = o.deliveryOutcome==='On Hold';
       const delivered = o.deliveryOutcome==='Delivered';
-      const deliveredLocked = delivered && !admin;
+      const deliveredLocked = delivered && !canResend;
       return `
       <div class="list-row oi-row" data-order-row="${o.id}" style="cursor:pointer;justify-content:space-between;">
         <span style="display:flex;align-items:center;gap:10px;">
@@ -5607,10 +5614,10 @@ function renderOrderInquiryPage(){
         <span class="oi-row-actions" style="display:grid;grid-template-columns:140px 132px 172px 172px;gap:8px;align-items:center;">
           <button type="button" class="btn btn-sm" style="width:100%;" data-view-tracking="${o.id}" onclick="event.stopPropagation()">👁 View tracking</button>
           ${o.deliveryOutcome
-            ? `<span class="pill ${delivered?'pill-active':(onHold?'pill-hold':'pill-high')}" style="width:100%;box-sizing:border-box;text-align:center;cursor:${deliveredLocked?'default':'pointer'};" ${deliveredLocked?'':`data-open-delivery-outcome="${o.id}"`} onclick="event.stopPropagation()" ${deliveredLocked?'title="Delivered — only Admin can change this."':'title="Click to change"'}>${esc(o.deliveryOutcome)}</span>`
+            ? `<span class="pill ${delivered?'pill-active':(onHold?'pill-hold':'pill-high')}" style="width:100%;box-sizing:border-box;text-align:center;cursor:${deliveredLocked?'default':'pointer'};" ${deliveredLocked?'':`data-open-delivery-outcome="${o.id}"`} onclick="event.stopPropagation()" ${deliveredLocked?'title="Delivered — you don\'t have permission to change this."':'title="Click to change"'}>${esc(o.deliveryOutcome)}</span>`
             : `<button type="button" class="btn btn-sm" style="width:100%;" data-open-delivery-outcome="${o.id}" onclick="event.stopPropagation()">Delivery status</button>`}
-          <button type="button" class="btn btn-sm" style="width:100%;" data-review-fb="${o.id}" ${fbLocked?'disabled title="Already sent — only Admin can send it again."':''} onclick="event.stopPropagation()">${fbSent?'FB review sent ✓':'Send FB review link'}</button>
-          <button type="button" class="btn btn-sm" style="width:100%;" data-review-google="${o.id}" ${googleLocked?'disabled title="Already sent — only Admin can send it again."':''} onclick="event.stopPropagation()">${googleSent?'Google review sent ✓':'Send Google review'}</button>
+          <button type="button" class="btn btn-sm" style="width:100%;" data-review-fb="${o.id}" ${fbLocked?'disabled title="Already sent — you don\'t have permission to send it again."':''} onclick="event.stopPropagation()">${fbSent?'FB review sent ✓':'Send FB review link'}</button>
+          <button type="button" class="btn btn-sm" style="width:100%;" data-review-google="${o.id}" ${googleLocked?'disabled title="Already sent — you don\'t have permission to send it again."':''} onclick="event.stopPropagation()">${googleSent?'Google review sent ✓':'Send Google review'}</button>
         </span>
       </div>`;
     }).join('')}
@@ -5876,7 +5883,7 @@ function renderCustomersPage(){
   </div>
   <div class="toolbar">
     <input class="search-input" id="customer-search" placeholder="Search by name or phone…" value="${esc(state.filters.customerSearch)}">
-    ${isAdmin() ? `
+    ${(state.session && roleCan(state.session.role, 'customers_manage')) ? `
     <div style="display:flex;gap:8px;align-items:center;">
       ${state.selectedCustomers.size>0 ? `
       <span class="hint">${state.selectedCustomers.size} selected</span>
@@ -5892,17 +5899,17 @@ function renderCustomersPage(){
     ${rows.length===0 ? `<div class="empty-state">No customers ${q?'match your search':'yet'}.</div>` : `
     <table class="data-table">
       <thead><tr>
-        ${isAdmin()?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
-        <th>Name</th><th>Phone</th><th>City/Area</th><th>Type</th><th>Status</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}
+        ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
+        <th>Name</th><th>Phone</th><th>City/Area</th><th>Type</th><th>Status</th><th>Added</th>${(state.session && roleCan(state.session.role, 'customers_manage'))?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
         ${rows.map(c=>`
-        <tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`data-customer-row="${c.id}"`:''}>
-          ${isAdmin()?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
+        <tr class="${(state.session && roleCan(state.session.role, 'customers_manage'))?'clickable':''}" ${(state.session && roleCan(state.session.role, 'customers_manage'))?`data-customer-row="${c.id}"`:''}>
+          ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
           <td>${esc(c.name)}</td><td>${esc(c.phone)||'—'}</td><td>${esc(c.cityArea)||'—'}</td><td>${esc(c.type)}</td>
           <td><span class="pill ${c.status==='Active'?'pill-active':'pill-inactive'}">${c.status}</span></td>
           <td>${fmtDate(c.createdAt)}</td>
-          ${isAdmin()?`<td class="row-actions" onclick="event.stopPropagation()">
+          ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
             <button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>
           </td>`:''}
@@ -5926,7 +5933,7 @@ function renderSuppliersPage(){
   </div>
   <div class="toolbar">
     <input class="search-input" id="supplier-search" placeholder="Search by name or vendor ID…" value="${esc(state.filters.supplierSearch)}">
-    ${isAdmin() ? `
+    ${(state.session && roleCan(state.session.role, 'suppliers_manage')) ? `
     <div style="display:flex;gap:8px;align-items:center;">
       ${state.selectedSuppliers.size>0 ? `
       <span class="hint">${state.selectedSuppliers.size} selected</span>
@@ -5942,17 +5949,17 @@ function renderSuppliersPage(){
     ${rows.length===0 ? `<div class="empty-state">No suppliers ${q?'match your search':'yet'}.</div>` : `
     <table class="data-table">
       <thead><tr>
-        ${isAdmin()?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
-        <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${isAdmin()?'<th>Actions</th>':''}
+        ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
+        <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${(state.session && roleCan(state.session.role, 'suppliers_manage'))?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
         ${rows.map(s=>`
-        <tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`data-supplier-row="${s.id}"`:''}>
-          ${isAdmin()?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
+        <tr class="${(state.session && roleCan(state.session.role, 'suppliers_manage'))?'clickable':''}" ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`data-supplier-row="${s.id}"`:''}>
+          ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
           <td>${esc(s.name)}</td><td>${esc(s.vendorId)||'—'}</td>
           <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></td>
           <td>${fmtDate(s.createdAt)}</td>
-          ${isAdmin()?`<td class="row-actions" onclick="event.stopPropagation()">
+          ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>
             <button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>
           </td>`:''}
@@ -6199,7 +6206,7 @@ function brandingPreviewModal(addonId){
           <label class="btn btn-sm" style="cursor:pointer;">Change
             <input type="file" class="brand-change-input" data-addon="${a.id}" style="display:none;" accept="image/*">
           </label>
-          ${(isAdmin() && a.id!=='logo') ? `<button class="btn btn-sm btn-danger" data-brand-delete="${a.id}">Delete</button>` : ''}
+          ${(state.session && roleCan(state.session.role, 'branding_manage') && a.id!=='logo') ? `<button class="btn btn-sm btn-danger" data-brand-delete="${a.id}">Delete</button>` : ''}
           <button type="button" class="btn btn-sm" id="btn-cancel-modal">Close</button>
         </div>
       </div>
@@ -6249,7 +6256,7 @@ function renderComplaintsPage(){
       }).join('')}
     </div>
     <div style="display:flex;gap:14px;align-items:center;">
-      ${(isAdmin()||isSubAdmin()) && state.selectedComplaints.size>0 ? `
+      ${state.session && roleCan(state.session.role, 'complaints_bulk_delete') && state.selectedComplaints.size>0 ? `
       <span class="hint">${state.selectedComplaints.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-complaints">Delete selected</button>
       ` : ''}
@@ -6269,40 +6276,43 @@ function renderComplaintsArchivePage(){
       <button class="tab active" data-complaints-view="active">${icon('complaints')} Complaints</button>
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
-      ${isAdmin() && state.selectedComplaints.size>0 ? `
+      ${state.session && roleCan(state.session.role, 'complaints_delete_archived') && state.selectedComplaints.size>0 ? `
       <span class="hint">${state.selectedComplaints.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-complaints">Delete selected</button>
       ` : ''}
       <button type="button" class="btn-text" data-complaints-view="archive" style="font-size:12px;font-weight:600;">Archive${archived.length?` (${archived.length})`:''}</button>
-      ${isAdmin() && archived.length ? `<button type="button" class="btn btn-sm btn-danger" id="btn-reset-complaints-archive">Reset archive</button>` : ''}
+      ${state.session && roleCan(state.session.role, 'complaints_reset_archive') && archived.length ? `<button type="button" class="btn btn-sm btn-danger" id="btn-reset-complaints-archive">Reset archive</button>` : ''}
     </div>
   </div>
-  <div class="hint" style="margin-bottom:12px;">Closed complaints move here automatically 2 hours after being closed. Only Admin can restore, select, or delete from here.</div>
+  <div class="hint" style="margin-bottom:12px;">Closed complaints move here automatically 2 hours after being closed. Restoring, selecting or deleting from here needs elevated access.</div>
   ${renderComplaintsTable(archived, {adminOnly:true})}
   `;
 }
 function renderComplaintsTable(rows, opts){
-  const canManageRows = opts && opts.adminOnly ? isAdmin() : (isAdmin()||isSubAdmin());
+  const role = state.session && state.session.role;
+  const canSelect = !!role && roleCan(role, opts && opts.adminOnly ? 'complaints_delete_archived' : 'complaints_bulk_delete');
+  const canRestoreRow = (c) => !!role && roleCan(role, c.archived ? 'complaints_delete_archived' : 'complaints_restore');
+  const canDeleteRow = (c) => !!role && roleCan(role, c.archived ? 'complaints_delete_archived' : 'complaints_delete_active');
   return `
   <div class="panel">
     ${rows.length===0 ? `<div class="empty-state">No complaints here.</div>` : `
     <table class="data-table">
       <thead><tr>
-        ${canManageRows?`<th style="width:36px;"><input type="checkbox" id="complaint-select-all"></th>`:''}
+        ${canSelect?`<th style="width:36px;"><input type="checkbox" id="complaint-select-all"></th>`:''}
         <th>Customer</th><th>Reason</th><th>Priority</th><th>Status</th><th>Actions</th>
       </tr></thead>
       <tbody>
         ${rows.map(c=>`
         <tr class="clickable" data-complaint-row="${c.id}">
-          ${canManageRows?`<td onclick="event.stopPropagation()"><input type="checkbox" class="complaint-select-row" data-complaint-id="${c.id}" ${state.selectedComplaints.has(c.id)?'checked':''}></td>`:''}
+          ${canSelect?`<td onclick="event.stopPropagation()"><input type="checkbox" class="complaint-select-row" data-complaint-id="${c.id}" ${state.selectedComplaints.has(c.id)?'checked':''}></td>`:''}
           <td>${esc(c.customer)||'—'}</td><td>${esc(c.category)||'—'}</td>
           <td><span class="pill pill-${c.priority.toLowerCase()}">${c.priority}</span></td>
           <td><span class="pill pill-${c.status.toLowerCase().replace(' ','-').replace('in-progress','progress')}">${c.status}</span></td>
           <td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-complaint="${c.id}">Open</button>
             <button class="btn btn-sm" data-view-as-customer="${c.id}">Customer view</button>
-            ${canManageRows && (c.status==='Resolved'||c.status==='Closed') ? `<button type="button" class="btn btn-sm" data-restore-complaint="${c.id}">Restore</button>` : ''}
-            ${canManageRows?`<button class="btn btn-sm btn-danger" data-delete-complaint-row="${c.id}">Delete</button>`:''}
+            ${canRestoreRow(c) && (c.status==='Resolved'||c.status==='Closed') ? `<button type="button" class="btn btn-sm" data-restore-complaint="${c.id}">Restore</button>` : ''}
+            ${canDeleteRow(c)?`<button class="btn btn-sm btn-danger" data-delete-complaint-row="${c.id}">Delete</button>`:''}
           </td>
         </tr>`).join('')}
       </tbody>
@@ -6317,8 +6327,8 @@ function renderStaffPage(){
     ...(uncategorized.length ? [{key:'', label:'Uncategorized', members:uncategorized}] : [])];
   return `
   <div class="toolbar">
-    ${isAdmin() ? `<button type="button" class="btn-text" id="btn-manage-staff-categories">⚙ Manage categories</button>` : '<div></div>'}
-    ${isAdmin() ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
+    ${(state.session && roleCan(state.session.role, 'staff_manage')) ? `<button type="button" class="btn-text" id="btn-manage-staff-categories">⚙ Manage categories</button>` : '<div></div>'}
+    ${(state.session && roleCan(state.session.role, 'staff_manage')) ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
   </div>
   ${state.staff.length===0 ? `<div class="panel"><div class="empty-state">No staff added yet.</div></div>` :
     groups.map(g=>`
@@ -6326,14 +6336,14 @@ function renderStaffPage(){
       <div class="panel-head"><h3>${esc(g.label)} <span class="hint" style="font-weight:400;">(${g.members.length})</span></h3></div>
       ${g.members.length===0 ? `<div class="empty-state">No one in this category yet.</div>` : `
       <table class="data-table">
-        <thead><tr><th>Photo</th><th>Name</th><th>Title</th>${isAdmin()?'<th>Actions</th>':''}</tr></thead>
+        <thead><tr><th>Photo</th><th>Name</th><th>Title</th>${(state.session && roleCan(state.session.role, 'staff_manage'))?'<th>Actions</th>':''}</tr></thead>
         <tbody>
           ${g.members.map(s=>`
           <tr>
             <td>${staffAvatarHtml(s.name, 40)}</td>
             <td>${esc(s.name)}</td>
             <td>${s.title ? esc(s.title) : '<span class="hint">—</span>'}</td>
-            ${isAdmin()?`<td class="row-actions">
+            ${(state.session && roleCan(state.session.role, 'staff_manage'))?`<td class="row-actions">
               <button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
               <label class="btn btn-sm" style="cursor:pointer;">${s.photo?'Change photo':'Add photo'}
                 <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
@@ -6635,7 +6645,7 @@ function manageBulkSmsTemplatesModal(){
 }
 /* ===================== Customer ratings page ===================== */
 function renderRatingsPage(){
-  const admin = isAdmin();
+  const admin = !!state.session && roleCan(state.session.role, 'ratings_bulk_delete');
   const rated = state.orders.filter(o=>o.customerRating).slice().sort((a,b)=>new Date(b.customerRatingAt||0)-new Date(a.customerRatingAt||0));
   const avg = rated.length ? (rated.reduce((sum,o)=>sum+o.customerRating,0)/rated.length) : 0;
   const allSelected = rated.length>0 && rated.every(o=>state.selectedRatings.has(o.id));
@@ -6814,17 +6824,21 @@ function orderedSettingsJumpCards(cards){
   });
 }
 function renderSettingsPage(){
+  // User account setup and User roles stay Admin-only no matter what — they're where access
+  // itself gets granted, so letting settings_access alone reach them would let a role with that
+  // one permission hand itself (or anyone) broader access. Every other panel follows settings_access.
+  const canSettings = !!state.session && roleCan(state.session.role, 'settings_access');
   const jumpCards = orderedSettingsJumpCards([
-    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints'},
-    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard'},
-    {id:'settings-template-customization', label:'Template customization', icon:'settings'},
-    {id:'settings-appearance', label:'Appearance', icon:'star'},
-    {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset'},
-    {id:'settings-secure-accounts', label:'User account setup', icon:'customers'},
-    {id:'settings-user-roles', label:'User roles', icon:'staff'},
-    {id:'settings-login-activity', label:'Login activity', icon:'search'},
-    {id:'settings-sms-settings', label:'SMS settings', icon:'send'},
-  ].filter(c => isAdmin()));
+    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints', adminOnly:false},
+    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard', adminOnly:false},
+    {id:'settings-template-customization', label:'Template customization', icon:'settings', adminOnly:false},
+    {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false},
+    {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset', adminOnly:false},
+    {id:'settings-secure-accounts', label:'User account setup', icon:'customers', adminOnly:true},
+    {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
+    {id:'settings-login-activity', label:'Login activity', icon:'search', adminOnly:false},
+    {id:'settings-sms-settings', label:'SMS settings', icon:'send', adminOnly:false},
+  ].filter(c => c.adminOnly ? isAdmin() : (isAdmin() || canSettings)));
   const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : jumpCards[0].id;
   const renderOpenPanel = SETTINGS_PANEL_RENDERERS[openId];
   return `
@@ -7394,7 +7408,7 @@ function openMixingTemplatesPicker(recipeId){
   openModal('mixingtemplates');
 }
 async function applyMixingTemplateToRecipe(templateId){
-  if(!isAdmin()) return;
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
   const recipeId = state._mixingTemplatePickerForRecipeId;
   const t = templateById(templateId);
   state._mixingTemplatePickerForRecipeId = null;
@@ -7521,7 +7535,7 @@ function syncTemplateDraftStepFieldsFromDOM(){
   });
 }
 async function saveTemplateSteps(){
-  if(!isAdmin()) return;
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
   syncTemplateDraftStepFieldsFromDOM();
   const d = state._templateDraft; if(!d) return;
   const name = (d.name||'').trim();
@@ -7551,7 +7565,7 @@ async function saveTemplateSteps(){
   openMixingTemplatesModal();
 }
 function deleteMixingTemplate(id){
-  if(!isAdmin()) return;
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
   const t = templateById(id);
   openConfirmModal({
     title: 'Delete template', danger: true, confirmLabel: 'Delete', keepParentModal: true,
@@ -7563,7 +7577,7 @@ function deleteMixingTemplate(id){
   });
 }
 function addMixingTemplatePrompt(){
-  if(!isAdmin()) return;
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
   openPromptModal({
     title: 'New phrases template', label: 'Template name', placeholder: 'e.g. Face Wash',
     confirmLabel: 'Create', _returnTo: 'mixingtemplates',
@@ -7873,9 +7887,12 @@ function renderRecipesPage(){
   ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
-    ${isAdmin() ? `<div style="display:flex;gap:8px;"><button class="btn" id="btn-mixing-templates">Phrases templates</button><button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button></div>` : ''}
+    <div style="display:flex;gap:8px;">
+      ${state.session && roleCan(state.session.role, 'costing_manage_templates') ? `<button class="btn" id="btn-mixing-templates">Phrases templates</button>` : ''}
+      ${state.session && roleCan(state.session.role, 'costing_create_recipe') ? `<button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button>` : ''}
+    </div>
   </div>
-  ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${isAdmin()?'Create one to start guiding the blending team through a batch.':''}</div>` : `
+  ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${state.session && roleCan(state.session.role,'costing_create_recipe')?'Create one to start guiding the blending team through a batch.':''}</div>` : `
   <div class="recipe-grid">
     ${state.recipes.map(r=>{
       const totalMin = r.steps.reduce((sum,s)=>sum+(s.waitMinutes||0),0);
@@ -7889,7 +7906,7 @@ function renderRecipesPage(){
         <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'} · ~${totalMin} min total${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
           ${matCount ? `<button class="btn btn-primary btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
-          ${isAdmin() ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
+          ${state.session && roleCan(state.session.role, 'costing_delete_recipe') ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
         </div>
       </div>`;
     }).join('')}
@@ -7933,7 +7950,7 @@ function costingProductIcon(name){
   return 'bottle';
 }
 function renderCostingProductGrid(){
-  const admin = isAdmin();
+  const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
   const products = state.costingProducts;
   return `
   <div class="toolbar">
@@ -7963,7 +7980,7 @@ function activeCostingVersions(product){ return (product.versions||[]).filter(v=
 function archivedCostingVersions(product){ return (product.versions||[]).filter(v=>v.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0)); }
 function renderCostingVersionsList(product){
   if(state._costingVersionsView==='archive') return renderCostingVersionsArchive(product);
-  const admin = isAdmin();
+  const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
   const versions = activeCostingVersions(product).slice().sort((a,b)=>new Date(b.editedAt||b.createdAt)-new Date(a.editedAt||a.createdAt));
   const archivedCount = archivedCostingVersions(product).length;
   return `
@@ -7999,7 +8016,7 @@ function renderCostingVersionsList(product){
   `;
 }
 function renderCostingVersionsArchive(product){
-  const admin = isAdmin();
+  const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
   const versions = archivedCostingVersions(product);
   return `
   <button type="button" class="btn-text" data-costing-versions-view="active" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
@@ -8108,7 +8125,7 @@ function costingSupplierTagsHtml(m){
 // Amount+Cost column group, so a sheet with several sizes stays easy to track while scrolling.
 const BATCH_COLOR_PALETTE = ['#FCA5A5','#FDBA74','#FDE68A','#86EFAC','#93C5FD','#C4B5FD','#F9A8D4'];
 function renderCostingProductSheet(product, version){
-  const admin = isAdmin();
+  const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
   const draft = state._costingDraft || {materials:[], batchSizes:[]};
   ensureFixedCostDefaults(draft);
   const materials = draft.materials||[];
@@ -8407,7 +8424,7 @@ function renderBatchFocusOverlay(){
         <div class="bf-note">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — moving on…" : 'remaining on this step'))}</div>
       `}
     `}
-    ${isAdmin() ? `
+    ${canManageBlendBoard() ? `
     <div class="bf-controls">
       ${!isDone && b.status==='running' ? `<button class="btn" id="btn-batch-focus-pause">Pause</button>` : ''}
       ${!isDone && b.status==='paused' ? `<button class="btn" id="btn-batch-focus-resume">Resume</button>` : ''}
@@ -8642,7 +8659,7 @@ function recipeBatchSheetModal(recipeId){
   const totalAmt = recipeMaterialAmount(totalPct, batchSizeKg);
   // Step editing lives here now (admin only) instead of a separate Edit screen — reuses the
   // same draft + step-editor-row markup/handlers as the full recipe form.
-  const canEditSteps = isAdmin() && state._recipeDraft && state._recipeDraft.id===r.id;
+  const canEditSteps = !!state.session && roleCan(state.session.role, 'costing_edit_steps') && state._recipeDraft && state._recipeDraft.id===r.id;
   const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
   const batchActive = isBatchDisplayActive();
   const tpl = batchSheetTemplate();
@@ -8766,7 +8783,7 @@ function printBatchSheet(recipeId){
   const batchNo = noEl ? noEl.value : uid('BLD');
   const totalPct = recipeMaterialsTotalPercent(r.materials);
   const totalAmt = recipeMaterialAmount(totalPct, batchSizeKg);
-  const canEditSteps = isAdmin() && state._recipeDraft && state._recipeDraft.id===r.id;
+  const canEditSteps = !!state.session && roleCan(state.session.role, 'costing_edit_steps') && state._recipeDraft && state._recipeDraft.id===r.id;
   const baseSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
   const steps = baseSteps.map(s=>{
     if(s.type==='preparation'){
@@ -8866,7 +8883,7 @@ function renderChatPage(){
   const quoted = state.chatQuoteId ? state.chat.find(x=>x.id===state.chatQuoteId) : null;
   return `
   <div class="panel" style="display:flex;flex-direction:column;height:calc(100vh - 190px);margin-bottom:0;">
-    ${isAdmin() && state.chat.length>0 ? `
+    ${state.session && roleCan(state.session.role, 'chat_delete_history') && state.chat.length>0 ? `
     <div style="display:flex;justify-content:flex-end;padding:12px 18px 0;">
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-chat-history">Delete chat history</button>
     </div>` : ''}
@@ -9625,15 +9642,18 @@ function renderOrderDrawer(id){
   const key = STAGE_KEYS[o.stage]; const style = STAGE_STYLE[key];
   const canAdv = canAdvance(o.stage);
   const priority = o.priority || 'Medium';
-  // Archived orders (2h+ after pickup, shown in Order inquiry) are view-only for non-admins
-  // (e.g. Customer Care); Admin can still edit and save.
-  const ro = !isAdmin();
+  const role = state.session && state.session.role;
+  const canEditFull = !!role && roleCan(role, 'orders_edit_full');
+  const canEditTrackingOnly = !!role && roleCan(role, 'orders_edit_tracking_only');
+  // Archived orders (2h+ after pickup, shown in Order inquiry) are view-only for roles without
+  // full edit rights; a role with full edit rights can still edit and save.
+  const ro = !canEditFull;
   const roAttr = ro ? 'readonly' : '';
   const roDis = ro ? 'disabled' : '';
-  // Packing marks orders picked up by delivery and is the one actually handed the CityPak tag,
-  // so they can also fix/enter it here afterwards — even though the rest of the order stays
-  // Admin-only to edit.
-  const courierNumberRoAttr = (isAdmin() || isPacking()) ? '' : 'readonly';
+  // A role with just the tracking-only permission (e.g. Packing/Dispatch, who marks orders picked
+  // up by delivery and is handed the CityPak tag) can fix/enter it here afterwards — even though
+  // the rest of the order stays locked to full-edit roles.
+  const courierNumberRoAttr = (canEditFull || canEditTrackingOnly) ? '' : 'readonly';
   return `
   <div class="drawer-overlay" id="overlay"></div>
   <div class="drawer">
@@ -9650,7 +9670,7 @@ function renderOrderDrawer(id){
       <span class="stage-badge" style="background:${style.bg};color:${style.c};">${STAGES[o.stage]}</span>
     </div>
 
-    ${ro ? `<div class="hint" style="margin-bottom:14px;">${o.archived ? 'View only — this order is archived and can\'t be edited.' : (isPacking() ? 'View only — except the delivery tracking number below, which you can edit and save.' : (canAdv ? 'View only — only Admin can edit order details, but you can move this order forward below.' : 'View only — only Admin can edit orders.'))}</div>` : ''}
+    ${ro ? `<div class="hint" style="margin-bottom:14px;">${o.archived ? 'View only — this order is archived and can\'t be edited.' : (canEditTrackingOnly ? 'View only — except the delivery tracking number below, which you can edit and save.' : (canAdv ? 'View only — you don\'t have edit rights for order details, but you can move this order forward below.' : 'View only — you don\'t have edit rights for orders.'))}</div>` : ''}
     <form id="form-order-edit" data-order-id="${o.id}">
       ${richTextField({name:'product', label:'Product / task', value:o.product, required:true, readOnly:ro})}
       <div class="field-row-3">
@@ -9693,12 +9713,12 @@ function renderOrderDrawer(id){
 
       <div class="modal-actions" style="justify-content:space-between;">
         <div style="display:flex;gap:8px;">
-          ${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-order">Delete</button>` : ''}
-          ${isAdmin() && o.stage===STAGES.length-1 && !o.archived ? `<button type="button" class="btn" id="btn-archive-order-now" title="Move straight to Order Inquiry without waiting for the automatic 2-hour sweep">Archive now</button>` : ''}
+          ${role && roleCan(role, 'orders_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-order">Delete</button>` : ''}
+          ${role && roleCan(role, 'orders_archive_now') && o.stage===STAGES.length-1 && !o.archived ? `<button type="button" class="btn" id="btn-archive-order-now" title="Move straight to Order Inquiry without waiting for the automatic 2-hour sweep">Archive now</button>` : ''}
         </div>
         <div style="display:flex;gap:8px;">
           ${canAdv ? `<button type="button" class="btn" id="btn-advance">${NEXT_ACTION_LABEL[o.stage]}</button>` : ''}
-          ${(!ro || isPacking()) ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
+          ${(!ro || canEditTrackingOnly) ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>
       </div>
     </form>
@@ -9768,7 +9788,7 @@ function renderBlendDrawer(id){
       </div>
 
       <div class="modal-actions" style="justify-content:space-between;">
-        <div>${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-blend">Delete</button>` : ''}</div>
+        <div>${state.session && roleCan(state.session.role, 'blending_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-blend">Delete</button>` : ''}</div>
         <div style="display:flex;gap:8px;">
           ${!ro && canAdv ? `<button type="button" class="btn" id="btn-advance-blend">${BLEND_NEXT_ACTION_LABEL[b.stage]}</button>` : ''}
           ${!ro ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
@@ -9872,7 +9892,7 @@ function renderRndDrawer(id){
     </div>
 
     <div class="modal-actions" style="justify-content:space-between;margin-top:16px;">
-      <div>${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd">Delete</button>` : ''}</div>
+      <div>${state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd">Delete</button>` : ''}</div>
       <div style="display:flex;gap:8px;">
         ${!ro && canAdv ? `<button type="button" class="btn" id="btn-advance-rnd">${RND_NEXT_ACTION_LABEL[p.stage]}</button>` : ''}
         ${!ro ? `<button type="submit" form="form-rnd-edit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
@@ -9890,7 +9910,7 @@ function rndChemistFormModal(id){
       <form id="form-rnd-chemist" data-edit-id="${c?c.id:''}">
         <div class="field"><label>Name</label><input name="name" required autocomplete="off" value="${c?esc(c.name):''}"></div>
         <div class="modal-actions" style="justify-content:space-between;">
-          <div>${c && isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd-chemist">Delete</button>` : ''}</div>
+          <div>${c && state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd-chemist">Delete</button>` : ''}</div>
           <div style="display:flex;gap:8px;">
             <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
             <button type="submit" class="btn btn-primary">${c?'Save changes':'Add chemist'}</button>
@@ -10052,9 +10072,15 @@ const COMPLAINT_LOCK_AFTER_MS = 60*60*1000;
 // one-hour-after-logging rule. Customer Care is handled separately in complaintFormModal: they're
 // never "locked" out of a running complaint entirely, just restricted to the update log on it.
 function isComplaintLocked(c){
-  if(!c || isAdmin() || isSubAdmin()) return false;
+  if(!c) return false;
+  const role = state.session && state.session.role;
+  if(!role) return true;
+  // complaints_full_edit bypasses every lock (matches the old isAdmin()||isSubAdmin() exemption);
+  // complaints_edit_after_1hr only lifts the 1-hour timer, not the Resolved/Closed lock (matches
+  // the old Customer Care carve-out, which never bypassed Resolved/Closed).
+  if(roleCan(role, 'complaints_full_edit')) return false;
   if(c.status==='Resolved' || c.status==='Closed') return true;
-  if(state.session && state.session.role==='Customer Care') return false;
+  if(roleCan(role, 'complaints_edit_after_1hr')) return false;
   return Date.now() - new Date(c.createdAt).getTime() > COMPLAINT_LOCK_AFTER_MS;
 }
 function archivedComplaints(){ return state.complaints.filter(c=>c.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0)); }
@@ -10075,8 +10101,9 @@ function sweepClosedComplaints(){
 // (matched by their own login name, for named logins) can open it. Customer Care is exempt from
 // this — they can open any running complaint to add an update, regardless of who it's assigned to.
 function canOpenComplaint(c){
-  if(!c || isAdmin() || isSubAdmin()) return true;
-  if(state.session && state.session.role==='Customer Care') return true;
+  if(!c) return true;
+  const role = state.session && state.session.role;
+  if(role && roleCan(role, 'complaints_manage')) return true;
   if(!c.assignedTo) return true;
   const myName = state.session && (state.session.staffName || state.session.name);
   return myName===c.assignedTo;
@@ -10100,19 +10127,21 @@ function complaintUpdates(c){
 }
 function complaintFormModal(id){
   const c = id ? byId(state.complaints,id) : null;
-  const isCustomerCareViewer = !!(state.session && state.session.role==='Customer Care');
+  const role = state.session && state.session.role;
+  const canFullEditRole = !!role && roleCan(role, 'complaints_full_edit');
   const archived = !!(c && (c.status==='Resolved' || c.status==='Closed'));
   const isAssignedToMe = !!(c && state.session && c.assignedTo && (state.session.staffName || state.session.name)===c.assignedTo);
-  // Customer Care can open any running complaint, but only to add an update - every other field
-  // (category, priority, status, assignedTo, contact info, description) stays locked for them —
-  // UNLESS they're the one it's assigned to, in which case they get full edit access on this one
-  // complaint so they can actually action it (e.g. move it to In Progress), not just log updates.
-  // Admin/Sub Admin always get full edit access; everyone else follows the older lock rules.
-  const readOnly = c && (!canManageComplaints() || isComplaintLocked(c) || (isCustomerCareViewer && !isAssignedToMe));
-  const canAddUpdate = !!c && (isAdmin() || isSubAdmin() || (isCustomerCareViewer && !archived));
-  // Once a complaint is archived (2h+ after being closed), only Admin can delete it — Sub Admin
-  // keeps full access everywhere else, but archive rows are Admin-only.
-  const canDelete = c && (isAdmin() || (isSubAdmin() && !c.archived));
+  // A role without complaints_full_edit (e.g. Customer care representative) can open any running
+  // complaint, but only to add an update — every other field (category, priority, status,
+  // assignedTo, contact info, description) stays locked for them — UNLESS they're the one it's
+  // assigned to, in which case they get full edit access on this one complaint so they can
+  // actually action it (e.g. move it to In Progress), not just log updates. A role with
+  // complaints_full_edit (Admin/Sub Admin by default) always gets full edit access.
+  const readOnly = c && (!canManageComplaints() || isComplaintLocked(c) || (!canFullEditRole && !isAssignedToMe));
+  const canAddUpdate = !!c && (canFullEditRole || (canManageComplaints() && !archived));
+  // Deleting an archived complaint needs complaints_delete_archived (Admin-only by default);
+  // deleting an active one needs complaints_delete_active (also Sub Admin by default).
+  const canDelete = c && !!role && (roleCan(role, 'complaints_delete_archived') || (roleCan(role, 'complaints_delete_active') && !c.archived));
   // Anyone who can create a new complaint, edit an existing one, or add an update to one can also
   // attach images to it — Customer Care included, via the update-log path since every other field
   // is locked for them.
@@ -10147,7 +10176,7 @@ function complaintFormModal(id){
           <div class="field"><label>Status</label>
             <select name="status" ${readOnly?'disabled':''}>${COMPLAINT_STATUSES.map(st=>`<option ${c.status===st?'selected':''}>${st}</option>`).join('')}</select>
           </div>
-          ${!isCustomerCareViewer ? `
+          ${canFullEditRole ? `
           <div class="field"><label>Assigned representative</label>
             <select name="assignedTo" ${readOnly?'disabled':''}>
               <option value="" ${!c.assignedTo?'selected':''}>Unassigned</option>
@@ -10156,7 +10185,7 @@ function complaintFormModal(id){
           </div>` : `<div class="field"></div>`}
         </div>` : `
         <input type="hidden" name="status" value="Open">
-        ${!isCustomerCareViewer ? `
+        ${canFullEditRole ? `
         <div class="field-row">
           <div class="field"><label>Assigned representative</label>
             <select name="assignedTo">
@@ -10200,8 +10229,7 @@ function complaintFormModal(id){
         </div>
         ${complaintUpdates(c).length ? `<div class="field"><label>Update history</label><div class="timeline">${complaintUpdates(c).map(u=>`<div class="item">${esc(u.status)}${u.note?' — '+esc(u.note):''}<div class="t">${fmtDateTime(u.at)} · ${esc(u.by)}</div></div>`).join('')}</div></div>` : ''}
         ` : ''}
-        ${c && isCustomerCareViewer ? `<div class="hint" style="margin:-6px 0 14px;">${archived ? 'Archived — locked, view only.' : (isAssignedToMe ? 'This complaint is assigned to you — you can edit it and update its status.' : 'You can view this complaint and add an update below, but only Admin, Sub Admin, or whoever it\'s assigned to can change its details or status.')}</div>` : ''}
-        ${c && canManageComplaints() && !isAdmin() && !isSubAdmin() && !isCustomerCareViewer ? `<div class="hint" style="margin:-6px 0 14px;">${isComplaintLocked(c) ? 'Locked — more than an hour has passed since this was logged, so only Admin can edit or delete it now.' : 'Editable for one hour after logging; after that, only Admin can make changes.'}</div>` : ''}
+        ${c && !canFullEditRole && canManageComplaints() ? `<div class="hint" style="margin:-6px 0 14px;">${archived ? 'Archived — locked, view only.' : (isAssignedToMe ? 'This complaint is assigned to you — you can edit it and update its status.' : 'You can view this complaint and add an update below, but only someone with full edit rights, or whoever it\'s assigned to, can change its details or status.')}</div>` : ''}
         <div class="modal-actions" style="justify-content:space-between;">
           <div>${canDelete?`<button type="button" class="btn btn-danger" id="btn-delete-complaint">Delete</button>`:''}</div>
           <div style="display:flex;gap:8px;">
@@ -11191,7 +11219,7 @@ function attachShellHandlers(){
   };
   document.querySelectorAll('[data-complaints-view]').forEach(b=>b.addEventListener('click', ()=>{ state.complaintsView = b.dataset.complaintsView; state.selectedComplaints.clear(); render(); }));
   if(byIdEl('btn-reset-complaints-archive')) byIdEl('btn-reset-complaints-archive').onclick = ()=>{
-    if(!isAdmin()) return;
+    if(!state.session || !roleCan(state.session.role, 'complaints_reset_archive')) return;
     const n = archivedComplaints().length;
     openConfirmModal({
       title: 'Reset archive', danger: true, confirmLabel: 'Reset archive',

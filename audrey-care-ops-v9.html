@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261010191709">
+<meta name="app-build" content="20261010193823">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3117,7 +3117,10 @@ async function reverseGeocode(lat, lng){
 // fields it couldn't get. Two sources, both best-effort: the IP lookup gives an approximate
 // city for every login with no prompt; the GPS lookup (if the person allows it) overwrites that
 // with the device's actual coordinates and a precise place name.
-async function logLoginEvent(name, role){
+// precisePromise, when given, is one already started by the caller — see the comment at the
+// top of confirmLogin()/confirmLoginV2() for why that matters (Safari drops the permission
+// prompt silently if too much happens between the tap and the geolocation call).
+async function logLoginEvent(name, role, precisePromise){
   let geo = {};
   try{
     const res = await fetch('https://ipapi.co/json/');
@@ -3127,7 +3130,7 @@ async function logLoginEvent(name, role){
     }
   }catch(e){}
   try{
-    const precise = await getPreciseLocation();
+    const precise = await (precisePromise || getPreciseLocation());
     if(precise){
       const place = await reverseGeocode(precise.lat, precise.lng);
       geo = {...geo, lat: precise.lat, lng: precise.lng, accuracy: precise.accuracy, locationSource: 'gps'};
@@ -3139,6 +3142,11 @@ async function logLoginEvent(name, role){
   save('loginHistory').catch(()=>{});
 }
 async function confirmLogin(){
+  // Started here, synchronously, as the very first thing on the click — Safari/WebKit treats
+  // the permission prompt as tied to that original tap, and silently skips showing it (straight
+  // to denied, no dialog at all) once an await or two have passed. Everything else in this
+  // function can take its time; this one call can't wait for any of it.
+  const precisePromise = getPreciseLocation();
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
   const password = (passInput.value||'');
@@ -3175,7 +3183,7 @@ async function confirmLogin(){
   clearInterval(state._loginClockTimer);
   await saveSession();
   logActivity(`Logged in (${role})`);
-  logLoginEvent(sessionName, role);
+  logLoginEvent(sessionName, role, precisePromise);
   // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
   // before anyone was signed in — re-fetch now that we actually are, rather than rendering
   // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see.
@@ -3188,6 +3196,10 @@ async function confirmLogin(){
 // goes straight to the public board display rather than a staff session (matching how "Staff
 // Login" on that board already expects to find nobody signed in and show the login screen).
 async function confirmLoginV2(){
+  // Started here, synchronously, as the very first thing on the click — see the matching
+  // comment in confirmLogin() above for why (Safari/WebKit drops the permission prompt
+  // silently, no dialog at all, once an await or two separates it from the original tap).
+  const precisePromise = getPreciseLocation();
   const nameInput = document.getElementById('login-name');
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
@@ -3205,7 +3217,7 @@ async function confirmLoginV2(){
     passInput.value = ''; passInput.focus();
     return;
   }
-  if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
+  if(role==='Orders Process'){ logLoginEvent(typedName, role, precisePromise); await refreshAppData(true); enterBoardMode(); return; }
   // The role on file in User account setup (secureAccounts, looked up above as `role`) is always
   // current — it's what Admin actually edits. profiles.role is only ever set once, at signup, and
   // never updated after, so it goes stale the moment someone's access level changes; it's only
@@ -3220,7 +3232,7 @@ async function confirmLoginV2(){
   clearInterval(state._loginClockTimer);
   await saveSession();
   logActivity(`Logged in (${sessionRole})`);
-  logLoginEvent(sessionName, sessionRole);
+  logLoginEvent(sessionName, sessionRole, precisePromise);
   // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
   // before anyone was signed in — re-fetch now that we actually are, rather than rendering
   // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see. This is

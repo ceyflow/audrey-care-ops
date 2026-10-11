@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011090456">
+<meta name="app-build" content="20261011093255">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7269,6 +7269,7 @@ function renderSecureAccountsPanel(){
               <td>${esc(r.role)}</td>
               <td>${last ? fmtDateTime(last) : '<span class="hint">Never signed in</span>'}</td>
               <td class="row-actions">
+                <button type="button" class="btn btn-sm" data-reset-secure-account-password="${escAttr(r.name)}" title="Set a new password for them">🔑</button>
                 <button type="button" class="btn btn-sm" data-edit-secure-account="${escAttr(r.name)}" title="Edit">✏️</button>
                 <button type="button" class="btn btn-sm btn-danger" data-remove-secure-account="${escAttr(r.name)}" title="Remove">🗑️</button>
               </td>
@@ -7348,10 +7349,56 @@ async function runAddSecureAccount(){
 // Removing someone from the roster only takes away their ability to sign in (roleForLoginName()
 // won't find them anymore) — it doesn't delete the underlying Supabase Auth account, since that
 // needs admin API access this app doesn't have. Harmless to leave behind: unreachable, unused.
+// Setting someone else's password can't be done with the public anon key the browser holds —
+// Supabase's admin API (the only thing that can touch another user's password without knowing
+// their current one) requires the service-role secret, which must never reach client code. This
+// calls a small Edge Function that holds that secret server-side instead, and re-checks on the
+// server that the caller is really an Admin before it will act — never trust a client-side check
+// alone for something this sensitive. Requires that function to be deployed (see its source file
+// for the one-time setup) — until then this fails with a clear "not deployed yet" style error.
+async function adminResetSecureAccountPassword(loginName, newPassword){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(!session) throw new Error('Your own session has expired — log out and back in, then try again.');
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ loginName, newPassword }),
+  });
+  let result = {};
+  try{ result = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error(result.error || `Reset failed (${res.status}) — the admin-reset-password Edge Function may not be deployed yet.`);
+  return result;
+}
+function openResetSecureAccountPasswordPrompt(name){
+  openPromptModal({
+    title: `Set a new password for ${name}`,
+    sub: "They'll need to use this exact password next time they sign in.",
+    label: 'New password', inputType: 'text', placeholder: 'At least 6 characters',
+    confirmLabel: 'Set password',
+    onSubmit: async (value)=>{
+      const pw = (value||'').trim();
+      if(pw.length<6){ showToast('Password must be at least 6 characters'); return; }
+      try{
+        await adminResetSecureAccountPassword(name, pw);
+        logActivity(`Reset the password for ${name}`);
+        showToast(`${name}'s password has been reset`);
+      }catch(e){
+        openAlertModal({ title: "Couldn't reset the password", message: e.message || String(e) });
+      }
+    },
+  });
+}
 function removeSecureAccount(name){
   openConfirmModal({
     title: 'Remove account', danger: true, confirmLabel: 'Remove',
-    message: `${name} will no longer be able to sign in. You can add them back anytime with a new password.`,
+    // This only removes them from the list below — it does NOT delete their underlying login, so
+    // re-adding the same name later will fail with "already registered" rather than actually
+    // creating a fresh account. If they just need a new password, use 🔑 instead of removing them.
+    message: `${name} will no longer be able to sign in. This doesn't free up their login name to re-add later — if they just need a new password, use 🔑 Reset password instead.`,
     onConfirm: async ()=>{
       state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).filter(r=>r.name!==name)};
       await saveAuth();
@@ -12263,6 +12310,7 @@ function attachShellHandlers(){
   if(byIdEl('add-acct-fullname')) byIdEl('add-acct-fullname').addEventListener('input', e=>{ state._addAcctForm.fullName = e.target.value; });
   if(byIdEl('btn-add-secure-account')) byIdEl('btn-add-secure-account').onclick = runAddSecureAccount;
   document.querySelectorAll('[data-remove-secure-account]').forEach(b=>b.addEventListener('click', ()=>removeSecureAccount(b.dataset.removeSecureAccount)));
+  document.querySelectorAll('[data-reset-secure-account-password]').forEach(b=>b.addEventListener('click', ()=>openResetSecureAccountPasswordPrompt(b.dataset.resetSecureAccountPassword)));
   document.querySelectorAll('[data-edit-secure-account]').forEach(b=>b.addEventListener('click', ()=>{
     state._editSecureAccountName = b.dataset.editSecureAccount;
     openModal('editsecureaccount');

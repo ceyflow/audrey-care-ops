@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011182051">
+<meta name="app-build" content="20261011191353">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -614,7 +614,7 @@ html{ visibility:hidden; }
   .bsheet-step-row .bsr-temp-tag{border:1px dashed var(--border);border-radius:20px;padding:3px 10px 3px 8px;font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);cursor:pointer;}
   .bsheet-step-row .bsr-temp-tag[data-has-value="1"]{border-style:solid;border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
   .bsheet-step-row .bsr-temp-tag:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft);}
-  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:3fr 1fr;gap:14px;}
+  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:1fr 110px;gap:14px;}
   .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 5px;}
   .bsheet-step-row .bsr-field input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease;}
   .bsheet-step-row .bsr-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
@@ -4065,6 +4065,15 @@ function renderKeepChatScroll(){
     if(newEl) newEl.scrollTop = scrollTop;
   }
 }
+function renderKeepModalScroll(){
+  const overlayEl = document.querySelector('.overlay');
+  const modalEl = document.querySelector('.modal');
+  const overlayScroll = overlayEl ? overlayEl.scrollTop : null;
+  const modalScroll = modalEl ? modalEl.scrollTop : null;
+  render();
+  if(overlayScroll!==null){ const e = document.querySelector('.overlay'); if(e) e.scrollTop = overlayScroll; }
+  if(modalScroll!==null){ const e = document.querySelector('.modal'); if(e) e.scrollTop = modalScroll; }
+}
 function toggleChatMenu(id){ state.chatMenuOpenId = state.chatMenuOpenId===id ? null : id; renderKeepChatScroll(); }
 function closeChatMenu(){ if(state.chatMenuOpenId){ state.chatMenuOpenId = null; renderKeepChatScroll(); } }
 async function toggleChatLike(id){
@@ -7371,7 +7380,7 @@ function openTemplateStepsModal(id){
 function templateDraftAddPhrase(){
   const s = newStepDraft(); s.type = 'phrase';
   state._templateDraft.steps.push(s);
-  render();
+  renderKeepModalScroll();
 }
 const DEFAULT_PREP_CHECKLIST_ITEMS = [
   'Are the machines and equipment cleaned and sanitized?',
@@ -7382,25 +7391,25 @@ function stepsAddPreparationStep(draft){
     id: uid('PREP'), type: 'preparation',
     checklist: DEFAULT_PREP_CHECKLIST_ITEMS.map(text=>({id:uid('CHK'), kind:'checklist', text})),
   });
-  render();
+  renderKeepModalScroll();
 }
 function stepsAddChecklistItem(draft, stepId){
   const step = draft.steps.find(s=>s.id===stepId); if(!step) return;
   if(!step.checklist) step.checklist = [];
   step.checklist.push({id:uid('CHK'), kind:'checklist', text:''});
-  render();
+  renderKeepModalScroll();
 }
 function stepsAddFieldItem(draft, stepId){
   const step = draft.steps.find(s=>s.id===stepId); if(!step) return;
   if(!step.checklist) step.checklist = [];
   step.checklist.push({id:uid('FLD'), kind:'field', label:'', value:''});
-  render();
+  renderKeepModalScroll();
 }
 function stepsRemoveChecklistItem(draft, stepId, itemId){
   const step = draft.steps.find(s=>s.id===stepId); if(!step) return;
   if((step.checklist||[]).length<=1) return;
   step.checklist = step.checklist.filter(c=>c.id!==itemId);
-  render();
+  renderKeepModalScroll();
 }
 function templateDraftAddPreparationStep(){ stepsAddPreparationStep(state._templateDraft); }
 function templateDraftAddChecklistItem(stepId){ stepsAddChecklistItem(state._templateDraft, stepId); }
@@ -7413,7 +7422,7 @@ function draftRemoveChecklistItem(stepId, itemId){ stepsRemoveChecklistItem(stat
 function templateDraftRemoveStep(stepId){
   if(state._templateDraft.steps.length<=1) return;
   state._templateDraft.steps = state._templateDraft.steps.filter(s=>s.id!==stepId);
-  render();
+  renderKeepModalScroll();
 }
 function templateDraftMoveStep(stepId, dir){
   const steps = state._templateDraft.steps;
@@ -7421,7 +7430,7 @@ function templateDraftMoveStep(stepId, dir){
   const j = i+dir;
   if(j<0 || j>=steps.length) return;
   [steps[i], steps[j]] = [steps[j], steps[i]];
-  render();
+  renderKeepModalScroll();
 }
 function syncTemplateDraftStepFieldsFromDOM(){
   const d = state._templateDraft; if(!d) return;
@@ -7507,11 +7516,11 @@ function addMixingTemplatePrompt(){
     },
   });
 }
-function draftAddStep(){ state._recipeDraft.steps.push(newStepDraft()); render(); }
+function draftAddStep(){ state._recipeDraft.steps.push(newStepDraft()); renderKeepModalScroll(); }
 function draftRemoveStep(stepId){
   if(state._recipeDraft.steps.length<=1) return;
   state._recipeDraft.steps = state._recipeDraft.steps.filter(s=>s.id!==stepId);
-  render();
+  renderKeepModalScroll();
 }
 function draftMoveStep(stepId, dir){
   const steps = state._recipeDraft.steps;
@@ -7519,7 +7528,7 @@ function draftMoveStep(stepId, dir){
   const j = i+dir;
   if(j<0 || j>=steps.length) return;
   [steps[i], steps[j]] = [steps[j], steps[i]];
-  render();
+  renderKeepModalScroll();
 }
 function syncDraftTopFieldsFromDOM(){
   const d = state._recipeDraft;
@@ -7558,11 +7567,11 @@ function syncDraftStepFieldsFromDOM(){
     if(wait) s.waitMinutes = parseFloat(wait.value)||0;
   });
 }
-function draftAddMaterial(){ state._recipeDraft.materials.push(newMaterialDraft()); render(); }
+function draftAddMaterial(){ state._recipeDraft.materials.push(newMaterialDraft()); renderKeepModalScroll(); }
 function draftRemoveMaterial(matId){
   if(state._recipeDraft.materials.length<=1) return;
   state._recipeDraft.materials = state._recipeDraft.materials.filter(m=>m.id!==matId);
-  render();
+  renderKeepModalScroll();
 }
 function draftMoveMaterial(matId, dir){
   const materials = state._recipeDraft.materials;
@@ -7570,7 +7579,7 @@ function draftMoveMaterial(matId, dir){
   const j = i+dir;
   if(j<0 || j>=materials.length) return;
   [materials[i], materials[j]] = [materials[j], materials[i]];
-  render();
+  renderKeepModalScroll();
 }
 function syncDraftMaterialFieldsFromDOM(){
   const materials = state._recipeDraft.materials;

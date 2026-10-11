@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011100110">
+<meta name="app-build" content="20261011103308">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3280,6 +3280,7 @@ async function confirmLogin(){
   state._justLoggedIn = true;
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
+  checkRndAttendanceGate();
   await saveSession();
   logActivity(`Logged in (${role})`);
   logLoginEvent(sessionName, role, precisePromise);
@@ -3329,6 +3330,7 @@ async function confirmLoginV2(){
   state._justLoggedIn = true;
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
+  checkRndAttendanceGate();
   await saveSession();
   logActivity(`Logged in (${sessionRole})`);
   logLoginEvent(sessionName, sessionRole, precisePromise);
@@ -3344,6 +3346,7 @@ async function confirmLoginV2(){
 async function logOut(){
   state.session = null; state._pendingRole = null;
   state.aiChat = [];
+  state._pendingRndAttendance = null;
   await saveSession();
   if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
   render();
@@ -3760,6 +3763,58 @@ async function rndMarkLogout(chemistId, date){
   rec.by = state.session.name;
   await save('rndAttendance');
   showToast(chemist.name+' logged out');
+}
+// R&D Officer accounts mark their OWN attendance as the very first thing after logging in each
+// day — this is deliberately a mandatory gate (checkRndAttendanceGate() / renderRndAttendanceGate()
+// below), not an easily-skipped button buried in the Chemists tab, since that's exactly what
+// wasn't getting done reliably. Matched by login name against the chemist roster; the first time
+// a given name logs in under this role it's added to the roster automatically, since the whole
+// point is not needing Admin to pre-register every visit. Only triggers once per calendar day —
+// logging out and back in the same day they already marked doesn't ask again.
+function checkRndAttendanceGate(){
+  if(state.session.role !== 'R&D Officer') return;
+  let chemist = state.rndChemists.find(c=>c.name.toLowerCase()===state.session.name.toLowerCase());
+  if(!chemist){
+    chemist = {id: uid('CHM'), name: state.session.name, createdAt: new Date().toISOString()};
+    state.rndChemists = [...state.rndChemists, chemist];
+    save('rndChemists').catch(e=>console.error('auto-add chemist on R&D Officer login failed', e));
+  }
+  if(!rndAttLoginAt(rndAttRecFor(chemist.id, todayStr()))){
+    state._pendingRndAttendance = chemist.id;
+  }
+}
+function renderRndAttendanceGate(){
+  const chemist = byId(state.rndChemists, state._pendingRndAttendance);
+  const name = chemist ? chemist.name : state.session.name;
+  return `
+  <div class="center-screen" style="flex-direction:column;gap:18px;text-align:center;padding:24px;">
+    <div style="font-size:21px;font-weight:700;color:var(--ink);">Welcome, ${esc(name)}</div>
+    <div class="hint" style="max-width:380px;">Mark your attendance for today to continue into the system.</div>
+    <button type="button" class="btn btn-primary" id="btn-mark-own-rnd-attendance" style="padding:13px 30px;font-size:15px;">✓ Mark attendance for today</button>
+    <button type="button" class="btn" id="btn-skip-rnd-attendance-logout" style="font-size:13px;">Not me — log out</button>
+  </div>`;
+}
+function attachRndAttendanceGateHandlers(){
+  const markBtn = document.getElementById('btn-mark-own-rnd-attendance');
+  if(markBtn) markBtn.onclick = markOwnRndAttendance;
+  const skipBtn = document.getElementById('btn-skip-rnd-attendance-logout');
+  if(skipBtn) skipBtn.onclick = ()=>{ state._pendingRndAttendance = null; logOut(); };
+}
+async function markOwnRndAttendance(){
+  const chemistId = state._pendingRndAttendance;
+  const chemist = byId(state.rndChemists, chemistId);
+  if(!chemist) return;
+  const today = todayStr();
+  let rec = rndAttRecFor(chemist.id, today);
+  if(rec){ rec.loginAt = new Date().toISOString(); rec.by = state.session.name; }
+  else{
+    rec = {id: uid('ATT'), chemistId: chemist.id, chemistName: chemist.name, date: today, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
+    state.rndAttendance = [...state.rndAttendance, rec];
+  }
+  await save('rndAttendance');
+  state._pendingRndAttendance = null;
+  showToast('Attendance marked — welcome!');
+  render();
 }
 function rndAttendanceCountThisMonth(chemistId){
   const now = new Date();
@@ -4961,6 +5016,9 @@ function renderInner(){
   if(state.geoTestMode){ app.innerHTML = renderGeoTestPage(); attachGeoTestHandlers(); return; }
   if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
+  // R&D Officer accounts must mark today's attendance before reaching the rest of the app — set
+  // by checkRndAttendanceGate() right after login; see that function for why.
+  if(state._pendingRndAttendance){ app.innerHTML = renderRndAttendanceGate(); attachRndAttendanceGateHandlers(); return; }
   if(!pageAllowed(state.page)){ state.page = (pagesForRole(state.session.role)||['dashboard'])[0] || 'dashboard'; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.

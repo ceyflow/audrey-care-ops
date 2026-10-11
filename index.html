@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011163956">
+<meta name="app-build" content="20261011170212">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1601,6 +1601,30 @@ function applyTheme(){
   // actually saw, instead of always falling back to green. See _cachedThemeOrDefault() below.
   try{ localStorage.setItem('audreyThemeCache', JSON.stringify({paletteId: p.id})); }catch(e){}
 }
+// Same RLS problem as the theme above, for the two other things the sign-in screen itself needs
+// to show correctly while logged out: the uploaded logo/hero photo, and the login customization
+// text/font/order settings. Call after any authenticated fetch or save of either key so the cache
+// stays current; the sign-in screen falls back to this when the real (auth-only) read is blocked.
+function _cacheBrandingForLoggedOutView(){
+  try{ localStorage.setItem('audreyBrandingCache', JSON.stringify(state.branding)); }catch(e){}
+}
+function _cacheLoginCustomizationForLoggedOutView(){
+  try{ localStorage.setItem('audreyLoginCustomizationCache', JSON.stringify(state.loginCustomization)); }catch(e){}
+}
+function _cachedBrandingOrDefault(){
+  try{
+    const cached = JSON.parse(localStorage.getItem('audreyBrandingCache')||'null');
+    if(cached && Array.isArray(cached.addons)) return cached;
+  }catch(e){}
+  return {addons:[]};
+}
+function _cachedLoginCustomizationOrDefault(){
+  try{
+    const cached = JSON.parse(localStorage.getItem('audreyLoginCustomizationCache')||'null');
+    if(cached && typeof cached==='object') return {...DEFAULT_LOGIN_CUSTOMIZATION, ...cached};
+  }catch(e){}
+  return {...DEFAULT_LOGIN_CUSTOMIZATION};
+}
 function currentLogo(){
   const addons = (state.branding && state.branding.addons) || [];
   const found = addons.find(a=>a.id==='logo');
@@ -2451,11 +2475,6 @@ let state = {
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
   complaintMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='complaint',
   publicComplaintId: null, publicComplaintError: '',
-  // Standalone geolocation diagnostic page (#geotest) — a bare page with nothing else running,
-  // so a failure there can only mean the browser/device itself, never anything about the login
-  // flow's own timing or async chain.
-  geoTestMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='geotest',
-  _geoTestResult: null,
 };
 const _trackRequestedId = ((location.hash||'').replace('#','').split('/')[1]) ? decodeURIComponent((location.hash||'').replace('#','').split('/')[1]) : null;
 const _complaintRequestedId = _trackRequestedId;
@@ -2490,7 +2509,7 @@ function _cachedThemeOrDefault(){
   }catch(e){}
   return {paletteId:'green'};
 }
-const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? {...DEFAULT_LOGIN_CUSTOMIZATION} : []))))))));
+const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : []))))))));
 // One request for all 34 keys instead of 34 separate ones — each kvGet() round-trip has its own
 // latency, and firing them all at once doesn't fully hide that over a slower connection (plus
 // this is on the critical path of every single page load, authenticated or not, so it's worth
@@ -2537,6 +2556,13 @@ async function refreshAppData(knownAuthenticated){
     if(looksEmpty()) showDataLoadWarning(); else hideDataLoadWarning();
   }
   SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || _syncedKeyDefault(k); });
+  // Refresh the logged-out-view caches (see _cacheBrandingForLoggedOutView) whenever an
+  // authenticated fetch actually got real values — covers an admin who just looks around without
+  // ever opening Settings, not only the moment something is saved there.
+  if(knownAuthenticated){
+    if(loadedValues[SYNCED_KEYS.indexOf('branding')] != null) _cacheBrandingForLoggedOutView();
+    if(loadedValues[SYNCED_KEYS.indexOf('loginCustomization')] != null) _cacheLoginCustomizationForLoggedOutView();
+  }
   return loadedValues;
 }
 // Fetches a DEFERRED_KEY the first time it's actually needed (see performGoTo) instead of on
@@ -2999,7 +3025,12 @@ async function _saveOnce(key){
     try{
       const merged = await mergeBeforeSave(key);
       const ok = await kvSet(key, merged);
-      if(ok){ state[key] = merged; snapshotBaseline(key); return true; }
+      if(ok){
+        state[key] = merged; snapshotBaseline(key);
+        if(key==='branding') _cacheBrandingForLoggedOutView();
+        if(key==='loginCustomization') _cacheLoginCustomizationForLoggedOutView();
+        return true;
+      }
     }catch(e){}
     await new Promise(r=>setTimeout(r, 500));
   }
@@ -3274,107 +3305,16 @@ function deviceSummaryFromUserAgent(ua){
   const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Unknown browser';
   return os+' · '+browser;
 }
-// Asks the browser for the device's real GPS coordinates (the same permission prompt a maps
-// site would show). Resolves to null — never rejects — if the person denies it, the device has
-// no location hardware, or it just takes too long, so a caller never needs its own try/catch.
-function getPreciseLocation(timeoutMs=20000){
-  return new Promise(resolve=>{
-    if(!navigator.geolocation){ resolve(null); return; }
-    let settled = false;
-    const done = (v)=>{ if(settled) return; settled = true; resolve(v); };
-    const timer = setTimeout(()=>done(null), timeoutMs);
-    navigator.geolocation.getCurrentPosition(
-      pos=>{ clearTimeout(timer); done({lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy}); },
-      ()=>{ clearTimeout(timer); done(null); },
-      {enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0}
-    );
-  });
-}
-// Turns GPS coordinates into a place name (town/village level where BigDataCloud has it, city
-// otherwise) via its free, key-less, CORS-open reverse-geocode endpoint — no backend of our own
-// to hold an API key against, which matters since this whole app ships as static files.
-async function reverseGeocode(lat, lng){
-  try{
-    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
-    if(!res.ok) return null;
-    const data = await res.json();
-    const place = data.locality || data.city || (data.localityInfo && data.localityInfo.administrative && data.localityInfo.administrative[0] && data.localityInfo.administrative[0].name) || '';
-    return {city: place, region: data.principalSubdivision || '', country: data.countryName || ''};
-  }catch(e){ return null; }
-}
-// A bare, standalone diagnostic page (#geotest) — intentionally outside the normal login flow,
-// so a tap here goes straight into navigator.geolocation with nothing else in between. If this
-// fails the same way the real login does, the cause is the browser/device, not our code's
-// timing. Shows the raw outcome (coordinates, or the exact error code+message) on screen, plus
-// the Permissions API's read of the CURRENT state where the browser supports asking for it
-// without triggering a fresh prompt.
-function renderGeoTestPage(){
-  const r = state._geoTestResult;
-  return `
-  <div style="max-width:520px;margin:40px auto;padding:0 20px;font-family:system-ui,-apple-system,sans-serif;">
-    <h2 style="margin-bottom:4px;">Location diagnostic</h2>
-    <div style="color:#666;margin-bottom:20px;font-size:14px;">Standalone test — nothing else on this page. Tap the button, then screenshot or copy what it says below.</div>
-    <div style="margin-bottom:14px;font-size:14px;"><b>navigator.geolocation exists:</b> ${('geolocation' in navigator) ? '✅ yes' : '❌ no'}</div>
-    <div style="margin-bottom:14px;font-size:14px;"><b>Secure context (HTTPS):</b> ${window.isSecureContext ? '✅ yes' : '❌ no — geolocation requires HTTPS'}</div>
-    <div id="geotest-permstate" style="margin-bottom:14px;font-size:14px;"><b>Current permission state:</b> checking…</div>
-    <button type="button" id="btn-geotest-run" style="padding:14px 24px;font-size:16px;font-weight:600;background:#3B82C4;color:#fff;border:none;border-radius:10px;cursor:pointer;width:100%;">📍 Test my location now</button>
-    <div style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:10px;font-family:monospace;font-size:13px;white-space:pre-wrap;word-break:break-word;min-height:60px;">${r ? esc(r) : 'Result will show here after you tap the button above.'}</div>
-  </div>`;
-}
-function attachGeoTestHandlers(){
-  if(navigator.permissions && navigator.permissions.query){
-    navigator.permissions.query({name:'geolocation'}).then(status=>{
-      const el = document.getElementById('geotest-permstate');
-      if(el) el.innerHTML = `<b>Current permission state:</b> ${esc(status.state)}`;
-    }).catch(()=>{
-      const el = document.getElementById('geotest-permstate');
-      if(el) el.innerHTML = `<b>Current permission state:</b> not readable on this browser`;
-    });
-  } else {
-    const el = document.getElementById('geotest-permstate');
-    if(el) el.innerHTML = `<b>Current permission state:</b> Permissions API not supported here`;
-  }
-  const btn = document.getElementById('btn-geotest-run');
-  if(btn) btn.addEventListener('click', ()=>{
-    state._geoTestResult = 'Requesting… (watch for a browser popup now)';
-    render();
-    const GEO_ERROR_NAMES = {1:'PERMISSION_DENIED', 2:'POSITION_UNAVAILABLE', 3:'TIMEOUT'};
-    navigator.geolocation.getCurrentPosition(
-      pos=>{
-        state._geoTestResult = `SUCCESS\nlat: ${pos.coords.latitude}\nlng: ${pos.coords.longitude}\naccuracy: ${pos.coords.accuracy}m`;
-        render();
-      },
-      err=>{
-        state._geoTestResult = `ERROR\ncode: ${err.code} (${GEO_ERROR_NAMES[err.code]||'unknown'})\nmessage: ${err.message}`;
-        render();
-      },
-      {enableHighAccuracy: true, timeout: 20000, maximumAge: 0}
-    );
-  });
-}
-// Fire-and-forget: never blocks login, and a failed lookup (offline, rate-limited, blocked, or
-// location permission denied) still leaves a time+device record, just without the location
-// fields it couldn't get. Two sources, both best-effort: the IP lookup gives an approximate
-// city for every login with no prompt; the GPS lookup (if the person allows it) overwrites that
-// with the device's actual coordinates and a precise place name.
-// precisePromise, when given, is one already started by the caller — see the comment at the
-// top of confirmLogin()/confirmLoginV2() for why that matters (Safari drops the permission
-// prompt silently if too much happens between the tap and the geolocation call).
-async function logLoginEvent(name, role, precisePromise){
+// Fire-and-forget: never blocks login, and a failed lookup (offline, rate-limited, or blocked)
+// still leaves a time+device record, just without the location fields it couldn't get. IP-based
+// only — an approximate city for every login, with no permission prompt.
+async function logLoginEvent(name, role){
   let geo = {};
   try{
     const res = await fetch('https://ipapi.co/json/');
     if(res.ok){
       const data = await res.json();
-      if(!data.error) geo = {ip: data.ip, city: data.city, region: data.region, country: data.country_name, lat: data.latitude, lng: data.longitude, locationSource: 'ip'};
-    }
-  }catch(e){}
-  try{
-    const precise = await (precisePromise || getPreciseLocation());
-    if(precise){
-      const place = await reverseGeocode(precise.lat, precise.lng);
-      geo = {...geo, lat: precise.lat, lng: precise.lng, accuracy: precise.accuracy, locationSource: 'gps'};
-      if(place && place.city) geo = {...geo, city: place.city, region: place.region || geo.region, country: place.country || geo.country};
+      if(!data.error) geo = {ip: data.ip, city: data.city, region: data.region, country: data.country_name, lat: data.latitude, lng: data.longitude};
     }
   }catch(e){}
   const entry = {id: uid('LOGIN'), name, role, at: new Date().toISOString(), userAgent: navigator.userAgent, ...geo};
@@ -3382,11 +3322,6 @@ async function logLoginEvent(name, role, precisePromise){
   save('loginHistory').catch(()=>{});
 }
 async function confirmLogin(){
-  // Started here, synchronously, as the very first thing on the click — Safari/WebKit treats
-  // the permission prompt as tied to that original tap, and silently skips showing it (straight
-  // to denied, no dialog at all) once an await or two have passed. Everything else in this
-  // function can take its time; this one call can't wait for any of it.
-  const precisePromise = getPreciseLocation();
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
   const password = (passInput.value||'');
@@ -3423,7 +3358,7 @@ async function confirmLogin(){
   clearInterval(state._loginClockTimer);
   await saveSession();
   logActivity(`Logged in (${role})`);
-  logLoginEvent(sessionName, role, precisePromise);
+  logLoginEvent(sessionName, role);
   // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
   // before anyone was signed in — re-fetch now that we actually are, rather than rendering
   // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see.
@@ -3443,10 +3378,6 @@ async function confirmLogin(){
 // goes straight to the public board display rather than a staff session (matching how "Staff
 // Login" on that board already expects to find nobody signed in and show the login screen).
 async function confirmLoginV2(){
-  // Started here, synchronously, as the very first thing on the click — see the matching
-  // comment in confirmLogin() above for why (Safari/WebKit drops the permission prompt
-  // silently, no dialog at all, once an await or two separates it from the original tap).
-  const precisePromise = getPreciseLocation();
   const nameInput = document.getElementById('login-name');
   const passInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error');
@@ -3464,7 +3395,7 @@ async function confirmLoginV2(){
     passInput.value = ''; passInput.focus();
     return;
   }
-  if(role==='Orders Process'){ logLoginEvent(typedName, role, precisePromise); await refreshAppData(true); enterBoardMode(); return; }
+  if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
   // The role on file in User account setup (secureAccounts, looked up above as `role`) is always
   // current — it's what Admin actually edits. profiles.role is only ever set once, at signup, and
   // never updated after, so it goes stale the moment someone's access level changes; it's only
@@ -3479,7 +3410,7 @@ async function confirmLoginV2(){
   clearInterval(state._loginClockTimer);
   await saveSession();
   logActivity(`Logged in (${sessionRole})`);
-  logLoginEvent(sessionName, sessionRole, precisePromise);
+  logLoginEvent(sessionName, sessionRole);
   // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
   // before anyone was signed in — re-fetch now that we actually are, rather than rendering
   // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see. This is
@@ -5322,8 +5253,7 @@ function syncLoginMap(){
   pins.forEach(e=>{
     const marker = L.marker([e.lat, e.lng]).addTo(map);
     const loc = esc([e.city, e.region, e.country].filter(Boolean).join(', ') || 'Unknown location');
-    const precision = e.locationSource==='gps' ? 'Exact — device GPS' : 'Approximate — internet connection';
-    marker.bindPopup(`<b>${esc(e.name)}</b> — ${esc(e.role)}<br>${fmtDateTime(e.at)}<br>${loc}<br><span style="color:#888;font-size:11px;">${precision}</span>`);
+    marker.bindPopup(`<b>${esc(e.name)}</b> — ${esc(e.role)}<br>${fmtDateTime(e.at)}<br>${loc}<br><span style="color:#888;font-size:11px;">Approximate — based on IP address</span>`);
     if(focused && e.id===focusId) marker.openPopup();
   });
   _loginMapInstance = map;
@@ -5350,7 +5280,6 @@ function renderInner(){
   if(state.boardMode){ app.innerHTML = renderBoardPage(); attachBoardHandlers(); return; }
   if(state.trackMode){ app.innerHTML = renderTrackPage(); attachTrackHandlers(); return; }
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
-  if(state.geoTestMode){ app.innerHTML = renderGeoTestPage(); attachGeoTestHandlers(); return; }
   if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
   // R&D Officer accounts must mark today's attendance before reaching the rest of the app — set
@@ -8122,7 +8051,7 @@ function renderLoginActivityPanel(){
   <div class="panel" id="settings-login-activity">
     <div class="panel-head"><h3>Login activity</h3>${anyPins ? `<button type="button" class="btn btn-sm" id="btn-view-login-map">🗺️ View on map</button>` : ''}</div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize. When the device allows location access, this is its exact GPS position; otherwise it's an approximate city based on the internet connection.</div>
+      <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize. Location is an approximate city based on the IP address, not exact GPS.</div>
       ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
       <table class="data-table" style="margin:0;">
@@ -8131,7 +8060,7 @@ function renderLoginActivityPanel(){
           ${entries.slice(0,100).map(e=>{
             const hasPin = typeof e.lat==='number' && typeof e.lng==='number';
             const loc = e.city ? esc([e.city, e.region, e.country].filter(Boolean).join(', ')) : '<span class="hint">Unknown</span>';
-            const precisionBadge = hasPin ? `<span class="hint" style="font-size:10.5px;margin-left:5px;">${e.locationSource==='gps' ? '(exact)' : '(approx.)'}</span>` : '';
+            const precisionBadge = hasPin ? `<span class="hint" style="font-size:10.5px;margin-left:5px;">(approx.)</span>` : '';
             return `
           <tr>
             <td>${esc(e.name)}</td>

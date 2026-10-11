@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011170708">
+<meta name="app-build" content="20261011182051">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -685,7 +685,10 @@ html{ visibility:hidden; }
   .bsheet-step-row .bsr-head,.prep-step-row .bsr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
   .bsheet-step-row .bsr-title,.prep-step-row .bsr-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
   .bsheet-step-row .bsr-badge{width:24px;height:24px;border-radius:50%;background:linear-gradient(155deg,var(--accent),var(--accent-dark));color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 5px rgba(60,144,88,.35);}
-  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
+  .bsheet-step-row .bsr-temp-tag{border:1px dashed var(--border);border-radius:20px;padding:3px 10px 3px 8px;font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);cursor:pointer;}
+  .bsheet-step-row .bsr-temp-tag[data-has-value="1"]{border-style:solid;border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
+  .bsheet-step-row .bsr-temp-tag:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft);}
+  .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:3fr 1fr;gap:14px;}
   .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 5px;}
   .bsheet-step-row .bsr-field input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease;}
   .bsheet-step-row .bsr-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
@@ -8292,7 +8295,14 @@ function startBatchTicker(){
 function stopBatchTicker(){ if(state._batchTicker){ clearInterval(state._batchTicker); state._batchTicker=null; } }
 
 // ---- Recipe CRUD ----
-function newStepDraft(){ return {id:uid('STEP'), ingredient:'', amount:'', waitMinutes:0}; }
+const TEMPERATURE_OPTIONS = [40,45,50,55,60,65,70,75,80];
+function temperatureTagHtml(idPrefix, s){
+  return `<select id="${idPrefix}-temp-${s.id}" class="bsr-temp-tag" data-has-value="${s.temperature?'1':'0'}" onchange="this.dataset.hasValue=this.value?'1':'0'" onclick="event.stopPropagation()">
+    <option value="">+ Temp</option>
+    ${TEMPERATURE_OPTIONS.map(t=>`<option value="${t}"${String(s.temperature||'')===String(t)?' selected':''}>${t}°C</option>`).join('')}
+  </select>`;
+}
+function newStepDraft(){ return {id:uid('STEP'), ingredient:'', amount:'', temperature:'', waitMinutes:0}; }
 function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 // Percentage-of-batch-weight formulation, e.g. { percent: 4 } on an 150kg batch needs 6kg.
 // This is how the factory's real batch sheets are written, so a recipe's raw materials scale to
@@ -8453,10 +8463,10 @@ function syncTemplateDraftStepFieldsFromDOM(){
       return;
     }
     const ing = document.getElementById('tstep-ing-'+s.id);
-    const amt = document.getElementById('tstep-amt-'+s.id);
+    const temp = document.getElementById('tstep-temp-'+s.id);
     const wait = document.getElementById('tstep-wait-'+s.id);
     if(ing) s.ingredient = ing.value;
-    if(amt) s.amount = amt.value;
+    if(temp) s.temperature = temp.value;
     if(wait) s.waitMinutes = parseFloat(wait.value)||0;
   });
 }
@@ -8479,7 +8489,7 @@ async function saveTemplateSteps(){
     }
     const ingredient = (s.ingredient||'').trim();
     if(!ingredient) return null;
-    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
+    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
   }).filter(Boolean);
   if(!name){ showToast('Name this template'); return; }
   if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
@@ -8566,9 +8576,11 @@ function syncDraftStepFieldsFromDOM(){
     }
     const ing = document.getElementById('step-ing-'+s.id);
     const amt = document.getElementById('step-amt-'+s.id);
+    const temp = document.getElementById('step-temp-'+s.id);
     const wait = document.getElementById('step-wait-'+s.id);
     if(ing) s.ingredient = ing.value;
     if(amt) s.amount = amt.value;
+    if(temp) s.temperature = temp.value;
     if(wait) s.waitMinutes = parseFloat(wait.value)||0;
   });
 }
@@ -8617,7 +8629,7 @@ async function submitRecipe(e){
   syncDraftStepFieldsFromDOM();
   syncDraftMaterialFieldsFromDOM();
   const steps = state._recipeDraft.steps
-    .map(s=>({id:s.id, ingredient:(s.ingredient||'').trim(), amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)}))
+    .map(s=>({id:s.id, ingredient:(s.ingredient||'').trim(), amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)}))
     .filter(s=>s.ingredient);
   const materials = state._recipeDraft.materials
     .map(m=>({id:m.id, name:(m.name||'').trim(), percent: Math.max(0, Number(m.percent)||0)}))
@@ -8743,7 +8755,7 @@ async function nextBatchStep(){
   b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
   await saveActiveBatchVerified();
-  showToast('Now: '+batchStepLabel(step)+(step.amount?(' — '+step.amount):''));
+  showToast('Now: '+batchStepLabel(step)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
 }
 async function prevBatchStep(){
   const b = state.activeBatch; if(!b || b.currentStep<=0) return;
@@ -9316,6 +9328,7 @@ function renderActiveBatchCard(){
       <div class="batch-step-title">Step ${b.currentStep+1} of ${b.steps.length}: ${esc(batchStepLabel(step))}</div>
       ${step.type==='preparation' ? batchStepChecklistHtml(step) : `
         ${step.amount ? `<div class="batch-step-amount">${esc(step.amount)}</div>` : ''}
+        ${step.temperature ? `<div class="batch-step-amount">🌡 ${esc(step.temperature)}°C</div>` : ''}
         <div id="batch-countdown" class="batch-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
         <div id="batch-countdown-note" class="rc-meta" style="opacity:.85;">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'paused' : (remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step'))}</div>
       `}
@@ -9340,7 +9353,7 @@ function renderActiveBatchCard(){
         const cls = i<b.currentStep || (isDone) ? 'done' : (i===b.currentStep ? 'current' : '');
         return `<div class="bs-row ${cls}">
           <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
-          <span style="flex:1;">${esc(batchStepLabel(s))}${s.amount?(' — '+esc(s.amount)):''}</span>
+          <span style="flex:1;">${esc(batchStepLabel(s))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
           <span>${s.waitMinutes>0 ? s.waitMinutes+' min' : 'no wait'}</span>
         </div>`;
       }).join('')}
@@ -9364,6 +9377,7 @@ function renderBatchFocusOverlay(){
       <div class="bf-ingredient">${esc(batchStepLabel(step))}</div>
       ${step.type==='preparation' ? batchStepChecklistHtml(step) : `
         ${step.amount ? `<div class="bf-amount">${esc(step.amount)}</div>` : ''}
+        ${step.temperature ? `<div class="bf-amount">🌡 ${esc(step.temperature)}°C</div>` : ''}
         <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
         <div class="bf-note">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — moving on…" : 'remaining on this step'))}</div>
       `}
@@ -9484,7 +9498,7 @@ function renderTemplateStepsModal(){
           return `
           <div class="bsheet-step-row">
             <div class="bsr-head">
-              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)}</div>
+              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temperatureTagHtml('tstep', s)}</div>
               <div class="bsr-actions">
                 <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
                 <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
@@ -9493,7 +9507,6 @@ function renderTemplateStepsModal(){
             </div>
             <div class="bsr-fields">
               <div class="bsr-field"><label>Instruction</label><input id="tstep-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
-              <div class="bsr-field"><label>Amount</label><input id="tstep-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
               <div class="bsr-field"><label>Wait (min)</label><input id="tstep-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
             </div>
           </div>`;
@@ -9660,7 +9673,7 @@ function recipeBatchSheetModal(recipeId){
           return `
           <div class="bsheet-step-row">
             <div class="bsr-head">
-              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)}</div>
+              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temperatureTagHtml('step', s)}</div>
               <div class="bsr-actions">
                 <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
                 <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
@@ -9669,7 +9682,6 @@ function recipeBatchSheetModal(recipeId){
             </div>
             <div class="bsr-fields">
               <div class="bsr-field"><label>Instruction</label><input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
-              <div class="bsr-field"><label>Amount</label><input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="e.g. 80kg"></div>
               <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
             </div>
           </div>`;
@@ -9685,7 +9697,7 @@ function recipeBatchSheetModal(recipeId){
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${r.steps.map(s=> s.type==='preparation'
           ? `<li style="margin-bottom:4px;">Preparation/Checking: ${(s.checklist||[]).map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join('; ')}</li>`
-          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
+          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.temperature?' — '+esc(s.temperature)+'°C':''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
         ).join('')}
       </ol>` : '')}
       ${(tpl.showCombineNote && r.combineNote) ? `<div class="hint" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;"><strong style="color:var(--ink);">Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
@@ -9778,11 +9790,13 @@ function printBatchSheet(recipeId){
     }
     const ingEl = document.getElementById('step-ing-'+s.id);
     const amtEl = document.getElementById('step-amt-'+s.id);
+    const tempEl = document.getElementById('step-temp-'+s.id);
     const waitEl = document.getElementById('step-wait-'+s.id);
     return {
       type: 'phrase',
       ingredient: ingEl ? ingEl.value : s.ingredient,
       amount: amtEl ? amtEl.value : s.amount,
+      temperature: tempEl ? tempEl.value : s.temperature,
       waitMinutes: waitEl ? (parseFloat(waitEl.value)||0) : s.waitMinutes,
     };
   }).filter(s=> s.type==='preparation' ? (s.checklist||[]).length>0 : s.ingredient);
@@ -9811,7 +9825,7 @@ function printBatchSheet(recipeId){
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${steps.map(s=> s.type==='preparation'
           ? `<li style="margin-bottom:4px;"><strong>Preparation/Checking:</strong> ${s.checklist.map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join('; ')}</li>`
-          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
+          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.temperature?' — '+esc(s.temperature)+'°C':''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
         ).join('')}
       </ol>` : ''}
       ${(tpl.showCombineNote && r.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
@@ -9859,7 +9873,7 @@ function printDocumentedBatchSheet(batchId){
       <ol style="margin:0 0 14px;padding-left:20px;">
         ${steps.map(s=> s.type==='preparation'
           ? `<li style="margin-bottom:4px;"><strong>Preparation/Checking:</strong> ${(s.checklist||[]).map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join('; ')}</li>`
-          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
+          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.temperature?' — '+esc(s.temperature)+'°C':''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
         ).join('')}
       </ol>` : ''}
       ${(tpl.showCombineNote && b.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(b.combineNote)}</div>` : ''}
@@ -9887,7 +9901,7 @@ async function saveBatchSheetSteps(recipeId){
     }
     const ingredient = (s.ingredient||'').trim();
     if(!ingredient) return null;
-    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
+    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
   }).filter(Boolean);
   if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const r = byId(state.recipes, recipeId); if(!r) return;

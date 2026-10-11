@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011161306">
+<meta name="app-build" content="20261011163956">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1013,7 +1013,16 @@ const SMS_CONFIGURED = SMS_APP_SECRET !== 'PASTE_SMS_APP_SECRET';
 const CITYPAK_APP_SECRET = 'audrey-citypak-7f3a9c1e-8b42';
 const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','templates','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','smsCampaigns','complaintCategories','complaintPriorities','bulkSmsTemplates','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndProjects','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization'];
+// 'templates' used to be a real synced key; nothing in the app reads state.templates any more
+// (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
+// from here so it stops being fetched on every login for no reason.
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization'];
+// Fetched lazily the first time their own page is opened, instead of on every single login and
+// refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
+// reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
+// so there's nothing anywhere else in the app that needs them before that page is actually opened.
+const DEFERRED_KEYS = ['bulkSmsTemplates','smsCampaigns','rndProjects'];
+const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns'], rnd: ['rndProjects'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1497,7 +1506,11 @@ function subscribeRealtime(){
         if(stableStringify(state.auth)===stableStringify(incoming) || recentlySavedByUs(k)) return;
         state.auth = incoming; render(); return;
       }
-      if(SYNCED_KEYS.includes(k)){
+      // A DEFERRED_KEY only joins live realtime handling once it's actually been fetched (see
+      // ensureDeferredKeysLoaded) — before that there's no local copy to reconcile against, and no
+      // UI showing it anyway, so an update arriving for a page nobody's opened yet is simply
+      // picked up by the normal fetch whenever that page is first opened.
+      if(SYNCED_KEYS.includes(k) || (DEFERRED_KEYS.includes(k) && state._deferredLoaded[k])){
         const incoming = payload.new ? payload.new.value : _syncedKeyDefault(k);
         if(stableStringify(state[k])===stableStringify(incoming) || recentlySavedByUs(k)) return;
         const prevChatLen = (k==='chat' && Array.isArray(state.chat)) ? state.chat.length : null;
@@ -1834,7 +1847,7 @@ const PAGE_DATA_KEYS = {
   chat: ['chat','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns'],
   ratings: ['orders'],
-  settings: ['templates','complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
+  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
 };
 // Every mutating action across every page calls logActivity(), and the topbar's Activity log
 // viewer is available regardless of which page is open — so activityLog isn't tied to one page,
@@ -2110,6 +2123,24 @@ const RND_NEXT_ACTION_LABEL = {0:'Transfer to '+RND_STAGES[1], 1:'Transfer to '+
 // and Sample Testing merged into one "On Trial & Formulating" stage. Maps an old 0-4 stage index
 // to its new 0-3 one, for one-time migration of products/history saved under the old scheme.
 const RND_STAGE_MIGRATION_MAP = {0:0, 1:1, 2:1, 3:2, 4:3};
+// One-time migration: the R&D board went from 5 stages to 4 (Formulating + Sample Testing merged
+// into "On Trial & Formulating"). Remaps any product/history stage index saved under the old 0-4
+// scheme to the new 0-3 one — guarded by _stageSchemaV2 per record so it only ever runs once per
+// product. Called both from loadAll() (a no-op now that rndProjects loads lazily — nothing to
+// migrate before it's fetched) and right after ensureDeferredKeysLoaded actually fetches it, so
+// old-format records still get fixed up whenever they're actually loaded.
+function migrateRndProjectStages(){
+  if(!Array.isArray(state.rndProjects)) return;
+  let rndMigrated = false;
+  state.rndProjects.forEach(p=>{
+    if(p._stageSchemaV2) return;
+    if(typeof p.stage==='number') p.stage = RND_STAGE_MIGRATION_MAP[p.stage] ?? Math.min(p.stage,3);
+    if(Array.isArray(p.history)) p.history.forEach(h=>{ if(typeof h.stage==='number') h.stage = RND_STAGE_MIGRATION_MAP[h.stage] ?? Math.min(h.stage,3); });
+    p._stageSchemaV2 = true;
+    rndMigrated = true;
+  });
+  if(rndMigrated) kvSet('rndProjects', state.rndProjects).catch(e=>console.error('rnd stage migration failed', e));
+}
 function canManageRnd(){ return !!state.session && roleCan(state.session.role, 'rnd_manage'); }
 function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
 
@@ -2360,7 +2391,7 @@ function personIcon(){
 
 let state = {
   session: null,
-  orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [], templates: [],
+  orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [],
   recipes: [], activeBatch: null, batchFocusMode: false,
   gmpChecklistEntries: [],
   blendBatches: [],
@@ -2408,6 +2439,8 @@ let state = {
   bulkSmsProgress: null,
   bulkSmsTab: 'campaign',
   bulkSmsTemplates: [],
+  smsCampaigns: [],
+  _deferredLoaded: {}, // which DEFERRED_KEYS have actually been fetched this session
   _bulkSmsTemplateForm: null,
   navLabels: {},
   selectedComplaints: new Set(),
@@ -2506,6 +2539,23 @@ async function refreshAppData(knownAuthenticated){
   SYNCED_KEYS.forEach((k, i) => { state[k] = loadedValues[i] || _syncedKeyDefault(k); });
   return loadedValues;
 }
+// Fetches a DEFERRED_KEY the first time it's actually needed (see performGoTo) instead of on
+// every login/refresh. Sets the baseline the same way loadAll() does for every other key, so
+// save()'s merge-before-write logic works correctly the first time this page's own form saves —
+// by the time any UI that could trigger a save on this key has rendered, this has already run.
+// Returns true if it actually fetched anything (caller re-renders only when that's the case).
+async function ensureDeferredKeysLoaded(keys){
+  const toFetch = (keys||[]).filter(k => !state._deferredLoaded[k]);
+  if(!toFetch.length) return false;
+  const results = await Promise.all(toFetch.map(k => kvGet(k).catch(()=>undefined)));
+  toFetch.forEach((k,i) => {
+    state[k] = results[i] != null ? results[i] : _syncedKeyDefault(k);
+    state._deferredLoaded[k] = true;
+    snapshotBaseline(k);
+  });
+  if(toFetch.includes('rndProjects')) migrateRndProjectStages();
+  return true;
+}
 async function loadAll(){
   if(!BACKEND_CONFIGURED){ state.loaded = true; state.backendMissing = true; render(); return; }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
@@ -2555,21 +2605,11 @@ async function loadAll(){
     delete state.navLabels.blending;
     kvSet('navLabels', state.navLabels).catch(e=>console.error('clear stale blending navLabel failed', e));
   }
-  // One-time migration: the R&D board went from 5 stages to 4 (Formulating + Sample Testing
-  // merged into "On Trial & Formulating"). Remap any product/history stage index saved under the
-  // old 0-4 scheme to the new 0-3 one — guarded by _stageSchemaV2 so it only ever runs once per
-  // product, never re-applied to data already in the new scheme.
-  if(Array.isArray(state.rndProjects)){
-    let rndMigrated = false;
-    state.rndProjects.forEach(p=>{
-      if(p._stageSchemaV2) return;
-      if(typeof p.stage==='number') p.stage = RND_STAGE_MIGRATION_MAP[p.stage] ?? Math.min(p.stage,3);
-      if(Array.isArray(p.history)) p.history.forEach(h=>{ if(typeof h.stage==='number') h.stage = RND_STAGE_MIGRATION_MAP[h.stage] ?? Math.min(h.stage,3); });
-      p._stageSchemaV2 = true;
-      rndMigrated = true;
-    });
-    if(rndMigrated) kvSet('rndProjects', state.rndProjects).catch(e=>console.error('rnd stage migration failed', e));
-  }
+  // rndProjects is now a DEFERRED_KEY (not fetched until the R&D page is opened), so this no-ops
+  // here on a fresh login — see migrateRndProjectStages() itself, which ensureDeferredKeysLoaded
+  // calls right after actually fetching it, so old-format records still get migrated whenever
+  // they're actually loaded, just not necessarily at login time any more.
+  migrateRndProjectStages();
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
@@ -2983,10 +3023,12 @@ async function logActivity(message){
       role: state.session ? state.session.role : null,
       message,
     });
-    // Keep a full year of history — trim only entries older than that, not by count, so an
-    // active shop doesn't lose months of audit trail to an arbitrary entry cap.
-    const oneYearAgo = Date.now() - 365*24*60*60*1000;
-    state.activityLog = state.activityLog.filter(l => new Date(l.at).getTime() >= oneYearAgo);
+    // activityLog is fetched in full on every single login/refresh (it's not a DEFERRED_KEY — the
+    // topbar's Activity log button is visible, and clickable, from any page) — a full year of
+    // every mutating action across a busy shop adds up to real megabytes re-downloaded every time.
+    // 180 days plus a hard count cap bounds that, while still keeping a solid audit window.
+    const sixMonthsAgo = Date.now() - 180*24*60*60*1000;
+    state.activityLog = state.activityLog.filter(l => new Date(l.at).getTime() >= sixMonthsAgo).slice(0, 5000);
     await save('activityLog');
   }catch(e){ console.error('logActivity failed', e); }
 }
@@ -3456,6 +3498,12 @@ async function logOut(){
   state.aiChat = [];
   state._pendingRndAttendance = null;
   state._rndAttCal = null;
+  // Every eager (SYNCED_KEYS) value gets freshly overwritten on the next login via
+  // refreshAppData(), but a DEFERRED_KEY only re-fetches when its _deferredLoaded flag is false —
+  // without clearing this here, a second, different account logging into the same browser tab
+  // would see whichever account was last on the R&D/Bulk SMS page's stale in-memory data instead
+  // of a fresh fetch for themselves.
+  state._deferredLoaded = {};
   await saveSession();
   if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
   render();
@@ -3493,6 +3541,8 @@ function performGoTo(page){
   render();
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
+  const deferredKeys = DEFERRED_KEY_PAGES[page];
+  if(deferredKeys) ensureDeferredKeysLoaded(deferredKeys).then(fetched => { if(fetched) render(); });
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
@@ -6351,7 +6401,7 @@ function renderRndPage(){
       ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
       : (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd" style="margin-left:auto;">+ Add product</button>` : '')}
   </div>
-  ${view==='chemists' ? renderRndChemistsTab() : (state.rndProjects.length===0 ? `
+  ${view==='chemists' ? renderRndChemistsTab() : (!state._deferredLoaded.rndProjects ? `<div class="empty-state"><p class="hint">Loading…</p></div>` : state.rndProjects.length===0 ? `
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>
@@ -7057,6 +7107,9 @@ function renderBulkSmsPage(){
   `;
 }
 function renderBulkSmsCampaignTab(){
+  if(!state._deferredLoaded.bulkSmsTemplates || !state._deferredLoaded.smsCampaigns){
+    return `<div class="empty-state"><p class="hint">Loading…</p></div>`;
+  }
   const q = (state.filters.bulkSmsCustomerSearch||'').toLowerCase();
   const withPhone = state.customers.filter(c=>c.phone);
   const rows = withPhone.filter(c=> !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q));

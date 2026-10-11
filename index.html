@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011160448">
+<meta name="app-build" content="20261011160955">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -550,7 +550,7 @@ html{ visibility:hidden; }
     padding:48px 52px 44px;min-width:0;overflow:hidden;position:relative;
   }
   .login-illustration::after{content:'';position:absolute;inset:0;background:linear-gradient(195deg,rgba(10,24,16,0) 45%,rgba(7,18,12,.4) 100%);pointer-events:none;}
-  .login-illustration-logo{height:30px;width:auto;max-width:none;display:block;align-self:flex-start;flex:0 0 auto;position:relative;z-index:1;filter:brightness(0) invert(1);opacity:.95;object-fit:contain;}
+  .login-illustration-logo{height:54px;width:auto;max-width:none;display:block;align-self:flex-start;flex:0 0 auto;position:relative;z-index:1;filter:brightness(0) invert(1);opacity:.95;object-fit:contain;}
   .login-hero-bottom{position:relative;z-index:1;}
   .login-eyebrow{margin:0;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.7);}
   .login-hero-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(28px,3.4vw,42px);line-height:1.1;color:#fff;margin:12px 0 0;max-width:14ch;}
@@ -591,7 +591,7 @@ html{ visibility:hidden; }
      the hero content with the rest of the row empty. */
   .login-preview-frame{border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;min-height:300px;margin-bottom:22px;}
   .login-illustration-preview{flex:1.15;padding:26px 30px;min-height:auto;}
-  .login-illustration-preview .login-illustration-logo{height:24px;}
+  .login-illustration-preview .login-illustration-logo{height:40px;}
   .login-illustration-preview .login-eyebrow{font-size:10px;}
   .login-illustration-preview .login-hero-greeting{font-size:clamp(19px,2.1vw,25px);max-width:16ch;}
   .login-illustration-preview .login-hero-sub{font-size:12px;max-width:34ch;margin-top:10px;}
@@ -2911,6 +2911,7 @@ async function loadAll(){
   SYNCED_KEYS.forEach(k=>snapshotBaseline(k));
   render();
   subscribeRealtime();
+  shrinkOversizedLoginHeroPhotoIfNeeded(); // fire-and-forget, see its own comment
   // Customer-facing tracking page: while a CityPak shipment is still in transit, silently
   // re-poll for new tracking events so the page updates live without needing a manual reload.
   // Stops itself once the shipment is marked delivered.
@@ -4052,16 +4053,79 @@ function fileToDataUrl(file){
     reader.readAsDataURL(file);
   });
 }
+// Every synced key — branding included — gets downloaded in full on every single login and
+// refresh (one batched query across all of them, see _fetchSyncedKeys). A raw phone photo saved
+// straight through fileToDataUrl can be several MB of base64 text sitting inside that one row, so
+// every refresh for every user pays to download it even though it only displays on the (rarely
+// seen, logged-out) sign-in screen. Downscales to a sane max dimension and re-encodes as JPEG —
+// still sharp as a full-bleed background on any real screen, a small fraction of the size.
+function downscaleImageToDataUrl(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if(w > maxDim || h > maxDim){
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w*scale); h = Math.round(h*scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function dataUrlApproxBytes(dataUrl){
+  const i = dataUrl.indexOf(',');
+  const b64 = i>=0 ? dataUrl.slice(i+1) : dataUrl;
+  return Math.round(b64.length * 0.75); // base64 -> raw bytes
+}
+// One-time self-heal for photos uploaded before downscaleImageToDataUrl existed (or from before
+// this fix at all) — those are sitting in the branding row at full original size, and that row
+// gets downloaded in full on every single login/refresh for every user (see _fetchSyncedKeys),
+// which is exactly what made the site feel slow after someone uploaded a real phone photo as the
+// login hero background. Runs after the normal render so it never delays the page the user is
+// looking at; only an admin-capable session can write the fix back.
+async function shrinkOversizedLoginHeroPhotoIfNeeded(){
+  try{
+    if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
+    const photo = loginHeroPhoto();
+    if(!photo || dataUrlApproxBytes(photo) < 900*1024) return;
+    const img = new Image();
+    await new Promise((resolve, reject)=>{ img.onload = resolve; img.onerror = reject; img.src = photo; });
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const maxDim = 1920;
+    if(w > maxDim || h > maxDim){ const scale = maxDim/Math.max(w,h); w = Math.round(w*scale); h = Math.round(h*scale); }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    const smaller = canvas.toDataURL('image/jpeg', 0.82);
+    if(dataUrlApproxBytes(smaller) >= dataUrlApproxBytes(photo)) return; // never make it worse
+    const addons = state.branding.addons || (state.branding.addons = []);
+    const existing = addons.find(a=>a.id==='loginHeroPhoto');
+    if(!existing) return;
+    existing.image = smaller; existing.updatedAt = new Date().toISOString();
+    await save('branding');
+    console.log('Shrank an oversized login hero photo automatically (every refresh was downloading it in full).');
+  }catch(e){ console.error('shrinkOversizedLoginHeroPhotoIfNeeded failed', e); }
+}
 async function brandingChangeAddon(addonId, file){
   if(!(state.session && roleCan(state.session.role, 'branding_manage')) || !file) return;
-  let dataUrl;
-  try{ dataUrl = await fileToDataUrl(file); }
-  catch(e){ showToast('Could not read that file'); return; }
   // The login hero photo fills the whole pane via background-size:cover at whatever aspect ratio
   // the viewer's screen happens to be — forcing it through the fixed-frame crop tool first (built
   // for logos dropped onto a small fixed box) would crop it a second, different way at render
-  // time and just throw away the user's framing. Save the full image and let CSS do the fitting.
+  // time and just throw away the user's framing. Save a downscaled copy and let CSS do the fitting.
   if(addonId === 'loginHeroPhoto'){
+    let dataUrl;
+    try{ dataUrl = await downscaleImageToDataUrl(file, 1920, 0.82); }
+    catch(e){ showToast('Could not read that image'); return; }
     const addons = state.branding.addons || (state.branding.addons = []);
     const existing = addons.find(a=>a.id===addonId);
     if(existing){ existing.image = dataUrl; existing.updatedAt = new Date().toISOString(); }
@@ -4070,6 +4134,9 @@ async function brandingChangeAddon(addonId, file){
     showToast('Login hero photo updated');
     return;
   }
+  let dataUrl;
+  try{ dataUrl = await fileToDataUrl(file); }
+  catch(e){ showToast('Could not read that file'); return; }
   state.pendingCrop = {addonId, dataUrl};
   openModal('brandcrop');
 }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011104905">
+<meta name="app-build" content="20261011134610">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3356,6 +3356,7 @@ async function logOut(){
   state.session = null; state._pendingRole = null;
   state.aiChat = [];
   state._pendingRndAttendance = null;
+  state._rndAttCal = null;
   await saveSession();
   if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
   render();
@@ -3782,9 +3783,16 @@ async function rndMarkLogout(chemistId, date){
 // logging out and back in the same day they already marked doesn't ask again.
 function checkRndAttendanceGate(){
   if(state.session.role !== 'R&D Officer') return;
-  let chemist = state.rndChemists.find(c=>c.name.toLowerCase()===state.session.name.toLowerCase());
+  // Trimmed on both sides, not just lower-cased: a name typed or stored with stray leading/
+  // trailing whitespace anywhere (the chemist roster entry, a staff_name on an older account,
+  // etc.) would otherwise fail this exact-equality check and silently create a SECOND chemist
+  // record for the same person — which is exactly how a login's attendance write can end up
+  // linked to a different chemist id than the one Admin's table is actually showing for that
+  // name, making it look like the record never saved at all.
+  const loginName = (state.session.name||'').trim().toLowerCase();
+  let chemist = state.rndChemists.find(c=>(c.name||'').trim().toLowerCase()===loginName);
   if(!chemist){
-    chemist = {id: uid('CHM'), name: state.session.name, createdAt: new Date().toISOString()};
+    chemist = {id: uid('CHM'), name: (state.session.name||'').trim(), createdAt: new Date().toISOString()};
     state.rndChemists = [...state.rndChemists, chemist];
     save('rndChemists').catch(e=>console.error('auto-add chemist on R&D Officer login failed', e));
   }
@@ -3792,37 +3800,128 @@ function checkRndAttendanceGate(){
     state._pendingRndAttendance = chemist.id;
   }
 }
+// Same calendar used by Admin's own Attendance button (rndAttendanceModal) — reused directly
+// here rather than rebuilt, so Sudath sees the real month-by-month history (not just a bare
+// "mark today" button) and the two stay visually and behaviorally identical. Rendered as the
+// gate's own full-page content (no overlay/modal wrapper) since this blocks the whole app, not
+// a dismissible dialog over it.
 function renderRndAttendanceGate(){
-  const chemist = byId(state.rndChemists, state._pendingRndAttendance);
-  const name = chemist ? chemist.name : state.session.name;
+  const chemistId = state._pendingRndAttendance;
+  const chemist = byId(state.rndChemists, chemistId);
+  if(!chemist) return '';
+  if(!state._rndAttCal || state._rndAttCal.chemistId!==chemistId){
+    state._rndAttCal = {chemistId, month: todayStr().slice(0,7), selectedDate: todayStr()};
+  }
+  const cal = state._rndAttCal;
+  const [y,m] = cal.month.split('-').map(Number);
+  const firstOfMonth = new Date(y, m-1, 1);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const startWeekday = firstOfMonth.getDay();
+  const monthLabel = firstOfMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const today = todayStr();
+
+  let cells = '';
+  for(let i=0;i<startWeekday;i++) cells += `<div class="rnd-cal-cell rnd-cal-empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${cal.month}-${String(d).padStart(2,'0')}`;
+    const rec = rndAttRecFor(chemistId, dateStr);
+    const inAt = rndAttLoginAt(rec);
+    const detail = inAt ? `<div class="rnd-cal-detail"><span class="rnd-cal-in">In ${fmtTimeOnly(inAt)}</span>${rec.logoutAt?`<span class="rnd-cal-out">Out ${fmtTimeOnly(rec.logoutAt)}</span>`:''}</div>` : '';
+    cells += `<div class="rnd-cal-cell ${dateStr===today?'rnd-cal-today':''} ${dateStr===cal.selectedDate?'rnd-cal-selected':''} ${inAt?'rnd-cal-marked':''}" data-rnd-gate-cal-date="${dateStr}">
+      <div class="rnd-cal-daynum">${d}</div>
+      ${detail}
+    </div>`;
+  }
+  const weekdayHeaders = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w=>`<div class="rnd-cal-wd">${w}</div>`).join('');
+
+  const selRec = cal.selectedDate ? rndAttRecFor(chemistId, cal.selectedDate) : null;
+  const selInAt = rndAttLoginAt(selRec);
+  const canLogin = !!cal.selectedDate && !selInAt;
+  const canLogout = !!cal.selectedDate && !!selInAt && !(selRec && selRec.logoutAt);
+  const selDateLabel = cal.selectedDate ? (()=>{ const [sy,sm,sd]=cal.selectedDate.split('-').map(Number); return new Date(sy,sm-1,sd).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}); })() : '';
+
   return `
-  <div class="center-screen" style="flex-direction:column;gap:18px;text-align:center;padding:24px;">
-    <div style="font-size:21px;font-weight:700;color:var(--ink);">Welcome, ${esc(name)}</div>
-    <div class="hint" style="max-width:380px;">Mark your attendance for today to continue into the system.</div>
-    <button type="button" class="btn btn-primary" id="btn-mark-own-rnd-attendance" style="padding:13px 30px;font-size:15px;">✓ Mark attendance for today</button>
-    <button type="button" class="btn" id="btn-skip-rnd-attendance-logout" style="font-size:13px;">Not me — log out</button>
+  <div style="max-width:480px;margin:36px auto;padding:0 20px;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:21px;font-weight:700;color:var(--ink);">Welcome, ${esc(chemist.name)}</div>
+      <div class="hint">Mark today's attendance to continue into the system.</div>
+    </div>
+    <div class="rnd-cal-nav">
+      <button type="button" class="btn btn-sm" id="btn-rnd-gate-cal-prev">‹</button>
+      <div class="rnd-cal-month">${monthLabel}</div>
+      <button type="button" class="btn btn-sm" id="btn-rnd-gate-cal-next">›</button>
+    </div>
+    <div class="rnd-cal-grid">
+      ${weekdayHeaders}
+      ${cells}
+    </div>
+    ${cal.selectedDate ? `
+    <div class="rnd-cal-detail-panel">
+      <div class="rnd-cal-detail-date">${selDateLabel}</div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn ${canLogin?'btn-primary':''}" id="btn-rnd-gate-login" ${canLogin?'':'disabled'}>${selInAt ? '✓ Logged in '+fmtTimeOnly(selInAt) : 'Login'}</button>
+        <button type="button" class="btn ${canLogout?'btn-primary':''}" id="btn-rnd-gate-logout" ${canLogout?'':'disabled'}>${selRec && selRec.logoutAt ? '✓ Logged out '+fmtTimeOnly(selRec.logoutAt) : 'Logout'}</button>
+      </div>
+      ${!selInAt ? `<div class="hint" style="margin-top:8px;">Log in first — logout unlocks once that day has a login.</div>` : ''}
+    </div>` : ''}
+    <div style="text-align:center;margin-top:18px;">
+      <button type="button" class="btn" id="btn-skip-rnd-attendance-logout" style="font-size:13px;">Not me — log out</button>
+    </div>
   </div>`;
 }
 function attachRndAttendanceGateHandlers(){
-  const markBtn = document.getElementById('btn-mark-own-rnd-attendance');
-  if(markBtn) markBtn.onclick = markOwnRndAttendance;
   const skipBtn = document.getElementById('btn-skip-rnd-attendance-logout');
-  if(skipBtn) skipBtn.onclick = ()=>{ state._pendingRndAttendance = null; logOut(); };
+  if(skipBtn) skipBtn.onclick = ()=>{ state._pendingRndAttendance = null; state._rndAttCal = null; logOut(); };
+  const prevBtn = document.getElementById('btn-rnd-gate-cal-prev');
+  if(prevBtn) prevBtn.onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, -1); render(); };
+  const nextBtn = document.getElementById('btn-rnd-gate-cal-next');
+  if(nextBtn) nextBtn.onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, 1); render(); };
+  document.querySelectorAll('[data-rnd-gate-cal-date]').forEach(cell=>cell.addEventListener('click', ()=>{
+    state._rndAttCal.selectedDate = cell.dataset.rndGateCalDate; render();
+  }));
+  const loginBtn = document.getElementById('btn-rnd-gate-login');
+  if(loginBtn) loginBtn.onclick = ()=>markOwnRndAttendance(state._rndAttCal.selectedDate);
+  const logoutBtn = document.getElementById('btn-rnd-gate-logout');
+  if(logoutBtn) logoutBtn.onclick = ()=>markOwnRndLogout(state._rndAttCal.selectedDate);
 }
-async function markOwnRndAttendance(){
+// Self-service versions of rndMarkLogin/rndMarkLogout — deliberately NOT gated by
+// canManageRnd(), since the whole point is the R&D Officer marking THEIR OWN attendance without
+// needing the broader "manage all of R&D" permission. Always scoped to the chemist this exact
+// session is gated against (state._pendingRndAttendance), never an arbitrary id from outside.
+async function markOwnRndAttendance(date){
   const chemistId = state._pendingRndAttendance;
   const chemist = byId(state.rndChemists, chemistId);
   if(!chemist) return;
-  const today = todayStr();
-  let rec = rndAttRecFor(chemist.id, today);
+  const d = date || todayStr();
+  let rec = rndAttRecFor(chemist.id, d);
   if(rec){ rec.loginAt = new Date().toISOString(); rec.by = state.session.name; }
   else{
-    rec = {id: uid('ATT'), chemistId: chemist.id, chemistName: chemist.name, date: today, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
+    rec = {id: uid('ATT'), chemistId: chemist.id, chemistName: chemist.name, date: d, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
     state.rndAttendance = [...state.rndAttendance, rec];
   }
   await save('rndAttendance');
-  state._pendingRndAttendance = null;
-  showToast('Attendance marked — welcome!');
+  // Only marking TODAY actually unlocks the app — filling in a past day from the calendar is
+  // just completing the record, not today's check-in.
+  if(d===todayStr()){
+    state._pendingRndAttendance = null;
+    state._rndAttCal = null;
+    showToast('Attendance marked — welcome!');
+  } else {
+    showToast('Attendance updated for '+d);
+  }
+  render();
+}
+async function markOwnRndLogout(date){
+  const chemistId = state._pendingRndAttendance;
+  const chemist = byId(state.rndChemists, chemistId);
+  if(!chemist) return;
+  const d = date || todayStr();
+  const rec = rndAttRecFor(chemist.id, d);
+  if(!rndAttLoginAt(rec)){ showToast('Log in first before marking logout'); return; }
+  if(rec.logoutAt){ showToast('Already logged out for that day'); return; }
+  rec.logoutAt = new Date().toISOString();
+  rec.by = state.session.name;
+  await save('rndAttendance');
   render();
 }
 function rndAttendanceCountThisMonth(chemistId){

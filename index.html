@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011140204">
+<meta name="app-build" content="20261011142338">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9360,6 +9360,55 @@ function recipeBatchSheetModal(recipeId){
     </div>
   </div>`;
 }
+// Standard factory QA card (Production Area / Equipment / Water checks, operator sign-off,
+// finished-product QC, finishing checks) — matches the paper "Batch Preparation Check List" used
+// on the floor today. Printed blank for hand-filling with a pen: these are physical, in-the-moment
+// checks (is the room actually clean right now) with no digital equivalent, so there's nothing to
+// track in state — this is presentation only, appended to both batch-sheet print paths.
+function renderPrepChecklistHTML(){
+  const checkRows = items => items.map(i=>`<tr><td>${esc(i)}</td><td style="height:20px;"></td><td style="height:20px;"></td></tr>`).join('');
+  const sigLine = label => `<div style="margin:10px 0 2px;font-size:12px;">${esc(label)}: <span style="display:inline-block;border-bottom:1px solid #9CA9A0;width:220px;">&nbsp;</span></div>`;
+  return `
+  <div style="font-weight:600;margin:18px 0 8px;font-size:14px;border-top:1px solid #D9EDE0;padding-top:14px;">Batch Preparation Check List</div>
+
+  <div style="font-weight:600;margin:8px 0 4px;font-size:12px;color:#6C8071;">Production Area Check</div>
+  <table class="data-table" style="font-size:12px;margin-bottom:4px;">
+    <thead><tr><th>Check</th><th style="width:70px;">Status</th><th style="width:160px;">Remark</th></tr></thead>
+    <tbody>${checkRows(['Production room Cleaned','Floors cleaned and Dry','No waste or leftover materials present'])}</tbody>
+  </table>
+
+  <div style="font-weight:600;margin:8px 0 4px;font-size:12px;color:#6C8071;">Equipment Check</div>
+  <table class="data-table" style="font-size:12px;margin-bottom:4px;">
+    <thead><tr><th>Check</th><th style="width:70px;">Status</th><th style="width:160px;">Remark</th></tr></thead>
+    <tbody>${checkRows(['Mixing Tank / Machine Cleaned','Compressor Line','No Damage'])}</tbody>
+  </table>
+
+  <div style="font-weight:600;margin:8px 0 4px;font-size:12px;color:#6C8071;">Water Check</div>
+  <table class="data-table" style="font-size:12px;margin-bottom:4px;">
+    <thead><tr><th>Check</th><th style="width:60px;">Standard</th><th style="width:60px;">Status</th><th style="width:140px;">Remark</th></tr></thead>
+    <tbody>
+      <tr><td>Machine Water Bucket level</td><td style="text-align:center;">70%</td><td style="height:20px;"></td><td style="height:20px;"></td></tr>
+      <tr><td>pH Level</td><td style="text-align:center;">5 - 6.5</td><td style="height:20px;"></td><td style="height:20px;"></td></tr>
+    </tbody>
+  </table>
+  ${sigLine('Machine Operator Signature')}
+
+  <div style="font-weight:600;margin:14px 0 4px;font-size:12px;color:#6C8071;">Finished Product Check</div>
+  <table class="data-table" style="font-size:12px;margin-bottom:4px;">
+    <thead><tr><th>Check</th><th>Sample 1</th><th>Sample 2</th><th>Sample 3</th></tr></thead>
+    <tbody>
+      ${['Viscosity','Color','Fragrance','Printing / QC Sticker / Insert / Lids','Finished Product pH','Sample Collected'].map(i=>`<tr><td>${esc(i)}</td><td style="height:20px;"></td><td style="height:20px;"></td><td style="height:20px;"></td></tr>`).join('')}
+    </tbody>
+  </table>
+  ${sigLine('Supervisor Signature')}
+
+  <div style="font-weight:600;margin:14px 0 4px;font-size:12px;color:#6C8071;">Batch Finishing Check</div>
+  <table class="data-table" style="font-size:12px;margin-bottom:4px;">
+    <thead><tr><th>Check</th><th style="width:70px;">Status</th><th style="width:160px;">Remark</th></tr></thead>
+    <tbody>${checkRows(['Machine Cleaned','Production room Cleaned','No waste or leftover materials present'])}</tbody>
+  </table>
+  `;
+}
 // Renders a plain, read-only copy of the sheet into #print-area (a direct child of body, outside
 // the on-screen modal/overlay entirely) and prints that — see the #print-area CSS comment for
 // why printing the modal in place didn't work. Pulls live values out of the on-screen inputs
@@ -9428,6 +9477,7 @@ function printBatchSheet(recipeId){
       ${(tpl.showCombineNote && r.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(r.combineNote)}</div>` : ''}
       ${(tpl.showPH && r.standardPH) ? `<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Standard finished product pH ${esc(r.standardPH)}</div>` : ''}
       ${(tpl.showFooter && tpl.footerText) ? `<div style="text-align:center;font-size:13px;color:#6C8071;">${esc(tpl.footerText)}</div>` : ''}
+      ${renderPrepChecklistHTML()}
     </div>
   `;
   window.print();
@@ -9475,6 +9525,7 @@ function printDocumentedBatchSheet(batchId){
       ${(tpl.showCombineNote && b.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(b.combineNote)}</div>` : ''}
       ${(tpl.showPH && b.standardPH) ? `<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Standard finished product pH ${esc(b.standardPH)}</div>` : ''}
       ${(tpl.showFooter && tpl.footerText) ? `<div style="text-align:center;font-size:13px;color:#6C8071;">${esc(tpl.footerText)}</div>` : ''}
+      ${renderPrepChecklistHTML()}
     </div>
   `;
   window.print();
@@ -12337,7 +12388,13 @@ function attachShellHandlers(){
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = (e)=>printBatchSheet(e.currentTarget.dataset.recipeId);
   if(byIdEl('btn-save-batchsheet-steps')) byIdEl('btn-save-batchsheet-steps').onclick = ()=>saveBatchSheetSteps(state._recipeDraft && state._recipeDraft.id);
   if(byIdEl('btn-start-batch-from-sheet')) byIdEl('btn-start-batch-from-sheet').onclick = async (e)=>{
-    await startBatch(e.currentTarget.dataset.recipeId);
+    // The batch number shown/edited on the pre-run preview (sheet-batch-no) must be the SAME
+    // one that ends up on the physical, post-run documented sheet — otherwise the paperwork and
+    // the system disagree on which batch is which. It used to be dropped here and a fresh random
+    // one generated instead.
+    const noEl = document.getElementById('sheet-batch-no');
+    const batchNo = noEl ? noEl.value.trim() : '';
+    await startBatch(e.currentTarget.dataset.recipeId, batchNo ? {batchNo} : undefined);
     if(state.activeBatch) closeModal(); // zero-step recipes show a toast and stay open instead
   };
   if(byIdEl('form-recipe')) byIdEl('form-recipe').addEventListener('submit', submitRecipe);

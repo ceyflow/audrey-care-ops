@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011085427">
+<meta name="app-build" content="20261011085733">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2361,7 +2361,23 @@ function _cachedThemeOrDefault(){
   return {paletteId:'green'};
 }
 const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? {addons:[]} : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : [])))))));
-const _fetchSyncedKeys = () => Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
+// One request for all 34 keys instead of 34 separate ones — each kvGet() round-trip has its own
+// latency, and firing them all at once doesn't fully hide that over a slower connection (plus
+// this is on the critical path of every single page load, authenticated or not, so it's worth
+// avoiding the multiplied cost). Falls back to the old per-key behavior if the batched query
+// itself fails outright (network error, not just an empty/RLS-blocked result).
+async function _fetchSyncedKeys(){
+  try{
+    const { data, error } = await supabaseClient.from('app_data').select('key, value').in('key', SYNCED_KEYS);
+    if(error) throw error;
+    const byKey = {};
+    (data||[]).forEach(row => { byKey[row.key] = row.value; });
+    return SYNCED_KEYS.map(k => (byKey[k] !== undefined) ? byKey[k] : null);
+  }catch(e){
+    console.error('_fetchSyncedKeys batched query failed, falling back to per-key fetch', e);
+    return Promise.all(SYNCED_KEYS.map(k => kvGet(k).catch(()=>null)));
+  }
+}
 // Fetches every SYNCED_KEY and applies it to state — used both by loadAll() at page bootstrap
 // (which may run before anyone is signed in at all) and, critically, right after a successful
 // login. A login handler only sets state.session and re-renders; it was never re-running this

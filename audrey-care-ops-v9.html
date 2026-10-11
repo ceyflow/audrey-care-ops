@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011085733">
+<meta name="app-build" content="20261011090456">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2435,6 +2435,11 @@ async function loadAll(){
       });
     }catch(e){}
   }
+  // Fired together, not one after the other — 'auth' isn't a SYNCED_KEY (it has its own shape/
+  // migration handling below) so it used to be fetched in its own sequential await AFTER this one
+  // finished, adding a full extra network round trip to every single page load for no reason:
+  // the two reads don't depend on each other at all.
+  const authFetchPromise = kvGet('auth').catch(()=>undefined);
   const loadedValues = await refreshAppData(!!_authSession);
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
   // for that key yet, i.e. the raw load came back null/undefined). That's different from the
@@ -2743,7 +2748,7 @@ async function loadAll(){
   catch(e){ state.session = null; }
   let _rolePagesCleared = false;
   try{
-    const a = await kvGet('auth');
+    const a = await authFetchPromise;
     state.auth = a ? {...DEFAULT_AUTH, ...a} : {...DEFAULT_AUTH};
     // Settings → Page access (the per-role sidebar override screen) is gone — clear out any
     // custom overrides an Admin had saved there so every role falls back to its hardcoded
@@ -2752,7 +2757,11 @@ async function loadAll(){
       state.auth = {...state.auth, rolePages: {}};
       _rolePagesCleared = true;
     }
-    await kvSet('auth', state.auth);
+    // Not awaited: this write-back only matters for the NEXT load (new DEFAULT_AUTH fields
+    // filled in, or the rolePages-clearing migration persisted) — nothing between here and
+    // render() below needs it to have actually landed yet, so it shouldn't hold up becoming
+    // visible on every single page load just to re-save data that's usually unchanged anyway.
+    kvSet('auth', state.auth).catch(e=>console.error('auth write-back failed', e));
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
   if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
     syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));

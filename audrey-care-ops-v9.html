@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011093255">
+<meta name="app-build" content="20261011100110">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7337,7 +7337,31 @@ async function runAddSecureAccount(){
   }
   if(!f.password || f.password.length<6){ showToast('Password must be at least 6 characters'); return; }
   const res = await supabaseSignUpForMigration(f.role, f.name.trim(), f.password);
-  if(!res.ok){ showToast(res.error || 'Could not create that account'); return; }
+  if(!res.ok){
+    // "Already registered" means a real login with this name already exists — almost always
+    // because they were removed from the list earlier without actually deleting the underlying
+    // account (removing only clears the list; see removeSecureAccount()), so simply retrying
+    // signup can never work for this exact name again. Recover instead of just failing: reset
+    // that existing login to the password just typed (via the Edge Function — the public key
+    // this app holds can't do that on its own) and add them back to the visible list.
+    if(/already registered/i.test(res.error||'')){
+      try{
+        await adminResetSecureAccountPassword(f.name.trim(), f.password);
+      }catch(e){
+        openAlertModal({ title: `${f.name.trim()}'s login already exists`, message: `Resetting its password to the one you typed also failed: ${e.message || e}` });
+        return;
+      }
+      state.auth = {...state.auth, secureAccounts: [...(state.auth.secureAccounts||[]), {
+        role:f.role, name:f.name.trim(), fullName:(f.fullName||'').trim(),
+      }]};
+      await saveAuth();
+      state._addAcctForm = null;
+      showToast(`${f.name.trim()} already had a login — reused it, reset the password to what you typed, and added them back to the list`);
+      render();
+      return;
+    }
+    showToast(res.error || 'Could not create that account'); return;
+  }
   state.auth = {...state.auth, secureAccounts: [...(state.auth.secureAccounts||[]), {
     role:f.role, name:f.name.trim(), fullName:(f.fullName||'').trim(),
   }]};

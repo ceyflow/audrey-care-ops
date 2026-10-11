@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011191353">
+<meta name="app-build" content="20261011192018">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -616,8 +616,9 @@ html{ visibility:hidden; }
   .bsheet-step-row .bsr-temp-tag:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft);}
   .bsheet-step-row .bsr-fields{display:grid;grid-template-columns:1fr 110px;gap:14px;}
   .bsheet-step-row .bsr-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 5px;}
-  .bsheet-step-row .bsr-field input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;color:var(--ink);transition:border-color .15s ease,box-shadow .15s ease;}
-  .bsheet-step-row .bsr-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .bsheet-step-row .bsr-field input,.bsheet-step-row .bsr-field textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;color:var(--ink);font-family:inherit;transition:border-color .15s ease,box-shadow .15s ease;}
+  .bsheet-step-row .bsr-field textarea{resize:vertical;min-height:62px;}
+  .bsheet-step-row .bsr-field input:focus,.bsheet-step-row .bsr-field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
   .bsheet-step-row .bsr-actions,.prep-step-row .bsr-actions{display:flex;gap:6px;flex-shrink:0;}
   .bsheet-step-row .bsr-actions button,.prep-step-row .bsr-actions button{border:1px solid var(--border);background:var(--surface);border-radius:7px;width:26px;height:24px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;transition:all .15s ease;}
   .bsheet-step-row .bsr-actions button:hover,.prep-step-row .bsr-actions button:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);}
@@ -7323,6 +7324,9 @@ function temperatureTagHtml(idPrefix, s){
     ${TEMPERATURE_OPTIONS.map(t=>`<option value="${t}"${String(s.temperature||'')===String(t)?' selected':''}>${t}°C</option>`).join('')}
   </select>`;
 }
+function instructionTextareaHtml(idPrefix, s){
+  return `<textarea id="${idPrefix}-ing-${s.id}" rows="1" placeholder="e.g. Carbomer + H2O" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.ingredient))}</textarea>`;
+}
 function newStepDraft(){ return {id:uid('STEP'), ingredient:'', amount:'', temperature:'', waitMinutes:0}; }
 function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 function recipeMaterialAmount(percent, batchSizeKg){ return (Number(percent)||0)/100 * (Number(batchSizeKg)||0); }
@@ -8391,7 +8395,7 @@ function renderTemplateStepsModal(){
               </div>
             </div>
             <div class="bsr-fields">
-              <div class="bsr-field"><label>Instruction</label><input id="tstep-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
+              <div class="bsr-field"><label>Instruction</label>${instructionTextareaHtml('tstep', s)}</div>
               <div class="bsr-field"><label>Wait (min)</label><input id="tstep-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
             </div>
           </div>`;
@@ -8560,7 +8564,7 @@ function recipeBatchSheetModal(recipeId){
               </div>
             </div>
             <div class="bsr-fields">
-              <div class="bsr-field"><label>Instruction</label><input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="e.g. Carbomer + H2O"></div>
+              <div class="bsr-field"><label>Instruction</label>${instructionTextareaHtml('step', s)}</div>
               <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
             </div>
           </div>`;

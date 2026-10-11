@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011205429">
+<meta name="app-build" content="20261011211151">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -227,45 +227,45 @@ html{ visibility:hidden; }
   table.data-table td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
   table.data-table tr:last-child td{border-bottom:none;}
   table.data-table tr.clickable:hover{background:var(--bg);cursor:pointer;}
-  table.sticker-table{font-size:14px;}
-  table.sticker-table th{padding:12px 8px;font-size:12.5px;}
-  table.sticker-table td{padding:10px 8px;}
+  table.sticker-table{font-size:10px;}
+  table.sticker-table th{padding:8px 6px;font-size:9px;}
+  table.sticker-table td{padding:7px 6px;}
   table.sticker-table tbody tr:nth-child(even){background:var(--bg);}
   table.sticker-table tbody tr:hover{background:var(--accent-soft);}
-  table.sticker-table td:first-child{font-weight:700;font-size:14.5px;}
-  .sticker-cell{display:flex;gap:4px;align-items:center;}
+  table.sticker-table td:first-child{font-weight:700;font-size:10px;}
+  .sticker-cell{display:flex;gap:3px;align-items:center;}
   .sticker-issue-wrap{
-    position:relative;width:38px;height:34px;border-radius:7px;
+    position:relative;width:27px;height:24px;border-radius:6px;
     border:1.5px solid #E4C6C2;background:var(--danger-soft);
   }
   .sticker-issue-sign{
-    position:absolute;left:6px;top:50%;transform:translateY(-50%);
-    color:var(--danger);font-weight:700;font-size:14px;pointer-events:none;
+    position:absolute;left:4px;top:50%;transform:translateY(-50%);
+    color:var(--danger);font-weight:700;font-size:10px;pointer-events:none;
   }
   table.sticker-table .sticker-issue-input{
     width:100%;height:100%;border:none;background:transparent;
-    padding-left:15px;font-size:13px;color:var(--danger);font-weight:700;text-align:left;
+    padding-left:10px;font-size:9px;color:var(--danger);font-weight:700;text-align:left;
   }
   table.sticker-table .sticker-issue-input:focus{outline:2px solid var(--danger);outline-offset:1px;border-radius:6px;}
   table.sticker-table .sticker-total-box{
-    min-width:26px;text-align:center;font-size:15px;font-weight:800;color:var(--ink);
+    min-width:18px;text-align:center;font-size:11px;font-weight:800;color:var(--ink);
   }
   .sticker-add-btn{
-    width:24px;height:24px;border-radius:999px;border:none;background:var(--accent);color:#fff;
-    font-size:15px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
+    width:17px;height:17px;border-radius:999px;border:none;background:var(--accent);color:#fff;
+    font-size:11px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;padding:0;
   }
   .sticker-add-btn:hover{background:var(--accent-dark);}
-  table.sticker-table button.btn-danger{width:32px;height:32px;padding:0;font-size:14px;}
+  table.sticker-table button.btn-danger{width:22px;height:22px;padding:0;font-size:10px;}
   .sticker-category-card{
-    display:flex;align-items:center;gap:9px;background:#fff;border:1.5px solid var(--border);
-    border-radius:10px;padding:12px 18px;font-size:15px;font-weight:600;color:var(--ink);
+    display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--border);
+    border-radius:8px;padding:8px 13px;font-size:11px;font-weight:600;color:var(--ink);
     cursor:pointer;transition:border-color .15s,background .15s;
   }
   .sticker-category-card:hover{border-color:var(--accent);}
   .sticker-category-card.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark);}
   .sticker-category-count{
-    background:var(--bg);border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;color:var(--muted);
+    background:var(--bg);border-radius:999px;padding:1px 6px;font-size:9px;font-weight:700;color:var(--muted);
   }
   .sticker-category-card.active .sticker-category-count{background:#fff;color:var(--accent-dark);}
   table.costing-table tbody tr{background:var(--bg);}
@@ -2842,6 +2842,12 @@ async function confirmLoginV2(){
   const role = roleForLoginName(typedName);
   if(!role){
     if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
+    passInput.value = ''; passInput.focus();
+    return;
+  }
+  const acctEntry = (state.auth.secureAccounts||[]).find(r=>r.name.toLowerCase()===typedName.toLowerCase());
+  if(acctEntry && acctEntry.active===false){
+    if(errEl) errEl.textContent = 'This account has been deactivated — contact your Admin.';
     passInput.value = ''; passInput.focus();
     return;
   }
@@ -6879,15 +6885,19 @@ function renderSecureAccountsPanel(){
       ${migrated ? `
       <div class="hint" style="margin-bottom:14px;">Real database-backed logins are active. Costing and R&amp;D data now require a genuine signed-in Admin account — not just the app's own password screen.</div>
       <table class="data-table secure-accounts-table" style="margin-bottom:14px;">
-        <thead><tr><th>User login</th><th>Full name</th><th>Access level</th><th>Last visit</th><th></th></tr></thead>
+        <thead><tr><th>User login</th><th>Full name</th><th>Access level</th><th>Last visit</th><th>Status</th><th></th></tr></thead>
         <tbody>
           ${(state.auth.secureAccounts||[]).map(r=>{
             const last = lastVisitForLoginName(r.name);
+            const active = r.active!==false;
             return `<tr>
               <td style="font-weight:600;">${esc(r.name)}</td>
               <td>${r.fullName ? esc(r.fullName) : '<span class="hint">—</span>'}</td>
               <td>${esc(r.role)}</td>
               <td>${last ? fmtDateTime(last) : '<span class="hint">Never signed in</span>'}</td>
+              <td>
+                <button type="button" class="pill ${active?'pill-active':'pill-inactive'}" style="border:none;cursor:pointer;" data-toggle-secure-account-active="${escAttr(r.name)}" title="${active?'Click to deactivate — blocks sign-in until reactivated':'Click to reactivate'}">${active?'Active':'Inactive'}</button>
+              </td>
               <td class="row-actions">
                 <button type="button" class="btn btn-sm" data-reset-secure-account-password="${escAttr(r.name)}" title="Set a new password for them">🔑</button>
                 <button type="button" class="btn btn-sm" data-edit-secure-account="${escAttr(r.name)}" title="Edit">✏️</button>
@@ -7015,6 +7025,25 @@ function openResetSecureAccountPasswordPrompt(name){
         openAlertModal({ title: "Couldn't reset the password", message: e.message || String(e) });
       }
     },
+  });
+}
+function toggleSecureAccountActive(name){
+  const r = (state.auth.secureAccounts||[]).find(x=>x.name===name); if(!r) return;
+  const nowActive = r.active===false; // about to flip TO this
+  if(!nowActive && state.session && state.session.name===name){
+    showToast("You can't deactivate the account you're signed in as — sign in as another Admin first");
+    return;
+  }
+  const apply = async ()=>{
+    state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(x=>x.name===name?{...x, active:nowActive}:x)};
+    await saveAuth();
+    showToast(nowActive ? `${name} reactivated` : `${name} deactivated — they can't sign in until reactivated`);
+  };
+  if(nowActive){ apply(); return; }
+  openConfirmModal({
+    title: 'Deactivate account', danger: true, confirmLabel: 'Deactivate',
+    message: `${name} won't be able to sign in until you click Active again. Their login, history and settings all stay intact.`,
+    onConfirm: apply,
   });
 }
 function removeSecureAccount(name){
@@ -11780,6 +11809,7 @@ function attachShellHandlers(){
   if(byIdEl('add-acct-fullname')) byIdEl('add-acct-fullname').addEventListener('input', e=>{ state._addAcctForm.fullName = e.target.value; });
   if(byIdEl('btn-add-secure-account')) byIdEl('btn-add-secure-account').onclick = runAddSecureAccount;
   document.querySelectorAll('[data-remove-secure-account]').forEach(b=>b.addEventListener('click', ()=>removeSecureAccount(b.dataset.removeSecureAccount)));
+  document.querySelectorAll('[data-toggle-secure-account-active]').forEach(b=>b.addEventListener('click', ()=>toggleSecureAccountActive(b.dataset.toggleSecureAccountActive)));
   document.querySelectorAll('[data-reset-secure-account-password]').forEach(b=>b.addEventListener('click', ()=>openResetSecureAccountPasswordPrompt(b.dataset.resetSecureAccountPassword)));
   document.querySelectorAll('[data-edit-secure-account]').forEach(b=>b.addEventListener('click', ()=>{
     state._editSecureAccountName = b.dataset.editSecureAccount;

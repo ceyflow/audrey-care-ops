@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011142338">
+<meta name="app-build" content="20261011144609">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8392,8 +8392,13 @@ async function nextBatchStep(){
   const b = state.activeBatch; if(!b) return;
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   if(b.currentStep >= b.steps.length-1){
+    // Used to persist status:'completed' to the server here, then immediately overwrite it with
+    // null a moment later in finishBatchIntoBlendingBoard — two full verified round-trips to the
+    // same row back-to-back for a state nothing ever reads (finishBatchIntoBlendingBoard doesn't
+    // look at b.status, and nothing renders between these two lines). That doubled both the wait
+    // and the odds of hitting a transient save failure on "Finish batch" — reported live as a
+    // spurious "Could not save activeBatch" toast right after a batch had, in fact, finished fine.
     b.status = 'completed';
-    await saveActiveBatchVerified();
     await finishBatchIntoBlendingBoard(b);
     return;
   }

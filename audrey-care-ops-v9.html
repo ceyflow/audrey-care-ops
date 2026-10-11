@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011193047">
+<meta name="app-build" content="20261011195522">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -653,6 +653,11 @@ html{ visibility:hidden; }
   .batch-prep-checklist .bpc-check input[type="checkbox"]{width:20px;height:20px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:#FFD27A;}
   .batch-prep-checklist .bpc-check label{cursor:pointer;}
   .batch-prep-checklist .bpc-field strong{color:#FFD27A;}
+  .batch-prep-checklist .bpc-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .batch-prep-checklist .bpc-field label{flex-shrink:0;}
+  .batch-prep-checklist .bpc-field-input{min-width:110px;padding:6px 10px;border:1px solid rgba(255,210,122,.5);border-radius:7px;background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:600;}
+  .batch-prep-checklist .bpc-field-input:focus{outline:none;border-color:#FFD27A;background:rgba(255,255,255,.14);}
+  .batch-prep-checklist .bpc-field-input::placeholder{color:rgba(255,255,255,.45);font-weight:400;}
   .batch-countdown{font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:18px 0 6px;letter-spacing:.01em;}
   .batch-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
@@ -724,6 +729,7 @@ html{ visibility:hidden; }
   .batch-focus .batch-prep-checklist{margin-top:18px;max-width:800px;}
   .batch-focus .batch-prep-checklist .bpc-row{font-size:clamp(16px,2vw,22px);opacity:.9;padding:6px 0;}
   .batch-focus .batch-prep-checklist .bpc-check input[type="checkbox"]{width:28px;height:28px;margin-top:3px;}
+  .batch-focus .batch-prep-checklist .bpc-field-input{font-size:clamp(16px,2vw,22px);padding:8px 12px;}
   .batch-focus .bf-countdown{font-size:clamp(70px,14vw,180px);font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:34px 0 8px;}
   .batch-focus .bf-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
   .batch-focus .bf-note{font-size:18px;opacity:.8;margin-bottom:26px;}
@@ -2668,7 +2674,12 @@ async function loadAll(){
     );
     if(alreadyTransferred){
       state.activeBatch = null;
-      saveActiveBatchVerified().catch(e=>console.error('clearing stale transferred activeBatch failed', e));
+      // Silent, best-effort — not saveActiveBatchVerified(): that goes through save()/_saveOnce(),
+      // which pops a "Could not save activeBatch" toast on every one of its own retry attempts
+      // that fails, and this check re-runs on every single page load, so a transient failure here
+      // would surface that toast on every refresh anywhere in the app. If this write doesn't land,
+      // this same check just clears it again next load — it never needs to bother anyone about it.
+      kvSet('activeBatch', null).catch(e=>console.error('clearing stale transferred activeBatch failed', e));
     }
   }
   // Backfills any SMS template keys added after a workspace was first set up.
@@ -8306,10 +8317,40 @@ function batchStepWaitMinutes(step){ return step && step.type!=='preparation' ? 
 function batchStepLabel(step){ return step.type==='preparation' ? 'Preparation/Checking' : step.ingredient; }
 function batchStepChecklistHtml(step){
   if(step.type!=='preparation') return '';
+  const canEdit = canManageBlendBoard();
   return `<div class="batch-prep-checklist">${(step.checklist||[]).map(c=> c.kind==='field'
-    ? `<div class="bpc-row bpc-field">${esc(c.label)}: <strong>${esc(c.value)||'—'}</strong></div>`
-    : `<div class="bpc-row bpc-check"><input type="checkbox" id="batch-chk-${c.id}"><label for="batch-chk-${c.id}">${esc(c.text)}</label></div>`
+    ? `<div class="bpc-row bpc-field">
+        <label for="batch-field-${c.id}">${esc(c.label)}:</label>
+        ${canEdit
+          ? `<input type="text" class="bpc-field-input" id="batch-field-${c.id}" value="${esc(c.value)}" placeholder="Enter value" onchange="updateBatchPrepFieldValue('${step.id}','${c.id}',this.value)">`
+          : `<strong>${esc(c.value)||'—'}</strong>`}
+      </div>`
+    : `<div class="bpc-row bpc-check"><input type="checkbox" id="batch-chk-${c.id}" ${c.checked?'checked':''} ${canEdit?'':'disabled'} onchange="updateBatchPrepChecked('${step.id}','${c.id}',this.checked)"><label for="batch-chk-${c.id}">${esc(c.text)}</label></div>`
   ).join('')}</div>`;
+}
+// The whole point of a "field" prep item (e.g. "Initial Water pH Level") is to record the value
+// measured on the actual floor during this run — it used to only ever show whatever was typed
+// into the recipe/template editor ahead of time (usually blank, so always "—"), with no way for
+// the person running the batch to type the real reading in. Same gap for the checklist items:
+// the checkbox rendered but nothing ever listened for it, so a tick never persisted or carried
+// through to the documented batch sheet. Both now write straight onto state.activeBatch and save,
+// the same as every other batch-run mutation (pause/next/etc.) — so they end up in
+// finishBatchIntoBlendingBoard's productionSteps snapshot and the physical printed record.
+async function updateBatchPrepFieldValue(stepId, checklistId, value){
+  if(!canManageBlendBoard()) return;
+  const b = state.activeBatch; if(!b) return;
+  const step = b.steps.find(s=>s.id===stepId); if(!step || step.type!=='preparation') return;
+  const item = (step.checklist||[]).find(c=>c.id===checklistId); if(!item) return;
+  item.value = value;
+  await saveActiveBatchVerified();
+}
+async function updateBatchPrepChecked(stepId, checklistId, checked){
+  if(!canManageBlendBoard()) return;
+  const b = state.activeBatch; if(!b) return;
+  const step = b.steps.find(s=>s.id===stepId); if(!step || step.type!=='preparation') return;
+  const item = (step.checklist||[]).find(c=>c.id===checklistId); if(!item) return;
+  item.checked = checked;
+  await saveActiveBatchVerified();
 }
 function batchRemainingSeconds(){
   const b = state.activeBatch; if(!b) return 0;
@@ -8743,7 +8784,14 @@ async function startBatch(recipeId, extra){
     id: uid('BATCH'), recipeId: r.id, recipeName: r.name,
     productName: extra.productName || r.name, qty: extra.qty || '',
     batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '',
-    steps: r.steps.map(s=>({...s})), currentStep: 0,
+    // A preparation step's checklist array/items are objects, not primitives — {...s} alone
+    // leaves them shared by reference with the recipe's own steps. Harmless while the checklist
+    // was read-only during a run, but now that updateBatchPrepFieldValue/updateBatchPrepChecked
+    // write into a checklist item while the batch is live, an unguarded reference would silently
+    // rewrite the recipe/template's own checklist data (e.g. a measured pH reading bleeding into
+    // the next batch's starting "Initial Water pH Level"). Clone it the same way
+    // finishBatchIntoBlendingBoard already does for its own snapshot.
+    steps: r.steps.map(s=> s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s}), currentStep: 0,
     status: 'running', stepDeadline: new Date(Date.now()+batchStepWaitMinutes(first)*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
   };

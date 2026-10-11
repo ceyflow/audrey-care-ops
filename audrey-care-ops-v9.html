@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011134610">
+<meta name="app-build" content="20261011140204">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8448,13 +8448,26 @@ function stopBatch(){
 // Finishing a recipe's step timer feeds it into the Blending board as a real batch,
 // then takes everyone watching straight there — no manual "Dismiss" click needed.
 async function finishBatchIntoBlendingBoard(b){
+  // Snapshot the production run onto the board card itself (not just a recipeId reference) so
+  // the documented batch sheet stays accurate for physical record-keeping even if the recipe is
+  // later edited or deleted.
+  const recipe = byId(state.recipes, b.recipeId);
   const batch = {
     id: uid('BLD'), batchNo: b.batchNo || uid('BLD'),
     product: b.productName || b.recipeName, qty: b.qty || '', variation: b.variation || '',
     priority: 'Medium', notes: '',
     stage: 0, assignee: null,
     createdAt: new Date().toISOString(),
-    history: [{stage:0, at:new Date().toISOString(), by:state.session.name}]
+    history: [{stage:0, at:new Date().toISOString(), by:state.session.name}],
+    recipeId: b.recipeId,
+    recipeName: recipe ? recipe.name : b.recipeName,
+    batchSizeKg: recipe ? recipe.batchSizeKg : null,
+    materials: recipe ? recipe.materials.map(m=>({...m})) : [],
+    standardPH: recipe ? recipe.standardPH : '',
+    combineNote: recipe ? recipe.combineNote : '',
+    startedAt: b.startedAt, startedBy: b.startedBy,
+    completedAt: new Date().toISOString(), completedBy: state.session.name,
+    productionSteps: b.steps.map(s=> s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s}),
   };
   state.blendBatches.unshift(batch);
   await save('blendBatches');
@@ -9227,22 +9240,6 @@ function recipeFormModal(){
     </div>
   </div>`;
 }
-// Recalculates every raw material's amount + the totals row as the batch size input changes,
-// without a full render() (keeps the input focused mid-keystroke).
-function updateBatchSheetAmounts(recipeId){
-  const r = byId(state.recipes, recipeId); if(!r) return;
-  const sizeEl = document.getElementById('sheet-batch-size');
-  const batchSizeKg = parseFloat(sizeEl && sizeEl.value)||0;
-  let totalAmt = 0;
-  (r.materials||[]).forEach(m=>{
-    const amt = recipeMaterialAmount(m.percent, batchSizeKg);
-    totalAmt += amt;
-    const cell = document.querySelector('.sheet-amt[data-mat-id="'+m.id+'"]');
-    if(cell) cell.textContent = amt.toFixed(3);
-  });
-  const totalAmtEl = document.getElementById('sheet-total-amt');
-  if(totalAmtEl) totalAmtEl.textContent = totalAmt.toFixed(3);
-}
 function recipeBatchSheetModal(recipeId){
   const r = byId(state.recipes, recipeId); if(!r) return '';
   const batchSizeKg = r.batchSizeKg || 0;
@@ -9266,7 +9263,8 @@ function recipeBatchSheetModal(recipeId){
       ${(tpl.showDescription && r.description) ? `<div class="hint" style="text-align:center;margin-bottom:10px;">${esc(r.description)}</div>` : ''}
       <div class="field" style="max-width:220px;margin:0 auto 14px;">
         <label style="text-align:center;display:block;">Batch size (kg)</label>
-        <input id="sheet-batch-size" type="number" min="0" step="0.1" value="${batchSizeKg}" style="text-align:center;" oninput="updateBatchSheetAmounts('${r.id}')">
+        <div style="text-align:center;font-weight:700;font-size:18px;">${batchSizeKg}</div>
+        <div class="hint" style="text-align:center;">Locked — set when transferred from Costing</div>
       </div>
       <table class="data-table">
         <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th><th>Amount needed</th></tr></thead>
@@ -9365,11 +9363,11 @@ function recipeBatchSheetModal(recipeId){
 // Renders a plain, read-only copy of the sheet into #print-area (a direct child of body, outside
 // the on-screen modal/overlay entirely) and prints that — see the #print-area CSS comment for
 // why printing the modal in place didn't work. Pulls live values out of the on-screen inputs
-// first so an unsaved batch size or step edit still prints correctly.
+// first so an unsaved step edit still prints correctly (batch size itself is locked, so it always
+// comes straight from the recipe).
 function printBatchSheet(recipeId){
   const r = byId(state.recipes, recipeId); if(!r) return;
-  const sizeEl = document.getElementById('sheet-batch-size');
-  const batchSizeKg = sizeEl ? (parseFloat(sizeEl.value)||0) : (r.batchSizeKg||0);
+  const batchSizeKg = r.batchSizeKg||0;
   const noEl = document.getElementById('sheet-batch-no');
   const batchNo = noEl ? noEl.value : uid('BLD');
   const totalPct = recipeMaterialsTotalPercent(r.materials);
@@ -9434,6 +9432,53 @@ function printBatchSheet(recipeId){
   `;
   window.print();
 }
+// The physical, for-the-record version: prints the actual run data snapshotted onto a completed
+// Mixing and Filling card by finishBatchIntoBlendingBoard — start/end time, who ran it, and the
+// production steps as they stood at that run — rather than the live (possibly since-edited) recipe.
+function printDocumentedBatchSheet(batchId){
+  const b = byId(state.blendBatches, batchId); if(!b || !b.startedAt) return;
+  const materials = b.materials||[];
+  const totalPct = recipeMaterialsTotalPercent(materials);
+  const totalAmt = recipeMaterialAmount(totalPct, b.batchSizeKg||0);
+  const steps = b.productionSteps||[];
+  const area = document.getElementById('print-area');
+  if(!area) return;
+  const tpl = batchSheetTemplate();
+  area.innerHTML = `
+    <div style="max-width:680px;margin:0 auto;padding:24px;font-family:'Inter',system-ui,sans-serif;color:#20291F;">
+      ${(tpl.showLogo && batchSheetLogo()) ? `<div style="text-align:center;margin-bottom:10px;"><img src="${batchSheetLogo()}" alt="Logo" style="max-height:135px;max-width:480px;object-fit:contain;"></div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div><div style="font-size:12px;color:#6C8071;">Date</div><div style="font-weight:600;">${fmtDate(b.completedAt)}</div></div>
+        <div><div style="font-size:12px;color:#6C8071;">Batch number</div><div style="font-weight:600;">${esc(b.batchNo)}</div></div>
+      </div>
+      <h2 style="text-align:center;margin:6px 0 2px;text-transform:uppercase;">${esc(b.recipeName||b.product)}</h2>
+      <div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Batch size: <strong style="color:#20291F;">${b.batchSizeKg||0}</strong> kg</div>
+      <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:14px;font-size:13px;">
+        <div><div style="color:#6C8071;">Started</div><div style="font-weight:600;">${fmtDateTime(b.startedAt)}</div>${b.startedBy?`<div style="color:#6C8071;font-size:12px;">by ${esc(b.startedBy)}</div>`:''}</div>
+        <div style="text-align:right;"><div style="color:#6C8071;">Completed</div><div style="font-weight:600;">${fmtDateTime(b.completedAt)}</div>${b.completedBy?`<div style="color:#6C8071;font-size:12px;">by ${esc(b.completedBy)}</div>`:''}</div>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th><th>Amount needed</th></tr></thead>
+        <tbody>
+          ${materials.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(m.name)}</td><td>${m.percent.toFixed(3)}</td><td>${recipeMaterialAmount(m.percent, b.batchSizeKg||0).toFixed(3)}</td></tr>`).join('')}
+          <tr style="font-weight:700;"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td>${totalAmt.toFixed(3)}</td></tr>
+        </tbody>
+      </table>
+      ${steps.length ? `
+      <div style="font-weight:600;margin:16px 0 8px;">Production Steps</div>
+      <ol style="margin:0 0 14px;padding-left:20px;">
+        ${steps.map(s=> s.type==='preparation'
+          ? `<li style="margin-bottom:4px;"><strong>Preparation/Checking:</strong> ${(s.checklist||[]).map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join('; ')}</li>`
+          : `<li style="margin-bottom:4px;">${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}${s.waitMinutes>0?' ('+s.waitMinutes+' min)':''}</li>`
+        ).join('')}
+      </ol>` : ''}
+      ${(tpl.showCombineNote && b.combineNote) ? `<div style="border:1px solid #D9EDE0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Combine together:</strong> ${esc(b.combineNote)}</div>` : ''}
+      ${(tpl.showPH && b.standardPH) ? `<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#6C8071;">Standard finished product pH ${esc(b.standardPH)}</div>` : ''}
+      ${(tpl.showFooter && tpl.footerText) ? `<div style="text-align:center;font-size:13px;color:#6C8071;">${esc(tpl.footerText)}</div>` : ''}
+    </div>
+  `;
+  window.print();
+}
 async function saveBatchSheetSteps(recipeId){
   syncDraftStepFieldsFromDOM();
   const d = state._recipeDraft;
@@ -9455,15 +9500,11 @@ async function saveBatchSheetSteps(recipeId){
   }).filter(Boolean);
   if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const r = byId(state.recipes, recipeId); if(!r) return;
-  const sizeEl = document.getElementById('sheet-batch-size');
-  const batchSizeKg = sizeEl ? Math.max(0, parseFloat(sizeEl.value)||0) : r.batchSizeKg;
   r.steps = steps;
-  r.batchSizeKg = batchSizeKg;
   // Deep-copy (not just {...s}) so the still-open draft's checklist arrays are independent of
   // what was just saved to r.steps — otherwise further edits here would mutate the saved recipe
   // directly, bypassing Save entirely, the same reference-sharing bug fixed for the template editor.
   d.steps = steps.map(s => s.type==='preparation' ? {...s, checklist:s.checklist.map(c=>({...c}))} : {...s});
-  d.batchSizeKg = batchSizeKg;
   await save('recipes');
   showToast('Batch sheet saved');
   render();
@@ -10366,6 +10407,15 @@ function renderBlendDrawer(id){
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
       <span class="stage-badge" style="background:${style.bg};color:${style.c};">${BLEND_STAGES[b.stage]}</span>
     </div>
+
+    ${b.startedAt ? `
+    <div class="field" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div><div class="hint">Started</div><div style="font-weight:600;">${fmtDateTime(b.startedAt)}</div>${b.startedBy?`<div class="hint">by ${esc(b.startedBy)}</div>`:''}</div>
+        <div style="text-align:right;"><div class="hint">Completed</div><div style="font-weight:600;">${fmtDateTime(b.completedAt)}</div>${b.completedBy?`<div class="hint">by ${esc(b.completedBy)}</div>`:''}</div>
+      </div>
+      <button type="button" class="btn btn-sm" style="margin-top:10px;" id="btn-print-blend-sheet">🖨 Print batch sheet</button>
+    </div>` : ''}
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
     <form id="form-blend-edit" data-batch-id="${b.id}">
@@ -11563,6 +11613,7 @@ function attachShellHandlers(){
   if(byIdEl('form-blend-edit')) byIdEl('form-blend-edit').addEventListener('submit', submitBlendEdit);
   if(byIdEl('btn-advance-blend')) byIdEl('btn-advance-blend').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceBlendBatch(id); };
   if(byIdEl('btn-delete-blend')) byIdEl('btn-delete-blend').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteBlendBatch(id); };
+  if(byIdEl('btn-print-blend-sheet')) byIdEl('btn-print-blend-sheet').onclick = ()=>{ const id=state.modal.split(':')[1]; printDocumentedBatchSheet(id); };
 
   // R&D board
   if(byIdEl('btn-new-rnd')) byIdEl('btn-new-rnd').onclick = ()=>openModal('rnd:new');
@@ -12060,8 +12111,18 @@ function attachShellHandlers(){
       placeholder: 'e.g. 250', defaultValue: sizes.length ? sizes[0] : '',
       confirmLabel: 'Create batch sheet',
       onSubmit: async (value)=>{
-        const batchSizeKg = Math.max(0, parseFloat(value)||0);
+        let batchSizeKg = Math.max(0, parseFloat(value)||0);
         if(!batchSizeKg){ showToast('Enter a batch size in Kg'); return; }
+        // Only the preset sizes on this costing version were actually costed — an arbitrary
+        // in-between figure would ship a batch sheet whose cost/ratios were never verified.
+        // Snap to whichever preset is closest instead (e.g. 100 -> 102) and say so.
+        if(sizes.length){
+          const nearest = sizes.reduce((best,sz)=> Math.abs(sz-batchSizeKg) < Math.abs(best-batchSizeKg) ? sz : best, sizes[0]);
+          if(nearest !== batchSizeKg){
+            showToast(`Adjusted to ${nearest}kg — the nearest costed batch size on file`);
+            batchSizeKg = nearest;
+          }
+        }
         const newRecipe = {
           id: uid('RCP'),
           name: `${product.name} — ${version.name}`,

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011103308">
+<meta name="app-build" content="20261011104905">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3280,7 +3280,6 @@ async function confirmLogin(){
   state._justLoggedIn = true;
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
-  checkRndAttendanceGate();
   await saveSession();
   logActivity(`Logged in (${role})`);
   logLoginEvent(sessionName, role, precisePromise);
@@ -3288,6 +3287,13 @@ async function confirmLogin(){
   // before anyone was signed in — re-fetch now that we actually are, rather than rendering
   // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see.
   await refreshAppData(true);
+  // Must run AFTER refreshAppData(), not before — that call overwrites state.rndChemists /
+  // state.rndAttendance wholesale with the fresh authenticated fetch, which would silently wipe
+  // out (or just race against) a chemist this had only just looked up or auto-created against
+  // the stale pre-login snapshot, leaving _pendingRndAttendance pointing at an id that no longer
+  // existed in the array by the time "Mark attendance" was clicked — the button then found
+  // nothing and did nothing, with no error at all.
+  checkRndAttendanceGate();
   render();
 }
 // Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
@@ -3330,7 +3336,6 @@ async function confirmLoginV2(){
   state._justLoggedIn = true;
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
-  checkRndAttendanceGate();
   await saveSession();
   logActivity(`Logged in (${sessionRole})`);
   logLoginEvent(sessionName, sessionRole, precisePromise);
@@ -3341,6 +3346,10 @@ async function confirmLoginV2(){
   // have no pre-existing session, so loadAll()'s one and only fetch always ran unauthenticated,
   // and nothing used to ever re-fetch after the login that followed it.
   await refreshAppData(true);
+  // Must run AFTER refreshAppData(), not before — see the matching comment in confirmLogin()
+  // above for why (refreshAppData overwrites rndChemists/rndAttendance wholesale, which would
+  // silently invalidate whatever this had just looked up or created against the stale snapshot).
+  checkRndAttendanceGate();
   render();
 }
 async function logOut(){

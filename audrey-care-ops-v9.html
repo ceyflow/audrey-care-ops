@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011192018">
+<meta name="app-build" content="20261011193047">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1731,7 +1731,10 @@ const DEFAULT_AUTH = {
   // Admin-customized sidebar page lists for Blending/Packing (see pagesForRole()).
   // Unused now that custom roles (state.userRoles) own per-role page access — kept only so an
   // old saved blob with this key doesn't error, never written to again.
-  rolePages: {}
+  rolePages: {},
+  // Which PAGE_DATA_KEYS_VERSION role_data_access was last synced against — see the auto-resync
+  // check in loadAll() right after refreshAppData.
+  roleDataAccessSyncVersion: 0,
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
@@ -1852,6 +1855,14 @@ function permissionsByDepartment(){
   });
   return groups;
 }
+// Bump this whenever a key is added to (or removed from) PAGE_DATA_KEYS below. role_data_access
+// only gets re-synced for a role when someone re-saves it in Settings → User roles, so a role
+// nobody happens to re-save after such a change keeps missing that key's data forever — it can
+// still write it (so it looks fine in the tab that wrote it) but a fresh reload's read comes back
+// without it, since the database silently omits rows the role isn't listed for. Bumping this
+// forces every role to resync next time any Admin's session touches loadAll() (see there), closing
+// that gap without relying on anyone remembering to re-save roles by hand.
+const PAGE_DATA_KEYS_VERSION = 2;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -2640,6 +2651,26 @@ async function loadAll(){
   // calls right after actually fetching it, so old-format records still get migrated whenever
   // they're actually loaded, just not necessarily at login time any more.
   migrateRndProjectStages();
+  // finishBatchIntoBlendingBoard transfers the batch to blendBatches, THEN separately nulls
+  // activeBatch — two awaited writes, not one atomic one. If the second write silently fails
+  // after the first already landed (a network hiccup between them; saveActiveBatchVerified's own
+  // return value went unchecked there), the transfer still happened for real, but activeBatch
+  // keeps pointing at the same run — reported live as "finished a batch, refreshed, and the
+  // finished one came back" with its full live controls, not just a frozen done state, because the
+  // server's copy was never actually marked completed either. Detect that exact mismatch (an
+  // activeBatch whose batchNo/recipeId/startedAt already match a blendBatches record) and clear
+  // the stale local copy — the real transfer already happened, so there's nothing left to resume.
+  if(state.activeBatch && state.activeBatch.batchNo){
+    const alreadyTransferred = (state.blendBatches||[]).some(bb =>
+      bb.batchNo === state.activeBatch.batchNo &&
+      bb.recipeId === state.activeBatch.recipeId &&
+      bb.startedAt === state.activeBatch.startedAt
+    );
+    if(alreadyTransferred){
+      state.activeBatch = null;
+      saveActiveBatchVerified().catch(e=>console.error('clearing stale transferred activeBatch failed', e));
+    }
+  }
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
@@ -2933,6 +2964,24 @@ async function loadAll(){
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
   if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
     syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));
+  }
+  // PAGE_DATA_KEYS sometimes gains a key for an existing page (e.g. rndChemists/rndAttendance
+  // joining the R&D page's list) without anyone re-saving every role in Settings → User roles —
+  // the only other thing that pushes a fresh set of keys to role_data_access. A role nobody
+  // happens to re-save after that keeps missing the new key's data: it can still write it (so it
+  // looks fine in the tab that wrote it), but a later fresh reload's read silently comes back
+  // without it, since the database only returns rows the role is listed for. Only an Admin's
+  // session has the database rights to actually update role_data_access, so this runs once per
+  // version bump the next time any Admin's browser loads the app, and remembers the version it
+  // last synced so it doesn't redo this on every single load.
+  if(state.auth.migratedToSupabaseAuth && state.session && state.session.role==='Admin'
+     && state.auth.roleDataAccessSyncVersion !== PAGE_DATA_KEYS_VERSION){
+    syncAllRoleDataAccess().then(res=>{
+      if(res && res.ok){
+        state.auth = {...state.auth, roleDataAccessSyncVersion: PAGE_DATA_KEYS_VERSION};
+        kvSet('auth', state.auth).catch(e=>console.error('roleDataAccessSyncVersion write-back failed', e));
+      }
+    }).catch(e=>console.error('role_data_access version resync failed', e));
   }
   state.loaded = true;
   applyTheme();

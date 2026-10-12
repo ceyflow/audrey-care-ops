@@ -6383,6 +6383,11 @@ function renderOrderInquiryPage(){
   const limit = q ? matches.length : (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE);
   const rows = matches.slice(0, limit);
   const hiddenCount = matches.length - rows.length;
+  // Orders link to a customer by name only (no customerId field), matching how the rest of the
+  // app already looks up a customer's salesman — see the same name-normalized pattern in
+  // customerFormModal. Indexed once per render rather than a per-row .find() over state.customers.
+  const salesmanByCustomerName = {};
+  state.customers.forEach(c=>{ if(c.salesman) salesmanByCustomerName[c.name.trim().toLowerCase()] = c.salesman; });
   return `
   <div class="toolbar">
     <input class="search-input" id="order-inquiry-search" placeholder="Search by customer name…" value="${esc(state.filters.orderInquirySearch||'')}">
@@ -6396,13 +6401,15 @@ function renderOrderInquiryPage(){
       const onHold = o.deliveryOutcome==='On Hold';
       const delivered = o.deliveryOutcome==='Delivered';
       const deliveredLocked = delivered && !canResend;
+      const salesman = salesmanByCustomerName[(o.customer||'').trim().toLowerCase()];
       return `
       <div class="list-row oi-row" data-order-row="${o.id}" style="cursor:pointer;justify-content:space-between;">
         <span style="display:flex;align-items:center;gap:10px;">
           <span class="lr-avatar empty">${initials(o.customer||'?')}</span>
           <span class="lr-name">${esc(o.customer)}</span>
         </span>
-        <span class="oi-row-actions" style="display:grid;grid-template-columns:140px 132px 172px 172px;gap:8px;align-items:center;">
+        <span class="oi-row-actions" style="display:grid;grid-template-columns:140px 140px 132px 172px 172px;gap:8px;align-items:center;">
+          <span class="btn btn-sm" style="width:100%;box-sizing:border-box;text-align:center;cursor:default;" title="Sales person">${salesman ? esc(salesman) : '—'}</span>
           <button type="button" class="btn btn-sm" style="width:100%;" data-view-tracking="${o.id}" onclick="event.stopPropagation()">👁 View tracking</button>
           ${o.deliveryOutcome
             ? `<span class="pill ${delivered?'pill-active':(onHold?'pill-hold':'pill-high')}" style="width:100%;box-sizing:border-box;text-align:center;cursor:${deliveredLocked?'default':'pointer'};" ${deliveredLocked?'':`data-open-delivery-outcome="${o.id}"`} onclick="event.stopPropagation()" ${deliveredLocked?'title="Delivered — you don\'t have permission to change this."':'title="Click to change"'}>${esc(o.deliveryOutcome)}</span>`

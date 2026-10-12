@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011214811">
+<meta name="app-build" content="20261012054004">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -2483,7 +2483,7 @@ async function loadAll(){
       state.auth = {...state.auth, rolePages: {}};
       _rolePagesCleared = true;
     }
-    kvSet('auth', state.auth).catch(e=>console.error('auth write-back failed', e));
+    if(a) kvSet('auth', state.auth).catch(e=>console.error('auth write-back failed', e));
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
   if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
     syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));

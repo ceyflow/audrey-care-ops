@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261012145729">
+<meta name="app-build" content="20261012151200">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -13002,6 +13002,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-remove-staff]').forEach(b=>b.addEventListener('click', ()=>removeStaffMember(b.dataset.removeStaff)));
   document.querySelectorAll('.staff-photo-input').forEach(inp=>inp.addEventListener('change', (e)=>{
     const file = e.target.files[0];
+    e.target.value = '';
     if(file) uploadStaffPhoto(inp.dataset.staff, file);
   }));
   document.querySelectorAll('[data-remove-staff-photo]').forEach(b=>b.addEventListener('click', ()=>removeStaffPhoto(b.dataset.removeStaffPhoto)));
@@ -13725,6 +13726,11 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-brand-delete]').forEach(b=>b.addEventListener('click', ()=>brandingDeleteAddon(b.dataset.brandDelete)));
   document.querySelectorAll('.brand-change-input').forEach(inp=>inp.addEventListener('change', (e)=>{
     const file = e.target.files[0];
+    // Reset the input right away, not just on success — browsers only fire 'change' when the
+    // picked file differs from whatever the input already holds, so picking the SAME file twice
+    // in a row (e.g. trying again after an unclear first attempt) silently does nothing at all
+    // unless the value is cleared in between. Matches "I uploaded it again and nothing happened".
+    e.target.value = '';
     if(file) brandingChangeAddon(inp.dataset.addon, file);
   }));
   if(byIdEl('form-brand-add-addon')) byIdEl('form-brand-add-addon').addEventListener('submit', brandingAddAddon);

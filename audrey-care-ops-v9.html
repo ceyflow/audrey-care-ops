@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261011214811">
+<meta name="app-build" content="20261012054004">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3038,7 +3038,13 @@ async function loadAll(){
     // filled in, or the rolePages-clearing migration persisted) — nothing between here and
     // render() below needs it to have actually landed yet, so it shouldn't hold up becoming
     // visible on every single page load just to re-save data that's usually unchanged anyway.
-    kvSet('auth', state.auth).catch(e=>console.error('auth write-back failed', e));
+    // Only ever write back when the read actually succeeded (`a` truthy) — a transient read
+    // failure (RLS hiccup, network blip) falls through to the `{...DEFAULT_AUTH}` branch above
+    // for THIS session's display only; writing that back would blindly overwrite the real stored
+    // auth config (migratedToSupabaseAuth, secureAccounts, saved passwords…) with nothing. This
+    // was confirmed as a real production incident: one bad read silently wiped
+    // migratedToSupabaseAuth back to unset for everyone, with no merge protection to catch it.
+    if(a) kvSet('auth', state.auth).catch(e=>console.error('auth write-back failed', e));
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
   if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
     syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));

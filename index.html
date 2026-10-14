@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261014040525">
+<meta name="app-build" content="20261014153830">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -2825,7 +2825,7 @@ async function logLoginEvent(name, role){
     const res = await fetch('https://ipapi.co/json/');
     if(res.ok){
       const data = await res.json();
-      if(!data.error) geo = {ip: data.ip, city: data.city, region: data.region, country: data.country_name, lat: data.latitude, lng: data.longitude};
+      if(!data.error) geo = {ip: data.ip};
     }
   }catch(e){}
   const entry = {id: uid('LOGIN'), name, role, at: new Date().toISOString(), userAgent: navigator.userAgent, ...geo};
@@ -2957,7 +2957,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._loginMapFocusId = null; state._salesPersonColorsDraft = null; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; render(); }
 async function createOrder(e){
   e.preventDefault();
   const f = e.target;
@@ -4502,53 +4502,6 @@ function render(){
     renderInner();
     restoreFocusedInput(focusSnapshot);
   }
-  syncLoginMap();
-}
-let _leafletLoadPromise = null;
-function loadLeaflet(){
-  if(typeof L !== 'undefined') return Promise.resolve();
-  if(_leafletLoadPromise) return _leafletLoadPromise;
-  _leafletLoadPromise = new Promise((resolve, reject)=>{
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => resolve();
-    script.onerror = () => { _leafletLoadPromise = null; reject(new Error('Map library failed to load')); };
-    document.head.appendChild(script);
-  });
-  return _leafletLoadPromise;
-}
-let _loginMapInstance = null;
-function syncLoginMap(){
-  const container = document.getElementById('login-map');
-  if(_loginMapInstance){ _loginMapInstance.remove(); _loginMapInstance = null; }
-  if(!container) return;
-  if(typeof L==='undefined'){
-    loadLeaflet()
-      .then(()=>{ if(document.getElementById('login-map')) syncLoginMap(); })
-      .catch(()=>{ if(container.isConnected) container.innerHTML = '<div class="empty-state" style="padding:20px;">Couldn\'t load the map right now — check your connection and try again.</div>'; });
-    return;
-  }
-  const pins = (state.loginHistory||[]).filter(e=>typeof e.lat==='number' && typeof e.lng==='number');
-  if(!pins.length) return;
-  const focusId = state._loginMapFocusId;
-  const focused = focusId ? pins.find(e=>e.id===focusId) : null;
-  const center = focused ? [focused.lat, focused.lng] : [pins[0].lat, pins[0].lng];
-  const map = L.map(container, {scrollWheelZoom: true}).setView(center, focused ? 14 : 7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-  }).addTo(map);
-  pins.forEach(e=>{
-    const marker = L.marker([e.lat, e.lng]).addTo(map);
-    const loc = esc([e.city, e.region, e.country].filter(Boolean).join(', ') || 'Unknown location');
-    marker.bindPopup(`<b>${esc(e.name)}</b> — ${esc(e.role)}<br>${fmtDateTime(e.at)}<br>${loc}<br><span style="color:#888;font-size:11px;">Approximate — based on IP address</span>`);
-    if(focused && e.id===focusId) marker.openPopup();
-  });
-  _loginMapInstance = map;
 }
 let _deferredRenderTimer = null;
 function renderOrDefer(){
@@ -7423,31 +7376,25 @@ function renderRoleEditForm(f){
 }
 function renderLoginActivityPanel(){
   const entries = [...(state.loginHistory||[])].sort((a,b)=>new Date(b.at)-new Date(a.at));
-  const anyPins = entries.some(e=>typeof e.lat==='number' && typeof e.lng==='number');
   return `
   <div class="panel" id="settings-login-activity">
-    <div class="panel-head"><h3>Login activity</h3>${anyPins ? `<button type="button" class="btn btn-sm" id="btn-view-login-map">🗺️ View on map</button>` : ''}</div>
+    <div class="panel-head"><h3>Login activity</h3></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize. Location is an approximate city based on the IP address, not exact GPS.</div>
+      <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize.</div>
       ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
       <table class="data-table" style="margin:0;">
-        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>Location</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
+        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
         <tbody>
-          ${entries.slice(0,100).map(e=>{
-            const hasPin = typeof e.lat==='number' && typeof e.lng==='number';
-            const loc = e.city ? esc([e.city, e.region, e.country].filter(Boolean).join(', ')) : '<span class="hint">Unknown</span>';
-            const precisionBadge = hasPin ? `<span class="hint" style="font-size:10.5px;margin-left:5px;">(approx.)</span>` : '';
-            return `
+          ${entries.slice(0,100).map(e=>`
           <tr>
             <td>${esc(e.name)}</td>
             <td>${esc(e.role)}</td>
             <td>${fmtDateTime(e.at)}</td>
-            <td>${hasPin ? `<button type="button" class="link-btn" data-view-login-pin="${e.id}" style="background:none;border:none;padding:0;color:var(--accent-dark);text-decoration:underline;cursor:pointer;font:inherit;">📍 ${loc}</button>${precisionBadge}` : loc}</td>
             <td>${e.ip ? esc(e.ip) : '<span class="hint">—</span>'}</td>
             <td>${esc(deviceSummaryFromUserAgent(e.userAgent))}</td>
             ${isAdmin()?`<td><button type="button" class="btn btn-sm btn-danger" data-delete-login="${e.id}">🗑️</button></td>`:''}
-          </tr>`;}).join('')}
+          </tr>`).join('')}
         </tbody>
       </table>
       </div>`}
@@ -7463,21 +7410,6 @@ function deleteLoginEntry(id){
       await save('loginHistory');
     },
   });
-}
-function loginActivityMapModal(){
-  const entries = [...(state.loginHistory||[])].filter(e=>typeof e.lat==='number' && typeof e.lng==='number');
-  const focused = state._loginMapFocusId ? entries.find(e=>e.id===state._loginMapFocusId) : null;
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:820px;max-height:88vh;display:flex;flex-direction:column;">
-      <h2>Login locations</h2>
-      <div class="sub">${focused ? `Centered on ${esc(focused.name)}'s sign-in — ${fmtDateTime(focused.at)}.` : `${entries.length} sign-in${entries.length===1?'':'s'} with a known location.`} Pins marked exact come from the device's GPS; the rest are approximate, from its internet connection.</div>
-      <div id="login-map" style="height:460px;border-radius:12px;overflow:hidden;margin-top:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><span class="hint">Loading map…</span></div>
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-      </div>
-    </div>
-  </div>`;
 }
 async function runSecureAccountsMigration(){
   const form = state._secureAcctForm;
@@ -9335,7 +9267,6 @@ function renderModal(){
   if(type==='aibot') return aiBotModal();
   if(type==='changepassword') return changePasswordModal();
   if(type==='activitylog') return activityLogModal();
-  if(type==='loginmap') return loginActivityMapModal();
   return '';
 }
 function changePasswordModal(){
@@ -10744,11 +10675,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-open-aibot')) byIdEl('btn-open-aibot').onclick = ()=>openModal('aibot');
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
   if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
-  if(byIdEl('btn-view-login-map')) byIdEl('btn-view-login-map').onclick = ()=>{ state._loginMapFocusId = null; openModal('loginmap'); };
-  document.querySelectorAll('[data-view-login-pin]').forEach(b=>b.addEventListener('click', ()=>{
-    state._loginMapFocusId = b.dataset.viewLoginPin;
-    openModal('loginmap');
-  }));
   document.querySelectorAll('[data-delete-login]').forEach(b=>b.addEventListener('click', ()=>deleteLoginEntry(b.dataset.deleteLogin)));
   if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;

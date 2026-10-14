@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261014153830">
+<meta name="app-build" content="20261014154007">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -2825,7 +2825,7 @@ async function logLoginEvent(name, role){
     const res = await fetch('https://ipapi.co/json/');
     if(res.ok){
       const data = await res.json();
-      if(!data.error) geo = {ip: data.ip};
+      if(!data.error) geo = {ip: data.ip, city: data.city, region: data.region};
     }
   }catch(e){}
   const entry = {id: uid('LOGIN'), name, role, at: new Date().toISOString(), userAgent: navigator.userAgent, ...geo};
@@ -7384,13 +7384,14 @@ function renderLoginActivityPanel(){
       ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
       <table class="data-table" style="margin:0;">
-        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
+        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>Location</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
         <tbody>
           ${entries.slice(0,100).map(e=>`
           <tr>
             <td>${esc(e.name)}</td>
             <td>${esc(e.role)}</td>
             <td>${fmtDateTime(e.at)}</td>
+            <td>${e.city ? esc([e.city, e.region].filter(Boolean).join(', ')) : '<span class="hint">—</span>'}</td>
             <td>${e.ip ? esc(e.ip) : '<span class="hint">—</span>'}</td>
             <td>${esc(deviceSummaryFromUserAgent(e.userAgent))}</td>
             ${isAdmin()?`<td><button type="button" class="btn btn-sm btn-danger" data-delete-login="${e.id}">🗑️</button></td>`:''}

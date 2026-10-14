@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261012151200">
+<meta name="app-build" content="20261014040525">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 html{ visibility:hidden; }
@@ -5738,6 +5738,7 @@ function renderCustomersPage(){
       <label class="btn" style="cursor:pointer;">⬆ Import CSV
         <input type="file" id="customer-import-input" accept=".csv,text/csv" style="display:none;">
       </label>
+      <button class="btn" id="btn-export-customers-csv">⬇ Export CSV</button>
       <button class="btn" id="btn-salesperson-colors">🎨 Sales person colors</button>
       <button class="btn btn-primary" id="btn-new-customer">+ Add customer</button>
     </div>` : ''}
@@ -9591,7 +9592,7 @@ function salesPersonColorsModal(){
             <span style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(name)}</span>
             <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
               <input type="color" value="${color||'#9AA08C'}" data-salesperson-color-input="${escAttr(name)}" style="width:36px;height:30px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;">
-              ${color ? `<button type="button" class="btn btn-sm" data-salesperson-color-clear="${escAttr(name)}" title="Remove color">✕</button>` : ''}
+              <button type="button" class="btn btn-sm" data-salesperson-color-clear="${escAttr(name)}" title="Remove color">✕</button>
             </span>
           </div>`;
         }).join('')}

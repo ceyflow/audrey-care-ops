@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261015055123">
+<meta name="app-build" content="20261015142052">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6665,13 +6665,17 @@ function renderCustomersPage(){
     <table class="data-table">
       <thead><tr>
         ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
-        <th>Name</th><th>Phone</th><th>City/Area</th><th>Type</th><th>Status</th><th>Added</th>${(state.session && roleCan(state.session.role, 'customers_manage'))?'<th>Actions</th>':''}
+        <th>Name</th><th>Phone</th><th>Sales person</th><th>Type</th><th>Status</th><th>Added</th>${(state.session && roleCan(state.session.role, 'customers_manage'))?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
         ${rows.map(c=>`
         <tr class="${(state.session && roleCan(state.session.role, 'customers_manage'))?'clickable':''}" ${(state.session && roleCan(state.session.role, 'customers_manage'))?`data-customer-row="${c.id}"`:''}>
           ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
-          <td>${esc(c.name)}</td><td>${esc(c.phone)||'—'}</td><td>${esc(c.cityArea)||'—'}</td><td>${esc(c.type)}</td>
+          <td>${esc(c.name)}</td><td>${esc(c.phone)||'—'}</td>
+          <td>${(()=>{ if(!c.salesman) return '<span class="hint">—</span>';
+            const spColor = (state.salesPersonColors||{})[c.salesman];
+            return `<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(c.salesman)}</span>`; })()}</td>
+          <td>${esc(c.type)}</td>
           <td><span class="pill ${c.status==='Active'?'pill-active':'pill-inactive'}">${c.status}</span></td>
           <td>${fmtDate(c.createdAt)}</td>
           ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<td class="row-actions" onclick="event.stopPropagation()">

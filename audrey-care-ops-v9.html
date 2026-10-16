@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261015142052">
+<meta name="app-build" content="20261016180429">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1043,8 +1043,9 @@ const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
 // so there's nothing anywhere else in the app that needs them before that page is actually opened.
-const DEFERRED_KEYS = ['bulkSmsTemplates','smsCampaigns','rndProjects'];
-const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns'], rnd: ['rndProjects'] };
+const DEFERRED_KEYS = ['bulkSmsTemplates','smsCampaigns','rndProjects','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'];
+const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns'], rnd: ['rndProjects'],
+  gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -1934,7 +1935,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 3;
+const PAGE_DATA_KEYS_VERSION = 4;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -1952,7 +1953,7 @@ const PAGE_DATA_KEYS = {
   suppliers: ['suppliers'],
   complaints: ['complaints','complaintCategories','complaintPriorities','staff','customers'],
   ordersprocess: ['orders','branding'],
-  gmp: ['gmpChecklistEntries'],
+  gmp: ['gmpChecklistEntries','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','staff'],
   rnd: ['rndProjects','rndChemists','rndAttendance'],
   staff: ['staff','staffCategories'],
   chat: ['chat','staff'],
@@ -2418,6 +2419,377 @@ const GMP_CHECKLIST_DEFS = [
     ]
   }
 ];
+
+/* ============== GMP: Inspections / Maintenance & Calibration / Pest control / Customer Feedback ==============
+   These four cards hold a mix of shapes, digitised from the factory's paper forms:
+     - a generic "log" (one record per event — a vehicle inspection, a complaint, a survey response),
+       covering 9 of the forms via one data-driven modal + list;
+     - two registries (Calibration Schedule, PM machine list) — simple named-item CRUD lists;
+     - two grids shaped like the Cleaning grid but with a different row axis and cell shape
+       (machines × week-of-year for Maintenance, pest points × day with per-pest-type counts);
+     - a daily roster (Employee Health & Hygiene) — staff × a fixed set of checks, one day at a time.
+   None of this reuses GMP_CHECKLIST_DEFS/state.gmpChecklistEntries — Cleaning keeps working exactly
+   as it did. */
+const GMP_RATING_LABELS = {5:'Excellent', 4:'Good', 3:'Satisfactory', 2:'Needs Improvement', 1:'Poor'};
+const GMP_VEHICLE_CHECK_ITEMS = [
+  'Good General Cleanliness (Body / Roof / Floor)', 'Low Dust Level Inside the Vehicle', 'No Oil and Grease Patches',
+  'No Insect / Pest Infestation', 'Not Susceptible to Weather Damage', 'No Adverse Odour', 'No Oil Spillages',
+  'Good Physical Condition of Vehicle', 'Vehicle is Fully Covered', 'Other',
+];
+const GMP_BUILDING_AREA_ITEMS = [
+  'Entry Point (Doors)', 'Hygiene Room (water tap, soap/sanitiser dispensers, hand dryer, glasses etc.)', 'Sign Boards',
+  'Floor (Damaged, Cleanliness)', 'Roof (Damaged, Cleanliness)', 'Wall (Damaged, Cleanliness)', 'Ceiling (Damaged, Cleanliness)',
+  'Windows & Fine Mesh (Damaged, Cleanliness)', 'Lights, Covers and Fittings (Damaged, Cleanliness)', 'Emergency Lights',
+  'Fly Catcher', 'Glue Traps', 'Pipe Lines (Leaking)', 'Drains — Inside', 'Drains — Outside', 'Surrounding Areas (pest attack, flora etc.)',
+];
+const GMP_INCOMING_CHECKED_PARAMS = {
+  pm: ['Physical / Packing Damages', 'COAs / Food Grade Certificates', 'Dust / Foreign Matters', 'Width', 'Length', 'Height'],
+  rm: ['Physical Damages', 'COAs / Food Grade Certificates (if required)', 'Packing Damage', 'Dust / Foreign Matters', 'Appearance / Colour / Odour', 'Package / Box Condition'],
+};
+const GMP_VISITOR_HEALTH_ITEMS = [
+  'Diarrhea or Vomiting', 'Any Parasitic Infection', 'Ear, Nose and Throat Infections', 'Typhoid or Paratyphoid',
+  'Skin Rashes', 'Recurring Boils', 'Dysentery',
+];
+const GMP_BREAKDOWN_STATEMENT_ITEMS = [
+  'Job Completed Satisfactorily', 'Equipment / Machine is in GMP Condition to Use for Manufacturing',
+  'Removal of Chemical / Waste / Debris Materials from Production Area is Done Properly',
+  'Rechecked the Availability of Chemical / Oil / Water Levels in Equipment / Machine',
+];
+const GMP_CUSTOMER_PRODUCT_ITEMS = [
+  'Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Bubble Bath', 'Bath Salt', 'Air Freshener', 'Pillow Mist', 'Massage Oil', 'Hand Wash',
+];
+const GMP_SATISFACTION_QUESTIONS = [
+  'How satisfied are you with the overall quality of the product?',
+  'How satisfied are you with the fragrance, texture, and appearance of the product?',
+  "How satisfied are you with the product's performance (e.g. cleansing, moisturising, conditioning, refreshing)?",
+  'How satisfied are you with the packaging quality, labelling, and ease of use?',
+  'Did the product meet your expectations for quality and safety?',
+  'How satisfied are you with the consistency of product quality across different purchases?',
+  'How satisfied are you with the availability and timely delivery of the products?',
+  'How satisfied are you with our customer service and response to your inquiries or complaints?',
+  'How likely are you to purchase Audrey Care products again and recommend them to others?',
+  'Overall, how satisfied are you with Audrey Care (Pvt) Ltd. as a supplier?',
+];
+const GMP_LOG_DEFS = [
+  {id:'vehicleInspection', card:'inspections', name:'Vehicle Inspection', summaryCols:['date','vehicleNo','transporter','evaluatedBy'],
+    fields:[
+      {key:'date', label:'Date', type:'date'},
+      {key:'transporter', label:'Name of Transporter', type:'text'},
+      {key:'dispatchGrn', label:'Dispatch / GRN Number', type:'text'},
+      {key:'vehicleNo', label:'Vehicle Number', type:'text'},
+      {key:'checks', label:'Evaluation', type:'yesnolist', items: GMP_VEHICLE_CHECK_ITEMS},
+      {key:'remarks', label:'Remarks', type:'textarea'},
+      {key:'evaluatedBy', label:'Evaluation Done By', type:'text'},
+    ]},
+  {id:'buildingCondition', card:'inspections', name:'Building Condition Inspection', summaryCols:['date','site','checkedBy'],
+    fields:[
+      {key:'date', label:'Date', type:'date'},
+      {key:'site', label:'Site / Section', type:'text'},
+      {key:'areas', label:'Areas Inspected (Good / Bad + corrective action)', type:'conditionlist', items: GMP_BUILDING_AREA_ITEMS},
+      {key:'remarks', label:'Remarks', type:'textarea'},
+      {key:'checkedBy', label:'Checked By', type:'text'},
+      {key:'approvedBy', label:'Approved By', type:'text'},
+    ]},
+  {id:'incomingInspectionPM', card:'inspections', name:'Incoming Inspection — Packing Materials', summaryCols:['receivingDate','supplier','itemDescription','batchNo'],
+    fields:[
+      {key:'supplier', label:'Supplier Name', type:'text'}, {key:'receivingDate', label:'Receiving Date', type:'date'},
+      {key:'invoiceNo', label:'Invoice No.', type:'text'}, {key:'batchNo', label:'Batch No', type:'text'}, {key:'grnNo', label:'GRN No', type:'text'},
+      {key:'itemDescription', label:'Item Description', type:'text'}, {key:'quantity', label:'Quantity', type:'text'},
+      {key:'checkedParams', label:'Checked Parameters', type:'yesnolist', items: GMP_INCOMING_CHECKED_PARAMS.pm},
+      {key:'vehicleNo', label:'Vehicle No', type:'text'},
+      {key:'vehicleCondition', label:'Vehicle Condition', type:'yesnolist', items:['Cleanliness', 'No Cross Contamination', 'Properly Covered']},
+      {key:'checkedBy', label:'Checked By', type:'text'}, {key:'reviewedBy', label:'Reviewed By', type:'text'},
+    ]},
+  {id:'incomingInspectionRM', card:'inspections', name:'Incoming Inspection — Raw Materials', summaryCols:['receivingDate','supplier','itemDescription','batchNo'],
+    fields:[
+      {key:'supplier', label:'Supplier Name', type:'text'}, {key:'receivingDate', label:'Receiving Date', type:'date'},
+      {key:'invoiceNo', label:'Invoice No.', type:'text'}, {key:'batchNo', label:'Batch No', type:'text'}, {key:'grnNo', label:'GRN No', type:'text'},
+      {key:'itemDescription', label:'Item Description', type:'text'}, {key:'quantity', label:'Quantity', type:'text'},
+      {key:'checkedParams', label:'Checked Parameters', type:'yesnolist', items: GMP_INCOMING_CHECKED_PARAMS.rm},
+      {key:'vehicleNo', label:'Vehicle No', type:'text'},
+      {key:'vehicleCondition', label:'Vehicle Condition', type:'yesnolist', items:['Cleanliness', 'No Cross Contamination', 'Properly Covered']},
+      {key:'checkedBy', label:'Checked By', type:'text'}, {key:'reviewedBy', label:'Reviewed By', type:'text'},
+    ]},
+  {id:'visitorHygiene', card:'inspections', name:'Visitor Hygiene Questionnaire', summaryCols:['date','name','company','purpose'],
+    fields:[
+      {key:'date', label:'Date', type:'date'}, {key:'name', label:'Name', type:'text'}, {key:'company', label:'Company', type:'text'},
+      {key:'nic', label:'NIC No', type:'text'}, {key:'purpose', label:'Purpose of the Visit', type:'textarea'},
+      {key:'contactPerson', label:'Contact Person in the Factory', type:'text'},
+      {key:'health', label:'In the last three months, has the visitor suffered from any of these?', type:'yesnolist', items: GMP_VISITOR_HEALTH_ITEMS},
+      {key:'signatureName', label:'Visitor Signature (typed name)', type:'text'}, {key:'approvedBy', label:'Approved By', type:'text'},
+    ]},
+  {id:'calibrationCheck', card:'maintenance', name:'Internal Calibration Check', summaryCols:['date','instrument','correction','verifiedBy'],
+    fields:[
+      {key:'instrument', label:'Name of Instrument', type:'text'}, {key:'date', label:'Date', type:'date'},
+      {key:'masterReading', label:'Master Equipment Reading', type:'text'}, {key:'calibratingReading', label:'Calibrating Equipment Reading', type:'text'},
+      {key:'correction', label:'Correction', type:'text'}, {key:'remarks', label:'Remarks', type:'textarea'},
+      {key:'checkedBy', label:'Checked By', type:'text'}, {key:'verifiedBy', label:'Verified By', type:'text'},
+    ]},
+  {id:'breakdownHistory', card:'maintenance', name:'Machine Repair / Breakdown History', summaryCols:['date','machine','mechanicSign','totalDowntime'],
+    fields:[
+      {key:'machine', label:'Machine Name', type:'text'}, {key:'section', label:'Section', type:'text'}, {key:'date', label:'Date', type:'date'},
+      {key:'breakdownDetails', label:'Breakdown Details', type:'textarea'}, {key:'repairedDetails', label:'Repaired Details', type:'textarea'},
+      {key:'sparePartsConsumed', label:'Spare Parts Consumed', type:'textarea'},
+      {key:'downTimeFrom', label:'Down Time From', type:'text'}, {key:'downTimeTo', label:'Down Time To', type:'text'},
+      {key:'totalDowntime', label:'Total Down Time (hours/minutes)', type:'text'}, {key:'mechanicSign', label:'Mechanic (Sign)', type:'text'},
+      {key:'statement', label:'Factory Manager Sign-off', type:'yesnolist', items: GMP_BREAKDOWN_STATEMENT_ITEMS},
+      {key:'spareCost', label:'Spare Cost', type:'text'}, {key:'directorSign', label:'Director Sign', type:'text'},
+      {key:'remarks', label:'Remarks', type:'textarea'},
+    ]},
+  {id:'customerSurvey', card:'feedback', name:'Customer Satisfaction Survey', summaryCols:['date','customerName'],
+    fields:[
+      {key:'customerName', label:'Customer or Company Name', type:'text'}, {key:'date', label:'Date', type:'date'},
+      {key:'products', label:'Product Purchased', type:'checkboxgroup', items: GMP_CUSTOMER_PRODUCT_ITEMS},
+      {key:'ratings', label:'Satisfaction Ratings', type:'ratinglist', items: GMP_SATISFACTION_QUESTIONS},
+      {key:'likedMost', label:'What did you like most about our products?', type:'textarea'},
+      {key:'improvements', label:'What improvements would you recommend?', type:'textarea'},
+      {key:'newProducts', label:'Any new products or fragrances you would like us to introduce?', type:'textarea'},
+    ]},
+  {id:'complaintRecord', card:'feedback', name:'Customer Complaint Record (GMP/QMS)', summaryCols:['date','company','validity','correctiveActionResponsibility'],
+    fields:[
+      {key:'date', label:'Date', type:'date'}, {key:'reportedBy', label:'Reported By', type:'text'}, {key:'contactDetails', label:'Contact Details', type:'text'},
+      {key:'company', label:'Company', type:'text'}, {key:'complaint', label:'Complaint', type:'textarea'}, {key:'productDetails', label:'Product Details', type:'text'},
+      {key:'sampleCollected', label:'Sample Collected', type:'yesno'},
+      {key:'investigationResults', label:'Analytical / Investigation Results (Root Cause)', type:'textarea'},
+      {key:'validity', label:'Validity of the Complaint', type:'select', options:['Critical','Non-critical','Alert']},
+      {key:'correction', label:'Correction', type:'textarea'}, {key:'correctionResponsibility', label:'Correction — Responsibility', type:'text'},
+      {key:'correctiveAction', label:'Corrective Action', type:'textarea'}, {key:'correctiveActionResponsibility', label:'Corrective Action — Responsibility', type:'text'},
+      {key:'effectiveness', label:'Effectiveness of the Preventive Action', type:'textarea'},
+    ]},
+];
+function gmpLogDefById(id){ return GMP_LOG_DEFS.find(d=>d.id===id); }
+function gmpLogEntriesFor(defId){ return (state.gmpLogEntries||[]).filter(e=>e.defId===defId).sort((a,b)=>new Date(b.at)-new Date(a.at)); }
+async function saveGmpLogEntry(defId, id, data){
+  const list = state.gmpLogEntries||[];
+  if(id){
+    const e = list.find(x=>x.id===id); if(!e) return;
+    e.data = data; e.updatedAt = new Date().toISOString();
+  } else {
+    state.gmpLogEntries = [...list, {id:uid('GMPLOG'), defId, at:new Date().toISOString(), data}];
+  }
+  await save('gmpLogEntries');
+}
+async function deleteGmpLogEntry(id){
+  state.gmpLogEntries = (state.gmpLogEntries||[]).filter(e=>e.id!==id);
+  await save('gmpLogEntries');
+}
+// Summary-table cell for one of a log def's `summaryCols` — all of them are plain-text or date
+// fields (list-shaped fields never go in summaryCols), so this never has to unpack a sub-object.
+function gmpLogSummaryCell(col, data, at){
+  const raw = data ? data[col] : '';
+  if(col==='date' && !raw) return fmtDate(at);
+  if(/date$/i.test(col) && raw) return fmtDate(raw);
+  return raw || '—';
+}
+function gmpFieldHtml(field, data){
+  const v = data ? data[field.key] : undefined;
+  const todayIso = new Date().toISOString().slice(0,10);
+  if(field.type==='text') return `<div class="field"><label>${esc(field.label)}</label><input data-gf="${field.key}" value="${escAttr(v||'')}"></div>`;
+  if(field.type==='textarea') return `<div class="field"><label>${esc(field.label)}</label><textarea data-gf="${field.key}" rows="3">${esc(v||'')}</textarea></div>`;
+  if(field.type==='date') return `<div class="field"><label>${esc(field.label)}</label><input type="date" data-gf="${field.key}" value="${escAttr(v||todayIso)}"></div>`;
+  if(field.type==='select') return `<div class="field"><label>${esc(field.label)}</label><select data-gf="${field.key}"><option value="">—</option>${(field.options||[]).map(o=>`<option value="${escAttr(o)}" ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+  if(field.type==='yesno') return `<div class="field"><label>${esc(field.label)}</label><select data-gf="${field.key}"><option value="">—</option><option value="Yes" ${v==='Yes'?'selected':''}>Yes</option><option value="No" ${v==='No'?'selected':''}>No</option></select></div>`;
+  if(field.type==='yesnolist') return `
+    <div class="field"><label>${esc(field.label)}</label>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${field.items.map((label,i)=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
+          <span style="font-size:12.5px;">${esc(label)}</span>
+          <select data-gf="${field.key}" data-gf-idx="${i}" style="width:90px;flex-shrink:0;">
+            <option value="">—</option>
+            <option value="Yes" ${v&&v[i]==='Yes'?'selected':''}>Yes</option>
+            <option value="No" ${v&&v[i]==='No'?'selected':''}>No</option>
+          </select>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  if(field.type==='ratinglist') return `
+    <div class="field"><label>${esc(field.label)}</label>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${field.items.map((label,i)=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
+          <span style="font-size:12.5px;flex:1;">${esc(label)}</span>
+          <select data-gf="${field.key}" data-gf-idx="${i}" style="width:160px;flex-shrink:0;">
+            <option value="">—</option>
+            ${[5,4,3,2,1].map(n=>`<option value="${n}" ${v&&v[i]===String(n)?'selected':''}>${n} - ${GMP_RATING_LABELS[n]}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  if(field.type==='checkboxgroup') return `
+    <div class="field"><label>${esc(field.label)}</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${field.items.map((label,i)=>`
+        <label style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;">
+          <input type="checkbox" data-gf="${field.key}" data-gf-idx="${i}" ${v&&v[i]?'checked':''}> ${esc(label)}
+        </label>`).join('')}
+      </div>
+    </div>`;
+  if(field.type==='conditionlist') return `
+    <div class="field"><label>${esc(field.label)}</label>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${field.items.map((label,i)=>{ const row=(v&&v[i])||{}; return `
+        <div style="display:grid;grid-template-columns:1fr 92px 1fr;gap:8px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
+          <span style="font-size:12.5px;">${esc(label)}</span>
+          <select data-gf="${field.key}" data-gf-idx="${i}" data-gf-sub="condition">
+            <option value="">—</option>
+            <option value="Good" ${row.condition==='Good'?'selected':''}>Good</option>
+            <option value="Bad" ${row.condition==='Bad'?'selected':''}>Bad</option>
+          </select>
+          <input data-gf="${field.key}" data-gf-idx="${i}" data-gf-sub="action" placeholder="Corrective action" value="${escAttr(row.action||'')}">
+        </div>`;}).join('')}
+      </div>
+    </div>`;
+  return '';
+}
+function readGmpFieldsFromForm(form, def){
+  const data = {};
+  def.fields.forEach(f=>{
+    if(['text','textarea','date','select','yesno'].includes(f.type)){
+      const el = form.querySelector(`[data-gf="${f.key}"]`);
+      data[f.key] = el ? el.value.trim() : '';
+    } else if(f.type==='yesnolist' || f.type==='ratinglist'){
+      const vals = {};
+      form.querySelectorAll(`[data-gf="${f.key}"]`).forEach(el=>{ vals[el.dataset.gfIdx] = el.value; });
+      data[f.key] = vals;
+    } else if(f.type==='checkboxgroup'){
+      const vals = {};
+      form.querySelectorAll(`[data-gf="${f.key}"]`).forEach(el=>{ vals[el.dataset.gfIdx] = el.checked; });
+      data[f.key] = vals;
+    } else if(f.type==='conditionlist'){
+      const vals = {};
+      f.items.forEach((label,i)=>{
+        const cond = form.querySelector(`[data-gf="${f.key}"][data-gf-idx="${i}"][data-gf-sub="condition"]`);
+        const act = form.querySelector(`[data-gf="${f.key}"][data-gf-idx="${i}"][data-gf-sub="action"]`);
+        vals[i] = {condition: cond?cond.value:'', action: act?(act.value||'').trim():''};
+      });
+      data[f.key] = vals;
+    }
+  });
+  return data;
+}
+
+// Employee Health & Hygiene — a daily roster (all staff x these 10 fixed checks), not a log.
+const GMP_HYGIENE_CHECKS = [
+  'Hand Washing / Sanitation', 'Cleaned Uniforms', 'No Overgrown Nails', 'No Strong Perfume',
+  'No Dangling Jewellery / Decorating Items', "Doesn't Suffer from a Communicable Disease",
+  'No Cuts & Wounds', 'Not Using Betel', 'Clean Shaven (or Tied Back)', 'No Overgrown Hair',
+];
+function gmpHygieneRosterFor(date){ return (state.gmpHygieneRoster||[]).find(r=>r.date===date) || null; }
+function blankGmpHygieneRoster(date){ return {id:uid('GMPHYG'), date, entries:{}, checkedBy:'', approvedBy:'', updatedAt:new Date().toISOString()}; }
+async function updateGmpHygieneCheck(date, staffId, checkIdx, value){
+  let r = gmpHygieneRosterFor(date);
+  if(!r){ r = blankGmpHygieneRoster(date); state.gmpHygieneRoster = [...(state.gmpHygieneRoster||[]), r]; }
+  if(!r.entries[staffId]) r.entries[staffId] = {checks:{}, remarks:''};
+  r.entries[staffId].checks[checkIdx] = value;
+  r.updatedAt = new Date().toISOString();
+  await save('gmpHygieneRoster');
+}
+async function updateGmpHygieneField(date, field, value){
+  let r = gmpHygieneRosterFor(date);
+  if(!r){ r = blankGmpHygieneRoster(date); state.gmpHygieneRoster = [...(state.gmpHygieneRoster||[]), r]; }
+  r[field] = value; r.updatedAt = new Date().toISOString();
+  await save('gmpHygieneRoster');
+}
+async function updateGmpHygieneRemarks(date, staffId, remarks){
+  let r = gmpHygieneRosterFor(date);
+  if(!r){ r = blankGmpHygieneRoster(date); state.gmpHygieneRoster = [...(state.gmpHygieneRoster||[]), r]; }
+  if(!r.entries[staffId]) r.entries[staffId] = {checks:{}, remarks:''};
+  r.entries[staffId].remarks = remarks; r.updatedAt = new Date().toISOString();
+  await save('gmpHygieneRoster');
+}
+
+// Calibration Schedule — a registry of instruments, each with a calibration cadence.
+const GMP_DEFAULT_CALIBRATION_INSTRUMENTS = [
+  {name:'Scale', location:'RM Store', type:'External', frequency:'Annual'},
+  {name:'Scale', location:'Packing', type:'External', frequency:'Annual'},
+  {name:'Scale', location:'Filling', type:'External', frequency:'Annual'},
+  {name:'Ph Meter', location:'', type:'Internal', frequency:'Quarterly'},
+  {name:'Thermometer', location:'', type:'External', frequency:'Annual'},
+  {name:'Temperature Display', location:'Body Lotion Machine', type:'Internal', frequency:'Quarterly'},
+  {name:'Temperature Display', location:'Shampoo Machine', type:'Internal', frequency:'Quarterly'},
+];
+function calibrationDueStatus(nextDate){
+  if(!nextDate) return null;
+  const days = Math.ceil((new Date(nextDate) - new Date())/86400000);
+  if(days<0) return 'overdue';
+  if(days<=30) return 'soon';
+  return 'ok';
+}
+async function saveCalibrationInstrument(id, data){
+  const list = state.gmpCalibrationInstruments||[];
+  if(id){ const r = list.find(x=>x.id===id); if(r) Object.assign(r, data); }
+  else state.gmpCalibrationInstruments = [...list, {id:uid('CALINST'), ...data}];
+  await save('gmpCalibrationInstruments');
+}
+async function deleteCalibrationInstrument(id){
+  state.gmpCalibrationInstruments = (state.gmpCalibrationInstruments||[]).filter(r=>r.id!==id);
+  await save('gmpCalibrationInstruments');
+}
+
+// Machine Preventive Maintenance — machines (a small registry, since real names vary per factory)
+// x an annual grid of weeks, click-to-cycle like the Cleaning grid but yearly, not monthly.
+async function saveMaintenanceMachine(id, name, machineNo){
+  const list = state.gmpMaintenanceMachines||[];
+  if(id){ const m = list.find(x=>x.id===id); if(m){ m.name = name; m.machineNo = machineNo; } }
+  else state.gmpMaintenanceMachines = [...list, {id:uid('MACH'), name, machineNo}];
+  await save('gmpMaintenanceMachines');
+}
+async function deleteMaintenanceMachine(id){
+  state.gmpMaintenanceMachines = (state.gmpMaintenanceMachines||[]).filter(m=>m.id!==id);
+  state.gmpMaintenanceEntries = (state.gmpMaintenanceEntries||[]).filter(e=>e.machineId!==id);
+  await save('gmpMaintenanceMachines'); await save('gmpMaintenanceEntries');
+}
+function gmpMaintenanceEntryFor(machineId, year){
+  return (state.gmpMaintenanceEntries||[]).find(e=>e.machineId===machineId && e.year===year) || null;
+}
+async function toggleGmpMaintenanceCell(machineId, year, month, week){
+  let e = gmpMaintenanceEntryFor(machineId, year);
+  if(!e){ e = {id:uid('GMPMAINT'), machineId, year, cells:{}, updatedAt:new Date().toISOString()}; state.gmpMaintenanceEntries = [...(state.gmpMaintenanceEntries||[]), e]; }
+  const key = month+'_'+week;
+  if(e.cells[key]) delete e.cells[key]; else e.cells[key] = true;
+  e.updatedAt = new Date().toISOString();
+  await save('gmpMaintenanceEntries');
+}
+
+// Pest Control Monitoring — bait/observation points (a small registry) x a day grid, where each
+// cell holds a COUNT per pest type rather than a single status — this is what makes it different
+// from the Cleaning grid's single-value cells.
+const GMP_DEFAULT_PEST_POINTS = Array.from({length:10}, (_,i)=>`Pest Point ${String(i+1).padStart(2,'0')}`);
+const GMP_PEST_TYPES = [
+  {key:'moths', label:'Moths'}, {key:'gecko', label:'Gecko'}, {key:'flies', label:'Flies / Bees'}, {key:'cockroach', label:'Cockroach'},
+  {key:'rats', label:'Rats'}, {key:'millipede', label:'Millipede / Centipede'}, {key:'lizards', label:'Lizards'}, {key:'others', label:'Others'},
+];
+async function savePestPoint(id, name){
+  const list = state.gmpPestPoints||[];
+  if(id){ const p = list.find(x=>x.id===id); if(p) p.name = name; }
+  else state.gmpPestPoints = [...list, {id:uid('PESTPT'), name}];
+  await save('gmpPestPoints');
+}
+async function deletePestPoint(id){
+  state.gmpPestPoints = (state.gmpPestPoints||[]).filter(p=>p.id!==id);
+  await save('gmpPestPoints');
+}
+function gmpPestEntryFor(year, month){
+  return (state.gmpPestEntries||[]).find(e=>e.year===year && e.month===month) || null;
+}
+function blankGmpPestEntry(year, month){ return {id:uid('GMPPEST'), year, month, cells:{}, remarks:'', observedBy:'', checkedBy:'', updatedAt:new Date().toISOString()}; }
+async function saveGmpPestCell(year, month, pointId, day, counts){
+  let e = gmpPestEntryFor(year, month);
+  if(!e){ e = blankGmpPestEntry(year, month); state.gmpPestEntries = [...(state.gmpPestEntries||[]), e]; }
+  const key = pointId+'_'+day;
+  const total = Object.values(counts).reduce((s,n)=>s+(Number(n)||0), 0);
+  if(total===0) delete e.cells[key]; else e.cells[key] = counts;
+  e.updatedAt = new Date().toISOString();
+  await save('gmpPestEntries');
+}
+async function updateGmpPestField(year, month, field, value){
+  let e = gmpPestEntryFor(year, month);
+  if(!e){ e = blankGmpPestEntry(year, month); state.gmpPestEntries = [...(state.gmpPestEntries||[]), e]; }
+  e[field] = value; e.updatedAt = new Date().toISOString();
+  await save('gmpPestEntries');
+}
+
 function gmpChecklistDefById(id){ return GMP_CHECKLIST_DEFS.find(d=>d.id===id); }
 function gmpChecklistExtraRows(def){ return (def && def.extraRows) || GMP_CHECKLIST_DEFAULT_EXTRA_ROWS; }
 function gmpChecklistEntryFor(checklistId, year, month){
@@ -2480,7 +2852,9 @@ const ICONS = {
   chevron:'<path d="M9 6l6 6-6 6"/>',
   search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>',
   star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/>',
-  headset:'<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/><path d="M19.5 19v.5a3 3 0 0 1-3 3h-3"/>'
+  headset:'<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/><path d="M19.5 19v.5a3 3 0 0 1-3 3h-3"/>',
+  wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2 2.8-2.8z"/>',
+  pest:'<circle cx="12" cy="13.5" r="4"/><path d="M12 9.5V6.5"/><path d="M9.3 7.7 7.5 5.9"/><path d="M14.7 7.7l1.8-1.8"/><path d="M8 13.5H4"/><path d="M20 13.5h-4"/><path d="M9 17l-2 2.8"/><path d="M15 17l2 2.8"/>'
 };
 function icon(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`; }
 const TRACK_STAGE_PATHS = [
@@ -2515,6 +2889,8 @@ let state = {
   orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [],
   recipes: [], activeBatch: null, batchFocusMode: false,
   gmpChecklistEntries: [],
+  gmpLogEntries: [], gmpCalibrationInstruments: [], gmpPestPoints: [], gmpPestEntries: [],
+  gmpMaintenanceMachines: [], gmpMaintenanceEntries: [], gmpHygieneRoster: [],
   blendBatches: [],
   rndProjects: [],
   rndChemists: [],
@@ -2671,12 +3047,25 @@ async function ensureDeferredKeysLoaded(keys){
   const toFetch = (keys||[]).filter(k => !state._deferredLoaded[k]);
   if(!toFetch.length) return false;
   const results = await Promise.all(toFetch.map(k => kvGet(k).catch(()=>undefined)));
+  // A `null` result (vs. a real, possibly-empty, array) means this key has never been saved by
+  // anyone — true first-time-ever state, not "someone deleted all the rows". Only that case gets
+  // the starter rows below; an intentional empty list stays empty.
+  const neverSaved = new Set();
   toFetch.forEach((k,i) => {
+    if(results[i] == null) neverSaved.add(k);
     state[k] = results[i] != null ? results[i] : _syncedKeyDefault(k);
     state._deferredLoaded[k] = true;
     snapshotBaseline(k);
   });
   if(toFetch.includes('rndProjects')) migrateRndProjectStages();
+  if(neverSaved.has('gmpPestPoints') && state.gmpPestPoints.length===0){
+    state.gmpPestPoints = GMP_DEFAULT_PEST_POINTS.map(name=>({id:uid('PESTPT'), name}));
+    save('gmpPestPoints').catch(()=>{});
+  }
+  if(neverSaved.has('gmpCalibrationInstruments') && state.gmpCalibrationInstruments.length===0){
+    state.gmpCalibrationInstruments = GMP_DEFAULT_CALIBRATION_INSTRUMENTS.map(x=>({id:uid('CALINST'), serialNo:'', idCode:'', lastCalibrated:'', nextCalibration:'', nextSubmission:'', ...x}));
+    save('gmpCalibrationInstruments').catch(()=>{});
+  }
   return true;
 }
 async function loadAll(){
@@ -5973,7 +6362,7 @@ const PAGE_META = {
   stickerstock:{title:'Sticker stock', sub:'5L can sticker counts by fragrance, so Packing always knows what\'s left.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
-  gmp:{title:'GMP', sub:'Fill in and track the factory\'s cleaning checklists — no paper needed.'},
+  gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
   rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, chemist attendance, and progress.'},
   staff:{title:'Staff', sub:'People working across the pipeline.'},
   chat:{title:'Team chat', sub:'Message everyone signed in to the workspace.'},
@@ -6741,7 +7130,427 @@ function renderSuppliersPage(){
 
 /* ===================== GMP page (document attachments) ===================== */
 function renderGmpPage(){
-  return renderGmpChecklistsSection();
+  const section = state.filters.gmpSection;
+  const inner = section==='cleaning' ? renderGmpChecklistsSection()
+    : section==='inspections' ? renderGmpInspectionsSection()
+    : section==='maintenance' ? renderGmpMaintenanceSection()
+    : section==='pest' ? renderGmpPestSection()
+    : section==='feedback' ? renderGmpFeedbackSection()
+    : null;
+  if(!inner) return renderGmpHub();
+  return `<div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-gmp-back>‹ GMP</button></div>${inner}`;
+}
+function renderGmpHub(){
+  const cards = [
+    {id:'cleaning', label:'Cleaning', icon:'gmp'},
+    {id:'inspections', label:'Inspections', icon:'search'},
+    {id:'maintenance', label:'Maintenance & Calibration', icon:'wrench'},
+    {id:'pest', label:'Pest Control Monitoring', icon:'pest'},
+    {id:'feedback', label:'Customer Feedback', icon:'star'},
+  ];
+  return `
+  <div class="landing-section">
+    <div class="landing-section-title">GMP &amp; Quality</div>
+    <div class="landing-grid">
+      ${cards.map(c=>`
+      <button type="button" class="landing-card" data-gmp-section="${c.id}">
+        ${icon(c.icon)}<span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
+
+const GMP_INSPECTION_IDS = ['vehicleInspection','employeeHygiene','buildingCondition','incomingInspectionPM','incomingInspectionRM','visitorHygiene'];
+function renderGmpInspectionsSection(){
+  let id = state.filters.gmpInspectionId;
+  if(!id || !GMP_INSPECTION_IDS.includes(id)) id = GMP_INSPECTION_IDS[0];
+  const tabNames = {employeeHygiene:'Employee Health & Hygiene'};
+  return `
+  <div class="toolbar" style="flex-wrap:wrap;">
+    <div class="tabs" style="flex-wrap:wrap;">
+      ${GMP_INSPECTION_IDS.map(i=>`<button class="tab ${id===i?'active':''}" data-gmp-inspection-select="${i}">${esc(tabNames[i]||gmpLogDefById(i).name)}</button>`).join('')}
+    </div>
+  </div>
+  ${id==='employeeHygiene' ? renderGmpHygieneRoster() : renderGmpLogSection(id)}
+  `;
+}
+
+const GMP_MAINTENANCE_SUBS = [
+  {id:'pm', name:'Preventive Maintenance'}, {id:'calibrationSchedule', name:'Calibration Schedule'},
+  {id:'calibrationCheck', name:'Calibration Check'}, {id:'breakdownHistory', name:'Breakdown History'},
+];
+function renderGmpMaintenanceSection(){
+  let id = state.filters.gmpMaintenanceSub;
+  if(!id || !GMP_MAINTENANCE_SUBS.some(s=>s.id===id)) id = 'pm';
+  return `
+  <div class="toolbar" style="flex-wrap:wrap;">
+    <div class="tabs" style="flex-wrap:wrap;">
+      ${GMP_MAINTENANCE_SUBS.map(s=>`<button class="tab ${id===s.id?'active':''}" data-gmp-maintenance-select="${s.id}">${esc(s.name)}</button>`).join('')}
+    </div>
+  </div>
+  ${id==='pm' ? renderGmpMaintenanceGrid() : id==='calibrationSchedule' ? renderGmpCalibrationRegistry() : renderGmpLogSection(id)}
+  `;
+}
+
+const GMP_FEEDBACK_IDS = ['customerSurvey','complaintRecord'];
+function renderGmpFeedbackSection(){
+  let id = state.filters.gmpFeedbackSub;
+  if(!id || !GMP_FEEDBACK_IDS.includes(id)) id = GMP_FEEDBACK_IDS[0];
+  return `
+  <div class="toolbar" style="flex-wrap:wrap;">
+    <div class="tabs" style="flex-wrap:wrap;">
+      ${GMP_FEEDBACK_IDS.map(i=>`<button class="tab ${id===i?'active':''}" data-gmp-feedback-select="${i}">${esc(gmpLogDefById(i).name)}</button>`).join('')}
+    </div>
+  </div>
+  ${renderGmpLogSection(id)}
+  `;
+}
+
+const GMP_LOG_COLUMN_LABELS = {
+  date:'Date', vehicleNo:'Vehicle No', transporter:'Transporter', evaluatedBy:'Evaluated By', site:'Site', checkedBy:'Checked By',
+  receivingDate:'Receiving Date', supplier:'Supplier', itemDescription:'Item', batchNo:'Batch No', name:'Name', company:'Company',
+  purpose:'Purpose', instrument:'Instrument', correction:'Correction', verifiedBy:'Verified By', machine:'Machine',
+  mechanicSign:'Mechanic', totalDowntime:'Downtime', customerName:'Customer', validity:'Validity',
+  correctiveActionResponsibility:'Responsibility',
+};
+function renderGmpLogSection(defId){
+  const def = gmpLogDefById(defId);
+  const entries = gmpLogEntriesFor(defId);
+  const cols = def.summaryCols;
+  return `
+  <div class="toolbar">
+    <div></div>
+    <button type="button" class="btn btn-primary" data-gmp-log-new="${defId}">+ Add entry</button>
+  </div>
+  <div class="panel">
+    ${entries.length===0 ? `<div class="empty-state">No entries yet.</div>` : `
+    <table class="data-table">
+      <thead><tr>${cols.map(c=>`<th>${esc(GMP_LOG_COLUMN_LABELS[c]||c)}</th>`).join('')}<th>Actions</th></tr></thead>
+      <tbody>
+        ${entries.map(e=>`
+        <tr>
+          ${cols.map(c=>`<td>${esc(gmpLogSummaryCell(c, e.data, e.at))}</td>`).join('')}
+          <td class="row-actions">
+            <button class="btn btn-sm" data-gmp-log-open="${e.id}" data-gmp-log-def="${defId}">Open</button>
+            ${isAdmin()?`<button class="btn btn-sm btn-danger" data-gmp-log-delete="${e.id}">Delete</button>`:''}
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>`;
+}
+
+function renderGmpCalibrationRegistry(){
+  const rows = state.gmpCalibrationInstruments||[];
+  return `
+  <div class="toolbar">
+    <div></div>
+    <button type="button" class="btn btn-primary" id="btn-gmp-cal-new">+ Add instrument</button>
+  </div>
+  <div class="panel">
+    ${rows.length===0 ? `<div class="empty-state">No instruments added yet.</div>` : `
+    <table class="data-table">
+      <thead><tr><th>Equipment</th><th>Location</th><th>Type</th><th>Frequency</th><th>Last Calibrated</th><th>Next Calibration</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${rows.map(r=>{
+          const status = calibrationDueStatus(r.nextCalibration);
+          const pill = status==='overdue' ? `<span class="pill" style="background:var(--danger-soft);color:var(--danger);">Overdue</span>`
+            : status==='soon' ? `<span class="pill" style="background:#FDF3D8;color:#A67C00;">Due soon</span>`
+            : status==='ok' ? `<span class="pill pill-active">OK</span>` : `<span class="hint">—</span>`;
+          return `
+        <tr>
+          <td>${esc(r.name)}</td><td>${esc(r.location)||'—'}</td><td>${esc(r.type)||'—'}</td><td>${esc(r.frequency)||'—'}</td>
+          <td>${r.lastCalibrated?fmtDate(r.lastCalibrated):'—'}</td><td>${r.nextCalibration?fmtDate(r.nextCalibration):'—'}</td>
+          <td>${pill}</td>
+          <td class="row-actions">
+            <button class="btn btn-sm" data-gmp-cal-edit="${r.id}">Edit</button>
+            ${isAdmin()?`<button class="btn btn-sm btn-danger" data-gmp-cal-delete="${r.id}">Delete</button>`:''}
+          </td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>`}
+  </div>`;
+}
+
+function renderGmpMaintenanceGrid(){
+  const machines = state.gmpMaintenanceMachines||[];
+  const year = state.filters.gmpMaintenanceYear || new Date().getFullYear();
+  return `
+  <div class="toolbar">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button type="button" class="btn btn-sm" data-gmp-maint-year="-1">‹ Prev</button>
+      <div style="font-weight:600;font-size:13px;min-width:50px;text-align:center;">${year}</div>
+      <button type="button" class="btn btn-sm" data-gmp-maint-year="1">Next ›</button>
+    </div>
+    <button type="button" class="btn btn-primary" id="btn-gmp-machine-new">+ Add machine</button>
+  </div>
+  <div class="hint" style="margin:0 0 10px;">Click a week cell to mark preventive maintenance done for that machine that week. Changes save automatically.</div>
+  ${machines.length===0 ? `<div class="empty-state">No machines added yet.</div>` : `
+  <div class="checklist-scroll">
+    <table class="checklist-grid">
+      <thead><tr>
+        <th class="checklist-task-col">Machine</th>
+        ${MONTH_NAMES.map(m=>[1,2,3,4].map(w=>`<th style="font-size:10px;">${m.slice(0,3)} W${w}</th>`).join('')).join('')}
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${machines.map(m=>{
+          const entry = gmpMaintenanceEntryFor(m.id, year);
+          const cells = entry ? entry.cells : {};
+          return `
+        <tr>
+          <td class="checklist-task-col">${esc(m.name)}${m.machineNo?` <span class="hint">(${esc(m.machineNo)})</span>`:''}</td>
+          ${MONTH_NAMES.map((_,mi)=>[1,2,3,4].map(w=>{
+            const key = (mi+1)+'_'+w;
+            const done = !!cells[key];
+            return `<td class="checklist-cell" style="background:${done?GMP_CHECKLIST_STATUS_COLOR.OK:'transparent'};color:${done?'#fff':'var(--ink)'};" data-gmp-maint-cell="${m.id}|${year}|${mi+1}|${w}">${done?'✓':''}</td>`;
+          }).join('')).join('')}
+          <td><button type="button" class="btn btn-sm" data-gmp-machine-edit="${m.id}">Edit</button></td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>
+  </div>`}
+  `;
+}
+
+function renderGmpPestSection(){
+  const points = state.gmpPestPoints||[];
+  const now = new Date();
+  let period = state.filters.gmpPestPeriod;
+  let year, month;
+  if(period && /^\d{4}-\d{1,2}$/.test(period)){ [year, month] = period.split('-').map(Number); }
+  else { year = now.getFullYear(); month = now.getMonth()+1; }
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days = Array.from({length:daysInMonth}, (_,i)=>i+1);
+  const entry = gmpPestEntryFor(year, month);
+  const cells = entry ? entry.cells : {};
+  return `
+  <div class="toolbar" style="flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button type="button" class="btn btn-sm" id="btn-gmp-pest-prev">‹ Prev</button>
+      <div style="font-weight:600;font-size:13px;min-width:120px;text-align:center;">${MONTH_NAMES[month-1]} ${year}</div>
+      <button type="button" class="btn btn-sm" id="btn-gmp-pest-next">Next ›</button>
+    </div>
+    <button type="button" class="btn btn-primary" id="btn-gmp-pestpoint-new">+ Add point</button>
+  </div>
+  <div class="hint" style="margin:0 0 10px;">Click a day cell to record how many of each pest were seen at that point — empty/zero shows green, any count shows red.</div>
+  ${points.length===0 ? `<div class="empty-state">No pest points added yet.</div>` : `
+  <div class="checklist-scroll">
+    <table class="checklist-grid">
+      <thead><tr><th class="checklist-task-col">Point</th>${days.map(d=>`<th>${d}</th>`).join('')}<th></th></tr></thead>
+      <tbody>
+        ${points.map(p=>`
+        <tr>
+          <td class="checklist-task-col">${esc(p.name)}</td>
+          ${days.map(d=>{
+            const key = p.id+'_'+d;
+            const counts = cells[key];
+            const total = counts ? Object.values(counts).reduce((s,n)=>s+(Number(n)||0),0) : 0;
+            return `<td class="checklist-cell" style="background:${total>0?GMP_CHECKLIST_STATUS_COLOR.NOTOK:'var(--bg)'};color:${total>0?'#fff':'var(--ink)'};" data-gmp-pest-cell="${p.id}|${year}|${month}|${d}">${total>0?total:''}</td>`;
+          }).join('')}
+          <td><button type="button" class="btn btn-sm" data-gmp-pestpoint-edit="${p.id}">Edit</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel" style="margin-top:14px;max-width:520px;">
+    <div class="field"><label>Observed by (Cleaning Staff)</label><input data-gmp-pest-field="observedBy" value="${escAttr(entry?entry.observedBy||'':'')}"></div>
+    <div class="field"><label>Checked by (Production Supervisor)</label><input data-gmp-pest-field="checkedBy" value="${escAttr(entry?entry.checkedBy||'':'')}"></div>
+    <div class="field"><label>Remarks</label><textarea data-gmp-pest-field="remarks" rows="2">${esc(entry?entry.remarks||'':'')}</textarea></div>
+  </div>`}
+  `;
+}
+
+function renderGmpHygieneRoster(){
+  const date = state.filters.gmpHygieneDate || new Date().toISOString().slice(0,10);
+  const roster = gmpHygieneRosterFor(date);
+  const staffList = state.staff||[];
+  return `
+  <div class="toolbar">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button type="button" class="btn btn-sm" id="btn-gmp-hygiene-prev">‹ Prev day</button>
+      <input type="date" id="gmp-hygiene-date" value="${escAttr(date)}" style="font-weight:600;">
+      <button type="button" class="btn btn-sm" id="btn-gmp-hygiene-next">Next day ›</button>
+    </div>
+  </div>
+  <div class="hint" style="margin:0 0 10px;">Each staff member is checked for the items below before entering the production area — tick if satisfied. Changes save automatically.</div>
+  ${staffList.length===0 ? `<div class="empty-state">No staff on the roster yet — add staff from the Staff page first.</div>` : `
+  <div class="checklist-scroll">
+    <table class="checklist-grid">
+      <thead><tr><th class="checklist-task-col">Staff</th>${GMP_HYGIENE_CHECKS.map((c,i)=>`<th style="font-size:10.5px;" title="${escAttr(c)}">${i+1}</th>`).join('')}<th>Remarks</th></tr></thead>
+      <tbody>
+        ${staffList.map(s=>{
+          const e = (roster && roster.entries[s.id]) || {checks:{}, remarks:''};
+          return `
+        <tr>
+          <td class="checklist-task-col">${esc(s.name)}</td>
+          ${GMP_HYGIENE_CHECKS.map((_,i)=>{
+            const ok = !!e.checks[i];
+            return `<td class="checklist-cell" style="background:${ok?GMP_CHECKLIST_STATUS_COLOR.OK:'var(--bg)'};color:${ok?'#fff':'var(--ink)'};" data-gmp-hygiene-cell="${s.id}|${i}">${ok?'✓':''}</td>`;
+          }).join('')}
+          <td><input data-gmp-hygiene-remarks="${s.id}" value="${escAttr(e.remarks||'')}" style="width:140px;"></td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="hint" style="margin:10px 0;display:flex;flex-direction:column;gap:2px;">
+    ${GMP_HYGIENE_CHECKS.map((c,i)=>`<div>${i+1}. ${esc(c)}</div>`).join('')}
+  </div>
+  <div class="panel" style="max-width:520px;">
+    <div class="field"><label>Checked by</label><input data-gmp-hygiene-field="checkedBy" value="${escAttr(roster?roster.checkedBy||'':'')}"></div>
+    <div class="field"><label>Approved by</label><input data-gmp-hygiene-field="approvedBy" value="${escAttr(roster?roster.approvedBy||'':'')}"></div>
+  </div>`}
+  `;
+}
+
+function gmpLogEntryModal(defId, entryId){
+  const def = gmpLogDefById(defId);
+  const entry = entryId ? (state.gmpLogEntries||[]).find(e=>e.id===entryId) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:560px;max-height:88vh;overflow-y:auto;">
+      <h2>${esc(def.name)}</h2>
+      <form id="form-gmp-log" data-def="${defId}" data-entry-id="${entryId||''}">
+        ${def.fields.map(f=>gmpFieldHtml(f, entry?entry.data:null)).join('')}
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          ${entry&&isAdmin()?`<button type="button" class="btn btn-danger" id="btn-gmp-log-delete-inline" data-id="${entry.id}">Delete</button>`:''}
+          <button type="submit" class="btn btn-primary">${entry?'Save changes':'Add entry'}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function calibrationInstrumentModal(id){
+  const r = id ? (state.gmpCalibrationInstruments||[]).find(x=>x.id===id) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${r?'Edit instrument':'Add instrument'}</h2>
+      <form id="form-gmp-cal" data-edit-id="${r?r.id:''}">
+        <div class="field"><label>Name of Equipment</label><input name="calName" required value="${r?esc(r.name):''}"></div>
+        <div class="field"><label>Serial No</label><input name="calSerial" value="${r?esc(r.serialNo||''):''}"></div>
+        <div class="field"><label>Identification Code</label><input name="calIdCode" value="${r?esc(r.idCode||''):''}"></div>
+        <div class="field"><label>Location</label><input name="calLocation" value="${r?esc(r.location||''):''}"></div>
+        <div class="field"><label>Internal / External</label>
+          <select name="calType"><option value="Internal" ${r&&r.type==='Internal'?'selected':''}>Internal</option><option value="External" ${r&&r.type==='External'?'selected':''}>External</option></select>
+        </div>
+        <div class="field"><label>Frequency</label>
+          <select name="calFrequency">${['Quarterly','Annual','Monthly','Bi-annual'].map(f=>`<option value="${f}" ${r&&r.frequency===f?'selected':''}>${f}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Last Calibrated Date</label><input type="date" name="calLast" value="${r?esc(r.lastCalibrated||''):''}"></div>
+        <div class="field"><label>Next Calibration Date</label><input type="date" name="calNext" value="${r?esc(r.nextCalibration||''):''}"></div>
+        <div class="field"><label>Next Calibration Submission Date</label><input type="date" name="calSubmission" value="${r?esc(r.nextSubmission||''):''}"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          ${r&&isAdmin()?`<button type="button" class="btn btn-danger" id="btn-gmp-cal-delete-inline" data-id="${r.id}">Delete</button>`:''}
+          <button type="submit" class="btn btn-primary">${r?'Save changes':'Add instrument'}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function gmpMachineModal(id){
+  const m = id ? (state.gmpMaintenanceMachines||[]).find(x=>x.id===id) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${m?'Edit machine':'Add machine'}</h2>
+      <form id="form-gmp-machine" data-edit-id="${m?m.id:''}">
+        <div class="field"><label>Machine Name</label><input name="machName" required value="${m?esc(m.name):''}"></div>
+        <div class="field"><label>Machine No <span class="hint">(optional)</span></label><input name="machNo" value="${m?esc(m.machineNo||''):''}"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          ${m?`<button type="button" class="btn btn-danger" id="btn-gmp-machine-delete-inline" data-id="${m.id}">Delete</button>`:''}
+          <button type="submit" class="btn btn-primary">${m?'Save changes':'Add machine'}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function gmpPestPointModal(id){
+  const p = id ? (state.gmpPestPoints||[]).find(x=>x.id===id) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${p?'Edit pest point':'Add pest point'}</h2>
+      <form id="form-gmp-pestpoint" data-edit-id="${p?p.id:''}">
+        <div class="field"><label>Point name / location</label><input name="pestPointName" required value="${p?esc(p.name):''}"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          ${p?`<button type="button" class="btn btn-danger" id="btn-gmp-pestpoint-delete-inline" data-id="${p.id}">Delete</button>`:''}
+          <button type="submit" class="btn btn-primary">${p?'Save changes':'Add point'}</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function gmpPestCellModal(key){
+  const [pointId, year, month, day] = key.split('|');
+  const point = (state.gmpPestPoints||[]).find(p=>p.id===pointId);
+  const entry = gmpPestEntryFor(Number(year), Number(month));
+  const counts = (entry && entry.cells[pointId+'_'+day]) || {};
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${point?esc(point.name):'Pest point'}</h2>
+      <div class="sub">${esc(MONTH_NAMES[Number(month)-1])} ${esc(day)}, ${year} — number of each pest observed.</div>
+      <form id="form-gmp-pest-cell" data-key="${escAttr(key)}">
+        ${GMP_PEST_TYPES.map(t=>`
+        <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <label style="margin:0;">${esc(t.label)}</label>
+          <input type="number" min="0" style="width:80px;" name="pest_${t.key}" value="${counts[t.key]||''}">
+        </div>`).join('')}
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+async function saveGmpLogForm(e){
+  e.preventDefault();
+  const f = e.target; const defId = f.dataset.def; const id = f.dataset.entryId || null;
+  const def = gmpLogDefById(defId);
+  const data = readGmpFieldsFromForm(f, def);
+  await saveGmpLogEntry(defId, id, data);
+  closeModal();
+  showToast(id?'Entry updated':'Entry added');
+}
+async function saveGmpCalForm(e){
+  e.preventDefault();
+  const f = e.target; const id = f.dataset.editId || null;
+  const name = f.calName.value.trim(); if(!name) return;
+  await saveCalibrationInstrument(id, {
+    name, serialNo:f.calSerial.value.trim(), idCode:f.calIdCode.value.trim(), location:f.calLocation.value.trim(),
+    type:f.calType.value, frequency:f.calFrequency.value,
+    lastCalibrated:f.calLast.value, nextCalibration:f.calNext.value, nextSubmission:f.calSubmission.value,
+  });
+  closeModal();
+}
+async function saveGmpMachineForm(e){
+  e.preventDefault();
+  const f = e.target; const id = f.dataset.editId || null;
+  const name = f.machName.value.trim(); if(!name) return;
+  await saveMaintenanceMachine(id, name, f.machNo.value.trim());
+  closeModal();
+}
+async function saveGmpPestPointForm(e){
+  e.preventDefault();
+  const f = e.target; const id = f.dataset.editId || null;
+  const name = f.pestPointName.value.trim(); if(!name) return;
+  await savePestPoint(id, name);
+  closeModal();
+}
+async function saveGmpPestCellForm(e){
+  e.preventDefault();
+  const f = e.target; const key = f.dataset.key;
+  const [pointId, year, month, day] = key.split('|');
+  const counts = {};
+  GMP_PEST_TYPES.forEach(t=>{ const v = f['pest_'+t.key].value; if(v) counts[t.key] = Number(v); });
+  await saveGmpPestCell(Number(year), Number(month), pointId, day, counts);
+  closeModal();
 }
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function renderGmpChecklistsSection(){
@@ -10564,6 +11373,11 @@ function renderModal(){
   if(type==='managelines') return manageDeliveryLinesModal();
   if(type==='managestaffcategories') return manageStaffCategoriesModal();
   if(type==='salespersoncolors') return salesPersonColorsModal();
+  if(type==='gmplog') return gmpLogEntryModal(id, parts[2]==='new'?null:parts[2]);
+  if(type==='gmpcal') return calibrationInstrumentModal(id==='new'?null:id);
+  if(type==='gmpmachine') return gmpMachineModal(id==='new'?null:id);
+  if(type==='gmppestpoint') return gmpPestPointModal(id==='new'?null:id);
+  if(type==='gmppestcell') return gmpPestCellModal(id);
   if(type==='complaintreasons') return manageComplaintReasonsModal();
   if(type==='complaintpriorities') return manageComplaintPrioritiesModal();
   if(type==='bulksmstemplates') return manageBulkSmsTemplatesModal();
@@ -12928,6 +13742,114 @@ function attachShellHandlers(){
     await updateGmpChecklistSignOff(checklistId, Number(y), Number(m), fieldKey, Number(day), {name, dataUrl, signedAt:new Date().toISOString()});
     closeModal();
   };
+
+  // GMP: hub navigation + Inspections / Maintenance & Calibration / Pest control / Customer Feedback
+  document.querySelectorAll('[data-gmp-section]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpSection = b.dataset.gmpSection; render(); }));
+  document.querySelectorAll('[data-gmp-back]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpSection = null; render(); }));
+  document.querySelectorAll('[data-gmp-inspection-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpInspectionId = b.dataset.gmpInspectionSelect; render(); }));
+  document.querySelectorAll('[data-gmp-maintenance-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpMaintenanceSub = b.dataset.gmpMaintenanceSelect; render(); }));
+  document.querySelectorAll('[data-gmp-feedback-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpFeedbackSub = b.dataset.gmpFeedbackSelect; render(); }));
+
+  // GMP: generic log entries (Vehicle/Building/Incoming/Visitor/Calibration check/Breakdown/Survey/Complaint)
+  document.querySelectorAll('[data-gmp-log-new]').forEach(b=>b.addEventListener('click', ()=>openModal('gmplog:'+b.dataset.gmpLogNew+':new')));
+  document.querySelectorAll('[data-gmp-log-open]').forEach(b=>b.addEventListener('click', ()=>openModal('gmplog:'+b.dataset.gmpLogDef+':'+b.dataset.gmpLogOpen)));
+  document.querySelectorAll('[data-gmp-log-delete]').forEach(b=>b.addEventListener('click', ()=>{
+    openConfirmModal({ title:'Delete this entry?', danger:true, confirmLabel:'Delete',
+      message:"This permanently removes it from the log.", onConfirm: ()=>deleteGmpLogEntry(b.dataset.gmpLogDelete) });
+  }));
+  if(byIdEl('btn-gmp-log-delete-inline')) byIdEl('btn-gmp-log-delete-inline').onclick = ()=>{
+    const id = byIdEl('btn-gmp-log-delete-inline').dataset.id;
+    openConfirmModal({ title:'Delete this entry?', danger:true, confirmLabel:'Delete',
+      message:"This permanently removes it from the log.", onConfirm: async ()=>{ await deleteGmpLogEntry(id); } });
+  };
+  if(byIdEl('form-gmp-log')) byIdEl('form-gmp-log').addEventListener('submit', saveGmpLogForm);
+
+  // GMP: Calibration Schedule registry
+  if(byIdEl('btn-gmp-cal-new')) byIdEl('btn-gmp-cal-new').onclick = ()=>openModal('gmpcal:new');
+  document.querySelectorAll('[data-gmp-cal-edit]').forEach(b=>b.addEventListener('click', ()=>openModal('gmpcal:'+b.dataset.gmpCalEdit)));
+  document.querySelectorAll('[data-gmp-cal-delete]').forEach(b=>b.addEventListener('click', ()=>{
+    openConfirmModal({ title:'Delete this instrument?', danger:true, confirmLabel:'Delete',
+      message:"Removes it from the calibration schedule.", onConfirm: ()=>deleteCalibrationInstrument(b.dataset.gmpCalDelete) });
+  }));
+  if(byIdEl('btn-gmp-cal-delete-inline')) byIdEl('btn-gmp-cal-delete-inline').onclick = ()=>{
+    const id = byIdEl('btn-gmp-cal-delete-inline').dataset.id;
+    openConfirmModal({ title:'Delete this instrument?', danger:true, confirmLabel:'Delete',
+      message:"Removes it from the calibration schedule.", onConfirm: async ()=>{ await deleteCalibrationInstrument(id); closeModal(); } });
+  };
+  if(byIdEl('form-gmp-cal')) byIdEl('form-gmp-cal').addEventListener('submit', saveGmpCalForm);
+
+  // GMP: Preventive Maintenance grid + machine registry
+  document.querySelectorAll('[data-gmp-maint-year]').forEach(b=>b.addEventListener('click', ()=>{
+    state.filters.gmpMaintenanceYear = (state.filters.gmpMaintenanceYear || new Date().getFullYear()) + Number(b.dataset.gmpMaintYear);
+    render();
+  }));
+  document.querySelectorAll('[data-gmp-maint-cell]').forEach(td=>td.addEventListener('click', ()=>{
+    const [machineId, year, month, week] = td.dataset.gmpMaintCell.split('|');
+    toggleGmpMaintenanceCell(machineId, Number(year), Number(month), Number(week)).then(render);
+  }));
+  if(byIdEl('btn-gmp-machine-new')) byIdEl('btn-gmp-machine-new').onclick = ()=>openModal('gmpmachine:new');
+  document.querySelectorAll('[data-gmp-machine-edit]').forEach(b=>b.addEventListener('click', ()=>openModal('gmpmachine:'+b.dataset.gmpMachineEdit)));
+  if(byIdEl('btn-gmp-machine-delete-inline')) byIdEl('btn-gmp-machine-delete-inline').onclick = ()=>{
+    const id = byIdEl('btn-gmp-machine-delete-inline').dataset.id;
+    openConfirmModal({ title:'Delete this machine?', danger:true, confirmLabel:'Delete',
+      message:"Also removes its maintenance history.", onConfirm: async ()=>{ await deleteMaintenanceMachine(id); closeModal(); } });
+  };
+  if(byIdEl('form-gmp-machine')) byIdEl('form-gmp-machine').addEventListener('submit', saveGmpMachineForm);
+
+  // GMP: Pest Control Monitoring grid + point registry
+  if(byIdEl('btn-gmp-pest-prev')) byIdEl('btn-gmp-pest-prev').onclick = ()=>{
+    const now = new Date();
+    let [y,m] = (state.filters.gmpPestPeriod && /^\d{4}-\d{1,2}$/.test(state.filters.gmpPestPeriod)) ? state.filters.gmpPestPeriod.split('-').map(Number) : [now.getFullYear(), now.getMonth()+1];
+    m -= 1; if(m<1){ m=12; y-=1; }
+    state.filters.gmpPestPeriod = y+'-'+m; render();
+  };
+  if(byIdEl('btn-gmp-pest-next')) byIdEl('btn-gmp-pest-next').onclick = ()=>{
+    const now = new Date();
+    let [y,m] = (state.filters.gmpPestPeriod && /^\d{4}-\d{1,2}$/.test(state.filters.gmpPestPeriod)) ? state.filters.gmpPestPeriod.split('-').map(Number) : [now.getFullYear(), now.getMonth()+1];
+    m += 1; if(m>12){ m=1; y+=1; }
+    state.filters.gmpPestPeriod = y+'-'+m; render();
+  };
+  document.querySelectorAll('[data-gmp-pest-cell]').forEach(td=>td.addEventListener('click', ()=>openModal('gmppestcell:'+td.dataset.gmpPestCell)));
+  document.querySelectorAll('[data-gmp-pest-field]').forEach(el=>el.addEventListener('change', ()=>{
+    const now = new Date();
+    const [y,m] = (state.filters.gmpPestPeriod && /^\d{4}-\d{1,2}$/.test(state.filters.gmpPestPeriod)) ? state.filters.gmpPestPeriod.split('-').map(Number) : [now.getFullYear(), now.getMonth()+1];
+    updateGmpPestField(y, m, el.dataset.gmpPestField, el.value);
+  }));
+  if(byIdEl('btn-gmp-pestpoint-new')) byIdEl('btn-gmp-pestpoint-new').onclick = ()=>openModal('gmppestpoint:new');
+  document.querySelectorAll('[data-gmp-pestpoint-edit]').forEach(b=>b.addEventListener('click', ()=>openModal('gmppestpoint:'+b.dataset.gmpPestpointEdit)));
+  if(byIdEl('btn-gmp-pestpoint-delete-inline')) byIdEl('btn-gmp-pestpoint-delete-inline').onclick = ()=>{
+    const id = byIdEl('btn-gmp-pestpoint-delete-inline').dataset.id;
+    openConfirmModal({ title:'Delete this pest point?', danger:true, confirmLabel:'Delete',
+      message:"Removes it and its recorded counts.", onConfirm: async ()=>{ await deletePestPoint(id); closeModal(); } });
+  };
+  if(byIdEl('form-gmp-pestpoint')) byIdEl('form-gmp-pestpoint').addEventListener('submit', saveGmpPestPointForm);
+  if(byIdEl('form-gmp-pest-cell')) byIdEl('form-gmp-pest-cell').addEventListener('submit', saveGmpPestCellForm);
+
+  // GMP: Employee Health & Hygiene daily roster
+  if(byIdEl('gmp-hygiene-date')) byIdEl('gmp-hygiene-date').addEventListener('change', (e)=>{ state.filters.gmpHygieneDate = e.target.value; render(); });
+  if(byIdEl('btn-gmp-hygiene-prev')) byIdEl('btn-gmp-hygiene-prev').onclick = ()=>{
+    const d = new Date((state.filters.gmpHygieneDate || new Date().toISOString().slice(0,10))+'T00:00:00');
+    d.setDate(d.getDate()-1); state.filters.gmpHygieneDate = d.toISOString().slice(0,10); render();
+  };
+  if(byIdEl('btn-gmp-hygiene-next')) byIdEl('btn-gmp-hygiene-next').onclick = ()=>{
+    const d = new Date((state.filters.gmpHygieneDate || new Date().toISOString().slice(0,10))+'T00:00:00');
+    d.setDate(d.getDate()+1); state.filters.gmpHygieneDate = d.toISOString().slice(0,10); render();
+  };
+  document.querySelectorAll('[data-gmp-hygiene-cell]').forEach(td=>td.addEventListener('click', ()=>{
+    const [staffId, idx] = td.dataset.gmpHygieneCell.split('|');
+    const date = state.filters.gmpHygieneDate || new Date().toISOString().slice(0,10);
+    const roster = gmpHygieneRosterFor(date);
+    const current = !!(roster && roster.entries[staffId] && roster.entries[staffId].checks[idx]);
+    updateGmpHygieneCheck(date, staffId, idx, !current).then(render);
+  }));
+  document.querySelectorAll('[data-gmp-hygiene-remarks]').forEach(inp=>inp.addEventListener('change', ()=>{
+    const date = state.filters.gmpHygieneDate || new Date().toISOString().slice(0,10);
+    updateGmpHygieneRemarks(date, inp.dataset.gmpHygieneRemarks, inp.value);
+  }));
+  document.querySelectorAll('[data-gmp-hygiene-field]').forEach(inp=>inp.addEventListener('change', ()=>{
+    const date = state.filters.gmpHygieneDate || new Date().toISOString().slice(0,10);
+    updateGmpHygieneField(date, inp.dataset.gmpHygieneField, inp.value);
+  }));
 
   // Staff
   if(byIdEl('btn-new-staff')) byIdEl('btn-new-staff').onclick = ()=>openModal('staff:new');

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261017144838">
+<meta name="app-build" content="20261017161203">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3511,6 +3511,9 @@ async function loadAll(){
     const hashParts = (location.hash||'').replace('#','').split('/');
     const hashPage = (hashParts[0]||'').toLowerCase();
     if(hashPage && pageAllowed(hashPage)) state.page = hashPage;
+    // A refresh while a GMP card is open should land back in that card, not the hub — same idea
+    // as the costing drill-down restore just below, one level deep instead of two.
+    if(state.page==='gmp' && hashParts[1]) state.filters.gmpSection = hashParts[1];
     // A refresh while deep inside a costing recipe (product + version open) should land back
     // on that exact recipe sheet, not bounce out to the product grid — same drill-down the
     // sidebar page-level hash already gives every other page, one level deeper.
@@ -4030,13 +4033,20 @@ function performGoTo(page){
   state._costingDraft = null;
   state._costingDirty = false;
   state._costingVersionsView = 'active';
+  state.filters.gmpSection = null;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
-  if(((location.hash||'').replace('#','').split('/')[0]||'')!==page){
+  const curHashParts = (location.hash||'').replace('#','').split('/');
+  if((curHashParts[0]||'')!==page){
     // Costing & recipe / Production Guide / Mixing and Filling, and Order inquiry / Complaints,
     // are only ever opened from their department hub's cards — push a real history entry for
     // them so the browser's Back button returns to that hub, instead of leaving the app.
     if(SUBPAGE_PARENT_HUB[page]) history.pushState(null,'','#'+page);
     else history.replaceState(null,'','#'+page);
+  } else if(page==='gmp' && curHashParts[1]){
+    // Re-opening GMP from the sidebar always lands on the hub (reset above) — drop a stale
+    // "#gmp/<section>" left over from a card that was open before navigating elsewhere, so a
+    // card re-opened from here pushes exactly one history entry, not two.
+    history.replaceState(null,'','#gmp');
   }
   render();
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
@@ -13753,8 +13763,19 @@ function attachShellHandlers(){
   };
 
   // GMP: hub navigation + Inspections / Maintenance & Calibration / Pest control / Customer Feedback
-  document.querySelectorAll('[data-gmp-section]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpSection = b.dataset.gmpSection; render(); }));
-  document.querySelectorAll('[data-gmp-back]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpSection = null; render(); }));
+  // Opening a card pushes a real history entry (like SUBPAGE_PARENT_HUB pages) so the browser's
+  // own Back button returns to the hub in one step, instead of leaving the app entirely — see
+  // the popstate listener below. The in-app "‹ GMP" button goes through history.back() too, so
+  // both ways back stay in sync with exactly one step.
+  document.querySelectorAll('[data-gmp-section]').forEach(b=>b.addEventListener('click', ()=>{
+    const section = b.dataset.gmpSection;
+    history.pushState(null,'','#gmp/'+section);
+    state.filters.gmpSection = section; render();
+  }));
+  document.querySelectorAll('[data-gmp-back]').forEach(b=>b.addEventListener('click', ()=>{
+    if(((location.hash||'').replace('#','').split('/')[1]||'')) history.back();
+    else { state.filters.gmpSection = null; render(); }
+  }));
   document.querySelectorAll('[data-gmp-inspection-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpInspectionId = b.dataset.gmpInspectionSelect; render(); }));
   document.querySelectorAll('[data-gmp-maintenance-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpMaintenanceSub = b.dataset.gmpMaintenanceSelect; render(); }));
   document.querySelectorAll('[data-gmp-feedback-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpFeedbackSub = b.dataset.gmpFeedbackSelect; render(); }));
@@ -14622,9 +14643,11 @@ document.addEventListener('keydown', e=>{
 // performGoTo (the hub sub-pages) — resync app state to whatever page the hash now names.
 window.addEventListener('popstate', ()=>{
   if(!state.session || state.trackMode || state.boardMode || state.complaintMode) return;
-  const page = (location.hash||'').replace('#','').split('/')[0] || '';
+  const hashParts = (location.hash||'').replace('#','').split('/');
+  const page = hashParts[0] || '';
   if(!page || !pageAllowed(page)) return;
   state.page = page; state.modal = null;
+  if(page==='gmp') state.filters.gmpSection = hashParts[1] || null;
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
   render();

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261017163842">
+<meta name="app-build" content="20261017164525">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4475,6 +4475,19 @@ async function rndMarkLogout(chemistId, date){
   await save('rndAttendance');
   showToast(chemist.name+' logged out');
 }
+function deleteRndAttendance(id){
+  if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
+  const a = state.rndAttendance.find(x=>x.id===id);
+  openConfirmModal({
+    title: 'Delete attendance record', danger: true, confirmLabel: 'Delete',
+    message: `Delete the attendance record for ${a?a.chemistName:'this chemist'}${a?' on '+a.date:''}?`,
+    onConfirm: async ()=>{
+      state.rndAttendance = state.rndAttendance.filter(x=>x.id!==id);
+      await save('rndAttendance');
+      logActivity(`Deleted attendance record for ${a?a.chemistName:id}${a?' ('+a.date+')':''}`);
+    },
+  });
+}
 // R&D Officer accounts mark their OWN attendance as the very first thing after logging in each
 // day — this is deliberately a mandatory gate (checkRndAttendanceGate() / renderRndAttendanceGate()
 // below), not an easily-skipped button buried in the Chemists tab, since that's exactly what
@@ -7033,9 +7046,9 @@ function renderRndChemistsTab(){
     <div class="panel-head"><h3>Recent attendance</h3></div>
     ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
     <table class="data-table">
-      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th></tr></thead>
+      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th><th></th></tr></thead>
       <tbody>
-        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td></tr>`; }).join('')}
+        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td><td style="text-align:right;">${state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`; }).join('')}
       </tbody>
     </table>`}
   </div>
@@ -13508,6 +13521,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-rnd-view-mode]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = b.dataset.rndViewMode; render(); }));
   document.querySelectorAll('[data-rnd-outcome-view]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'outcome'; state.filters.rndOutcomeKind = b.dataset.rndOutcomeView; render(); }));
   document.querySelectorAll('[data-rnd-outcome-back]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'board'; render(); }));
+  document.querySelectorAll('[data-delete-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>deleteRndAttendance(b.dataset.deleteRndAttendance)));
   if(byIdEl('btn-quarantine-rnd')) byIdEl('btn-quarantine-rnd').onclick = ()=>{
     const id = state.modal.split(':')[1];
     // Captured once, before the first prompt ever opens — a retry after an empty submission

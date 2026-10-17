@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261016180429">
+<meta name="app-build" content="20261017142248">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2778,8 +2778,13 @@ async function saveGmpPestCell(year, month, pointId, day, counts){
   let e = gmpPestEntryFor(year, month);
   if(!e){ e = blankGmpPestEntry(year, month); state.gmpPestEntries = [...(state.gmpPestEntries||[]), e]; }
   const key = pointId+'_'+day;
-  const total = Object.values(counts).reduce((s,n)=>s+(Number(n)||0), 0);
-  if(total===0) delete e.cells[key]; else e.cells[key] = counts;
+  // Coerce every value to a clean number here, not just at the call site — this is the one place
+  // every save path funnels through, so it's what actually keeps anything other than a number out
+  // of stored cell data, however this got called.
+  const clean = {};
+  let total = 0;
+  GMP_PEST_TYPES.forEach(t=>{ const n = Number(counts[t.key])||0; if(n>0){ clean[t.key] = n; total += n; } });
+  if(total===0) delete e.cells[key]; else e.cells[key] = clean;
   e.updatedAt = new Date().toISOString();
   await save('gmpPestEntries');
 }
@@ -7428,19 +7433,19 @@ function calibrationInstrumentModal(id){
     <div class="modal">
       <h2>${r?'Edit instrument':'Add instrument'}</h2>
       <form id="form-gmp-cal" data-edit-id="${r?r.id:''}">
-        <div class="field"><label>Name of Equipment</label><input name="calName" required value="${r?esc(r.name):''}"></div>
-        <div class="field"><label>Serial No</label><input name="calSerial" value="${r?esc(r.serialNo||''):''}"></div>
-        <div class="field"><label>Identification Code</label><input name="calIdCode" value="${r?esc(r.idCode||''):''}"></div>
-        <div class="field"><label>Location</label><input name="calLocation" value="${r?esc(r.location||''):''}"></div>
+        <div class="field"><label>Name of Equipment</label><input name="calName" required value="${r?escAttr(r.name):''}"></div>
+        <div class="field"><label>Serial No</label><input name="calSerial" value="${r?escAttr(r.serialNo||''):''}"></div>
+        <div class="field"><label>Identification Code</label><input name="calIdCode" value="${r?escAttr(r.idCode||''):''}"></div>
+        <div class="field"><label>Location</label><input name="calLocation" value="${r?escAttr(r.location||''):''}"></div>
         <div class="field"><label>Internal / External</label>
           <select name="calType"><option value="Internal" ${r&&r.type==='Internal'?'selected':''}>Internal</option><option value="External" ${r&&r.type==='External'?'selected':''}>External</option></select>
         </div>
         <div class="field"><label>Frequency</label>
           <select name="calFrequency">${['Quarterly','Annual','Monthly','Bi-annual'].map(f=>`<option value="${f}" ${r&&r.frequency===f?'selected':''}>${f}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Last Calibrated Date</label><input type="date" name="calLast" value="${r?esc(r.lastCalibrated||''):''}"></div>
-        <div class="field"><label>Next Calibration Date</label><input type="date" name="calNext" value="${r?esc(r.nextCalibration||''):''}"></div>
-        <div class="field"><label>Next Calibration Submission Date</label><input type="date" name="calSubmission" value="${r?esc(r.nextSubmission||''):''}"></div>
+        <div class="field"><label>Last Calibrated Date</label><input type="date" name="calLast" value="${r?escAttr(r.lastCalibrated||''):''}"></div>
+        <div class="field"><label>Next Calibration Date</label><input type="date" name="calNext" value="${r?escAttr(r.nextCalibration||''):''}"></div>
+        <div class="field"><label>Next Calibration Submission Date</label><input type="date" name="calSubmission" value="${r?escAttr(r.nextSubmission||''):''}"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           ${r&&isAdmin()?`<button type="button" class="btn btn-danger" id="btn-gmp-cal-delete-inline" data-id="${r.id}">Delete</button>`:''}
@@ -7457,8 +7462,8 @@ function gmpMachineModal(id){
     <div class="modal">
       <h2>${m?'Edit machine':'Add machine'}</h2>
       <form id="form-gmp-machine" data-edit-id="${m?m.id:''}">
-        <div class="field"><label>Machine Name</label><input name="machName" required value="${m?esc(m.name):''}"></div>
-        <div class="field"><label>Machine No <span class="hint">(optional)</span></label><input name="machNo" value="${m?esc(m.machineNo||''):''}"></div>
+        <div class="field"><label>Machine Name</label><input name="machName" required value="${m?escAttr(m.name):''}"></div>
+        <div class="field"><label>Machine No <span class="hint">(optional)</span></label><input name="machNo" value="${m?escAttr(m.machineNo||''):''}"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           ${m?`<button type="button" class="btn btn-danger" id="btn-gmp-machine-delete-inline" data-id="${m.id}">Delete</button>`:''}
@@ -7475,7 +7480,7 @@ function gmpPestPointModal(id){
     <div class="modal">
       <h2>${p?'Edit pest point':'Add pest point'}</h2>
       <form id="form-gmp-pestpoint" data-edit-id="${p?p.id:''}">
-        <div class="field"><label>Point name / location</label><input name="pestPointName" required value="${p?esc(p.name):''}"></div>
+        <div class="field"><label>Point name / location</label><input name="pestPointName" required value="${p?escAttr(p.name):''}"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           ${p?`<button type="button" class="btn btn-danger" id="btn-gmp-pestpoint-delete-inline" data-id="${p.id}">Delete</button>`:''}
@@ -7499,7 +7504,7 @@ function gmpPestCellModal(key){
         ${GMP_PEST_TYPES.map(t=>`
         <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <label style="margin:0;">${esc(t.label)}</label>
-          <input type="number" min="0" style="width:80px;" name="pest_${t.key}" value="${counts[t.key]||''}">
+          <input type="number" min="0" style="width:80px;" name="pest_${t.key}" value="${escAttr(counts[t.key]||'')}">
         </div>`).join('')}
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>

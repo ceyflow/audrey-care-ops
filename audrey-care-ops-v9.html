@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261017161203">
+<meta name="app-build" content="20261017162111">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2561,17 +2561,23 @@ function gmpLogDefById(id){ return GMP_LOG_DEFS.find(d=>d.id===id); }
 function gmpLogEntriesFor(defId){ return (state.gmpLogEntries||[]).filter(e=>e.defId===defId).sort((a,b)=>new Date(b.at)-new Date(a.at)); }
 async function saveGmpLogEntry(defId, id, data){
   const list = state.gmpLogEntries||[];
+  const defName = gmpLogDefById(defId) ? gmpLogDefById(defId).name : defId;
   if(id){
     const e = list.find(x=>x.id===id); if(!e) return;
     e.data = data; e.updatedAt = new Date().toISOString();
+    logActivity(`Edited GMP ${defName} entry`);
   } else {
     state.gmpLogEntries = [...list, {id:uid('GMPLOG'), defId, at:new Date().toISOString(), data}];
+    logActivity(`Added GMP ${defName} entry`);
   }
   await save('gmpLogEntries');
 }
 async function deleteGmpLogEntry(id){
+  const e = (state.gmpLogEntries||[]).find(x=>x.id===id);
+  const defName = e && gmpLogDefById(e.defId) ? gmpLogDefById(e.defId).name : (e?e.defId:id);
   state.gmpLogEntries = (state.gmpLogEntries||[]).filter(e=>e.id!==id);
   await save('gmpLogEntries');
+  logActivity(`Deleted GMP ${defName} entry`);
 }
 // Summary-table cell for one of a log def's `summaryCols` — all of them are plain-text or date
 // fields (list-shaped fields never go in summaryCols), so this never has to unpack a sub-object.
@@ -2718,27 +2724,31 @@ function calibrationDueStatus(nextDate){
 }
 async function saveCalibrationInstrument(id, data){
   const list = state.gmpCalibrationInstruments||[];
-  if(id){ const r = list.find(x=>x.id===id); if(r) Object.assign(r, data); }
-  else state.gmpCalibrationInstruments = [...list, {id:uid('CALINST'), ...data}];
+  if(id){ const r = list.find(x=>x.id===id); if(r) Object.assign(r, data); logActivity(`Edited calibration instrument ${data.name}`); }
+  else { state.gmpCalibrationInstruments = [...list, {id:uid('CALINST'), ...data}]; logActivity(`Added calibration instrument ${data.name}`); }
   await save('gmpCalibrationInstruments');
 }
 async function deleteCalibrationInstrument(id){
+  const r = (state.gmpCalibrationInstruments||[]).find(x=>x.id===id);
   state.gmpCalibrationInstruments = (state.gmpCalibrationInstruments||[]).filter(r=>r.id!==id);
   await save('gmpCalibrationInstruments');
+  logActivity(`Deleted calibration instrument ${r?r.name:id}`);
 }
 
 // Machine Preventive Maintenance — machines (a small registry, since real names vary per factory)
 // x an annual grid of weeks, click-to-cycle like the Cleaning grid but yearly, not monthly.
 async function saveMaintenanceMachine(id, name, machineNo){
   const list = state.gmpMaintenanceMachines||[];
-  if(id){ const m = list.find(x=>x.id===id); if(m){ m.name = name; m.machineNo = machineNo; } }
-  else state.gmpMaintenanceMachines = [...list, {id:uid('MACH'), name, machineNo}];
+  if(id){ const m = list.find(x=>x.id===id); if(m){ m.name = name; m.machineNo = machineNo; } logActivity(`Edited maintenance machine ${name}`); }
+  else { state.gmpMaintenanceMachines = [...list, {id:uid('MACH'), name, machineNo}]; logActivity(`Added maintenance machine ${name}`); }
   await save('gmpMaintenanceMachines');
 }
 async function deleteMaintenanceMachine(id){
+  const m = (state.gmpMaintenanceMachines||[]).find(x=>x.id===id);
   state.gmpMaintenanceMachines = (state.gmpMaintenanceMachines||[]).filter(m=>m.id!==id);
   state.gmpMaintenanceEntries = (state.gmpMaintenanceEntries||[]).filter(e=>e.machineId!==id);
   await save('gmpMaintenanceMachines'); await save('gmpMaintenanceEntries');
+  logActivity(`Deleted maintenance machine ${m?m.name:id}`);
 }
 function gmpMaintenanceEntryFor(machineId, year){
   return (state.gmpMaintenanceEntries||[]).find(e=>e.machineId===machineId && e.year===year) || null;
@@ -2762,13 +2772,15 @@ const GMP_PEST_TYPES = [
 ];
 async function savePestPoint(id, name){
   const list = state.gmpPestPoints||[];
-  if(id){ const p = list.find(x=>x.id===id); if(p) p.name = name; }
-  else state.gmpPestPoints = [...list, {id:uid('PESTPT'), name}];
+  if(id){ const p = list.find(x=>x.id===id); if(p) p.name = name; logActivity(`Edited pest control point ${name}`); }
+  else { state.gmpPestPoints = [...list, {id:uid('PESTPT'), name}]; logActivity(`Added pest control point ${name}`); }
   await save('gmpPestPoints');
 }
 async function deletePestPoint(id){
+  const p = (state.gmpPestPoints||[]).find(x=>x.id===id);
   state.gmpPestPoints = (state.gmpPestPoints||[]).filter(p=>p.id!==id);
   await save('gmpPestPoints');
+  logActivity(`Deleted pest control point ${p?p.name:id}`);
 }
 function gmpPestEntryFor(year, month){
   return (state.gmpPestEntries||[]).find(e=>e.year===year && e.month===month) || null;
@@ -4084,6 +4096,7 @@ async function createOrder(e){
   }
   state.orders.unshift(order);
   await save('orders');
+  logActivity(`Created order ${order.orderNumber} (${order.customer})`);
   closeModal();
   showToast(photoError ? `Order created, but the picture could not be uploaded: ${photoError}` : 'Order created', photoError?9000:undefined);
 }
@@ -4130,6 +4143,7 @@ async function advanceOrder(id){
   if(justCompleted) o.completedAt = new Date().toISOString();
   o.history.push({stage:o.stage, at:new Date().toISOString(), by:state.session.name});
   await save('orders');
+  logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[o.stage]}`);
   showToast(justCompleted ? 'Order picked up by delivery' : 'Moved to '+STAGES[o.stage]);
   await triggerAutoOrderSms(o, orderAutoSmsKind(o.stage));
 }
@@ -4163,6 +4177,7 @@ async function moveOrderToStage(id, newStage, newCourierService, orderedIds){
   o.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
   applyBoardOrder(orderedIds);
   await save('orders');
+  logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[newStage]}`);
   showToast(courierChanged ? `Moved to ${STAGES[newStage]} — now ${newCourierService||'unassigned'} delivery` : 'Moved to '+STAGES[newStage]);
   // Only text the customer when the order actually progresses forward — a card dragged backwards
   // by accident shouldn't re-trigger a "your order is..." SMS.
@@ -4197,6 +4212,7 @@ async function submitOrderEdit(e){
     o.photo = null; o.photoUploadedAt = null;
   }
   await save('orders');
+  logActivity(`Edited order ${o.orderNumber||o.id} (${o.customer})`);
   showToast(photoError ? `Order updated, but the picture could not be uploaded: ${photoError}` : 'Order updated', photoError?9000:undefined);
   const trackingChanged = o.courierNumber && o.courierNumber!==oldCourierNumber;
   const phoneChanged = o.phone && o.phone!==oldPhone;
@@ -4241,6 +4257,7 @@ async function createBlendBatch(e){
   };
   state.blendBatches.unshift(batch);
   await save('blendBatches');
+  logActivity(`Created blend batch ${batch.batchNo}`);
   closeModal();
   showToast('Batch added');
 }
@@ -4251,6 +4268,7 @@ async function advanceBlendBatch(id){
   b.stage += 1;
   b.history.push({stage:b.stage, at:new Date().toISOString(), by:state.session.name});
   await save('blendBatches');
+  logActivity(`Moved blend batch ${b.batchNo} to ${BLEND_STAGES[b.stage]}`);
   showToast(b.stage===lastStage ? 'Batch dispatched to stock' : 'Moved to '+BLEND_STAGES[b.stage]);
 }
 async function submitBlendEdit(e){
@@ -4262,6 +4280,7 @@ async function submitBlendEdit(e){
     qty: f.qty.value.trim(), variation: f.variation.value.trim()
   });
   await save('blendBatches'); closeModal();
+  logActivity(`Edited blend batch ${b.batchNo}`);
   showToast('Batch updated');
 }
 async function moveBlendToStage(id, newStage){
@@ -4269,16 +4288,19 @@ async function moveBlendToStage(id, newStage){
   b.stage = newStage;
   b.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
   await save('blendBatches');
+  logActivity(`Moved blend batch ${b.batchNo} to ${BLEND_STAGES[newStage]}`);
   showToast('Moved to '+BLEND_STAGES[newStage]);
 }
 function deleteBlendBatch(id){
   if(!state.session || !roleCan(state.session.role, 'blending_delete')) return;
+  const b = byId(state.blendBatches, id);
   openConfirmModal({
     title: 'Delete batch', danger: true, confirmLabel: 'Delete',
     message: 'Delete this batch? This cannot be undone.',
     onConfirm: async ()=>{
       state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
       await save('blendBatches');
+      logActivity(`Deleted blend batch ${b?b.batchNo:id}`);
     },
   });
 }
@@ -4315,6 +4337,7 @@ async function createRndProject(e){
   };
   state.rndProjects.unshift(project);
   await save('rndProjects');
+  logActivity(`Created R&D product ${project.name}`);
   closeModal();
   showToast('Product added');
 }
@@ -4325,6 +4348,7 @@ async function advanceRndProject(id){
   p.stage += 1;
   p.history.push({stage:p.stage, at:new Date().toISOString(), by:state.session.name});
   await save('rndProjects');
+  logActivity(`Moved R&D product ${p.name} to ${RND_STAGES[p.stage]}`);
   showToast(p.stage===lastStage ? 'Marked as completed' : 'Moved to '+RND_STAGES[p.stage]);
 }
 async function submitRndEdit(e){
@@ -4339,6 +4363,7 @@ async function submitRndEdit(e){
     outcome: f.outcome ? f.outcome.value : (p.outcome||''),
   });
   await save('rndProjects'); closeModal();
+  logActivity(`Edited R&D product ${p.name}`);
   showToast('Product updated');
 }
 async function moveRndToStage(id, newStage){
@@ -4346,16 +4371,19 @@ async function moveRndToStage(id, newStage){
   p.stage = newStage;
   p.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
   await save('rndProjects');
+  logActivity(`Moved R&D product ${p.name} to ${RND_STAGES[newStage]}`);
   showToast('Moved to '+RND_STAGES[newStage]);
 }
 function deleteRndProject(id){
   if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
+  const p = byId(state.rndProjects, id);
   openConfirmModal({
     title: 'Delete product', danger: true, confirmLabel: 'Delete',
     message: 'Delete this product? This cannot be undone.',
     onConfirm: async ()=>{
       state.rndProjects = state.rndProjects.filter(x=>x.id!==id);
       await save('rndProjects');
+      logActivity(`Deleted R&D product ${p?p.name:id}`);
     },
   });
 }
@@ -4950,20 +4978,24 @@ async function addStaffMember(e){
       if(touchedBatches) saves.push(save('blendBatches'));
     }
     await Promise.all(saves); closeModal();
+    logActivity(`Edited staff member ${oldName}${oldName!==name?` (renamed to ${name})`:''}`);
     showToast('Staff member updated');
   } else {
     state.staff.push({id:uid('STF'), name, title, category});
     await save('staff'); closeModal();
+    logActivity(`Added staff member ${name}`);
     showToast('Staff added');
   }
 }
 function removeStaffMember(id){
+  const s = byId(state.staff, id);
   openConfirmModal({
     title: 'Remove staff member', danger: true, confirmLabel: 'Remove',
     message: 'Remove this staff member?',
     onConfirm: async ()=>{
       state.staff = state.staff.filter(s=>s.id!==id);
       await save('staff');
+      logActivity(`Removed staff member ${s?s.name:id}`);
     },
   });
 }
@@ -5003,15 +5035,18 @@ async function submitCustomer(e){
     state.customers.unshift({id:uid('CUS'), ...data, cityArea:'', email:'', type:'Individual', status:'Active', createdAt:new Date().toISOString()});
   }
   await save('customers'); closeModal();
+  logActivity(`${editId?'Edited':'Created'} customer ${data.name}`);
   showToast(editId ? 'Customer updated' : 'Customer added');
 }
 function deleteCustomer(id){
+  const c = byId(state.customers, id);
   openConfirmModal({
     title: 'Delete customer', danger: true, confirmLabel: 'Delete',
     message: 'Delete this customer?',
     onConfirm: async ()=>{
       state.customers = state.customers.filter(c=>c.id!==id);
       await save('customers');
+      logActivity(`Deleted customer ${c?c.name:id}`);
     },
   });
 }
@@ -5172,15 +5207,18 @@ async function submitSupplier(e){
     state.suppliers.unshift({id:uid('SUP'), ...data, createdAt:new Date().toISOString()});
   }
   await save('suppliers'); closeModal();
+  logActivity(`${editId?'Edited':'Created'} supplier ${data.name}`);
   showToast(editId ? 'Supplier updated' : 'Supplier added');
 }
 function deleteSupplier(id){
+  const s = byId(state.suppliers, id);
   openConfirmModal({
     title: 'Delete supplier', danger: true, confirmLabel: 'Delete',
     message: 'Delete this supplier?',
     onConfirm: async ()=>{
       state.suppliers = state.suppliers.filter(s=>s.id!==id);
       await save('suppliers');
+      logActivity(`Deleted supplier ${s?s.name:id}`);
     },
   });
 }
@@ -5290,6 +5328,7 @@ async function submitComplaint(e){
     if(uploaded.length < Math.min(photoInput.files.length, remaining)) showToast('Some images could not be uploaded', 6000);
   }
   await save('complaints'); closeModal();
+  logActivity(`${editId?'Edited':'Logged'} complaint from ${complaint.customer}`);
   showToast(editId ? 'Complaint updated' : 'Complaint logged');
   if(statusChanged) sendComplaintStatusSms(complaint);
 }
@@ -9908,6 +9947,7 @@ async function submitRecipe(e){
     combineNote: f.combineNote.value.trim(),
     materials, steps
   };
+  const wasEdit = !!state._recipeDraft.id;
   if(state._recipeDraft.id){
     const r = byId(state.recipes, state._recipeDraft.id);
     Object.assign(r, fields);
@@ -9915,6 +9955,7 @@ async function submitRecipe(e){
     state.recipes.unshift({id:uid('RCP'), ...fields, createdAt:new Date().toISOString()});
   }
   await save('recipes'); state._recipeDraft = null; closeModal();
+  logActivity(`${wasEdit?'Edited':'Created'} recipe ${fields.name}`);
   showToast('Recipe saved');
 }
 function deleteRecipe(id){
@@ -9925,6 +9966,7 @@ function deleteRecipe(id){
     onConfirm: async ()=>{
       state.recipes = state.recipes.filter(x=>x.id!==id);
       await save('recipes');
+      logActivity(`Deleted recipe ${r?r.name:id}`);
     },
   });
 }

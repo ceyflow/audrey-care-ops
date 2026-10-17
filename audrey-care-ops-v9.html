@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261017142248">
+<meta name="app-build" content="20261017144838">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4589,8 +4589,8 @@ function rndChemistOptions(selectedName){
   const unmatched = selectedName && !matched ? selectedName : null;
   return `
     <option value="">Unassigned</option>
-    ${unmatched ? `<option value="${esc(unmatched)}" selected>${esc(unmatched)} (not in chemist list)</option>` : ''}
-    ${state.rndChemists.map(c=>`<option value="${esc(c.name)}" ${matched&&matched.name===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
+    ${unmatched ? `<option value="${escAttr(unmatched)}" selected>${esc(unmatched)} (not in chemist list)</option>` : ''}
+    ${state.rndChemists.map(c=>`<option value="${escAttr(c.name)}" ${matched&&matched.name===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
   `;
 }
 
@@ -5028,7 +5028,11 @@ function parseCsvText(text){
 // The write side of parseCsvText — quotes a field only when it actually needs it (contains a
 // comma, quote, or newline), matching how spreadsheet software writes CSV back out.
 function csvEscapeField(v){
-  const s = (v==null) ? '' : String(v);
+  let s = (v==null) ? '' : String(v);
+  // Neutralize CSV/formula injection: a leading =,+,-,@ makes Excel/Sheets treat the cell as a
+  // formula when the exported file is later opened, so staff-entered free text (names, addresses,
+  // order notes) could otherwise run attacker-controlled formulas in whoever opens the export.
+  if(/^[=+\-@]/.test(s)) s = "'" + s;
   return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
 }
 function rowsToCsv(headers, rows){
@@ -7642,7 +7646,7 @@ function renderGmpChecklistsSection(){
           }
           return `<tr>
             <td class="checklist-task-col">${esc(r.label)}</td>
-            ${days.map(d=>`<td><input type="text" class="checklist-signoff-input" data-signoff="${r.key}" data-day="${d}" value="${esc(vals[d]||'')}"></td>`).join('')}
+            ${days.map(d=>`<td><input type="text" class="checklist-signoff-input" data-signoff="${r.key}" data-day="${d}" value="${escAttr(vals[d]||'')}"></td>`).join('')}
           </tr>`;
         }).join('')}
       </tbody>
@@ -7725,7 +7729,7 @@ function checklistDayModal(paramStr){
         }
         return `<div class="field">
           <label>${esc(r.label)}</label>
-          <input type="text" class="day-extra-input" data-checklist="${esc(checklistId)}" data-year="${year}" data-month="${month}" data-day="${day}" data-signoff="${r.key}" value="${esc(vals[day]||'')}" placeholder="${r.key==='remarks'?'Optional notes':'Name'}" autocomplete="off">
+          <input type="text" class="day-extra-input" data-checklist="${esc(checklistId)}" data-year="${year}" data-month="${month}" data-day="${day}" data-signoff="${r.key}" value="${escAttr(vals[day]||'')}" placeholder="${r.key==='remarks'?'Optional notes':'Name'}" autocomplete="off">
         </div>`;
       }).join('')}
       <div class="modal-actions">
@@ -7749,7 +7753,7 @@ function checklistSignModal(paramStr){
       <div class="hint" style="margin-bottom:14px;">${esc(def ? def.name : '')} · ${MONTH_NAMES[month-1]} ${day}, ${year}</div>
       <div class="field">
         <label>Signed by</label>
-        <input type="text" id="sign-pad-name" placeholder="Enter name" value="${esc(existing && existing.name || '')}" autocomplete="off">
+        <input type="text" id="sign-pad-name" placeholder="Enter name" value="${escAttr(existing && existing.name || '')}" autocomplete="off">
       </div>
       <div class="field">
         <label>Signature <span class="hint">(draw with mouse or finger)</span></label>
@@ -7785,7 +7789,7 @@ function brandingPreviewModal(addonId){
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <h2 style="margin-bottom:2px;">${esc(a.name)}</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${a.image ? `<a class="btn btn-sm" href="${esc(a.image)}" download="${esc(a.name)}.png">⬇ Download</a>` : ''}
+          ${a.image ? `<a class="btn btn-sm" href="${esc(a.image)}" download="${escAttr(a.name)}.png">⬇ Download</a>` : ''}
           <label class="btn btn-sm" style="cursor:pointer;">Change
             <input type="file" class="brand-change-input" data-addon="${a.id}" style="display:none;" accept="image/*">
           </label>
@@ -8136,13 +8140,13 @@ function manageComplaintReasonsModal(){
       <div class="sub">Rename, reorder, or remove the complaint reasons customers' issues get logged under.</div>
       <div class="nav-order-list" data-nav-group="complaintreasons">
         ${items.map(item=>`
-        <div class="nav-order-row" draggable="true" data-nav-item="${esc(item)}" style="justify-content:space-between;">
+        <div class="nav-order-row" draggable="true" data-nav-item="${escAttr(item)}" style="justify-content:space-between;">
           <span style="display:flex;align-items:center;gap:10px;overflow:hidden;">
             <span class="nav-order-handle">⋮⋮</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item)}</span>
           </span>
           <span style="display:flex;gap:4px;flex-shrink:0;">
-            <button type="button" class="btn btn-sm" data-edit-complaint-reason="${esc(item)}" title="Rename">✏️</button>
-            <button type="button" class="btn btn-sm btn-danger" data-delete-complaint-reason="${esc(item)}" title="Delete">🗑️</button>
+            <button type="button" class="btn btn-sm" data-edit-complaint-reason="${escAttr(item)}" title="Rename">✏️</button>
+            <button type="button" class="btn btn-sm btn-danger" data-delete-complaint-reason="${escAttr(item)}" title="Delete">🗑️</button>
           </span>
         </div>`).join('')}
       </div>
@@ -8165,13 +8169,13 @@ function manageComplaintPrioritiesModal(){
       <div class="sub">Rename, reorder, or remove the priority levels used on complaints.</div>
       <div class="nav-order-list" data-nav-group="complaintpriorities">
         ${items.map(item=>`
-        <div class="nav-order-row" draggable="true" data-nav-item="${esc(item)}" style="justify-content:space-between;">
+        <div class="nav-order-row" draggable="true" data-nav-item="${escAttr(item)}" style="justify-content:space-between;">
           <span style="display:flex;align-items:center;gap:10px;overflow:hidden;">
             <span class="nav-order-handle">⋮⋮</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item)}</span>
           </span>
           <span style="display:flex;gap:4px;flex-shrink:0;">
-            <button type="button" class="btn btn-sm" data-edit-complaint-priority="${esc(item)}" title="Rename">✏️</button>
-            <button type="button" class="btn btn-sm btn-danger" data-delete-complaint-priority="${esc(item)}" title="Delete">🗑️</button>
+            <button type="button" class="btn btn-sm" data-edit-complaint-priority="${escAttr(item)}" title="Rename">✏️</button>
+            <button type="button" class="btn btn-sm btn-danger" data-delete-complaint-priority="${escAttr(item)}" title="Delete">🗑️</button>
           </span>
         </div>`).join('')}
       </div>
@@ -8332,7 +8336,7 @@ function renderTemplateCustomizationPanel(){
           </tr>
           ${(state.branding.addons||[]).filter(a=>!['logo','ordersBoardLogo','trackPageLogo','welcomeLogo','favicon','batchSheetLogo'].includes(a.id)).map(a=>`
           <tr>
-            <td>${a.image?`<img src="${esc(a.image)}" alt="${esc(a.name)}" style="height:34px;width:auto;max-width:120px;object-fit:contain;">`:'<span class="hint">—</span>'}</td>
+            <td>${a.image?`<img src="${esc(a.image)}" alt="${escAttr(a.name)}" style="height:34px;width:auto;max-width:120px;object-fit:contain;">`:'<span class="hint">—</span>'}</td>
             <td>${esc(a.name)}</td>
             <td class="row-actions">
               <button class="btn btn-sm" data-brand-preview="${a.id}">Preview</button>
@@ -9463,7 +9467,7 @@ function batchStepChecklistHtml(step){
     ? `<div class="bpc-row bpc-field">
         <label for="batch-field-${c.id}">${esc(c.label)}:</label>
         ${canEdit
-          ? `<input type="text" class="bpc-field-input" id="batch-field-${c.id}" value="${esc(c.value)}" placeholder="Enter value" onchange="updateBatchPrepFieldValue('${step.id}','${c.id}',this.value)">`
+          ? `<input type="text" class="bpc-field-input" id="batch-field-${c.id}" value="${escAttr(c.value)}" placeholder="Enter value" onchange="updateBatchPrepFieldValue('${step.id}','${c.id}',this.value)">`
           : `<strong>${esc(c.value)||'—'}</strong>`}
       </div>`
     : `<div class="bpc-row bpc-check"><input type="checkbox" id="batch-chk-${c.id}" ${c.checked?'checked':''} ${canEdit?'':'disabled'} onchange="updateBatchPrepChecked('${step.id}','${c.id}',this.checked)"><label for="batch-chk-${c.id}">${esc(c.text)}</label></div>`
@@ -10390,7 +10394,7 @@ function renderCostingProductSheet(product, version){
         ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>`
         <tr data-mat-row="${m.id}">
           <td>${i+1}</td>
-          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${esc(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
+          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${escAttr(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
           <td>${admin?`<div class="cst-supplier-box" style="width:158px;border:1px solid var(--border);border-radius:5px;padding:1px 3px;flex-wrap:nowrap;">
@@ -10423,7 +10427,7 @@ function renderCostingProductSheet(product, version){
         ${fixedCosts.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No fixed costs yet. ${admin?'Add one (e.g. Electricity, Can cost).':''}</td></tr>` : fixedCosts.map((item,i)=>`
         <tr data-fixedcost-row="${item.id}">
           <td>${i+1}</td>
-          <td>${admin?`<input class="cst-fc-field" data-fcfield="name" data-fc="${item.id}" value="${esc(item.name)}" placeholder="e.g. Electricity" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(item.name)}</td>
+          <td>${admin?`<input class="cst-fc-field" data-fcfield="name" data-fc="${item.id}" value="${escAttr(item.name)}" placeholder="e.g. Electricity" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(item.name)}</td>
           <td></td>
           <td>${admin?`<input class="cst-fc-field" type="number" min="0" step="0.01" data-fcfield="unitCost" data-fc="${item.id}" value="${item.unitCost}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(item.unitCost)||0).toFixed(2))}</td>
           <td></td>
@@ -10732,7 +10736,7 @@ function renderTemplateStepsModal(){
       <h2>${d.id?'Edit template':'New template'}</h2>
       <div class="field" style="margin-bottom:18px;">
         <label>Template name</label>
-        <input id="template-name" value="${esc(d.name)}" placeholder="e.g. Shower Gel">
+        <input id="template-name" value="${escAttr(d.name)}" placeholder="e.g. Shower Gel">
       </div>
       <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>
       <div id="template-step-editor-list">
@@ -10755,15 +10759,15 @@ function renderTemplateStepsModal(){
                   if(c.kind==='field'){
                     return `
                     <div class="prep-checklist-item prep-field-item">
-                      <input type="text" id="tfld-value-${c.id}" value="${esc(c.value)}" placeholder="Value" class="prep-field-value">
-                      <input type="text" id="tfld-label-${c.id}" value="${esc(c.label)}" placeholder="Initial Water pH Level">
+                      <input type="text" id="tfld-value-${c.id}" value="${escAttr(c.value)}" placeholder="Value" class="prep-field-value">
+                      <input type="text" id="tfld-label-${c.id}" value="${escAttr(c.label)}" placeholder="Initial Water pH Level">
                       ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                     </div>`;
                   }
                   return `
                   <div class="prep-checklist-item">
                     <input type="checkbox">
-                    <input type="text" id="tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
+                    <input type="text" id="tchk-${c.id}" value="${escAttr(c.text)}" placeholder="Checklist question…">
                     ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                   </div>`;
                 }).join('')}
@@ -10812,10 +10816,10 @@ function recipeFormModal(){
       <div class="sub">The full batch sheet — raw material formulation, then the mixing steps.</div>
       <form id="form-recipe">
         <div class="field-row">
-          <div class="field"><label>Recipe / product name</label><input name="name" required value="${esc(d.name)}" placeholder="e.g. Body Lotion - Hotel Range"></div>
+          <div class="field"><label>Recipe / product name</label><input name="name" required value="${escAttr(d.name)}" placeholder="e.g. Body Lotion - Hotel Range"></div>
           <div class="field"><label>Reference batch size (kg)</label><input name="batchSizeKg" type="number" min="0" step="0.1" value="${d.batchSizeKg}" placeholder="e.g. 150" oninput="updateAllMaterialAmountPreviews()"></div>
         </div>
-        <div class="field"><label>Description (optional)</label><input name="description" value="${esc(d.description)}" placeholder="Notes for the blending team"></div>
+        <div class="field"><label>Description (optional)</label><input name="description" value="${escAttr(d.description)}" placeholder="Notes for the blending team"></div>
 
         <div class="hint" style="font-weight:600;color:var(--ink);margin:14px 0 4px;">Raw materials (% of batch weight)</div>
         <div class="hint" style="margin-bottom:8px;">Percentages scale to whatever batch size is entered when printing the sheet or starting a batch.</div>
@@ -10826,7 +10830,7 @@ function recipeFormModal(){
           <div class="step-editor-row">
             <span class="se-num">${i+1}</span>
             <div class="se-fields" style="grid-template-columns:2fr 1fr 1fr;">
-              <input id="mat-name-${m.id}" value="${esc(m.name)}" placeholder="Raw material — e.g. DI water">
+              <input id="mat-name-${m.id}" value="${escAttr(m.name)}" placeholder="Raw material — e.g. DI water">
               <input id="mat-pct-${m.id}" type="number" min="0" step="0.001" value="${m.percent}" placeholder="Percentage" oninput="updateMaterialAmountPreview('${m.id}')">
               <div class="hint" id="mat-amt-${m.id}" style="align-self:center;">${amt.toFixed(3)}</div>
             </div>
@@ -10841,7 +10845,7 @@ function recipeFormModal(){
         <div class="hint" style="margin-bottom:16px;">Total: <strong style="color:var(--ink);" id="mat-total-pct">${totalPct.toFixed(3)}%</strong></div>
 
         <div class="field-row">
-          <div class="field"><label>Standard finished product pH (optional)</label><input name="standardPH" value="${esc(d.standardPH)}" placeholder="e.g. 5.5 - 6.5"></div>
+          <div class="field"><label>Standard finished product pH (optional)</label><input name="standardPH" value="${escAttr(d.standardPH)}" placeholder="e.g. 5.5 - 6.5"></div>
         </div>
         <div class="field"><label>Combine together (optional)</label><textarea name="combineNote" placeholder="e.g. White Oil, Palm Oil, Stearic Acid, Cetyl Alcohol, Cetareth 20, GMS 40, BHT, EGDS" style="min-height:60px;">${esc(d.combineNote)}</textarea></div>
 
@@ -10851,8 +10855,8 @@ function recipeFormModal(){
           <div class="step-editor-row">
             <span class="se-num">${i+1}</span>
             <div class="se-fields">
-              <input id="step-ing-${s.id}" value="${esc(s.ingredient)}" placeholder="Instruction — e.g. Carbomer + H2O">
-              <input id="step-amt-${s.id}" value="${esc(s.amount)}" placeholder="Amount — e.g. 80kg">
+              <input id="step-ing-${s.id}" value="${escAttr(s.ingredient)}" placeholder="Instruction — e.g. Carbomer + H2O">
+              <input id="step-amt-${s.id}" value="${escAttr(s.amount)}" placeholder="Amount — e.g. 80kg">
               <input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}" placeholder="Wait (min)">
             </div>
             <div class="se-actions">
@@ -10930,15 +10934,15 @@ function recipeBatchSheetModal(recipeId){
                   if(c.kind==='field'){
                     return `
                     <div class="prep-checklist-item prep-field-item">
-                      <input type="text" id="step-tfld-value-${c.id}" value="${esc(c.value)}" placeholder="Value" class="prep-field-value">
-                      <input type="text" id="step-tfld-label-${c.id}" value="${esc(c.label)}" placeholder="Initial Water pH Level">
+                      <input type="text" id="step-tfld-value-${c.id}" value="${escAttr(c.value)}" placeholder="Value" class="prep-field-value">
+                      <input type="text" id="step-tfld-label-${c.id}" value="${escAttr(c.label)}" placeholder="Initial Water pH Level">
                       ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                     </div>`;
                   }
                   return `
                   <div class="prep-checklist-item">
                     <input type="checkbox">
-                    <input type="text" id="step-tchk-${c.id}" value="${esc(c.text)}" placeholder="Checklist question…">
+                    <input type="text" id="step-tchk-${c.id}" value="${escAttr(c.text)}" placeholder="Checklist question…">
                     ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                   </div>`;
                 }).join('')}
@@ -11509,13 +11513,13 @@ function manageDeliveryLinesModal(){
       <div class="sub">Rename, reorder, or remove the delivery lines on the Orders board.</div>
       <div class="nav-order-list" data-nav-group="deliverylines">
         ${lines.map(l=>`
-        <div class="nav-order-row" draggable="true" data-nav-item="${esc(l.key)}" style="justify-content:space-between;">
+        <div class="nav-order-row" draggable="true" data-nav-item="${escAttr(l.key)}" style="justify-content:space-between;">
           <span style="display:flex;align-items:center;gap:10px;overflow:hidden;">
             <span class="nav-order-handle">⋮⋮</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(l.label)}</span>
           </span>
           <span style="display:flex;gap:4px;flex-shrink:0;">
-            <button type="button" class="btn btn-sm" data-edit-delivery-line="${esc(l.key)}" title="Rename">✏️</button>
-            <button type="button" class="btn btn-sm btn-danger" data-delete-delivery-line="${esc(l.key)}" title="Delete">🗑️</button>
+            <button type="button" class="btn btn-sm" data-edit-delivery-line="${escAttr(l.key)}" title="Rename">✏️</button>
+            <button type="button" class="btn btn-sm btn-danger" data-delete-delivery-line="${escAttr(l.key)}" title="Delete">🗑️</button>
           </span>
         </div>`).join('')}
       </div>
@@ -11622,13 +11626,13 @@ function manageStaffCategoriesModal(){
       <div class="sub">Rename, reorder, or remove the team categories (Operation, Sales, etc.).</div>
       <div class="nav-order-list" data-nav-group="staffcategories">
         ${cats.map(c=>`
-        <div class="nav-order-row" draggable="true" data-nav-item="${esc(c.key)}" style="justify-content:space-between;">
+        <div class="nav-order-row" draggable="true" data-nav-item="${escAttr(c.key)}" style="justify-content:space-between;">
           <span style="display:flex;align-items:center;gap:10px;overflow:hidden;">
             <span class="nav-order-handle">⋮⋮</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.label)}</span>
           </span>
           <span style="display:flex;gap:4px;flex-shrink:0;">
-            <button type="button" class="btn btn-sm" data-edit-staff-category="${esc(c.key)}" title="Rename">✏️</button>
-            <button type="button" class="btn btn-sm btn-danger" data-delete-staff-category="${esc(c.key)}" title="Delete">🗑️</button>
+            <button type="button" class="btn btn-sm" data-edit-staff-category="${escAttr(c.key)}" title="Rename">✏️</button>
+            <button type="button" class="btn btn-sm btn-danger" data-delete-staff-category="${escAttr(c.key)}" title="Delete">🗑️</button>
           </span>
         </div>`).join('')}
       </div>
@@ -11684,7 +11688,7 @@ function citypakTagModal(id){
       <form id="form-citypak-tag" data-order-id="${o.id}">
         <div class="field">
           <label>CityPak order tag number</label>
-          <input name="citypakTag" placeholder="Paste the CityPak order tag number" value="${esc(o.courierNumber||'')}" autocomplete="off" autofocus>
+          <input name="citypakTag" placeholder="Paste the CityPak order tag number" value="${escAttr(o.courierNumber||'')}" autocomplete="off" autofocus>
           <div class="hint">This is shown to the customer on their "Track your order" page as a link straight to CityPak's delivery tracking.</div>
         </div>
         <div class="modal-actions">
@@ -11823,7 +11827,7 @@ function costingRenameVersionModal(versionId){
       <h2>Rename version</h2>
       <div class="sub">${esc(product.name)}</div>
       <form id="form-costing-rename-version" data-version-id="${version.id}">
-        <div class="field"><label>Version name</label><input name="versionName" required autofocus value="${esc(version.name)}"></div>
+        <div class="field"><label>Version name</label><input name="versionName" required autofocus value="${escAttr(version.name)}"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
@@ -11841,8 +11845,8 @@ function costingEditProductModal(productId){
       <h2>Edit product</h2>
       <div class="sub">Name and ID shown on the costing grid.</div>
       <form id="form-costing-edit-product" data-product-id="${product.id}">
-        <div class="field"><label>Product name</label><input name="name" required autofocus value="${esc(product.name)}"></div>
-        <div class="field"><label>Product ID</label><input name="productId" value="${esc(product.productId||'')}" placeholder="e.g. HSL29525 (optional)"></div>
+        <div class="field"><label>Product name</label><input name="name" required autofocus value="${escAttr(product.name)}"></div>
+        <div class="field"><label>Product ID</label><input name="productId" value="${escAttr(product.productId||'')}" placeholder="e.g. HSL29525 (optional)"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
@@ -12111,11 +12115,11 @@ function renderOrderDrawer(id){
 
       <div class="hint" style="margin:4px 0 10px;font-weight:600;color:var(--ink);">Order &amp; customer information</div>
       <div class="field-row">
-        <div class="field"><label>Order number</label><input name="orderNumber" value="${esc(o.orderNumber||o.id)}" ${roAttr}></div>
-        <div class="field"><label>Customer name</label><input name="customer" required value="${esc(o.customer)}" ${roAttr}></div>
+        <div class="field"><label>Order number</label><input name="orderNumber" value="${escAttr(o.orderNumber||o.id)}" ${roAttr}></div>
+        <div class="field"><label>Customer name</label><input name="customer" required value="${escAttr(o.customer)}" ${roAttr}></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Customer contact</label><input name="phone" value="${esc(o.phone)}" ${roAttr}></div>
+        <div class="field"><label>Customer contact</label><input name="phone" value="${escAttr(o.phone)}" ${roAttr}></div>
         <div class="field"><label>Delivery method</label>
           <select name="courierService" ${roDis}>
             <option value="" ${!o.courierService?'selected':''}>— Select —</option>
@@ -12125,7 +12129,7 @@ function renderOrderDrawer(id){
       </div>
       <div class="field-row">
         <div class="field"><label>Customer address</label><textarea name="address" ${roAttr}>${escBody(unbr(o.address||''))}</textarea></div>
-        <div class="field"><label>Delivery tracking number</label><input name="courierNumber" value="${esc(o.courierNumber||'')}" placeholder="Tracking number" ${courierNumberRoAttr}></div>
+        <div class="field"><label>Delivery tracking number</label><input name="courierNumber" value="${escAttr(o.courierNumber||'')}" placeholder="Tracking number" ${courierNumberRoAttr}></div>
       </div>
       ${orderPhotoField('order-photo', o.photo, ro)}
       <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(o.notes))}</textarea></div>
@@ -12215,8 +12219,8 @@ function renderBlendDrawer(id){
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
     <form id="form-blend-edit" data-batch-id="${b.id}">
       <div class="field-row">
-        <div class="field"><label>Batch Number</label><input name="batchNo" value="${esc(b.batchNo)}" ${roAttr}></div>
-        <div class="field"><label>Quantity</label><input name="qty" value="${esc(b.qty)}" ${roAttr}></div>
+        <div class="field"><label>Batch Number</label><input name="batchNo" value="${escAttr(b.batchNo)}" ${roAttr}></div>
+        <div class="field"><label>Quantity</label><input name="qty" value="${escAttr(b.qty)}" ${roAttr}></div>
       </div>
       <div class="field"><label>Variations</label><textarea name="variation" ${roAttr}>${escBody(unbr(b.variation))}</textarea></div>
 
@@ -12289,7 +12293,7 @@ function renderRndDrawer(id){
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
     <form id="form-rnd-edit" data-project-id="${p.id}">
-      <div class="field"><label>Product Name</label><input name="name" value="${esc(p.name)}" ${roAttr}></div>
+      <div class="field"><label>Product Name</label><input name="name" value="${escAttr(p.name)}" ${roAttr}></div>
       <div class="field-row">
         <div class="field"><label>Priority</label>
           <select name="priority" ${roAttr}>${PRIORITIES.map(pr=>`<option ${p.priority===pr?'selected':''}>${pr}</option>`).join('')}</select>
@@ -12345,7 +12349,7 @@ function rndChemistFormModal(id){
       <h2>${c?'Edit chemist':'Add chemist'}</h2>
       <div class="sub">${c?'Update this chemist’s details.':'Add a chemist who visits to develop products — mark their attendance each time they come in.'}</div>
       <form id="form-rnd-chemist" data-edit-id="${c?c.id:''}">
-        <div class="field"><label>Name</label><input name="name" required autocomplete="off" value="${c?esc(c.name):''}"></div>
+        <div class="field"><label>Name</label><input name="name" required autocomplete="off" value="${c?escAttr(c.name):''}"></div>
         <div class="modal-actions" style="justify-content:space-between;">
           <div>${c && state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd-chemist">Delete</button>` : ''}</div>
           <div style="display:flex;gap:8px;">
@@ -12437,18 +12441,18 @@ function customerFormModal(id){
       <h2>${c?'Edit customer':'Add customer'}</h2>
       <div class="sub">${c?'Update this customer\u2019s details.':'Adds a new customer record.'}</div>
       <form id="form-customer" data-edit-id="${c?c.id:''}">
-        <div class="field"><label>Customer name</label><input name="name" required autocomplete="off" value="${c?esc(c.name):''}"></div>
+        <div class="field"><label>Customer name</label><input name="name" required autocomplete="off" value="${c?escAttr(c.name):''}"></div>
         <div class="field-row">
-          <div class="field"><label>Short name</label><input name="shortName" autocomplete="off" value="${c?esc(c.shortName||''):''}"></div>
-          <div class="field"><label>Branch name</label><input name="branchName" autocomplete="off" value="${c?esc(c.branchName||''):''}"></div>
+          <div class="field"><label>Short name</label><input name="shortName" autocomplete="off" value="${c?escAttr(c.shortName||''):''}"></div>
+          <div class="field"><label>Branch name</label><input name="branchName" autocomplete="off" value="${c?escAttr(c.branchName||''):''}"></div>
         </div>
-        <div class="field"><label>SMS phone</label><input name="phone" autocomplete="off" value="${c?esc(c.phone):''}"></div>
+        <div class="field"><label>SMS phone</label><input name="phone" autocomplete="off" value="${c?escAttr(c.phone):''}"></div>
         <div class="field"><label>Address</label><textarea name="address" placeholder="Enter complete address">${c?escBody(unbr(c.address)):''}</textarea></div>
         <div class="field"><label>Salesman</label>
           <select name="salesman">
             <option value="">Unassigned</option>
-            ${unmatchedSalesman ? `<option value="${esc(unmatchedSalesman)}" selected>${esc(unmatchedSalesman)} (not in staff list)</option>` : ''}
-            ${state.staff.map(s=>`<option value="${esc(s.name)}" ${matchedStaff&&matchedStaff.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
+            ${unmatchedSalesman ? `<option value="${escAttr(unmatchedSalesman)}" selected>${esc(unmatchedSalesman)} (not in staff list)</option>` : ''}
+            ${state.staff.map(s=>`<option value="${escAttr(s.name)}" ${matchedStaff&&matchedStaff.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
           </select>
         </div>
         <div class="modal-actions" style="justify-content:space-between;">
@@ -12472,14 +12476,14 @@ function supplierFormModal(id){
       <div class="sub">${s?'Update this supplier\u2019s details.':'Adds a new supplier record.'}</div>
       <form id="form-supplier" data-edit-id="${s?s.id:''}">
         <div class="field-row">
-          <div class="field"><label>Supplier name</label><input name="name" required value="${s?esc(s.name):''}"></div>
-          <div class="field"><label>Vendor ID</label><input name="vendorId" placeholder="e.g. VD00086" value="${s?esc(s.vendorId):''}"></div>
+          <div class="field"><label>Supplier name</label><input name="name" required value="${s?escAttr(s.name):''}"></div>
+          <div class="field"><label>Vendor ID</label><input name="vendorId" placeholder="e.g. VD00086" value="${s?escAttr(s.vendorId):''}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Contact person</label><input name="contact" value="${s?esc(s.contact):''}"></div>
-          <div class="field"><label>Phone</label><input name="phone" value="${s?esc(s.phone):''}"></div>
+          <div class="field"><label>Contact person</label><input name="contact" value="${s?escAttr(s.contact):''}"></div>
+          <div class="field"><label>Phone</label><input name="phone" value="${s?escAttr(s.phone):''}"></div>
         </div>
-        <div class="field"><label>Email</label><input name="email" value="${s?esc(s.email):''}"></div>
+        <div class="field"><label>Email</label><input name="email" value="${s?escAttr(s.email):''}"></div>
         <div class="field"><label>Address</label><textarea name="address">${s?escBody(unbr(s.address)):''}</textarea></div>
         <div class="field"><label>Status</label>
           <select name="status">
@@ -12592,7 +12596,7 @@ function complaintFormModal(id){
       <form id="form-complaint" data-edit-id="${c?c.id:''}">
         <div class="field" style="position:relative;">
           <label>Customer name</label>
-          <input name="customer" id="complaint-customer-input" required autocomplete="off" value="${c?esc(c.customer):''}" ${readOnly?'readonly':''}>
+          <input name="customer" id="complaint-customer-input" required autocomplete="off" value="${c?escAttr(c.customer):''}" ${readOnly?'readonly':''}>
           <div id="complaint-customer-suggestions" class="ac-dropdown" style="display:none;"></div>
         </div>
         <div class="field-row">
@@ -12617,7 +12621,7 @@ function complaintFormModal(id){
           <div class="field"><label>Assigned representative</label>
             <select name="assignedTo" ${readOnly?'disabled':''}>
               <option value="" ${!c.assignedTo?'selected':''}>Unassigned</option>
-              ${state.staff.map(s=>`<option value="${esc(s.name)}" ${c.assignedTo===s.name?'selected':''}>${esc(s.name)}</option>`).join('')}
+              ${state.staff.map(s=>`<option value="${escAttr(s.name)}" ${c.assignedTo===s.name?'selected':''}>${esc(s.name)}</option>`).join('')}
             </select>
           </div>` : `<div class="field"></div>`}
         </div>` : `
@@ -12627,15 +12631,15 @@ function complaintFormModal(id){
           <div class="field"><label>Assigned representative</label>
             <select name="assignedTo">
               <option value="" selected>Unassigned</option>
-              ${state.staff.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('')}
+              ${state.staff.map(s=>`<option value="${escAttr(s.name)}">${esc(s.name)}</option>`).join('')}
             </select>
           </div>
           <div class="field"></div>
         </div>` : ''}
         `}
         <div class="field-row">
-          <div class="field"><label>Contact number</label><input name="phone" type="tel" required autocomplete="off" value="${c?esc(c.phone||''):''}" ${readOnly?'readonly':''}></div>
-          <div class="field"><label>Invoice number</label><input name="invoiceNumber" autocomplete="off" value="${c?esc(c.invoiceNumber||''):'ACIN'}" ${readOnly?'readonly':''}></div>
+          <div class="field"><label>Contact number</label><input name="phone" type="tel" required autocomplete="off" value="${c?escAttr(c.phone||''):''}" ${readOnly?'readonly':''}></div>
+          <div class="field"><label>Invoice number</label><input name="invoiceNumber" autocomplete="off" value="${c?escAttr(c.invoiceNumber||''):'ACIN'}" ${readOnly?'readonly':''}></div>
         </div>
         <div class="field"><label>Description</label><textarea name="description" ${readOnly?'readonly':''}>${c?escBody(unbr(c.description)):''}</textarea></div>
         <div class="field-row">
@@ -12728,8 +12732,8 @@ function staffFormModal(id){
       <h2>${s?'Edit staff member':'Add staff member'}</h2>
       <div class="sub">${s?'Renaming updates this person\'s name everywhere it\'s used as an assignment — open complaints, orders, and blend batches.':'Add someone to the team roster so orders can be assigned to them.'}</div>
       <form id="form-add-staff" data-edit-id="${s?s.id:''}">
-        <div class="field"><label>Name</label><input name="staffName" required autocomplete="off" value="${s?esc(s.name):''}"></div>
-        <div class="field"><label>Title <span class="hint">(optional)</span></label><input name="staffTitle" placeholder="e.g. Production Executive" autocomplete="off" value="${s?esc(s.title||''):''}"></div>
+        <div class="field"><label>Name</label><input name="staffName" required autocomplete="off" value="${s?escAttr(s.name):''}"></div>
+        <div class="field"><label>Title <span class="hint">(optional)</span></label><input name="staffTitle" placeholder="e.g. Production Executive" autocomplete="off" value="${s?escAttr(s.title||''):''}"></div>
         <div class="field"><label>Category</label>
           <select name="staffCategory">${cats.map(c=>`<option value="${escAttr(c.key)}" ${s&&s.category===c.key?'selected':''}>${esc(c.label)}</option>`).join('')}</select>
         </div>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261017162111">
+<meta name="app-build" content="20261017163842">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2959,7 +2959,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board' },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -4373,6 +4373,20 @@ async function moveRndToStage(id, newStage){
   await save('rndProjects');
   logActivity(`Moved R&D product ${p.name} to ${RND_STAGES[newStage]}`);
   showToast('Moved to '+RND_STAGES[newStage]);
+}
+// The Review-stage "Transfer to Quarantined" shortcut: unlike a plain "Transfer to Completed"
+// (which leaves the outcome unset for later), this sets the outcome and reason in one step so
+// a held-back trial's disposition is recorded at the moment it's decided, not after the fact.
+async function quarantineRndProject(id, reason){
+  const p = byId(state.rndProjects, id); if(!p) return;
+  const lastStage = RND_STAGES.length-1;
+  p.stage = lastStage;
+  p.outcome = 'quarantined';
+  p.quarantineReason = reason;
+  p.history.push({stage:lastStage, at:new Date().toISOString(), by:state.session.name});
+  await save('rndProjects');
+  logActivity(`Quarantined R&D product ${p.name}: ${reason}`);
+  showToast('Product moved to Quarantined');
 }
 function deleteRndProject(id){
   if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
@@ -6906,18 +6920,30 @@ function renderBlendCard(b){
 /* ===================== R&D page ===================== */
 function renderRndPage(){
   const viewRaw = state.filters.rndView;
-  const view = viewRaw==='chemists' ? 'chemists' : 'board';
+  const view = (viewRaw==='chemists' || viewRaw==='outcome') ? viewRaw : 'board';
+  const completedProjects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1);
+  const successCount = completedProjects.filter(p=>p.outcome==='success').length;
+  const quarantinedCount = completedProjects.filter(p=>p.outcome==='quarantined').length;
+  const unsetCount = completedProjects.filter(p=>!p.outcome).length;
   return `
   <div class="toolbar" style="flex-wrap:wrap;">
     <div class="tabs">
-      <button type="button" class="tab ${view==='board'?'active':''}" data-rnd-view-mode="board">Products</button>
+      <button type="button" class="tab ${view==='board'||view==='outcome'?'active':''}" data-rnd-view-mode="board">Products</button>
       <button type="button" class="tab ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">🧪 Chemists</button>
     </div>
     ${view==='chemists'
       ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
-      : (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd" style="margin-left:auto;">+ Add product</button>` : '')}
+      : `
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
+        <button type="button" class="rnd-outcome-label rnd-outcome-success" data-rnd-outcome-view="success" style="border:none;cursor:pointer;font-family:inherit;">✓ Success · ${successCount}</button>
+        <button type="button" class="rnd-outcome-label rnd-outcome-quarantined" data-rnd-outcome-view="quarantined" style="border:none;cursor:pointer;font-family:inherit;">⚠ Quarantined · ${quarantinedCount}</button>
+        ${unsetCount>0 ? `<button type="button" class="rnd-outcome-label" data-rnd-outcome-view="unset" style="border:none;cursor:pointer;font-family:inherit;">Not set · ${unsetCount}</button>` : ''}
+        ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd">+ Add product</button>` : ''}
+      </div>`}
   </div>
-  ${view==='chemists' ? renderRndChemistsTab() : (!state._deferredLoaded.rndProjects ? `<div class="empty-state"><p class="hint">Loading…</p></div>` : state.rndProjects.length===0 ? `
+  ${view==='chemists' ? renderRndChemistsTab()
+    : view==='outcome' ? renderRndOutcomeView(state.filters.rndOutcomeKind)
+    : (!state._deferredLoaded.rndProjects ? `<div class="empty-state"><p class="hint">Loading…</p></div>` : state.rndProjects.length===0 ? `
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>
@@ -6925,51 +6951,46 @@ function renderRndPage(){
     </div>
   ` : `
   <div class="board">
-    ${RND_STAGES.map((stageName,i)=>renderRndColumn(stageName,i)).join('')}
+    ${RND_STAGES.slice(0,-1).map((stageName,i)=>renderRndColumn(stageName,i)).join('')}
   </div>`)}
   `;
 }
 function renderRndColumn(stageName, i){
   const key = RND_STAGE_KEYS[i]; const style = RND_STAGE_STYLE[key];
   const projects = state.rndProjects.filter(p=>p.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
-  const isCompleted = i === RND_STAGES.length-1;
   return `
   <div class="column">
     <div class="column-head" style="background:${style.bg};color:${style.c};">
       <span class="name">${stageName}</span><span class="count">${projects.length}</span>
     </div>
     <div class="column-body" data-rnd-stage="${i}">
-      ${isCompleted ? renderRndCompletedGroups(projects) : (projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join(''))}
+      ${projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join('')}
     </div>
   </div>`;
 }
-// Completed is split into two labeled sub-groups instead of one flat list, so a finished trial's
-// final disposition (approved for production, or held back) is visible at a glance on the board.
-function renderRndCompletedGroups(projects){
-  if(projects.length===0) return `<div class="empty-col">Nothing here</div>`;
-  const success = projects.filter(p=>p.outcome==='success');
-  const quarantined = projects.filter(p=>p.outcome==='quarantined');
-  const unset = projects.filter(p=>!p.outcome);
+// Completed is reached two ways (a plain "Transfer to Completed" from Review, which leaves the
+// outcome unset, or the dedicated Quarantined transfer below) — rather than a 4th kanban column,
+// its three dispositions (Success / Quarantined / Not set) are small clickable counts in the
+// toolbar, each opening this filtered card view.
+function renderRndOutcomeView(kind){
+  const labels = {success:'Success', quarantined:'Quarantined', unset:'Not set'};
+  const label = labels[kind] || 'Completed';
+  const projects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1 && (kind==='unset' ? !p.outcome : p.outcome===kind))
+    .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   return `
-    <div class="rnd-outcome-group">
-      <div class="rnd-outcome-label rnd-outcome-success">✓ Success</div>
-      ${success.length===0 ? `<div class="empty-col">None yet</div>` : success.map(p=>renderRndCard(p)).join('')}
-    </div>
-    <div class="rnd-outcome-group">
-      <div class="rnd-outcome-label rnd-outcome-quarantined">⚠ Quarantined</div>
-      ${quarantined.length===0 ? `<div class="empty-col">None yet</div>` : quarantined.map(p=>renderRndCard(p)).join('')}
-    </div>
-    ${unset.length>0 ? `
-    <div class="rnd-outcome-group">
-      <div class="rnd-outcome-label">Not set</div>
-      ${unset.map(p=>renderRndCard(p)).join('')}
-    </div>` : ''}
+  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-rnd-outcome-back>‹ Products</button></div>
+  <div class="landing-section-title" style="margin-bottom:10px;">${esc(label)} <span class="hint">(${projects.length})</span></div>
+  ${projects.length===0 ? `<div class="empty-col">None yet</div>` : `
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
+    ${projects.map(p=>renderRndCard(p)).join('')}
+  </div>`}
   `;
 }
 function renderRndCard(p){
   return `
   <div class="card" draggable="${canManageRnd()?'true':'false'}" data-rnd="${p.id}">
     <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
+    ${p.outcome==='quarantined' && p.quarantineReason ? `<div class="hint" style="margin-top:4px;">${esc(p.quarantineReason)}</div>` : ''}
   </div>`;
 }
 function renderRndChemistsTab(){
@@ -12365,6 +12386,7 @@ function renderRndDrawer(id){
           <option value="success" ${p.outcome==='success'?'selected':''}>Success</option>
           <option value="quarantined" ${p.outcome==='quarantined'?'selected':''}>Quarantined</option>
         </select>
+        ${p.outcome==='quarantined' && p.quarantineReason ? `<div class="hint" style="margin-top:6px;">Reason: ${esc(p.quarantineReason)}</div>` : ''}
       </div>` : ''}
     </form>
 
@@ -12388,6 +12410,7 @@ function renderRndDrawer(id){
       <div>${state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd">Delete</button>` : ''}</div>
       <div style="display:flex;gap:8px;">
         ${!ro && canAdv ? `<button type="button" class="btn" id="btn-advance-rnd">${RND_NEXT_ACTION_LABEL[p.stage]}</button>` : ''}
+        ${!ro && p.stage===RND_STAGES.length-2 ? `<button type="button" class="btn btn-danger" id="btn-quarantine-rnd">Transfer to Quarantined</button>` : ''}
         ${!ro ? `<button type="submit" form="form-rnd-edit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
       </div>
     </div>
@@ -13483,6 +13506,29 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-rnd')) byIdEl('btn-new-rnd').onclick = ()=>openModal('rnd:new');
   if(byIdEl('btn-new-rnd-2')) byIdEl('btn-new-rnd-2').onclick = ()=>openModal('rnd:new');
   document.querySelectorAll('[data-rnd-view-mode]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = b.dataset.rndViewMode; render(); }));
+  document.querySelectorAll('[data-rnd-outcome-view]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'outcome'; state.filters.rndOutcomeKind = b.dataset.rndOutcomeView; render(); }));
+  document.querySelectorAll('[data-rnd-outcome-back]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'board'; render(); }));
+  if(byIdEl('btn-quarantine-rnd')) byIdEl('btn-quarantine-rnd').onclick = ()=>{
+    const id = state.modal.split(':')[1];
+    // Captured once, before the first prompt ever opens — a retry after an empty submission
+    // re-opens this same prompt while state.modal is already 'promptaction', so the usual
+    // auto-detected return target would resolve to null (closing the drawer) without this.
+    const returnTo = state.modal;
+    const openQuarantinePrompt = ()=> openPromptModal({
+      title: 'Transfer to Quarantined',
+      sub: 'Moves this product to Completed with a Quarantined outcome.',
+      label: 'Reason',
+      placeholder: 'Why is this product being quarantined?',
+      confirmLabel: 'Transfer',
+      _returnTo: returnTo,
+      onSubmit: async (value)=>{
+        const reason = (value||'').trim();
+        if(!reason){ showToast('Enter a reason'); openQuarantinePrompt(); return; }
+        await quarantineRndProject(id, reason);
+      },
+    });
+    openQuarantinePrompt();
+  };
   document.querySelectorAll('.column-body[data-rnd-stage]').forEach(col=>{
     col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('drag-over'); });
     col.addEventListener('dragleave', ()=>col.classList.remove('drag-over'));

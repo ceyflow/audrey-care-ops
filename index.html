@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261017164525">
+<meta name="app-build" content="20261017165546">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1383,8 +1383,8 @@ async function sendBulkSms(){
     onConfirm: ()=>{ executeBulkSmsSend(recipients, message, campaignName); },
   });
 }
-async function executeBulkSmsSend(recipients, message, campaignName){
-  const btn = document.getElementById('btn-send-bulk-sms'); if(btn) btn.disabled = true;
+async function executeBulkSmsSend(recipients, message, campaignName, btnId){
+  const btn = document.getElementById(btnId||'btn-send-bulk-sms'); if(btn) btn.disabled = true;
   const progressEl = document.getElementById('bulksms-progress');
   let sent = 0, failed = 0;
   let idx = 0;
@@ -1434,6 +1434,33 @@ async function sendQuickSms(){
   } else {
     showToast('Not sent: ' + result.error, 8000);
   }
+}
+async function sendOutstandingSms(){
+  if(!isAdmin() || !SMS_CONFIGURED) return;
+  const msgEl = document.getElementById('outstanding-sms-message');
+  const message = ((msgEl && msgEl.value) || '').trim();
+  if(!message){ showToast('Enter a message before sending'); return; }
+  const recipients = [...new Set([...state.bulkSmsCustomers].map(id=>{ const c = byId(state.customers, id); return c && c.phone; }).filter(Boolean))];
+  if(!recipients.length){ showToast('Select at least one recipient'); return; }
+  openConfirmModal({
+    title: 'Send outstanding payment reminder', confirmLabel: 'Send',
+    message: 'Send this message to ' + recipients.length + ' recipient' + (recipients.length===1?'':'s') + '? This cannot be undone.',
+    onConfirm: ()=>{ executeBulkSmsSend(recipients, message, 'Outstanding payment reminder', 'btn-send-outstanding-sms'); },
+  });
+}
+function markOutstandingPaid(id){
+  const c = byId(state.customers, id); if(!c) return;
+  const prior = Number(c.outstandingAmount)||0;
+  openConfirmModal({
+    title: 'Mark as paid', confirmLabel: 'Mark paid',
+    message: `Clear the Rs. ${prior.toFixed(2)} outstanding balance for ${c.name}?`,
+    onConfirm: async ()=>{
+      c.outstandingAmount = 0;
+      await save('customers');
+      logActivity(`Marked ${c.name}'s outstanding balance as paid (was Rs. ${prior.toFixed(2)})`);
+      showToast('Marked as paid');
+    },
+  });
 }
 function openBulkSmsTemplatesManager(){ state._bulkSmsTemplateForm = null; openModal('bulksmstemplates'); }
 function startNewBulkSmsTemplate(){ state._bulkSmsTemplateForm = {id:null, name:'', message:''}; render(); }
@@ -5053,7 +5080,8 @@ async function submitCustomer(e){
   const f = e.target; const editId = f.dataset.editId;
   const data = {
     name: f.name.value.trim(), shortName: f.shortName.value.trim(), branchName: f.branchName.value.trim(),
-    phone: f.phone.value.trim(), address: f.address.value.trim(), salesman: f.salesman.value || null
+    phone: f.phone.value.trim(), address: f.address.value.trim(), salesman: f.salesman.value || null,
+    outstandingAmount: Math.max(0, Number(f.outstandingAmount.value)||0)
   };
   if(!data.name) return;
   if(editId){
@@ -8078,8 +8106,72 @@ function renderBulkSmsPage(){
   <div class="tabs" style="margin-bottom:18px;">
     <button type="button" class="tab ${tab==='campaign'?'active':''}" data-bulksms-tab="campaign">Campaign</button>
     <button type="button" class="tab ${tab==='quicksend'?'active':''}" data-bulksms-tab="quicksend">Quick Send</button>
+    <button type="button" class="tab ${tab==='outstanding'?'active':''}" data-bulksms-tab="outstanding">Outstanding</button>
   </div>
-  ${tab==='campaign' ? renderBulkSmsCampaignTab() : renderQuickSmsTab()}
+  ${tab==='campaign' ? renderBulkSmsCampaignTab() : tab==='outstanding' ? renderBulkSmsOutstandingTab() : renderQuickSmsTab()}
+  `;
+}
+// Customers with an unpaid balance (set from the customer's Edit screen — there's no invoicing
+// system behind this, just a plain amount staff keep up to date) — reuses the Campaign tab's
+// recipient-picker ids/classes wholesale (bulksms-customer-search, bulksms-select-all-customers,
+// .bulksms-customer-row, bulksms-recipient-count, bulksms-send-count) so the same selection,
+// search, and count wiring handles both tabs with no page-specific JS of its own.
+function renderBulkSmsOutstandingTab(){
+  if(!state._deferredLoaded.bulkSmsTemplates || !state._deferredLoaded.smsCampaigns){
+    return `<div class="empty-state"><p class="hint">Loading…</p></div>`;
+  }
+  const q = (state.filters.bulkSmsCustomerSearch||'').toLowerCase();
+  const owing = state.customers.filter(c=>c.phone && (Number(c.outstandingAmount)||0) > 0);
+  const rows = owing.filter(c=> !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q))
+    .sort((a,b)=>(Number(b.outstandingAmount)||0)-(Number(a.outstandingAmount)||0));
+  const selectedCount = state.bulkSmsCustomers.size;
+  const allShownChecked = rows.length>0 && rows.every(c=>state.bulkSmsCustomers.has(c.id));
+  const totalOwed = owing.reduce((s,c)=>s+(Number(c.outstandingAmount)||0),0);
+  return `
+  <div class="stat-grid" style="margin-bottom:16px;">
+    <div class="stat-card"><div class="label">Customers owing</div><div class="value">${owing.length}</div></div>
+    <div class="stat-card"><div class="label">Total outstanding</div><div class="value accent">Rs. ${totalOwed.toFixed(2)}</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Compose reminder</h3><span class="hint">Sender ID: AUDREY</span></div>
+    <div class="panel-body">
+      <div class="field"><label>Message</label>
+        <textarea id="outstanding-sms-message" placeholder="e.g. This is a reminder that your account has an outstanding balance. Please settle at your earliest convenience." style="min-height:110px;"></textarea>
+        ${smsCountRowHtml('outstanding-charcount','outstanding-segcount')}
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Customers with an outstanding balance</h3><span class="hint" id="bulksms-recipient-count">${selectedCount} recipient${selectedCount===1?'':'s'} selected</span></div>
+    <div class="panel-body">
+      ${owing.length===0 ? `<div class="empty-state">No customers currently have an outstanding amount set. Add one from a customer's Edit screen.</div>` : `
+      <div class="field">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+          <label style="margin:0;">${rows.length} of ${owing.length} shown</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;margin:0;">
+            <input type="checkbox" id="bulksms-select-all-customers" ${allShownChecked?'checked':''}> Select all ${rows.length} shown
+          </label>
+        </div>
+        <input class="search-input" id="bulksms-customer-search" placeholder="Search customers…" style="width:100%;" value="${esc(state.filters.bulkSmsCustomerSearch||'')}">
+        <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:10px;">
+          ${rows.length===0 ? `<div class="hint" style="padding:14px;">No matches.</div>` : rows.map(c=>`
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;">
+            <input type="checkbox" class="bulksms-customer-row" data-customer-id="${c.id}" ${state.bulkSmsCustomers.has(c.id)?'checked':''}>
+            <span style="flex:1;font-size:13.5px;">${esc(c.name)}</span>
+            <span class="hint">${esc(c.phone)}</span>
+            <span style="font-weight:600;min-width:90px;text-align:right;">Rs. ${(Number(c.outstandingAmount)||0).toFixed(2)}</span>
+            <button type="button" class="btn btn-sm" data-mark-outstanding-paid="${c.id}" style="flex-shrink:0;">Mark paid</button>
+          </label>`).join('')}
+        </div>
+      </div>`}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div class="hint" id="bulksms-progress">${SMS_CONFIGURED ? '' : 'SMS is not set up yet — see SMS_APP_SECRET in the code.'}</div>
+      <button type="button" class="btn btn-primary" id="btn-send-outstanding-sms" ${!SMS_CONFIGURED?'disabled':''}>Send to <span id="bulksms-send-count">${selectedCount}</span> recipient${selectedCount===1?'':'s'}</button>
+    </div>
+  </div>
   `;
 }
 function renderBulkSmsCampaignTab(){
@@ -12543,6 +12635,7 @@ function customerFormModal(id){
             ${state.staff.map(s=>`<option value="${escAttr(s.name)}" ${matchedStaff&&matchedStaff.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
           </select>
         </div>
+        <div class="field"><label>Outstanding amount <span class="hint">(what this customer currently owes, if anything)</span></label><input name="outstandingAmount" type="number" min="0" step="0.01" autocomplete="off" value="${c&&c.outstandingAmount?c.outstandingAmount:''}" placeholder="0.00"></div>
         <div class="modal-actions" style="justify-content:space-between;">
           <div>${c?`<button type="button" class="btn btn-danger" id="btn-delete-customer">Delete</button>`:''}</div>
           <div style="display:flex;gap:8px;">
@@ -14457,6 +14550,9 @@ function attachShellHandlers(){
   }
   wireSmsCharCount('bulksms-message', 'bulksms-charcount', 'bulksms-segcount');
   wireSmsCharCount('quicksms-message', 'quicksms-charcount', 'quicksms-segcount');
+  wireSmsCharCount('outstanding-sms-message', 'outstanding-charcount', 'outstanding-segcount');
+  if(byIdEl('btn-send-outstanding-sms')) byIdEl('btn-send-outstanding-sms').onclick = sendOutstandingSms;
+  document.querySelectorAll('[data-mark-outstanding-paid]').forEach(b=>b.addEventListener('click', ()=>markOutstandingPaid(b.dataset.markOutstandingPaid)));
   if(byIdEl('btn-send-quick-sms')) byIdEl('btn-send-quick-sms').onclick = sendQuickSms;
   function updateBulkSmsRecipientCount(){
     const total = state.bulkSmsCustomers.size;
@@ -14487,10 +14583,10 @@ function attachShellHandlers(){
   });
   if(byIdEl('bulksms-customer-search')) byIdEl('bulksms-customer-search').addEventListener('input', e=>{
     state.filters.bulkSmsCustomerSearch = e.target.value;
-    const nameEl = byIdEl('bulksms-campaign-name'), msgEl = byIdEl('bulksms-message');
+    const nameEl = byIdEl('bulksms-campaign-name'), msgEl = byIdEl('bulksms-message') || byIdEl('outstanding-sms-message');
     const draft = { name: nameEl?nameEl.value:'', message: msgEl?msgEl.value:'' };
     render();
-    const nameEl2 = byIdEl('bulksms-campaign-name'), msgEl2 = byIdEl('bulksms-message');
+    const nameEl2 = byIdEl('bulksms-campaign-name'), msgEl2 = byIdEl('bulksms-message') || byIdEl('outstanding-sms-message');
     if(nameEl2) nameEl2.value = draft.name;
     if(msgEl2) msgEl2.value = draft.message;
   });

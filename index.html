@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018131808">
+<meta name="app-build" content="20261018133621">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -768,6 +768,13 @@ html{ visibility:hidden; }
   .prep-checklist-remove:hover{color:var(--ink);}
   .prep-edit-icon{flex-shrink:0;border:none;background:none;padding:4px;margin:-4px 0;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:6px;}
   .prep-edit-icon:hover{color:var(--accent-dark);background:var(--accent-soft);}
+  /* The step title — "Preparation/Checking Step N" by default — is itself an editable field now
+     (a custom name replaces it everywhere this step shows: the editor, the printed ledger table,
+     and the live headline while that step is actually running). Borderless like the checklist
+     text inputs, but keeps the title's bold weight and a sane width so it doesn't crowd the
+     PREPARATION pill and ↑↓✕ buttons sharing this row. */
+  .prep-title-input{flex:0 1 auto;min-width:70px;max-width:280px;border:none;background:transparent;font:inherit;font-weight:700;color:var(--ink);outline:none;padding:2px 0;}
+  .prep-title-input::placeholder{color:var(--ink);opacity:1;}
   .prep-field-item input.prep-field-value{flex:0 0 120px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:5px 9px;}
   .prep-field-item input.prep-field-value:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
   .prep-footer{display:flex;gap:8px;flex-wrap:wrap;}
@@ -9906,7 +9913,7 @@ function playBatchAlertSound(){
 // step cards, focus overlay) was built only for phrase steps and would otherwise crash
 // (new Date(NaN).toISOString()) or show "undefined" the moment one of these is first/reached.
 function batchStepWaitMinutes(step){ return step && step.type!=='preparation' ? (step.waitMinutes||0) : 0; }
-function batchStepLabel(step){ return step.type==='preparation' ? 'Preparation/Checking' : step.ingredient; }
+function batchStepLabel(step){ return step.type==='preparation' ? (step.name||'Preparation/Checking') : step.ingredient; }
 // The Instruction field is a growing textarea now (see instructionTextareaHtml) — people write
 // real multi-line steps into it ("Add Water 75Kg, Start the Heater" / "Then Add EDTA, SLES" /
 // "Wait until Dissolves all the SLES"), and showing the whole thing in one undifferentiated bold
@@ -10371,6 +10378,8 @@ function syncTemplateDraftStepFieldsFromDOM(){
   if(nameEl) d.name = nameEl.value;
   d.steps.forEach(s=>{
     if(s.type==='preparation'){
+      const nameEl2 = document.getElementById('tprepname-'+s.id);
+      if(nameEl2) s.name = nameEl2.value;
       (s.checklist||[]).forEach(c=>{
         if(c.kind==='field'){
           const labelEl = document.getElementById('tfld-label-'+c.id);
@@ -10407,7 +10416,7 @@ async function saveTemplateSteps(){
         const text = (c.text||'').trim();
         return text ? {id:c.id, kind:'checklist', text} : null;
       }).filter(Boolean);
-      return checklist.length ? {id:s.id, type:'preparation', checklist} : null;
+      return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
     }
     const ingredient = (s.ingredient||'').trim();
     if(!ingredient) return null;
@@ -10485,6 +10494,8 @@ function syncDraftStepFieldsFromDOM(){
     if(s.type==='preparation'){
       // Only ever reached via the batch sheet (recipeFormModal never seeds a preparation step) —
       // same field layout as the phrases template editor's preparation cards.
+      const prepNameEl = document.getElementById('step-prepname-'+s.id);
+      if(prepNameEl) s.name = prepNameEl.value;
       (s.checklist||[]).forEach(c=>{
         if(c.kind==='field'){
           const labelEl = document.getElementById('step-tfld-label-'+c.id);
@@ -11297,7 +11308,7 @@ function renderActiveBatchCard(){
       const ready = (step.checklist||[]).filter(c=> c.kind==='field' ? !!c.value : c.checked).length;
       return `
       <div class="bt-countdown">${ready}/${total}</div>
-      <div class="bt-headline">Preparation / Checking</div>
+      <div class="bt-headline">${esc(step.name)||'Preparation / Checking'}</div>
       <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}</div>`;
     })() : (()=>{
       const remaining = batchRemainingSeconds();
@@ -11357,7 +11368,7 @@ function renderBatchFocusOverlay(){
         <div class="bf-ingredient">All done 🎉</div>
         <div class="bf-amount" style="margin-top:12px;">${b.steps.length} of ${b.steps.length} steps complete</div>
       ` : step.type==='preparation' ? `
-        <div class="bf-ingredient">Preparation / Checking</div>
+        <div class="bf-ingredient">${esc(step.name)||'Preparation / Checking'}</div>
         <div class="bf-grid">
           <div class="bf-main">
             <div class="bf-main-label">Checklist</div>
@@ -11469,7 +11480,12 @@ function renderTemplateStepsModal(){
             return `
             <div class="prep-step-row">
               <div class="bsr-head">
-                <div class="bsr-title"><span class="prep-badge">${ord}</span> Preparation/Checking Step ${ord} <span class="prep-pill">Preparation</span></div>
+                <div class="bsr-title">
+                  <span class="prep-badge">${ord}</span>
+                  <input type="text" id="tprepname-${s.id}" value="${escAttr(s.name||'')}" placeholder="Preparation/Checking Step ${ord}" class="prep-title-input">
+                  ${prepEditIconHtml()}
+                  <span class="prep-pill">Preparation</span>
+                </div>
                 <div class="bsr-actions">
                   <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
                   <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
@@ -11647,7 +11663,12 @@ function recipeBatchSheetModal(recipeId){
             return `
             <div class="prep-step-row">
               <div class="bsr-head">
-                <div class="bsr-title"><span class="prep-badge">${ord}</span> Preparation/Checking Step ${ord} <span class="prep-pill">Preparation</span></div>
+                <div class="bsr-title">
+                  <span class="prep-badge">${ord}</span>
+                  <input type="text" id="step-prepname-${s.id}" value="${escAttr(s.name||'')}" placeholder="Preparation/Checking Step ${ord}" class="prep-title-input">
+                  ${prepEditIconHtml()}
+                  <span class="prep-pill">Preparation</span>
+                </div>
                 <div class="bsr-actions">
                   <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
                   <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
@@ -11799,7 +11820,7 @@ function bsmcLedgerStepsHtml(steps, ordinals){
         ? `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.label)}</td><td colspan="2" style="font-weight:700;">${c.value?esc(c.value):'—'}</td><td></td></tr>`
         : `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.text)}</td><td></td><td></td><td>${c.checked?'☑':'☐'}</td></tr>`
       ).join('');
-      return `<tr class="bsmc-ledger-grp"><td colspan="5">Preparation / Checking ${ord}</td></tr>${checklistRows}`;
+      return `<tr class="bsmc-ledger-grp"><td colspan="5">${s.name?esc(s.name):'Preparation / Checking '+ord}</td></tr>${checklistRows}`;
     }
     return `<tr class="bsmc-ledger-check"><td style="font-weight:700;">${esc(letterLabel(ord-1))}</td><td>${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}</td><td>${s.temperature?esc(s.temperature)+'°C':''}</td><td>${s.waitMinutes>0?s.waitMinutes+' min':''}</td><td></td></tr>`;
   }).join('');
@@ -11954,7 +11975,7 @@ async function saveBatchSheetSteps(recipeId){
         const text = (c.text||'').trim();
         return text ? {id:c.id, kind:'checklist', text} : null;
       }).filter(Boolean);
-      return checklist.length ? {id:s.id, type:'preparation', checklist} : null;
+      return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
     }
     const ingredient = (s.ingredient||'').trim();
     if(!ingredient) return null;

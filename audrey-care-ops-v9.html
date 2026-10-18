@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018093911">
+<meta name="app-build" content="20261018131808">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -766,6 +766,8 @@ html{ visibility:hidden; }
   .prep-checklist-item input[type="text"]{flex:1;border:none;background:transparent;font:inherit;font-size:13px;color:var(--ink);outline:none;min-width:0;}
   .prep-checklist-remove{border:none;background:none;color:var(--muted);cursor:pointer;flex-shrink:0;font-size:12px;padding:2px 4px;}
   .prep-checklist-remove:hover{color:var(--ink);}
+  .prep-edit-icon{flex-shrink:0;border:none;background:none;padding:4px;margin:-4px 0;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:6px;}
+  .prep-edit-icon:hover{color:var(--accent-dark);background:var(--accent-soft);}
   .prep-field-item input.prep-field-value{flex:0 0 120px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:5px 9px;}
   .prep-field-item input.prep-field-value:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
   .prep-footer{display:flex;gap:8px;flex-wrap:wrap;}
@@ -10210,6 +10212,13 @@ function temperatureTagHtml(idPrefix, s){
 function instructionTextareaHtml(idPrefix, s){
   return `<textarea id="${idPrefix}-ing-${s.id}" rows="1" placeholder="e.g. Carbomer + H2O" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.ingredient))}</textarea>`;
 }
+// A preparation/checking checklist's question and field-label text inputs are borderless and
+// transparent (.prep-checklist-item input[type="text"]) so a filled-in row reads as plain text,
+// not a form — but that leaves nothing to show it's actually editable. This pencil button is pure
+// visual affordance, placed right after the text input it belongs to so a click can focus it.
+function prepEditIconHtml(){
+  return `<button type="button" class="prep-edit-icon" title="Edit" tabindex="-1" onclick="this.previousElementSibling.focus()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>`;
+}
 function newStepDraft(){ return {id:uid('STEP'), ingredient:'', amount:'', temperature:'', waitMinutes:0}; }
 function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 // Percentage-of-batch-weight formulation, e.g. { percent: 4 } on an 150kg batch needs 6kg.
@@ -11474,6 +11483,7 @@ function renderTemplateStepsModal(){
                     <div class="prep-checklist-item prep-field-item">
                       <input type="text" id="tfld-value-${c.id}" value="${escAttr(c.value)}" placeholder="Value" class="prep-field-value">
                       <input type="text" id="tfld-label-${c.id}" value="${escAttr(c.label)}" placeholder="Initial Water pH Level">
+                      ${prepEditIconHtml()}
                       ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                     </div>`;
                   }
@@ -11481,6 +11491,7 @@ function renderTemplateStepsModal(){
                   <div class="prep-checklist-item">
                     <input type="checkbox">
                     <input type="text" id="tchk-${c.id}" value="${escAttr(c.text)}" placeholder="Checklist question…">
+                    ${prepEditIconHtml()}
                     ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-tchk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                   </div>`;
                 }).join('')}
@@ -11650,6 +11661,7 @@ function recipeBatchSheetModal(recipeId){
                     <div class="prep-checklist-item prep-field-item">
                       <input type="text" id="step-tfld-value-${c.id}" value="${escAttr(c.value)}" placeholder="Value" class="prep-field-value">
                       <input type="text" id="step-tfld-label-${c.id}" value="${escAttr(c.label)}" placeholder="Initial Water pH Level">
+                      ${prepEditIconHtml()}
                       ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                     </div>`;
                   }
@@ -11657,6 +11669,7 @@ function recipeBatchSheetModal(recipeId){
                   <div class="prep-checklist-item">
                     <input type="checkbox">
                     <input type="text" id="step-tchk-${c.id}" value="${escAttr(c.text)}" placeholder="Checklist question…">
+                    ${prepEditIconHtml()}
                     ${checklist.length>1 ? `<button type="button" class="prep-checklist-remove" data-chk-remove="${s.id}:${c.id}" title="Remove">✕</button>` : ''}
                   </div>`;
                 }).join('')}

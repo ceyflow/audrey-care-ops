@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018093043">
+<meta name="app-build" content="20261018093749">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -282,11 +282,14 @@ html{ visibility:hidden; }
   /* .bsmc-chip-batch is the printed/static label (printBatchSheet, printDocumentedBatchSheet, the
      Settings live preview) — a solid black pill reads as a clickable button on a printed page, so
      it gets the same light bordered treatment as the date chip, just bolder to still stand out.
-     .bsmc-chip-batch-input is the on-screen MODAL's editable field, where a filled pill is the
-     right signal (this one you can actually type into) — kept as its own distinct dark style. */
+     .bsmc-chip-batch-input is the on-screen MODAL's editable field — starts blank (a different
+     batch number every time, typed fresh per batch) so it needs to read as an empty space waiting
+     to be filled in, not a value that's already there: a dashed border instead of the date chip's
+     solid one, same as the "+ Temp" picker elsewhere in this app signals an unset field. */
   .bsmc-chip-batch{display:inline-block;background:#fff;border:1.5px solid #20291F;border-radius:999px;padding:5.5px 14px;font-size:12px;font-weight:700;color:#20291F;}
-  .bsmc-chip-batch-input{display:inline-block;background:#20291F;color:#fff;border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;width:140px;text-align:right;font-family:inherit;}
-  .bsmc-chip-batch-input::placeholder{color:rgba(255,255,255,.6);}
+  .bsmc-chip-batch-input{display:inline-block;background:#fff;color:#20291F;border:1.5px dashed #9CA9A0;border-radius:999px;padding:5.5px 14px;font-size:12px;font-weight:700;width:140px;text-align:right;font-family:inherit;}
+  .bsmc-chip-batch-input::placeholder{color:#9CA9A0;font-weight:500;}
+  .bsmc-chip-batch-input:focus{outline:none;border-color:#3C9058;border-style:solid;box-shadow:0 0 0 3px #E4F8EA;}
   /* Sticker stock keeps the same grid (every fragrance x product cell visible and directly
      editable at once, by request) but with visibly separated, larger rows instead of a cramped
      hairline grid — easier to scan across 7 columns and tap the right cell on a factory-floor
@@ -10225,11 +10228,11 @@ function openRecipeModal(id){
 function openBatchSheetModal(id){
   if(!byId(state.recipes, id)) return;
   state._recipeDraft = buildRecipeDraft(id);
-  // Generated once per modal-open, not per render — the sheet re-renders in place on every Save
-  // or step edit, and regenerating this on each render would silently throw away whatever batch
-  // number was typed in. syncDraftStepFieldsFromDOM() carries a typed edit into this field across
-  // those re-renders; see its own note.
-  state._recipeDraft.batchNo = uid('BLD');
+  // Starts blank, not a generated id — a different real batch number gets typed in by hand for
+  // every batch. Blank also survives the sheet's own re-renders (on Save, a step edit, …) the same
+  // way a typed one does, via syncDraftStepFieldsFromDOM(); see its own note. Left blank when the
+  // batch is actually started, startBatch() falls back to its own auto-generated id.
+  state._recipeDraft.batchNo = '';
   openModal('recipesheet:'+id);
 }
 // ---- Mixing steps templates ----
@@ -11598,6 +11601,7 @@ function recipeBatchSheetModal(recipeId){
         <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:104px;max-width:440px;object-fit:contain;">` : ''}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(new Date().toISOString())}</span>` : ''}
+          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc((state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || '')}" placeholder="Batch No." class="bsmc-chip-batch-input" oninput="if(state._recipeDraft) state._recipeDraft.batchNo=this.value;">` : ''}
         </div>
       </div>
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>

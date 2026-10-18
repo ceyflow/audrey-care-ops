@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018082918">
+<meta name="app-build" content="20261018084450">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -10725,7 +10725,6 @@ function renderRecipeLibraryPage(){
     <div style="display:flex;gap:8px;">
       ${canManageBlendBoard() ? `<button class="btn" id="btn-instruction-style">Instruction style</button>` : ''}
       ${state.session && roleCan(state.session.role, 'costing_manage_templates') ? `<button class="btn" id="btn-mixing-templates">Phrases templates</button>` : ''}
-      ${state.session && roleCan(state.session.role, 'costing_create_recipe') ? `<button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button>` : ''}
     </div>
   </div>
   ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${state.session && roleCan(state.session.role,'costing_create_recipe')?'Create one to start guiding the blending team through a batch.':''}</div>` : `
@@ -11567,8 +11566,7 @@ function recipeBatchSheetModal(recipeId){
           </tbody>
         </table>
       </div>
-      <div class="bsmc-card">
-      <div class="bsmc-label">Production Steps</div>
+      <div class="bsmc-label" style="margin:4px 0 10px;">Production Steps</div>
       ${canEditSteps ? (()=>{
         let phraseCount = 0, prepCount = 0;
         const ordinals = draftSteps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
@@ -11635,8 +11633,7 @@ function recipeBatchSheetModal(recipeId){
         <button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>
       </div>
       `;
-      })() : (r.steps.length ? bsmcPlainStepsHtml(r.steps) : '<div class="hint">No production steps yet.</div>')}
-      </div>
+      })() : `<div class="bsmc-card" style="margin-top:0;">${r.steps.length ? bsmcPlainStepsHtml(r.steps) : '<div class="hint">No production steps yet.</div>'}</div>`}
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
       <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>

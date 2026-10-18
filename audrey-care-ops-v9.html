@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018133621">
+<meta name="app-build" content="20261018134529">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6181,6 +6181,7 @@ function renderInner(){
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
+  if(freshPage && state.page==='dashboard') animateDashboardStats();
 }
 
 /* ===================== Customer order tracker ===================== */
@@ -6885,6 +6886,32 @@ function renderPage(){
 }
 
 /* ===================== Dashboard ===================== */
+// Counts each dashboard stat card up from 0 to its real value, instead of the number just
+// appearing — staggered per card (roughly matching the stat cards' own existing entrance
+// animation, content-enter in CSS) so each number settles shortly after its card finishes
+// animating in. Only called from renderInner() on an actual fresh navigation onto the Dashboard
+// (freshPage) — never on a background re-render of the dashboard already on screen (a realtime
+// update elsewhere). The markup itself always renders the real value (never "0") so any render
+// that ISN'T followed by this — background re-renders included — shows the correct number with no
+// animation; this function is the only thing that ever drops a number back to 0, right before
+// counting it back up, so a mid-animation re-render can't strand a card stuck at 0.
+function animateDashboardStats(){
+  document.querySelectorAll('.stat-card .stat-num[data-target]').forEach((el, i)=>{
+    const target = parseInt(el.dataset.target, 10) || 0;
+    const duration = 650;
+    el.textContent = '0';
+    setTimeout(()=>{
+      const start = performance.now();
+      const tick = now => {
+        const p = Math.min(1, (now-start)/duration);
+        const eased = 1 - Math.pow(1-p, 3); // ease-out cubic
+        el.textContent = Math.round(target*eased);
+        if(p < 1) requestAnimationFrame(tick); else el.textContent = target;
+      };
+      requestAnimationFrame(tick);
+    }, Math.min(i, 3)*70);
+  });
+}
 function renderDashboard(){
   const orders = activeOrders();
   const counts = STAGES.map((_,i)=>orders.filter(o=>o.stage===i).length);
@@ -6906,7 +6933,7 @@ function renderDashboard(){
     ${stats.map(s=>`
       <div class="stat-card">
         <div class="label">${s.label}</div>
-        <div class="value ${s.danger?'danger':''}">${s.danger?'<span class="pulse-dot"></span>':''}${s.value}</div>
+        <div class="value ${s.danger?'danger':''}">${s.danger?'<span class="pulse-dot"></span>':''}<span class="stat-num" data-target="${s.value}">${s.value}</span></div>
         ${s.sub?`<div class="hint" style="margin-top:4px;">${s.sub}</div>`:''}
       </div>`).join('')}
   </div>

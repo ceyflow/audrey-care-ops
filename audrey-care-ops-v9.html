@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018090522">
+<meta name="app-build" content="20261018091236">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -274,8 +274,13 @@ html{ visibility:hidden; }
   .bsmc-step-text{font-size:13.5px;line-height:1.5;white-space:pre-line;color:#20291F;}
   .bsmc-step-meta{font-size:11.5px;color:#6C8071;margin-top:3px;}
   .bsmc-chip-date{display:inline-block;background:#fff;border:1px solid #D9D9D2;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:#20291F;}
-  .bsmc-chip-batch,.bsmc-chip-batch-input{display:inline-block;background:#20291F;color:#fff;border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;}
-  .bsmc-chip-batch-input{width:140px;text-align:right;font-family:inherit;}
+  /* .bsmc-chip-batch is the printed/static label (printBatchSheet, printDocumentedBatchSheet, the
+     Settings live preview) — a solid black pill reads as a clickable button on a printed page, so
+     it gets the same light bordered treatment as the date chip, just bolder to still stand out.
+     .bsmc-chip-batch-input is the on-screen MODAL's editable field, where a filled pill is the
+     right signal (this one you can actually type into) — kept as its own distinct dark style. */
+  .bsmc-chip-batch{display:inline-block;background:#fff;border:1.5px solid #20291F;border-radius:999px;padding:5.5px 14px;font-size:12px;font-weight:700;color:#20291F;}
+  .bsmc-chip-batch-input{display:inline-block;background:#20291F;color:#fff;border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;width:140px;text-align:right;font-family:inherit;}
   .bsmc-chip-batch-input::placeholder{color:rgba(255,255,255,.6);}
   /* Sticker stock keeps the same grid (every fragrance x product cell visible and directly
      editable at once, by request) but with visibly separated, larger rows instead of a cramped
@@ -10105,9 +10110,38 @@ function batchRemainingSeconds(){
   if(!b.stepDeadline) return 0;
   return (new Date(b.stepDeadline).getTime() - Date.now())/1000;
 }
+// Keeps the screen from auto-locking while a batch is actively being watched on this device —
+// without it, mobile browsers throttle/suspend this very timer once the screen locks or the tab
+// is backgrounded, so the countdown freezes and the audible alert goes silent until someone comes
+// back (see startBatchTicker's own 1s tick, which is what stops running at all once that happens).
+// This only ever helps while the tab stays open and visible; it can't fix a phone that's been
+// manually locked for a while or someone switching to a different app entirely — the OS backgrounds
+// the page either way and this API offers no way around that, only against the screen's own
+// auto-timeout. Gracefully a no-op on browsers without Wake Lock support (most of them still, on
+// older Android/iOS) — the rest of the ticker keeps working exactly as before regardless.
+let _batchWakeLock = null;
+async function ensureBatchWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  const shouldHold = isBatchDisplayActive() && state.page==='recipes' && document.visibilityState==='visible';
+  if(shouldHold && !_batchWakeLock){
+    try{
+      _batchWakeLock = await navigator.wakeLock.request('screen');
+      _batchWakeLock.addEventListener('release', ()=>{ _batchWakeLock = null; });
+    }catch(e){ /* denied, low battery, unsupported in this context, etc — best-effort only */ }
+  } else if(!shouldHold && _batchWakeLock){
+    const lock = _batchWakeLock; _batchWakeLock = null;
+    try{ await lock.release(); }catch(e){}
+  }
+}
+// The OS releases any wake lock the instant a tab is hidden (screen lock, app switch) — there's no
+// way to prevent that, only to re-request it the moment the tab is visible again, so the screen
+// stays on for the rest of a still-running batch instead of needing another manual trigger.
+document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') ensureBatchWakeLock(); });
 function startBatchTicker(){
   stopBatchTicker();
+  ensureBatchWakeLock();
   state._batchTicker = setInterval(()=>{
+    ensureBatchWakeLock();
     if(!state.activeBatch || state.page!=='recipes') return;
     const b = state.activeBatch;
     if(b.status!=='running') return;
@@ -10142,7 +10176,10 @@ function startBatchTicker(){
     if(noteEl) noteEl.textContent = remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step';
   }, 1000);
 }
-function stopBatchTicker(){ if(state._batchTicker){ clearInterval(state._batchTicker); state._batchTicker=null; } }
+function stopBatchTicker(){
+  if(state._batchTicker){ clearInterval(state._batchTicker); state._batchTicker=null; }
+  if(_batchWakeLock){ const lock = _batchWakeLock; _batchWakeLock = null; lock.release().catch(()=>{}); }
+}
 
 // ---- Recipe CRUD ----
 const TEMPERATURE_OPTIONS = [40,45,50,55,60,65,70,75,80];
@@ -11698,6 +11735,19 @@ function renderPrepChecklistHTML(){
   </table>
   `;
 }
+// Printing right after setting #print-area's innerHTML can race a logo image that's still loading
+// (a remote Supabase Storage URL, not an inline data: URI) — Chromium's print snapshot doesn't
+// reliably wait for images still in flight, so a logo that shows fine on-screen a moment later can
+// come out as a blank gap in the actual print/PDF. Wait for every image in the print area to
+// settle (load or error) before handing off to window.print().
+function waitForPrintAreaImages(area){
+  const imgs = [...area.querySelectorAll('img')].filter(img => !img.complete);
+  if(!imgs.length) return Promise.resolve();
+  return Promise.all(imgs.map(img => new Promise(resolve => {
+    img.addEventListener('load', resolve, {once:true});
+    img.addEventListener('error', resolve, {once:true});
+  })));
+}
 // Numbered-circle rendering for a flat, not-yet-run steps list (the live recipe's own steps, or a
 // draft's edited copy) — shared by the on-screen batch sheet modal's read-only view and
 // printBatchSheet, so both read exactly the same list the recipe actually holds right now. The
@@ -11787,7 +11837,7 @@ function printBatchSheet(recipeId){
       ${renderPrepChecklistHTML()}
     </div>
   `;
-  window.print();
+  waitForPrintAreaImages(area).then(()=>window.print());
 }
 // The physical, for-the-record version: prints the actual run data snapshotted onto a completed
 // Mixing and Filling card by finishBatchIntoBlendingBoard — start/end time, who ran it, and the
@@ -11920,7 +11970,7 @@ function printDocumentedBatchSheet(batchId){
       </div>
     </div>
   `;
-  window.print();
+  waitForPrintAreaImages(area).then(()=>window.print());
 }
 async function saveBatchSheetSteps(recipeId){
   syncDraftStepFieldsFromDOM();

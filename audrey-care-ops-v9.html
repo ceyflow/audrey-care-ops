@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018024500">
+<meta name="app-build" content="20261018032450">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -645,18 +645,26 @@ html{ visibility:hidden; }
   .rc-icon-badge{width:36px;height:36px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin-bottom:2px;}
   .rc-icon-badge svg{width:19px;height:19px;}
   .recipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
-  .batch-card{position:relative;background:#F6FAF7;color:#15201A;border:1px solid #E1EAE3;border-radius:14px;padding:26px 28px;margin-bottom:22px;font-family:'Inter',system-ui,sans-serif;}
-  .batch-card .batch-recipe-name{font-size:13px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.06em;padding-right:120px;}
-  .batch-card .batch-step-of{font-size:12px;font-weight:700;color:#5B6E61;text-transform:uppercase;letter-spacing:.06em;margin-top:10px;}
-  .batch-card .batch-step-title{font-size:22px;font-weight:700;margin:3px 0 0;font-family:'Poppins',sans-serif;line-height:1.3;}
-  .batch-card .batch-step-detail{font-size:15px;font-weight:400;color:#5B6E61;margin:6px 0 2px;line-height:1.5;white-space:pre-line;max-width:640px;}
-  .batch-card .batch-step-amount{font-size:14.5px;font-weight:600;color:#15201A;}
-  .batch-card .batch-timer-panel{background:#fff;border:1px solid #E1EAE3;border-radius:12px;padding:16px 20px;margin:14px 0 0;}
-  .batch-temp-badge{position:absolute;top:18px;right:22px;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-weight:700;font-size:15px;color:#fff;animation:temp-badge-pulse 1.3s ease-in-out infinite;z-index:2;}
-  .batch-temp-badge.temp-green{background:#34C759;--glow:rgba(52,199,89,.55);}
-  .batch-temp-badge.temp-yellow{background:#E0A82E;--glow:rgba(224,168,46,.55);}
-  .batch-temp-badge.temp-red{background:#E5484D;--glow:rgba(229,72,77,.55);}
-  @keyframes temp-badge-pulse{0%,100%{box-shadow:0 0 6px 1px var(--glow);opacity:1;}50%{box-shadow:0 0 16px 4px var(--glow);opacity:.85;}}
+  .batch-card.batch-tile{--tile-accent:var(--accent-dark);position:relative;background:#fff;color:#15201A;border:1px solid #E1EAE3;border-radius:14px;padding:16px 18px;margin-bottom:22px;font-family:'Inter',system-ui,sans-serif;max-width:300px;}
+  .batch-tile.bt-paused{--tile-accent:#C77B10;}
+  .batch-tile.bt-temp-yellow{--tile-accent:#E0A82E;}
+  .batch-tile.bt-temp-red{--tile-accent:#E5484D;}
+  .batch-tile .bt-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .batch-tile .bt-recipe{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tile-accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .batch-tile .bt-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:#34C759;}
+  .batch-tile .bt-dot.temp-yellow{background:#E0A82E;}
+  .batch-tile .bt-dot.temp-red{background:#E5484D;}
+  .batch-tile .bt-dot.bt-dot-paused{background:#C77B10;}
+  .batch-tile .bt-countdown{font-family:'Poppins',sans-serif;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:8px 0 2px;color:var(--tile-accent);}
+  .batch-tile .bt-countdown.done{color:#C77B10;animation:pulse-dot-lite 1.4s infinite;}
+  .batch-tile .bt-headline{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .batch-tile .bt-meta{font-size:12px;font-weight:500;color:#5B6E61;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .batch-tile .bt-actions{display:flex;gap:6px;margin-top:12px;}
+  .batch-tile .bt-actions .btn{background:#fff;border-color:#D8E3DA;color:#15201A;font-weight:600;font-size:12px;padding:7px 11px;}
+  .batch-tile .bt-actions .btn:hover{background:#EFF5F1;}
+  .batch-tile .bt-actions .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
+  .batch-tile .bt-actions .btn-primary:hover{background:#2F7A48;}
+  .batch-tile .bt-actions .bt-expand{margin-left:auto;padding:7px 10px;}
   .batch-prep-checklist{margin:14px 0;text-align:left;max-width:560px;}
   .batch-prep-checklist .bpc-row{font-size:15px;color:#15201A;padding:6px 0;}
   .batch-prep-checklist .bpc-check{display:flex;align-items:flex-start;gap:10px;}
@@ -668,16 +676,7 @@ html{ visibility:hidden; }
   .batch-prep-checklist .bpc-field-input{min-width:110px;padding:6px 10px;border:1px solid #D8E3DA;border-radius:7px;background:#F6FAF7;color:#15201A;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;}
   .batch-prep-checklist .bpc-field-input:focus{outline:none;border-color:var(--accent-dark);background:#fff;}
   .batch-prep-checklist .bpc-field-input::placeholder{color:#8A9B8F;font-weight:400;}
-  .batch-countdown{font-family:'Poppins',sans-serif;font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:18px 0 6px;letter-spacing:.01em;color:var(--accent-dark);}
-  .batch-countdown.done{color:#C77B10;animation:pulse-dot-lite 1.4s infinite;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
-  .batch-progress-track{height:6px;border-radius:99px;background:#E3EEE6;overflow:hidden;margin:14px 0 18px;}
-  .batch-progress-fill{height:100%;background:var(--accent-dark);border-radius:99px;transition:width .4s ease;}
-  .batch-controls{display:flex;gap:8px;flex-wrap:wrap;}
-  .batch-controls .btn{background:#fff;border-color:#D8E3DA;color:#15201A;font-weight:600;}
-  .batch-controls .btn:hover{background:#EFF5F1;}
-  .batch-controls .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
-  .batch-controls .btn-primary:hover{background:#2F7A48;}
   .batch-steplist{display:flex;flex-direction:column;gap:0;margin-top:18px;border-top:1px solid #E1EAE3;}
   .batch-steplist .bs-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E1EAE3;font-size:13px;color:#5B6E61;}
   .batch-steplist .bs-row.current{color:#15201A;font-weight:600;}
@@ -765,6 +764,9 @@ html{ visibility:hidden; }
   .batch-focus .bf-countdown{font-family:'Poppins',sans-serif;font-size:clamp(46px,7vw,86px);font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--accent-dark);}
   .batch-focus .bf-countdown.done{color:#C77B10;animation:pulse-dot-lite 1.4s infinite;}
   .batch-focus .bf-note{margin-top:8px;font-size:14px;font-weight:500;color:#5B6E61;}
+  .batch-focus .bf-test-sound{background:#fff;border:1px solid #D8E3DA;color:#15201A;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0;}
+  .batch-focus .bf-test-sound:hover{background:#EFF5F1;}
+  .batch-focus .bf-steps-card{margin-top:24px;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:20px 24px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
   .batch-focus .bf-controls{margin-top:auto;padding-top:28px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
   .batch-focus .bf-controls .btn{background:#fff;border:1px solid #D8E3DA;color:#15201A;font-size:15px;font-weight:700;padding:13px 24px;border-radius:12px;}
   .batch-focus .bf-controls .btn:hover{background:#EFF5F1;}
@@ -9780,10 +9782,6 @@ function batchTempGlowClass(temp){
   if(t>50) return 'temp-yellow';
   return 'temp-green';
 }
-function batchTempBadgeHtml(temp){
-  if(!temp) return '';
-  return `<div class="batch-temp-badge ${batchTempGlowClass(temp)}">🌡 ${esc(String(temp))}°C</div>`;
-}
 function batchStepChecklistHtml(step){
   if(step.type!=='preparation') return '';
   const canEdit = canManageBlendBoard();
@@ -10906,67 +10904,77 @@ function costingOnFixedCostFieldInput(el){
   }
   state._costingDirty = true;
 }
+// Mini-dashboard-tile card: deliberately shows only what's needed for a glance from across the
+// floor (recipe, the one number that matters right now, a one-line headline, Pause/Next/Stop) —
+// everything else (full multi-line instructions, the complete step list, Previous/Restart/Test
+// sound) now lives behind "Big screen" (renderBatchFocusOverlay), so this stays small even once
+// several batches are running side by side.
+function batchStepsListHtml(b, isDone){
+  return `<div class="batch-steplist">
+    ${b.steps.map((s,i)=>{
+      const cls = i<b.currentStep || isDone ? 'done' : (i===b.currentStep ? 'current' : '');
+      return `<div class="bs-row ${cls}">
+        <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
+        <span style="flex:1;">${esc(batchStepLabel(s))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
+        <span>${s.waitMinutes>0 ? s.waitMinutes+' min' : 'no wait'}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
 function renderActiveBatchCard(){
   const b = state.activeBatch;
   const step = b.steps[b.currentStep];
   const isDone = b.status==='completed';
-  const pct = b.steps.length<=1 ? 100 : Math.round((b.currentStep/(b.steps.length-1))*100);
-  const remaining = isDone ? 0 : batchRemainingSeconds();
+  const batchBit = [b.batchNo?('Batch '+esc(b.batchNo)):'', b.qty?esc(b.qty):'', b.variation?esc(b.variation):''].filter(Boolean).join(' · ');
+  let dotClass = 'temp-green', accentClass = '';
+  if(!isDone){
+    if(b.status==='paused'){ dotClass = 'bt-dot-paused'; accentClass = 'bt-paused'; }
+    else {
+      dotClass = batchTempGlowClass(step.temperature);
+      if(dotClass==='temp-yellow') accentClass = 'bt-temp-yellow';
+      else if(dotClass==='temp-red') accentClass = 'bt-temp-red';
+    }
+  }
+  const bodyHtml = isDone ? `
+      <div class="bt-countdown">✓</div>
+      <div class="bt-headline">All ${b.steps.length} steps done 🎉</div>
+      <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Started by ${esc(b.startedBy)}</div>
+    ` : step.type==='preparation' ? (()=>{
+      const total = (step.checklist||[]).length;
+      const ready = (step.checklist||[]).filter(c=> c.kind==='field' ? !!c.value : c.checked).length;
+      return `
+      <div class="bt-countdown">${ready}/${total}</div>
+      <div class="bt-headline">Preparation / Checking</div>
+      <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}</div>`;
+    })() : (()=>{
+      const remaining = batchRemainingSeconds();
+      const parts = splitStepInstruction(step.ingredient);
+      const timed = step.waitMinutes>0;
+      return `
+      <div ${timed?'id="batch-countdown"':''} class="bt-countdown ${timed && remaining<=0 ? 'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
+      <div class="bt-headline">${esc(parts.headline)}</div>
+      <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}${step.temperature?(' · '+esc(String(step.temperature))+'°C'):''}</div>`;
+    })();
   return `
-  <div class="batch-card">
-    ${!isDone ? batchTempBadgeHtml(step.temperature) : ''}
-    <div class="batch-recipe-name">${isDone?'Batch complete':'Batch in progress'} · ${esc(b.recipeName)}</div>
-    ${(b.batchNo || b.qty || b.variation) ? `<div style="font-size:13px;opacity:.8;margin:-4px 0 4px;">${[b.batchNo?('Batch '+esc(b.batchNo)):'', b.qty?esc(b.qty):'', b.variation?esc(b.variation):''].filter(Boolean).join(' · ')}</div>` : ''}
-    ${isDone ? `
-      <div class="batch-step-title">All ${b.steps.length} steps done 🎉</div>
-      <div class="batch-step-amount">Started by ${esc(b.startedBy)} · ${fmtDateTime(b.startedAt)}</div>
-    ` : `
-      <div class="batch-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>
-      ${step.type==='preparation' ? `
-        <div class="batch-step-title">Preparation/Checking</div>
-        ${batchStepChecklistHtml(step)}
-      ` : (()=>{
-        const parts = splitStepInstruction(step.ingredient);
-        return `
-        <div class="batch-step-title">${esc(parts.headline)}</div>
-        ${parts.detail ? `<div class="batch-step-detail">${esc(parts.detail)}</div>` : ''}
-        ${step.amount ? `<div class="batch-step-amount">${esc(step.amount)}</div>` : ''}
-        <div class="batch-timer-panel">
-          <div id="batch-countdown" class="batch-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
-          <div id="batch-countdown-note" class="rc-meta" style="opacity:.85;">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'paused' : (remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step'))}</div>
-        </div>`;
-      })()}
-    `}
-    <div class="batch-progress-track"><div class="batch-progress-fill" style="width:${pct}%;"></div></div>
-
-    <div class="batch-controls">
-      <button class="btn" id="btn-batch-focus">⛶ Big screen</button>
-      <button class="btn" id="btn-batch-test-sound" title="Play the timer alert once to check your volume">🔊 Test sound</button>
+  <div class="batch-card batch-tile ${accentClass}">
+    <div class="bt-head">
+      <span class="bt-recipe">${esc(b.recipeName)}</span>
+      <span class="bt-dot ${dotClass}"></span>
+    </div>
+    ${bodyHtml}
+    <div class="bt-actions">
       ${canManageBlendBoard() ? `
       ${!isDone && b.status==='running' ? `<button class="btn" id="btn-batch-pause">Pause</button>` : ''}
       ${!isDone && b.status==='paused' ? `<button class="btn" id="btn-batch-resume">Resume</button>` : ''}
-      ${!isDone ? `<button class="btn" id="btn-batch-restart">Restart step timer</button>` : ''}
-      ${!isDone && b.currentStep>0 ? `<button class="btn" id="btn-batch-prev">◂ Previous step</button>` : ''}
-      ${!isDone ? `<button class="btn btn-primary" id="btn-batch-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
-      <button class="btn" id="btn-batch-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
+      ${!isDone ? `<button class="btn btn-primary" id="btn-batch-next">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
+      <button class="btn" id="btn-batch-stop">${isDone?'Dismiss':'Stop'}</button>
       ` : ''}
-    </div>
-
-    <div class="batch-steplist">
-      ${b.steps.map((s,i)=>{
-        const cls = i<b.currentStep || (isDone) ? 'done' : (i===b.currentStep ? 'current' : '');
-        return `<div class="bs-row ${cls}">
-          <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
-          <span style="flex:1;">${esc(batchStepLabel(s))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
-          <span>${s.waitMinutes>0 ? s.waitMinutes+' min' : 'no wait'}</span>
-        </div>`;
-      }).join('')}
+      <button class="btn bt-expand" id="btn-batch-focus" title="Big screen — full detail, all steps & more controls">⛶</button>
     </div>
   </div>`;
 }
-// Temperature shown as a labeled stat card in the focus overlay's side panel, not the floating
-// pulsing badge batchTempBadgeHtml() renders elsewhere (the regular, non-focus batch card) —
-// same green/yellow/red thresholds via batchTempGlowClass(), just a calmer light-theme treatment.
+// Temperature shown as a labeled stat card in the focus overlay's side panel — same green/yellow/red
+// thresholds via batchTempGlowClass() as the compact tile's status dot, just a calmer, labeled treatment.
 function batchFocusTempStatHtml(temp){
   if(!temp) return '';
   return `<div class="bf-side-card"><div class="bf-side-label"><span class="bf-temp-dot ${batchTempGlowClass(temp)}"></span>Temperature</div><div class="bf-temp-value">${esc(String(temp))}°C</div></div>`;
@@ -10986,7 +10994,10 @@ function renderBatchFocusOverlay(){
           <div class="bf-recipe">${esc(b.recipeName)}</div>
           ${!isDone ? `<div class="bf-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>` : ''}
         </div>
-        <button class="batch-focus-close" id="btn-batch-focus-close">✕ Close</button>
+        <div style="display:flex;gap:10px;flex-shrink:0;">
+          <button class="bf-test-sound" id="btn-batch-focus-test-sound" title="Play the timer alert once to check your volume">🔊 Test sound</button>
+          <button class="batch-focus-close" id="btn-batch-focus-close">✕ Close</button>
+        </div>
       </div>
       ${isDone ? `
         <div class="bf-ingredient">All done 🎉</div>
@@ -11016,12 +11027,18 @@ function renderBatchFocusOverlay(){
           </div>
         </div>`;
       })()}
+      <div class="bf-steps-card">
+        <div class="bf-main-label">All steps</div>
+        ${batchStepsListHtml(b, isDone)}
+      </div>
       ${canManageBlendBoard() ? `
       <div class="bf-controls">
         ${!isDone && b.status==='running' ? `<button class="btn" id="btn-batch-focus-pause">Pause</button>` : ''}
         ${!isDone && b.status==='paused' ? `<button class="btn" id="btn-batch-focus-resume">Resume</button>` : ''}
         ${!isDone && b.currentStep>0 ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
+        ${!isDone ? `<button class="btn" id="btn-batch-focus-restart">Restart step timer</button>` : ''}
         ${!isDone ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
+        <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
       </div>` : ''}
     </div>
   </div>`;
@@ -14677,17 +14694,17 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-mat-remove]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftRemoveMaterial(b.dataset.matRemove); }));
   if(byIdEl('btn-batch-pause')) byIdEl('btn-batch-pause').onclick = pauseBatch;
   if(byIdEl('btn-batch-resume')) byIdEl('btn-batch-resume').onclick = resumeBatch;
-  if(byIdEl('btn-batch-restart')) byIdEl('btn-batch-restart').onclick = restartCurrentStep;
-  if(byIdEl('btn-batch-prev')) byIdEl('btn-batch-prev').onclick = prevBatchStep;
   if(byIdEl('btn-batch-next')) byIdEl('btn-batch-next').onclick = nextBatchStep;
   if(byIdEl('btn-batch-stop')) byIdEl('btn-batch-stop').onclick = stopBatch;
   if(byIdEl('btn-batch-focus')) byIdEl('btn-batch-focus').onclick = toggleBatchFocus;
-  if(byIdEl('btn-batch-test-sound')) byIdEl('btn-batch-test-sound').onclick = playBatchAlertSound;
   if(byIdEl('btn-batch-focus-close')) byIdEl('btn-batch-focus-close').onclick = toggleBatchFocus;
+  if(byIdEl('btn-batch-focus-test-sound')) byIdEl('btn-batch-focus-test-sound').onclick = playBatchAlertSound;
   if(byIdEl('btn-batch-focus-pause')) byIdEl('btn-batch-focus-pause').onclick = pauseBatch;
   if(byIdEl('btn-batch-focus-resume')) byIdEl('btn-batch-focus-resume').onclick = resumeBatch;
   if(byIdEl('btn-batch-focus-prev')) byIdEl('btn-batch-focus-prev').onclick = prevBatchStep;
+  if(byIdEl('btn-batch-focus-restart')) byIdEl('btn-batch-focus-restart').onclick = restartCurrentStep;
   if(byIdEl('btn-batch-focus-next')) byIdEl('btn-batch-focus-next').onclick = nextBatchStep;
+  if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = stopBatch;
 
   // Chat
   if(byIdEl('chat-form')) byIdEl('chat-form').addEventListener('submit', sendChatMessage);

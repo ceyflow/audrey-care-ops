@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018051053">
+<meta name="app-build" content="20261018052602">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2007,9 +2007,9 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
-  Blending: ['blendingdept','blending','chat','recipes'],
+  Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
   Packing: ['orders','stickerstock','chat'],
   'Customer Care': ['customercare','complaints','orderinquiry','chat'],
   'Orders Process': ['ordersprocess'],
@@ -2017,7 +2017,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -3584,7 +3584,7 @@ async function loadAll(){
       {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS.Admin)},
       {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'])},
       {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints'], permissions:buildRolePermissions(['complaints_manage','complaints_edit_after_1hr'])},
-      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes'], permissions:buildRolePermissions(['blending_manage'])},
+      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes','recipelibrary'], permissions:buildRolePermissions(['blending_manage'])},
       {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders and sticker stock for packing and dispatch.', status:'Active', pages:['orders','stickerstock'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'])},
     ];
     kvSet('userRoles', state.userRoles).catch(e=>console.error('seed userRoles failed', e));
@@ -4228,7 +4228,7 @@ async function logOut(){
 }
 // These pages are only ever opened from their department hub's cards (Blending Department /
 // Customer Care) — mapped to that hub so Back can return there. See performGoTo/popstate below.
-const SUBPAGE_PARENT_HUB = { blending:'blendingdept', recipes:'blendingdept', costing:'blendingdept', orderinquiry:'customercare', complaints:'customercare' };
+const SUBPAGE_PARENT_HUB = { blending:'blendingdept', recipes:'blendingdept', recipelibrary:'blendingdept', costing:'blendingdept', orderinquiry:'customercare', complaints:'customercare' };
 function goTo(page){
   if(!pageAllowed(page)) return;
   if(state.page==='costing' && state._costingDirty){
@@ -6535,6 +6535,7 @@ const NAV = [
     {id:'orders', label:'Orders board', icon:'orders'},
     {id:'blendingdept', label:'Blending Department', icon:'blender', children:[
       {id:'costing', label:'Costing & recipe'},
+      {id:'recipelibrary', label:'Recipe library'},
       {id:'recipes', label:'Production Guide'},
       {id:'blending', label:'Mixing and Filling'},
     ]},
@@ -6642,9 +6643,10 @@ const PAGE_META = {
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
   customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
-  blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, or costing.'},
+  blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, recipe library, or costing.'},
   blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
-  recipes:{title:'Production Guide', sub:'Batch recipes with step-by-step timers for the blending team.'},
+  recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
+  recipelibrary:{title:'Recipe library', sub:'Create and manage the recipes the blending team runs batches from.'},
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
@@ -6787,6 +6789,7 @@ function renderPage(){
     case 'blendingdept': return renderBlendingDeptPage();
     case 'blending': return renderBlendingBoardPage();
     case 'recipes': return renderRecipesPage();
+    case 'recipelibrary': return renderRecipeLibraryPage();
     case 'costing': return renderCostingPage();
     case 'customers': return renderCustomersPage();
     case 'suppliers': return renderSuppliersPage();
@@ -7071,6 +7074,7 @@ function renderOrderInquiryPage(){
 function renderBlendingDeptPage(){
   const cards = [
     {id:'costing', label:'Costing & recipe', icon:'list'},
+    {id:'recipelibrary', label:'Recipe library', icon:'flask'},
     {id:'recipes', label:'Production Guide', icon:'recipe'},
     {id:'blending', label:'Mixing and Filling', icon:'blender'},
   ].filter(c=>pageAllowed(c.id));
@@ -10652,9 +10656,15 @@ function toggleBatchFocus(){ state.batchFocusMode = !state.batchFocusMode; rende
 function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatch.status!=='completed'); }
 
 // ---- Rendering ----
+// Production Guide now shows ONLY the batch currently running — browsing/creating/deleting
+// recipes moved to its own "Recipe library" page (renderRecipeLibraryPage, below), so this one
+// stays small even once several batches can run side by side.
 function renderRecipesPage(){
+  if(isBatchDisplayActive()) return renderActiveBatchCard();
+  return `<div class="empty-state">No batch running right now. Open a recipe in <a href="#" data-nav="recipelibrary">Recipe library</a> and start one from its Batch sheet to see it here.</div>`;
+}
+function renderRecipeLibraryPage(){
   return `
-  ${isBatchDisplayActive() ? renderActiveBatchCard() : ''}
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
     <div style="display:flex;gap:8px;">
@@ -14897,7 +14907,9 @@ function attachShellHandlers(){
     const noEl = document.getElementById('sheet-batch-no');
     const batchNo = noEl ? noEl.value.trim() : '';
     await startBatch(e.currentTarget.dataset.recipeId, batchNo ? {batchNo} : undefined);
-    if(state.activeBatch) closeModal(); // zero-step recipes show a toast and stay open instead
+    // zero-step recipes show a toast and stay open instead. Recipe library and the batch-running
+    // view (Production Guide) are separate pages now, so jump there to actually watch it run.
+    if(state.activeBatch){ closeModal(); goTo('recipes'); }
   };
   if(byIdEl('form-recipe')) byIdEl('form-recipe').addEventListener('submit', submitRecipe);
   if(byIdEl('btn-add-step')) byIdEl('btn-add-step').onclick = ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftAddStep(); };

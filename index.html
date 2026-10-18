@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018032450">
+<meta name="app-build" content="20261018034028">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -767,7 +767,7 @@ html{ visibility:hidden; }
   .batch-focus .bf-test-sound{background:#fff;border:1px solid #D8E3DA;color:#15201A;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0;}
   .batch-focus .bf-test-sound:hover{background:#EFF5F1;}
   .batch-focus .bf-steps-card{margin-top:24px;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:20px 24px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
-  .batch-focus .bf-controls{margin-top:auto;padding-top:28px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+  .batch-focus .bf-controls{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
   .batch-focus .bf-controls .btn{background:#fff;border:1px solid #D8E3DA;color:#15201A;font-size:15px;font-weight:700;padding:13px 24px;border-radius:12px;}
   .batch-focus .bf-controls .btn:hover{background:#EFF5F1;}
   .batch-focus .bf-controls .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
@@ -11027,10 +11027,6 @@ function renderBatchFocusOverlay(){
           </div>
         </div>`;
       })()}
-      <div class="bf-steps-card">
-        <div class="bf-main-label">All steps</div>
-        ${batchStepsListHtml(b, isDone)}
-      </div>
       ${canManageBlendBoard() ? `
       <div class="bf-controls">
         ${!isDone && b.status==='running' ? `<button class="btn" id="btn-batch-focus-pause">Pause</button>` : ''}
@@ -11040,6 +11036,10 @@ function renderBatchFocusOverlay(){
         ${!isDone ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
         <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
       </div>` : ''}
+      <div class="bf-steps-card">
+        <div class="bf-main-label">All steps</div>
+        ${batchStepsListHtml(b, isDone)}
+      </div>
     </div>
   </div>`;
 }

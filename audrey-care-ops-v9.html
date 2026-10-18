@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018091236">
+<meta name="app-build" content="20261018093043">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -267,12 +267,17 @@ html{ visibility:hidden; }
   table.bsmc-table tbody tr td:first-child{border-radius:8px 0 0 8px;}
   table.bsmc-table tbody tr td:last-child{border-radius:0 8px 8px 0;}
   table.bsmc-table tr.bsmc-total td{border-top:2px solid #20291F;font-weight:700;background:#fff;}
-  .bsmc-steps{list-style:none;margin:0;padding:0;}
-  .bsmc-step{display:flex;gap:12px;align-items:flex-start;padding:11px 0;}
-  .bsmc-step:not(:last-child){border-bottom:1px solid #EDF3EE;}
-  .bsmc-step-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#E4F8EA;color:#3C9058;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;}
-  .bsmc-step-text{font-size:13.5px;line-height:1.5;white-space:pre-line;color:#20291F;}
-  .bsmc-step-meta{font-size:11.5px;color:#6C8071;margin-top:3px;}
+  /* Compact Ledger Table — the picked direction for the Production Steps section, out of 10
+     explored structures. One dense table instead of a card per step: a shaded group-header row
+     opens each Preparation/Checking block, its checklist items are compact rows ending in a
+     ☑/☐ status column, and each mixing phase is a single row with its instruction, temperature
+     and wait time. Used for both the live (not-yet-run) steps list and the post-run documented
+     record — see bsmcLedgerStepsHtml. */
+  table.bsmc-ledger{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.bsmc-ledger th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#6C8071;font-weight:700;padding:7px 8px;border-bottom:1.5px solid #20291F;}
+  table.bsmc-ledger td{padding:8px 8px;border-bottom:1px solid #EDF3EE;vertical-align:top;}
+  table.bsmc-ledger tr.bsmc-ledger-grp td{background:#F4F9F5;font-weight:700;font-size:11.5px;color:#3C9058;text-transform:uppercase;letter-spacing:.03em;padding-top:12px;padding-bottom:6px;border-bottom:1px solid #D9EDE0;break-inside:avoid;}
+  table.bsmc-ledger tr.bsmc-ledger-check td{break-inside:avoid;}
   .bsmc-chip-date{display:inline-block;background:#fff;border:1px solid #D9D9D2;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:#20291F;}
   /* .bsmc-chip-batch is the printed/static label (printBatchSheet, printDocumentedBatchSheet, the
      Settings live preview) — a solid black pill reads as a clickable button on a printed page, so
@@ -9010,7 +9015,7 @@ function batchSheetTemplatePreviewPageHtml(tpl){
     </div>
     <div class="bsmc-card">
       <div class="bsmc-label">Production Steps</div>
-      ${documentedStepsSectionHtml(sampleSteps, ordinals)}
+      ${bsmcLedgerStepsHtml(sampleSteps, ordinals)}
     </div>
     ${batchSheetTrailingSectionsHtml(tpl, {combineNote:'Combine all phases slowly while stirring.', standardPH:'5.5 - 6.5'})}
   </div>`;
@@ -11593,7 +11598,6 @@ function recipeBatchSheetModal(recipeId){
         <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:104px;max-width:440px;object-fit:contain;">` : ''}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(new Date().toISOString())}</span>` : ''}
-          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc((state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || uid('BLD'))}" class="bsmc-chip-batch-input" oninput="if(state._recipeDraft) state._recipeDraft.batchNo=this.value;">` : ''}
         </div>
       </div>
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
@@ -11676,7 +11680,7 @@ function recipeBatchSheetModal(recipeId){
         <button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>
       </div>
       `;
-      })() : `<div class="bsmc-card" style="margin-top:0;">${r.steps.length ? bsmcPlainStepsHtml(r.steps) : '<div class="hint">No production steps yet.</div>'}</div>`}
+      })() : `<div class="bsmc-card" style="margin-top:0;">${r.steps.length ? bsmcLedgerStepsHtml(r.steps, documentedStepOrdinals(r.steps)) : '<div class="hint">No production steps yet.</div>'}</div>`}
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
       <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
@@ -11748,26 +11752,39 @@ function waitForPrintAreaImages(area){
     img.addEventListener('error', resolve, {once:true});
   })));
 }
-// Numbered-circle rendering for a flat, not-yet-run steps list (the live recipe's own steps, or a
-// draft's edited copy) — shared by the on-screen batch sheet modal's read-only view and
-// printBatchSheet, so both read exactly the same list the recipe actually holds right now. The
-// post-run documented sheet has its own richer per-step cards instead — see documentedStepCardHtml
-// — since it also carries recorded checklist state that a plain numbered line can't show.
-function bsmcPlainStepsHtml(steps){
-  return `<div class="bsmc-steps">${steps.map((s,i)=>{
-    const text = s.type==='preparation' ? 'Preparation / Checking' : esc(s.ingredient);
-    const meta = s.type==='preparation'
-      ? (s.checklist||[]).map(c=>c.kind==='field' ? `${esc(c.label)}${c.value?' — '+esc(c.value):''}` : esc(c.text)).join(' · ')
-      : [s.amount?esc(s.amount):'', s.temperature?esc(s.temperature)+'°C':'', s.waitMinutes>0?s.waitMinutes+' min':''].filter(Boolean).join(' · ');
-    return `
-    <div class="bsmc-step">
-      <div class="bsmc-step-num">${i+1}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="bsmc-step-text">${text}</div>
-        ${meta ? `<div class="bsmc-step-meta">${meta}</div>` : ''}
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+// Ordinals ("Preparation/Checking 1", Phrase "A"/"B"...) number within their own kind across the
+// WHOLE step list — computed once up front so every caller (live or documented) labels steps the
+// same way the on-screen step editor already does.
+function documentedStepOrdinals(steps){
+  let phraseCount = 0, prepCount = 0;
+  return steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
+}
+// Compact Ledger Table — the structure picked after exploring 10 alternatives for how the
+// Production Steps section reads (see batch sheet redesign history). One dense table instead of a
+// card per step: a shaded group-header row opens each Preparation/Checking block, its checklist
+// items are compact rows ending in a status column, and each mixing phase is a single row with its
+// instruction, temperature and wait time. Shared by the live (not-yet-run) steps list — the
+// on-screen modal's read-only view, printBatchSheet, the Settings preview — and the post-run
+// documented record (printDocumentedBatchSheet): a live checklist item has no `checked`/`value` yet
+// (nothing's been done), so it naturally prints blank/unchecked without any special-casing, while a
+// documented one shows the actual recorded state from the run.
+function bsmcLedgerStepsHtml(steps, ordinals){
+  const rows = steps.map((s, i) => {
+    const ord = ordinals[i];
+    if(s.type==='preparation'){
+      const checklistRows = (s.checklist||[]).map(c => c.kind==='field'
+        ? `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.label)}</td><td colspan="2" style="font-weight:700;">${c.value?esc(c.value):'—'}</td><td></td></tr>`
+        : `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.text)}</td><td></td><td></td><td>${c.checked?'☑':'☐'}</td></tr>`
+      ).join('');
+      return `<tr class="bsmc-ledger-grp"><td colspan="5">Preparation / Checking ${ord}</td></tr>${checklistRows}`;
+    }
+    return `<tr class="bsmc-ledger-check"><td style="font-weight:700;">${esc(letterLabel(ord-1))}</td><td>${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}</td><td>${s.temperature?esc(s.temperature)+'°C':''}</td><td>${s.waitMinutes>0?s.waitMinutes+' min':''}</td><td></td></tr>`;
+  }).join('');
+  return `
+  <table class="bsmc-ledger">
+    <thead><tr><th style="width:26px;">#</th><th>Instruction</th><th style="width:70px;">Temp</th><th style="width:70px;">Wait</th><th style="width:26px;"></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 // Renders a plain, read-only copy of the sheet into #print-area (a direct child of body, outside
 // the on-screen modal/overlay entirely) and prints that — see the #print-area CSS comment for
@@ -11831,7 +11848,7 @@ function printBatchSheet(recipeId){
       ${steps.length ? `
       <div class="bsmc-card">
         <div class="bsmc-label">Production Steps</div>
-        ${bsmcPlainStepsHtml(steps)}
+        ${bsmcLedgerStepsHtml(steps, documentedStepOrdinals(steps))}
       </div>` : ''}
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
       ${renderPrepChecklistHTML()}
@@ -11842,68 +11859,9 @@ function printBatchSheet(recipeId){
 // The physical, for-the-record version: prints the actual run data snapshotted onto a completed
 // Mixing and Filling card by finishBatchIntoBlendingBoard — start/end time, who ran it, and the
 // production steps as they stood at that run — rather than the live (possibly since-edited) recipe.
-// Each production step rendered as its own bordered card — the same "Phrase A / Preparation
-// step 1" shape as the on-screen editor, not a plain numbered list — so the printed record reads
-// the same way the person who built the template sees it. break-inside:avoid keeps one step from
-// being sliced across a page boundary. Checklist items print as a drawn ☑/☐ glyph reflecting the
-// actual checked state recorded during the run (updateBatchPrepChecked) — a real <input
-// type=checkbox> doesn't reliably print its checked state across browsers/print engines.
-function documentedStepCardHtml(s, ord){
-  const badge = label => `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#3C9058;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;">${label}</span>`;
-  if(s.type==='preparation'){
-    const rows = (s.checklist||[]).map(c=> c.kind==='field'
-      ? `<div style="padding:4px 0;font-size:13px;">${esc(c.label)}: <strong>${c.value?esc(c.value):'—'}</strong></div>`
-      : `<div style="padding:4px 0;font-size:13px;">${c.checked?'☑':'☐'} ${esc(c.text)}</div>`
-    ).join('');
-    return `
-    <div style="border:1px solid #D9EDE0;border-radius:10px;padding:14px 16px;margin-bottom:12px;break-inside:avoid;">
-      <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        ${badge(ord)} Preparation/Checking ${ord}
-      </div>
-      ${rows}
-    </div>`;
-  }
-  return `
-  <div style="border:1px solid #D9EDE0;border-radius:10px;padding:14px 16px;margin-bottom:12px;break-inside:avoid;">
-    <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      ${badge(letterLabel(ord-1))} Phrase ${letterLabel(ord-1)}
-      ${s.temperature ? `<span style="margin-left:auto;font-size:12px;font-weight:700;color:#3C9058;">🌡 ${esc(s.temperature)}°C</span>` : ''}
-    </div>
-    <div style="font-size:14px;white-space:pre-line;line-height:1.5;">${esc(s.ingredient)}</div>
-    ${s.amount ? `<div style="font-size:12px;color:#6C8071;margin-top:4px;">${esc(s.amount)}</div>` : ''}
-    ${s.waitMinutes>0 ? `<div style="font-size:12px;color:#6C8071;margin-top:4px;">Wait: ${s.waitMinutes} min</div>` : ''}
-  </div>`;
-}
-// Ordinals ("Preparation/Checking 1", "Phrase A"/"B"...) number within their own kind across the
-// WHOLE step list, not per page — splitting which card lands on which page must never change
-// what a card is labeled, so this is computed once up front and the caller places each rendered
-// card wherever it wants.
-function documentedStepOrdinals(steps){
-  let phraseCount = 0, prepCount = 0;
-  return steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
-}
-// Phrase cards are short (an instruction, maybe a temperature/wait line) and were taking a full
-// page width each while leaving half the line empty — pack consecutive phrase cards two to a row
-// instead. Preparation/Checking cards usually carry more lines (a whole checklist) and read
-// better full-width, so a run of those stays outside the grid, breaking it into its own block.
-function documentedStepsSectionHtml(steps, ordinals){
-  const blocks = [];
-  let i = 0;
-  while(i < steps.length){
-    if(steps[i].type==='preparation'){
-      blocks.push(documentedStepCardHtml(steps[i], ordinals[i]));
-      i++;
-      continue;
-    }
-    const group = [];
-    while(i < steps.length && steps[i].type!=='preparation'){
-      group.push(documentedStepCardHtml(steps[i], ordinals[i]));
-      i++;
-    }
-    blocks.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">${group.join('')}</div>`);
-  }
-  return blocks.join('');
-}
+// Checklist items print the actual ☑/☐ state recorded during the run (updateBatchPrepChecked) via
+// bsmcLedgerStepsHtml — a real <input type=checkbox> doesn't reliably print its checked state
+// across browsers/print engines.
 function printDocumentedBatchSheet(batchId){
   const b = byId(state.blendBatches, batchId); if(!b || !b.startedAt) return;
   const materials = b.materials||[];
@@ -11911,63 +11869,51 @@ function printDocumentedBatchSheet(batchId){
   const totalAmt = recipeMaterialAmount(totalPct, b.batchSizeKg||0);
   const steps = b.productionSteps||[];
   const ordinals = documentedStepOrdinals(steps);
-  // The pre-run Preparation/Checking step (when a recipe leads with one) reads as setup, not
-  // mixing — it belongs on the materials page with the rest of "before you start", not mixed in
-  // with the Production Steps on page 2.
-  const leadsWithPrep = steps.length && steps[0].type==='preparation';
-  const page1StepHtml = leadsWithPrep ? documentedStepCardHtml(steps[0], ordinals[0]) : '';
-  const page2Steps = leadsWithPrep ? steps.slice(1) : steps;
-  const page2Ordinals = leadsWithPrep ? ordinals.slice(1) : ordinals;
   const area = document.getElementById('print-area');
   if(!area) return;
   const tpl = batchSheetTemplate();
   const zoom = BATCH_SHEET_FONT_SCALE[tpl.fontSize] || 1;
   area.innerHTML = `
     <div style="max-width:680px;margin:0 auto;padding:24px;font-family:'Inter',system-ui,sans-serif;color:#20291F;zoom:${zoom};">
-      <div>
-        ${(tpl.showLogo && batchSheetLogo()) || tpl.showDate || tpl.showBatchNo ? `
-        <div style="background:${esc(tpl.headerColor)};-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;margin:-24px -24px 22px;padding:28px 24px 20px;border-radius:14px 14px 0 0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
-            ${batchSheetLogoSlotHtml(tpl)}
-            <div style="display:flex;gap:8px;flex-shrink:0;">
-              ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(b.completedAt)}</span>` : ''}
-              ${tpl.showBatchNo ? `<span class="bsmc-chip-batch">${esc(b.batchNo)}</span>` : ''}
-            </div>
+      ${(tpl.showLogo && batchSheetLogo()) || tpl.showDate || tpl.showBatchNo ? `
+      <div style="background:${esc(tpl.headerColor)};-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;margin:-24px -24px 22px;padding:28px 24px 20px;border-radius:14px 14px 0 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+          ${batchSheetLogoSlotHtml(tpl)}
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(b.completedAt)}</span>` : ''}
+            ${tpl.showBatchNo ? `<span class="bsmc-chip-batch">${esc(b.batchNo)}</span>` : ''}
           </div>
-          <div style="display:flex;justify-content:space-between;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #C9CAC4;font-size:12px;">
-            <div>
-              <div style="color:#6C8071;">Started</div>
-              <div style="font-weight:700;">${fmtDateTime(b.startedAt)} ${b.startedBy?`<span style="font-weight:400;color:#6C8071;">by ${esc(b.startedBy)}</span>`:''}</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="color:#6C8071;">Completed</div>
-              <div style="font-weight:700;">${fmtDateTime(b.completedAt)} ${b.completedBy?`<span style="font-weight:400;color:#6C8071;">by ${esc(b.completedBy)}</span>`:''}</div>
-            </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #C9CAC4;font-size:12px;">
+          <div>
+            <div style="color:#6C8071;">Started</div>
+            <div style="font-weight:700;">${fmtDateTime(b.startedAt)} ${b.startedBy?`<span style="font-weight:400;color:#6C8071;">by ${esc(b.startedBy)}</span>`:''}</div>
           </div>
-        </div>` : ''}
-        <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(b.recipeName||b.product)}</h2>
-        <div class="bsmc-pill" style="margin-bottom:16px;">${b.batchSizeKg||0} kg batch · locked</div>
-        <div class="bsmc-card">
-          <div class="bsmc-label">Materials</div>
-          <table class="bsmc-table">
-            <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th><th>Amount needed</th></tr></thead>
-            <tbody>
-              ${materials.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(m.name)}</td><td>${m.percent.toFixed(3)}</td><td>${recipeMaterialAmount(m.percent, b.batchSizeKg||0).toFixed(3)}</td></tr>`).join('')}
-              <tr class="bsmc-total"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td>${totalAmt.toFixed(3)}</td></tr>
-            </tbody>
-          </table>
+          <div style="text-align:right;">
+            <div style="color:#6C8071;">Completed</div>
+            <div style="font-weight:700;">${fmtDateTime(b.completedAt)} ${b.completedBy?`<span style="font-weight:400;color:#6C8071;">by ${esc(b.completedBy)}</span>`:''}</div>
+          </div>
         </div>
-        ${page1StepHtml ? `<div style="margin-top:4px;"><div class="bsmc-label">Preparation</div>${page1StepHtml}</div>` : ''}
+      </div>` : ''}
+      <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(b.recipeName||b.product)}</h2>
+      <div class="bsmc-pill" style="margin-bottom:16px;">${b.batchSizeKg||0} kg batch · locked</div>
+      <div class="bsmc-card">
+        <div class="bsmc-label">Materials</div>
+        <table class="bsmc-table">
+          <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th><th>Amount needed</th></tr></thead>
+          <tbody>
+            ${materials.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(m.name)}</td><td>${m.percent.toFixed(3)}</td><td>${recipeMaterialAmount(m.percent, b.batchSizeKg||0).toFixed(3)}</td></tr>`).join('')}
+            <tr class="bsmc-total"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td>${totalAmt.toFixed(3)}</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div>
-        ${page2Steps.length ? `
-        <div class="bsmc-card">
-          <div class="bsmc-label">Production Steps</div>
-          ${documentedStepsSectionHtml(page2Steps, page2Ordinals)}
-        </div>
-        ` : ''}
-        ${batchSheetTrailingSectionsHtml(tpl, {combineNote: b.combineNote, standardPH: b.standardPH})}
+      ${steps.length ? `
+      <div class="bsmc-card">
+        <div class="bsmc-label">Production Steps</div>
+        ${bsmcLedgerStepsHtml(steps, ordinals)}
       </div>
+      ` : ''}
+      ${batchSheetTrailingSectionsHtml(tpl, {combineNote: b.combineNote, standardPH: b.standardPH})}
     </div>
   `;
   waitForPrintAreaImages(area).then(()=>window.print());

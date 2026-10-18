@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018134529">
+<meta name="app-build" content="20261018145100">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4163,15 +4163,17 @@ function deviceSummaryFromUserAgent(ua){
   return os+' · '+browser;
 }
 // Fire-and-forget: never blocks login, and a failed lookup (offline, rate-limited, or blocked)
-// still leaves a time+device record, just without the fields it couldn't get. City/region are
-// shown as plain text only — no pin, no map.
+// still leaves a time+device record, just without the IP it couldn't get. City/region used to be
+// captured here too, but a free IP-geolocation lookup resolves to the ISP's nearest routing point,
+// not the person's real location — the same device logging in minutes apart kept showing different
+// provinces across the country, actively misleading rather than just imprecise, so dropped.
 async function logLoginEvent(name, role){
   let geo = {};
   try{
     const res = await fetch('https://ipapi.co/json/');
     if(res.ok){
       const data = await res.json();
-      if(!data.error) geo = {ip: data.ip, city: data.city, region: data.region};
+      if(!data.error) geo = {ip: data.ip};
     }
   }catch(e){}
   const entry = {id: uid('LOGIN'), name, role, at: new Date().toISOString(), userAgent: navigator.userAgent, ...geo};
@@ -6181,7 +6183,7 @@ function renderInner(){
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
-  if(freshPage && state.page==='dashboard') animateDashboardStats();
+  if(freshPage) animateStatCards();
 }
 
 /* ===================== Customer order tracker ===================== */
@@ -6885,17 +6887,18 @@ function renderPage(){
   }
 }
 
-/* ===================== Dashboard ===================== */
-// Counts each dashboard stat card up from 0 to its real value, instead of the number just
+// Counts every stat-card number on the current page up from 0 to its real value, instead of just
 // appearing — staggered per card (roughly matching the stat cards' own existing entrance
 // animation, content-enter in CSS) so each number settles shortly after its card finishes
-// animating in. Only called from renderInner() on an actual fresh navigation onto the Dashboard
-// (freshPage) — never on a background re-render of the dashboard already on screen (a realtime
-// update elsewhere). The markup itself always renders the real value (never "0") so any render
-// that ISN'T followed by this — background re-renders included — shows the correct number with no
-// animation; this function is the only thing that ever drops a number back to 0, right before
-// counting it back up, so a mid-animation re-render can't strand a card stuck at 0.
-function animateDashboardStats(){
+// animating in. Any page's stat cards can opt in, just by wrapping the number in
+// <span class="stat-num" data-target="N">N</span> (Dashboard, Customers, Suppliers so far) — called
+// unconditionally from renderInner() on every fresh page navigation (freshPage); a page with no
+// .stat-num elements is simply a no-op. Never runs on a background re-render of a page already on
+// screen (a realtime update elsewhere). The markup itself always renders the real value (never
+// "0") so any render this ISN'T called after — background re-renders included — shows the correct
+// number with no animation; this function is the only thing that ever drops a number back to 0,
+// right before counting it back up, so a mid-animation re-render can't strand a card stuck at 0.
+function animateStatCards(){
   document.querySelectorAll('.stat-card .stat-num[data-target]').forEach((el, i)=>{
     const target = parseInt(el.dataset.target, 10) || 0;
     const duration = 650;
@@ -6912,6 +6915,7 @@ function animateDashboardStats(){
     }, Math.min(i, 3)*70);
   });
 }
+/* ===================== Dashboard ===================== */
 function renderDashboard(){
   const orders = activeOrders();
   const counts = STAGES.map((_,i)=>orders.filter(o=>o.stage===i).length);
@@ -7228,17 +7232,12 @@ function renderBlendColumn(stageName, i){
   </div>`;
 }
 function renderBlendCard(b){
-  const priority = b.priority || 'Medium';
   return `
   <div class="card" draggable="${canManageBlendBoard()?'true':'false'}" data-blend="${b.id}">
-    <div class="top-row"><span class="customer">${esc(b.batchNo)}</span><span class="order-id">${b.id}</span></div>
-    <div class="product">${esc(b.product)} ${b.qty?('· qty '+esc(b.qty)):''}</div>
-    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-      <span class="pill pill-${priority.toLowerCase()}">${priority}</span>
-    </div>
+    <div class="top-row"><span class="customer">${esc(b.product)}${b.qty?(' · qty '+esc(b.qty)):''}</span><span class="order-id">${b.id}</span></div>
+    <div class="product">${esc(b.batchNo)}</div>
     <div class="meta-row">
-      <span class="assignee ${b.assignee?'':'unassigned'}"><span class="dot"></span>${b.assignee ? esc(b.assignee) : 'Unassigned'}</span>
-      <span class="days">${daysAgo(b.createdAt)}</span>
+      <span class="days" style="margin-left:auto;">${daysAgo(b.createdAt)}</span>
     </div>
   </div>`;
 }
@@ -7434,9 +7433,9 @@ function renderCustomersPage(){
   const active = state.customers.filter(c=>c.status==='Active').length;
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="label">Total customers</div><div class="value">${state.customers.length}</div></div>
-    <div class="stat-card"><div class="label">Active</div><div class="value accent">${active}</div></div>
-    <div class="stat-card"><div class="label">Inactive</div><div class="value">${state.customers.length-active}</div></div>
+    <div class="stat-card"><div class="label">Total customers</div><div class="value"><span class="stat-num" data-target="${state.customers.length}">${state.customers.length}</span></div></div>
+    <div class="stat-card"><div class="label">Active</div><div class="value accent"><span class="stat-num" data-target="${active}">${active}</span></div></div>
+    <div class="stat-card"><div class="label">Inactive</div><div class="value"><span class="stat-num" data-target="${state.customers.length-active}">${state.customers.length-active}</span></div></div>
   </div>
   <div class="toolbar">
     <input class="search-input" id="customer-search" placeholder="Search by name or phone…" value="${esc(state.filters.customerSearch)}">
@@ -7490,9 +7489,9 @@ function renderSuppliersPage(){
   const active = state.suppliers.filter(s=>s.status==='Active').length;
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="label">Total suppliers</div><div class="value">${state.suppliers.length}</div></div>
-    <div class="stat-card"><div class="label">Active</div><div class="value accent">${active}</div></div>
-    <div class="stat-card"><div class="label">Inactive</div><div class="value">${state.suppliers.length-active}</div></div>
+    <div class="stat-card"><div class="label">Total suppliers</div><div class="value"><span class="stat-num" data-target="${state.suppliers.length}">${state.suppliers.length}</span></div></div>
+    <div class="stat-card"><div class="label">Active</div><div class="value accent"><span class="stat-num" data-target="${active}">${active}</span></div></div>
+    <div class="stat-card"><div class="label">Inactive</div><div class="value"><span class="stat-num" data-target="${state.suppliers.length-active}">${state.suppliers.length-active}</span></div></div>
   </div>
   <div class="toolbar">
     <input class="search-input" id="supplier-search" placeholder="Search by name or vendor ID…" value="${esc(state.filters.supplierSearch)}">
@@ -9772,18 +9771,17 @@ function renderLoginActivityPanel(){
   <div class="panel" id="settings-login-activity">
     <div class="panel-head"><h3>Login activity</h3></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">Every sign-in, with where it came from — so you can spot one you don't recognize.</div>
+      <div class="hint" style="margin-bottom:12px;">Every sign-in, with its IP and device — so you can spot one you don't recognize.</div>
       ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
       <table class="data-table" style="margin:0;">
-        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>Location</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
+        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
         <tbody>
           ${entries.slice(0,100).map(e=>`
           <tr>
             <td>${esc(e.name)}</td>
             <td>${esc(e.role)}</td>
             <td>${fmtDateTime(e.at)}</td>
-            <td>${e.city ? esc([e.city, e.region].filter(Boolean).join(', ')) : '<span class="hint">—</span>'}</td>
             <td>${e.ip ? esc(e.ip) : '<span class="hint">—</span>'}</td>
             <td>${esc(deviceSummaryFromUserAgent(e.userAgent))}</td>
             ${isAdmin()?`<td><button type="button" class="btn btn-sm btn-danger" data-delete-login="${e.id}">🗑️</button></td>`:''}
@@ -10778,7 +10776,10 @@ async function finishBatchIntoBlendingBoard(b){
   const recipe = byId(state.recipes, b.recipeId);
   const batch = {
     id: uid('BLD'), batchNo: b.batchNo || uid('BLD'),
-    product: b.productName || b.recipeName, qty: b.qty || '', variation: b.variation || '',
+    // Quantity defaults to the batch size locked in from Costing when the batch was started
+    // (recipe.batchSizeKg) — that's the real amount that was actually mixed, so there's no reason
+    // to make someone retype it by hand unless this run genuinely produced a different amount.
+    product: b.productName || b.recipeName, qty: b.qty || (recipe && recipe.batchSizeKg ? recipe.batchSizeKg+' Kg' : ''), variation: b.variation || '',
     priority: 'Medium', notes: '',
     stage: 0, assignee: null,
     createdAt: new Date().toISOString(),

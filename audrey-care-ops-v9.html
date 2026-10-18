@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018024016">
+<meta name="app-build" content="20261018024500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -645,45 +645,45 @@ html{ visibility:hidden; }
   .rc-icon-badge{width:36px;height:36px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin-bottom:2px;}
   .rc-icon-badge svg{width:19px;height:19px;}
   .recipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
-  .batch-card{position:relative;background:linear-gradient(160deg,#173A2B,#1F4B39);color:#fff;border-radius:14px;padding:26px 28px;margin-bottom:22px;}
-  .batch-card .batch-recipe-name{font-size:13px;opacity:.75;text-transform:uppercase;letter-spacing:.04em;padding-right:120px;}
-  .batch-card .batch-step-of{font-size:12px;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.06em;margin-top:10px;}
-  .batch-card .batch-step-title{font-size:22px;font-weight:700;margin:3px 0 0;font-family:'Fraunces',serif;line-height:1.3;}
-  .batch-card .batch-step-detail{font-size:15px;font-weight:400;opacity:.78;margin:6px 0 2px;line-height:1.5;white-space:pre-line;max-width:640px;}
-  .batch-card .batch-step-amount{font-size:14.5px;opacity:.9;}
-  .batch-card .batch-timer-panel{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px 20px;margin:14px 0 0;}
+  .batch-card{position:relative;background:#F6FAF7;color:#15201A;border:1px solid #E1EAE3;border-radius:14px;padding:26px 28px;margin-bottom:22px;font-family:'Inter',system-ui,sans-serif;}
+  .batch-card .batch-recipe-name{font-size:13px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.06em;padding-right:120px;}
+  .batch-card .batch-step-of{font-size:12px;font-weight:700;color:#5B6E61;text-transform:uppercase;letter-spacing:.06em;margin-top:10px;}
+  .batch-card .batch-step-title{font-size:22px;font-weight:700;margin:3px 0 0;font-family:'Poppins',sans-serif;line-height:1.3;}
+  .batch-card .batch-step-detail{font-size:15px;font-weight:400;color:#5B6E61;margin:6px 0 2px;line-height:1.5;white-space:pre-line;max-width:640px;}
+  .batch-card .batch-step-amount{font-size:14.5px;font-weight:600;color:#15201A;}
+  .batch-card .batch-timer-panel{background:#fff;border:1px solid #E1EAE3;border-radius:12px;padding:16px 20px;margin:14px 0 0;}
   .batch-temp-badge{position:absolute;top:18px;right:22px;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-weight:700;font-size:15px;color:#fff;animation:temp-badge-pulse 1.3s ease-in-out infinite;z-index:2;}
-  .batch-temp-badge.temp-green{background:rgba(52,199,89,.22);border:1.5px solid #34C759;--glow:rgba(52,199,89,.9);}
-  .batch-temp-badge.temp-yellow{background:rgba(255,204,0,.22);border:1.5px solid #FFCC00;--glow:rgba(255,204,0,.9);}
-  .batch-temp-badge.temp-red{background:rgba(255,59,48,.22);border:1.5px solid #FF3B30;--glow:rgba(255,59,48,.95);}
-  @keyframes temp-badge-pulse{0%,100%{box-shadow:0 0 6px 1px var(--glow);opacity:1;}50%{box-shadow:0 0 20px 6px var(--glow);opacity:.72;}}
+  .batch-temp-badge.temp-green{background:#34C759;--glow:rgba(52,199,89,.55);}
+  .batch-temp-badge.temp-yellow{background:#E0A82E;--glow:rgba(224,168,46,.55);}
+  .batch-temp-badge.temp-red{background:#E5484D;--glow:rgba(229,72,77,.55);}
+  @keyframes temp-badge-pulse{0%,100%{box-shadow:0 0 6px 1px var(--glow);opacity:1;}50%{box-shadow:0 0 16px 4px var(--glow);opacity:.85;}}
   .batch-prep-checklist{margin:14px 0;text-align:left;max-width:560px;}
-  .batch-prep-checklist .bpc-row{font-size:15px;opacity:.92;padding:6px 0;}
+  .batch-prep-checklist .bpc-row{font-size:15px;color:#15201A;padding:6px 0;}
   .batch-prep-checklist .bpc-check{display:flex;align-items:flex-start;gap:10px;}
-  .batch-prep-checklist .bpc-check input[type="checkbox"]{width:20px;height:20px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:#FFD27A;}
+  .batch-prep-checklist .bpc-check input[type="checkbox"]{width:20px;height:20px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--accent-dark);}
   .batch-prep-checklist .bpc-check label{cursor:pointer;}
-  .batch-prep-checklist .bpc-field strong{color:#FFD27A;}
+  .batch-prep-checklist .bpc-field strong{color:var(--accent-dark);}
   .batch-prep-checklist .bpc-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .batch-prep-checklist .bpc-field label{flex-shrink:0;}
-  .batch-prep-checklist .bpc-field-input{min-width:110px;padding:6px 10px;border:1px solid rgba(255,210,122,.5);border-radius:7px;background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:600;}
-  .batch-prep-checklist .bpc-field-input:focus{outline:none;border-color:#FFD27A;background:rgba(255,255,255,.14);}
-  .batch-prep-checklist .bpc-field-input::placeholder{color:rgba(255,255,255,.45);font-weight:400;}
-  .batch-countdown{font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:18px 0 6px;letter-spacing:.01em;}
-  .batch-countdown.done{color:#FFD27A;animation:pulse-dot-lite 1.4s infinite;}
+  .batch-prep-checklist .bpc-field-input{min-width:110px;padding:6px 10px;border:1px solid #D8E3DA;border-radius:7px;background:#F6FAF7;color:#15201A;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;}
+  .batch-prep-checklist .bpc-field-input:focus{outline:none;border-color:var(--accent-dark);background:#fff;}
+  .batch-prep-checklist .bpc-field-input::placeholder{color:#8A9B8F;font-weight:400;}
+  .batch-countdown{font-family:'Poppins',sans-serif;font-size:56px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:18px 0 6px;letter-spacing:.01em;color:var(--accent-dark);}
+  .batch-countdown.done{color:#C77B10;animation:pulse-dot-lite 1.4s infinite;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
-  .batch-progress-track{height:6px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden;margin:14px 0 18px;}
-  .batch-progress-fill{height:100%;background:#7CD98A;border-radius:99px;transition:width .4s ease;}
+  .batch-progress-track{height:6px;border-radius:99px;background:#E3EEE6;overflow:hidden;margin:14px 0 18px;}
+  .batch-progress-fill{height:100%;background:var(--accent-dark);border-radius:99px;transition:width .4s ease;}
   .batch-controls{display:flex;gap:8px;flex-wrap:wrap;}
-  .batch-controls .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;}
-  .batch-controls .btn:hover{background:rgba(255,255,255,.22);}
-  .batch-controls .btn-primary{background:#3FA968;border-color:#3FA968;}
-  .batch-controls .btn-primary:hover{background:#369059;}
-  .batch-steplist{display:flex;flex-direction:column;gap:0;margin-top:18px;border-top:1px solid rgba(255,255,255,.16);}
-  .batch-steplist .bs-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;opacity:.55;}
-  .batch-steplist .bs-row.current{opacity:1;font-weight:600;}
-  .batch-steplist .bs-row.done{opacity:.75;}
-  .batch-steplist .bs-num{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
-  .batch-steplist .bs-row.done .bs-num{background:#3FA968;}
+  .batch-controls .btn{background:#fff;border-color:#D8E3DA;color:#15201A;font-weight:600;}
+  .batch-controls .btn:hover{background:#EFF5F1;}
+  .batch-controls .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
+  .batch-controls .btn-primary:hover{background:#2F7A48;}
+  .batch-steplist{display:flex;flex-direction:column;gap:0;margin-top:18px;border-top:1px solid #E1EAE3;}
+  .batch-steplist .bs-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E1EAE3;font-size:13px;color:#5B6E61;}
+  .batch-steplist .bs-row.current{color:#15201A;font-weight:600;}
+  .batch-steplist .bs-row.done{color:#7A8C7F;}
+  .batch-steplist .bs-num{width:22px;height:22px;border-radius:50%;background:#E3EEE6;color:#5B6E61;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+  .batch-steplist .bs-row.done .bs-num{background:var(--accent-dark);color:#fff;}
   .batch-steplist .bs-row.current .bs-num{background:#7CD98A;color:#173A2B;}
   .step-editor-row{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg);}
   .step-editor-row .se-num{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px;}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018042620">
+<meta name="app-build" content="20261018043544">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -739,28 +739,65 @@ html{ visibility:hidden; }
   .batch-focus .bf-recipe{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-dark);}
   .batch-focus .bf-step-of{margin-top:6px;font-size:15px;font-weight:500;color:#5B6E61;}
   .batch-focus .bf-ingredient{margin:20px 0 0;font-family:'Poppins',sans-serif;font-weight:700;font-size:clamp(26px,3.4vw,38px);line-height:1.2;max-width:900px;}
-  .batch-focus .bf-instr-list{margin:26px 0 0;display:flex;flex-direction:column;gap:14px;max-width:780px;}
-  .batch-focus .bf-instr-row{display:flex;gap:14px;align-items:flex-start;}
-  .batch-focus .bf-instr-num{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font:700 15px 'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;}
-  .batch-focus .bf-instr-row.lead .bf-instr-num{background:var(--accent-dark);color:#fff;}
-  .batch-focus .bf-instr-text{font:600 clamp(18px,2vw,21px) 'Inter',sans-serif;color:#15201A;line-height:1.4;padding-top:6px;}
-  .batch-focus .bf-instr-row.lead .bf-instr-text{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;padding-top:3px;}
-  .batch-focus .bf-instr-unified{margin:26px 0 0;max-width:820px;}
-  .batch-focus .bf-instr-unified-line{font:600 clamp(18px,2vw,22px) 'Inter',sans-serif;color:#15201A;line-height:1.5;margin-top:6px;}
-  .batch-focus .bf-instr-unified-line:first-child{margin-top:0;}
-  .batch-focus .bf-instr-unified-line.lead{font:700 clamp(26px,3.2vw,36px) 'Poppins',sans-serif;line-height:1.3;}
-  .batch-focus .bf-instr-lead{margin:26px 0 0;font:700 clamp(28px,3.6vw,40px) 'Poppins',sans-serif;color:#15201A;line-height:1.2;max-width:820px;}
-  .batch-focus .bf-instr-card{margin-top:18px;background:#EDF6EF;border:1px solid #D7E8DB;border-radius:14px;padding:18px 22px;max-width:720px;}
-  .batch-focus .bf-instr-card-line{font:600 clamp(16px,1.8vw,18px) 'Inter',sans-serif;color:#1E2B21;line-height:1.6;margin-top:8px;}
-  .batch-focus .bf-instr-card-line:first-child{margin-top:0;}
-  .batch-focus .bf-instr-timeline{margin:26px 0 0;position:relative;padding-left:28px;max-width:780px;}
-  .batch-focus .bf-instr-timeline::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:#D7E8DB;}
-  .batch-focus .bf-instr-timeline-row{position:relative;padding-bottom:22px;}
-  .batch-focus .bf-instr-timeline-row:last-child{padding-bottom:0;}
-  .batch-focus .bf-instr-timeline-dot{position:absolute;left:-28px;top:4px;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent-dark);}
-  .batch-focus .bf-instr-timeline-dot.lead{background:var(--accent-dark);box-shadow:0 0 0 2px var(--accent-dark);}
-  .batch-focus .bf-instr-timeline-text{font:600 clamp(17px,1.9vw,20px) 'Inter',sans-serif;color:#15201A;}
-  .batch-focus .bf-instr-timeline-text.lead{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;}
+  .bf-instr-list{margin:26px 0 0;display:flex;flex-direction:column;gap:14px;max-width:780px;}
+  .bf-instr-row{display:flex;gap:14px;align-items:flex-start;}
+  .bf-instr-num{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font:700 15px 'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;}
+  .bf-instr-row.lead .bf-instr-num{background:var(--accent-dark);color:#fff;}
+  .bf-instr-text{font:600 clamp(18px,2vw,21px) 'Inter',sans-serif;color:#15201A;line-height:1.4;padding-top:6px;}
+  .bf-instr-row.lead .bf-instr-text{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;padding-top:3px;}
+  .bf-instr-unified{margin:26px 0 0;max-width:820px;}
+  .bf-instr-unified-line{font:600 clamp(18px,2vw,22px) 'Inter',sans-serif;color:#15201A;line-height:1.5;margin-top:6px;}
+  .bf-instr-unified-line:first-child{margin-top:0;}
+  .bf-instr-unified-line.lead{font:700 clamp(26px,3.2vw,36px) 'Poppins',sans-serif;line-height:1.3;}
+  .bf-instr-lead{margin:26px 0 0;font:700 clamp(28px,3.6vw,40px) 'Poppins',sans-serif;color:#15201A;line-height:1.2;max-width:820px;}
+  .bf-instr-card{margin-top:18px;background:#EDF6EF;border:1px solid #D7E8DB;border-radius:14px;padding:18px 22px;max-width:720px;}
+  .bf-instr-card-line{font:600 clamp(16px,1.8vw,18px) 'Inter',sans-serif;color:#1E2B21;line-height:1.6;margin-top:8px;}
+  .bf-instr-card-line:first-child{margin-top:0;}
+  .bf-instr-timeline{margin:26px 0 0;position:relative;padding-left:28px;max-width:780px;}
+  .bf-instr-timeline::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:#D7E8DB;}
+  .bf-instr-timeline-row{position:relative;padding-bottom:22px;}
+  .bf-instr-timeline-row:last-child{padding-bottom:0;}
+  .bf-instr-timeline-dot{position:absolute;left:-28px;top:4px;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent-dark);}
+  .bf-instr-timeline-dot.lead{background:var(--accent-dark);box-shadow:0 0 0 2px var(--accent-dark);}
+  .bf-instr-timeline-text{font:600 clamp(17px,1.9vw,20px) 'Inter',sans-serif;color:#15201A;}
+  .bf-instr-timeline-text.lead{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;}
+  .bf-instr-icons{margin:26px 0 0;display:flex;flex-direction:column;gap:14px;max-width:780px;}
+  .bf-instr-icons-row{display:flex;gap:14px;align-items:center;}
+  .bf-instr-icons-badge{flex-shrink:0;width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .bf-instr-icons-badge.lead{background:var(--accent-dark);color:#fff;}
+  .bf-instr-icons-text{font:600 clamp(18px,2vw,21px) 'Inter',sans-serif;color:#15201A;}
+  .bf-instr-icons-text.lead{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;}
+  .bf-instr-keyword{margin:26px 0 0;max-width:760px;font:500 clamp(20px,2.4vw,28px) 'Inter',sans-serif;color:#15201A;line-height:1.6;}
+  .bf-instr-keyword-hl{color:var(--accent-dark);font-weight:700;}
+  .bf-instr-boxes{margin:26px 0 0;display:flex;flex-direction:column;gap:10px;max-width:780px;}
+  .bf-instr-box{background:#fff;border:1px solid #E1EAE3;border-radius:10px;padding:14px 18px;font:600 clamp(17px,1.9vw,19px) 'Inter',sans-serif;color:#15201A;}
+  .bf-instr-box.lead{border-left:4px solid var(--accent-dark);font:700 clamp(20px,2.4vw,24px) 'Poppins',sans-serif;padding:16px 18px;}
+  .bf-instr-active{margin:26px 0 0;display:flex;flex-direction:column;gap:12px;max-width:780px;}
+  .bf-instr-active-row{display:flex;gap:12px;align-items:center;}
+  .bf-instr-active-row:not(.lead){opacity:.55;}
+  .bf-instr-active-dot{width:10px;height:10px;border-radius:50%;border:2px solid #B9C4BC;flex-shrink:0;}
+  .bf-instr-active-dot.lead{width:14px;height:14px;border:none;background:var(--accent-dark);box-shadow:0 0 0 4px var(--accent-soft);}
+  .bf-instr-active-text{font:600 clamp(17px,1.9vw,19px) 'Inter',sans-serif;color:#5B6E61;}
+  .bf-instr-active-text.lead{font:700 clamp(24px,2.8vw,30px) 'Poppins',sans-serif;color:#15201A;}
+  .bf-instr-active-hint{margin-top:6px;font:600 12px 'Inter',sans-serif;color:#8C9A92;}
+  .bf-instr-focus-lead{margin:30px 0 0;font:700 clamp(32px,4vw,48px) 'Poppins',sans-serif;color:#15201A;line-height:1.2;max-width:820px;}
+  .bf-instr-focus-next{margin-top:18px;display:flex;align-items:center;gap:10px;}
+  .bf-instr-focus-tag{font:700 11px 'Inter',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5B6E61;background:#EDF3EE;padding:4px 10px;border-radius:999px;}
+  .bf-instr-focus-next-text{font:500 16px 'Inter',sans-serif;color:#5B6E61;}
+  .bf-instr-twocol{margin:26px 0 0;display:flex;gap:40px;align-items:flex-start;max-width:1080px;flex-wrap:wrap;}
+  .bf-instr-twocol-lead{flex:1 1 380px;font:700 clamp(24px,3vw,34px) 'Poppins',sans-serif;color:#15201A;line-height:1.25;}
+  .bf-instr-twocol-list{flex:1 1 260px;display:flex;flex-direction:column;gap:10px;padding-left:24px;border-left:2px solid #D7E8DB;}
+  .bf-instr-twocol-item{font:600 16px 'Inter',sans-serif;color:#15201A;}
+  .bf-instr-flow{margin:26px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px;max-width:1100px;}
+  .bf-instr-flow-item{font:600 clamp(16px,1.8vw,18px) 'Inter',sans-serif;color:#15201A;background:#fff;border:1px solid #E1EAE3;padding:9px 15px;border-radius:10px;}
+  .bf-instr-flow-item.lead{font:700 clamp(18px,2.1vw,21px) 'Poppins',sans-serif;background:var(--accent-soft);border-color:var(--accent-soft);}
+  .bf-instr-flow-arrow{font:700 18px 'Inter',sans-serif;color:var(--accent-dark);}
+  .bf-instr-divider{margin:26px 0 0;max-width:780px;}
+  .bf-instr-divider-row{padding:14px 0;border-bottom:1px solid #E1EAE3;font:600 clamp(17px,1.9vw,20px) 'Inter',sans-serif;color:#15201A;}
+  .bf-instr-divider-row:last-child{border-bottom:none;}
+  .bf-instr-divider-row.lead{font:700 clamp(21px,2.5vw,26px) 'Poppins',sans-serif;}
+  .instr-style-preview-frame{width:100%;height:112px;overflow:hidden;border-radius:10px;background:#F6FAF7;border:1px solid #E1EAE3;position:relative;}
+  .instr-style-preview{width:760px;transform:scale(.29);transform-origin:top left;padding:10px 14px;box-sizing:border-box;color:#15201A;}
   .batch-focus .bf-grid{margin-top:26px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
   .batch-focus .bf-main{flex:1 1 420px;min-width:0;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:24px 28px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
   .batch-focus .bf-main-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5B6E61;margin-bottom:12px;}
@@ -9809,25 +9846,37 @@ function splitStepLines(text){
 }
 // How the Big screen shows a timed step's instruction lines — a blending manager picks one from
 // "Instruction style" on the Production Guide page (recipes), so the team can try a different
-// layout themselves instead of asking for a redesign each time. Kept to four options that work
-// for ANY recipe's instruction text, however many lines or what they say: "Icon-led" (one emoji
-// per line) and "Keyword highlight" (bolding the important words in a rewritten sentence) were
-// both explored but dropped from here — both need understanding what a line actually MEANS
-// (which ingredient is which, which number matters), not just where it sits, so they can't be
-// generated reliably for an arbitrary recipe's free-typed steps the way these four can.
+// layout themselves instead of asking for a redesign each time. All 12 are positional-only (first
+// line vs. the rest, or every line the same) so they work for ANY recipe's free-typed instruction
+// text — none of them need to understand what a line actually MEANS. The two that would genuinely
+// want that (an icon matched to each ingredient, bolding only the words that matter) are still
+// built, but honestly: "Icon-led" uses one neutral bullet for every line rather than a guessed
+// icon, and "Keyword highlight" only bolds number+unit tokens it can detect (75Kg, 40°C), not
+// whichever words are actually important in a given step.
 const BATCH_INSTRUCTION_STYLES = [
   {id:'numbered', name:'Numbered Steps', desc:'Each line in its own numbered circle, like a mini checklist.'},
   {id:'unified', name:'Unified Flow', desc:'No headline/detail split — every line reads at the same weight.'},
   {id:'card', name:'Lead + Card', desc:'One bold lead line, the rest inside a soft tinted card.'},
+  {id:'icons', name:'Icon-Led Lines', desc:'Each line gets a small bullet icon instead of a size hierarchy.'},
   {id:'timeline', name:'Timeline', desc:'A connected vertical line with dots, showing the lines as a sequence.'},
+  {id:'keyword', name:'Keyword Highlight', desc:'One flowing paragraph with detected quantities bolded.'},
+  {id:'stackedboxes', name:'Stacked Boxes', desc:'Each line in its own bordered card, first one accented.'},
+  {id:'activechecklist', name:'Active Checklist', desc:'The current line lit up, the rest dimmed as "coming up".'},
+  {id:'singlefocus', name:'Single Focus + Up Next', desc:'Only the current line, large, plus a small "Up next" tag.'},
+  {id:'twocolumn', name:'Two-Column Split', desc:'Lead line big on the left, remaining lines listed on the right.'},
+  {id:'arrowflow', name:'Arrow Flow', desc:'Lines connected by → arrows, flowchart-style.'},
+  {id:'dividerlist', name:'Divider List', desc:'Equal-weight lines separated by thin rules.'},
 ];
 function currentInstructionStyle(){
   const id = (state.batchDisplay && state.batchDisplay.instructionStyle) || 'numbered';
   return BATCH_INSTRUCTION_STYLES.find(s=>s.id===id) ? id : 'numbered';
 }
-function renderBatchInstructionHtml(step){
+// styleOverride lets the "Instruction style" picker render a live, accurate preview of each
+// option (on fixed sample text) using this exact function, instead of a separate hand-drawn
+// mockup that could drift from what the real Big screen actually renders.
+function renderBatchInstructionHtml(step, styleOverride){
   const lines = splitStepLines(step.ingredient);
-  const style = currentInstructionStyle();
+  const style = styleOverride || currentInstructionStyle();
   if(style==='unified'){
     return `<div class="bf-instr-unified">
       ${lines.map((line,i)=>`<div class="bf-instr-unified-line${i===0?' lead':''}">${esc(line)}</div>`).join('')}
@@ -9840,12 +9889,61 @@ function renderBatchInstructionHtml(step){
       ${rest.map(line=>`<div class="bf-instr-card-line">${esc(line)}</div>`).join('')}
     </div>` : ''}`;
   }
+  if(style==='icons'){
+    return `<div class="bf-instr-icons">
+      ${lines.map((line,i)=>`<div class="bf-instr-icons-row${i===0?' lead':''}">
+        <span class="bf-instr-icons-badge${i===0?' lead':''}">●</span>
+        <span class="bf-instr-icons-text${i===0?' lead':''}">${esc(line)}</span>
+      </div>`).join('')}
+    </div>`;
+  }
   if(style==='timeline'){
     return `<div class="bf-instr-timeline">
       ${lines.map((line,i)=>`<div class="bf-instr-timeline-row">
         <span class="bf-instr-timeline-dot${i===0?' lead':''}"></span>
         <span class="bf-instr-timeline-text${i===0?' lead':''}">${esc(line)}</span>
       </div>`).join('')}
+    </div>`;
+  }
+  if(style==='keyword'){
+    const joined = esc(lines.join('. '));
+    const highlighted = joined.replace(/\d+(\.\d+)?\s?(°?[A-Za-z%]+)?/g, m => /\d/.test(m) ? `<strong class="bf-instr-keyword-hl">${m}</strong>` : m);
+    return `<div class="bf-instr-keyword">${highlighted}${lines.length?'.':''}</div>`;
+  }
+  if(style==='stackedboxes'){
+    return `<div class="bf-instr-boxes">
+      ${lines.map((line,i)=>`<div class="bf-instr-box${i===0?' lead':''}">${esc(line)}</div>`).join('')}
+    </div>`;
+  }
+  if(style==='activechecklist'){
+    return `<div class="bf-instr-active">
+      ${lines.map((line,i)=>`<div class="bf-instr-active-row${i===0?' lead':''}">
+        <span class="bf-instr-active-dot${i===0?' lead':''}"></span>
+        <span class="bf-instr-active-text${i===0?' lead':''}">${esc(line)}</span>
+      </div>`).join('')}
+      ${lines.length>1 ? `<div class="bf-instr-active-hint">Coming up next, once you're ready for them</div>` : ''}
+    </div>`;
+  }
+  if(style==='singlefocus'){
+    const [lead, next] = lines;
+    return `<div class="bf-instr-focus-lead">${esc(lead||'')}</div>
+    ${next ? `<div class="bf-instr-focus-next"><span class="bf-instr-focus-tag">Up next</span><span class="bf-instr-focus-next-text">${esc(next)}</span></div>` : ''}`;
+  }
+  if(style==='twocolumn'){
+    const [lead, ...rest] = lines;
+    return `<div class="bf-instr-twocol">
+      <div class="bf-instr-twocol-lead">${esc(lead||'')}</div>
+      ${rest.length ? `<div class="bf-instr-twocol-list">${rest.map(l=>`<div class="bf-instr-twocol-item">${esc(l)}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  if(style==='arrowflow'){
+    return `<div class="bf-instr-flow">
+      ${lines.map((line,i)=>(i>0?'<span class="bf-instr-flow-arrow">→</span>':'')+`<span class="bf-instr-flow-item${i===0?' lead':''}">${esc(line)}</span>`).join('')}
+    </div>`;
+  }
+  if(style==='dividerlist'){
+    return `<div class="bf-instr-divider">
+      ${lines.map((line,i)=>`<div class="bf-instr-divider-row${i===0?' lead':''}">${esc(line)}</div>`).join('')}
     </div>`;
   }
   // 'numbered' (default, and the fallback for an unrecognized saved value)
@@ -9858,17 +9956,21 @@ function renderBatchInstructionHtml(step){
   </div>`;
 }
 function openInstructionStyleModal(){ if(canManageBlendBoard()) openModal('instructionstyle'); }
+// Fixed sample text for the picker's live previews — same wording used throughout this feature's
+// own design exploration, so what's shown here matches what was actually compared and picked.
+const INSTRUCTION_PREVIEW_STEP = {ingredient:'Add Water 75Kg, Start the Heater\nThen Add EDTA, SLES\nWait until Dissolves all the SLES'};
 function renderInstructionStyleModal(){
   const current = currentInstructionStyle();
   return `
   <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:720px;">
+    <div class="modal" style="max-width:860px;">
       <h2>Instruction style</h2>
       <div class="sub">How a timed step's instructions show on the Big screen. Pick one — it applies for everyone right away.</div>
       <div class="recipe-grid" style="margin:16px 0;">
         ${BATCH_INSTRUCTION_STYLES.map(s=>`
         <div class="recipe-card">
-          <div class="rc-title">${esc(s.name)}</div>
+          <div class="instr-style-preview-frame"><div class="instr-style-preview">${renderBatchInstructionHtml(INSTRUCTION_PREVIEW_STEP, s.id)}</div></div>
+          <div class="rc-title" style="margin-top:8px;">${esc(s.name)}</div>
           <div class="rc-meta">${esc(s.desc)}</div>
           <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
             ${s.id===current

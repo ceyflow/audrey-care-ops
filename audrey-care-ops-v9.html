@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018084450">
+<meta name="app-build" content="20261018085256">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -10183,6 +10183,11 @@ function openRecipeModal(id){
 function openBatchSheetModal(id){
   if(!byId(state.recipes, id)) return;
   state._recipeDraft = buildRecipeDraft(id);
+  // Generated once per modal-open, not per render — the sheet re-renders in place on every Save
+  // or step edit, and regenerating this on each render would silently throw away whatever batch
+  // number was typed in. syncDraftStepFieldsFromDOM() carries a typed edit into this field across
+  // those re-renders; see its own note.
+  state._recipeDraft.batchNo = uid('BLD');
   openModal('recipesheet:'+id);
 }
 // ---- Mixing steps templates ----
@@ -10413,6 +10418,8 @@ function syncDraftTopFieldsFromDOM(){
 }
 function syncDraftStepFieldsFromDOM(){
   // pull current input values into the draft before add/remove/reorder/submit, so nothing typed is lost
+  const batchNoEl = document.getElementById('sheet-batch-no');
+  if(batchNoEl) state._recipeDraft.batchNo = batchNoEl.value;
   const steps = state._recipeDraft.steps;
   steps.forEach(s=>{
     if(s.type==='preparation'){
@@ -11547,10 +11554,10 @@ function recipeBatchSheetModal(recipeId){
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:680px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px;">
-        <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:52px;max-width:220px;object-fit:contain;">` : ''}</div>
+        <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:104px;max-width:440px;object-fit:contain;">` : ''}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(new Date().toISOString())}</span>` : ''}
-          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc(uid('BLD'))}" class="bsmc-chip-batch-input">` : ''}
+          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc((state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || uid('BLD'))}" class="bsmc-chip-batch-input">` : ''}
         </div>
       </div>
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
@@ -14601,7 +14608,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-delete-mixing-template]').forEach(b=>b.addEventListener('click', ()=>deleteMixingTemplate(b.dataset.deleteMixingTemplate)));
   document.querySelectorAll('[data-use-mixing-template]').forEach(b=>b.addEventListener('click', ()=>applyMixingTemplateToRecipe(b.dataset.useMixingTemplate)));
   if(byIdEl('btn-cancel-mixing-picker')) byIdEl('btn-cancel-mixing-picker').onclick = closeMixingTemplatesPicker;
-  if(byIdEl('btn-use-mixing-template')) byIdEl('btn-use-mixing-template').onclick = (e)=>openMixingTemplatesPicker(e.currentTarget.dataset.recipeId);
+  if(byIdEl('btn-use-mixing-template')) byIdEl('btn-use-mixing-template').onclick = (e)=>{ syncDraftStepFieldsFromDOM(); openMixingTemplatesPicker(e.currentTarget.dataset.recipeId); };
   if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
   if(byIdEl('btn-save-template-steps')) byIdEl('btn-save-template-steps').onclick = saveTemplateSteps;
   if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPhrase(); };

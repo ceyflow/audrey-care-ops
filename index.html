@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018090317">
+<meta name="app-build" content="20261018090522">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -11290,7 +11290,6 @@ function renderBatchFocusOverlay(){
           ${!isDone ? `<div class="bf-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>` : ''}
         </div>
         <div style="display:flex;gap:10px;flex-shrink:0;">
-          <button class="bf-test-sound" id="btn-batch-focus-test-sound" title="Play the timer alert once to check your volume">🔊 Test sound</button>
           <button class="batch-focus-close" id="btn-batch-focus-close">✕ Close</button>
         </div>
       </div>
@@ -11644,7 +11643,6 @@ function recipeBatchSheetModal(recipeId){
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
       <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-        <button type="button" class="btn" id="btn-print-batchsheet" data-recipe-id="${r.id}">🖨 Print</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
         ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
       </div>

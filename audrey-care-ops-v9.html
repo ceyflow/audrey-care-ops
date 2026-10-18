@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018034946">
+<meta name="app-build" content="20261018041841">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -664,6 +664,7 @@ html{ visibility:hidden; }
   .batch-tile .bt-actions .btn:hover{background:#EFF5F1;}
   .batch-tile .bt-actions .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
   .batch-tile .bt-actions .btn-primary:hover{filter:brightness(.88);}
+  .batch-tile .bt-actions .btn-primary:disabled,.batch-tile .bt-actions .btn-primary:active{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;opacity:1;}
   .batch-tile .bt-actions .bt-expand{margin-left:auto;padding:7px 10px;}
   .batch-prep-checklist{margin:14px 0;text-align:left;max-width:560px;}
   .batch-prep-checklist .bpc-row{font-size:15px;color:#15201A;padding:6px 0;}
@@ -738,7 +739,28 @@ html{ visibility:hidden; }
   .batch-focus .bf-recipe{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-dark);}
   .batch-focus .bf-step-of{margin-top:6px;font-size:15px;font-weight:500;color:#5B6E61;}
   .batch-focus .bf-ingredient{margin:20px 0 0;font-family:'Poppins',sans-serif;font-weight:700;font-size:clamp(26px,3.4vw,38px);line-height:1.2;max-width:900px;}
-  .batch-focus .bf-detail{font-size:clamp(17px,2vw,21px);font-weight:500;color:#2E3B33;line-height:1.6;white-space:pre-line;max-width:720px;margin:14px 0 0;}
+  .batch-focus .bf-instr-list{margin:26px 0 0;display:flex;flex-direction:column;gap:14px;max-width:780px;}
+  .batch-focus .bf-instr-row{display:flex;gap:14px;align-items:flex-start;}
+  .batch-focus .bf-instr-num{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font:700 15px 'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;}
+  .batch-focus .bf-instr-row.lead .bf-instr-num{background:var(--accent-dark);color:#fff;}
+  .batch-focus .bf-instr-text{font:600 clamp(18px,2vw,21px) 'Inter',sans-serif;color:#15201A;line-height:1.4;padding-top:6px;}
+  .batch-focus .bf-instr-row.lead .bf-instr-text{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;padding-top:3px;}
+  .batch-focus .bf-instr-unified{margin:26px 0 0;max-width:820px;}
+  .batch-focus .bf-instr-unified-line{font:600 clamp(18px,2vw,22px) 'Inter',sans-serif;color:#15201A;line-height:1.5;margin-top:6px;}
+  .batch-focus .bf-instr-unified-line:first-child{margin-top:0;}
+  .batch-focus .bf-instr-unified-line.lead{font:700 clamp(26px,3.2vw,36px) 'Poppins',sans-serif;line-height:1.3;}
+  .batch-focus .bf-instr-lead{margin:26px 0 0;font:700 clamp(28px,3.6vw,40px) 'Poppins',sans-serif;color:#15201A;line-height:1.2;max-width:820px;}
+  .batch-focus .bf-instr-card{margin-top:18px;background:#EDF6EF;border:1px solid #D7E8DB;border-radius:14px;padding:18px 22px;max-width:720px;}
+  .batch-focus .bf-instr-card-line{font:600 clamp(16px,1.8vw,18px) 'Inter',sans-serif;color:#1E2B21;line-height:1.6;margin-top:8px;}
+  .batch-focus .bf-instr-card-line:first-child{margin-top:0;}
+  .batch-focus .bf-instr-timeline{margin:26px 0 0;position:relative;padding-left:28px;max-width:780px;}
+  .batch-focus .bf-instr-timeline::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:#D7E8DB;}
+  .batch-focus .bf-instr-timeline-row{position:relative;padding-bottom:22px;}
+  .batch-focus .bf-instr-timeline-row:last-child{padding-bottom:0;}
+  .batch-focus .bf-instr-timeline-dot{position:absolute;left:-28px;top:4px;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent-dark);}
+  .batch-focus .bf-instr-timeline-dot.lead{background:var(--accent-dark);box-shadow:0 0 0 2px var(--accent-dark);}
+  .batch-focus .bf-instr-timeline-text{font:600 clamp(17px,1.9vw,20px) 'Inter',sans-serif;color:#15201A;}
+  .batch-focus .bf-instr-timeline-text.lead{font:700 clamp(22px,2.6vw,28px) 'Poppins',sans-serif;}
   .batch-focus .bf-grid{margin-top:26px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
   .batch-focus .bf-main{flex:1 1 420px;min-width:0;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:24px 28px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
   .batch-focus .bf-main-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5B6E61;margin-bottom:12px;}
@@ -772,6 +794,7 @@ html{ visibility:hidden; }
   .batch-focus .bf-controls .btn:hover{background:#EFF5F1;}
   .batch-focus .bf-controls .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
   .batch-focus .bf-controls .btn-primary:hover{filter:brightness(.88);}
+  .batch-focus .bf-controls .btn-primary:disabled,.batch-focus .bf-controls .btn-primary:active{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;opacity:1;}
   .hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
 
   .drawer-overlay{position:fixed;inset:0;background:rgba(20,25,20,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:110;animation:overlay-fade .2s ease;}
@@ -1060,7 +1083,7 @@ const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
 // (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
 // from here so it stops being fetched on every login for no reason.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -3066,6 +3089,7 @@ let state = {
   _costingDraft: null,
   _costingDirty: false,
   theme: {paletteId:'green'},
+  batchDisplay: {instructionStyle:'numbered'},
   aiChat: [],
   auth: null,
   loaded: false,
@@ -3679,6 +3703,11 @@ async function loadAll(){
   }
   SYNCED_KEYS.forEach(k=>snapshotBaseline(k));
   render();
+  // A refresh landing directly on the Production Guide page (hash restore, above) bypasses
+  // performGoTo and the popstate handler — the only two places that otherwise start this —
+  // so without this, a running batch's countdown rendered once correctly and then sat frozen
+  // until something else happened to trigger a re-render.
+  if(state.page==='recipes') startBatchTicker();
   subscribeRealtime();
   shrinkOversizedLoginHeroPhotoIfNeeded(); // fire-and-forget, see its own comment
   // Customer-facing tracking page: while a CityPak shipment is still in transit, silently
@@ -9772,6 +9801,96 @@ function splitStepInstruction(text){
   const i = s.indexOf('\n');
   return i===-1 ? {headline:s, detail:''} : {headline:s.slice(0,i).trim(), detail:s.slice(i+1).trim()};
 }
+// For the Big screen's instruction display — every line becomes its own item instead of a bold
+// headline + lighter detail paragraph, so a multi-line instruction reads as a short procedure
+// rather than a title with a caption underneath. Used by every BATCH_INSTRUCTION_STYLES option.
+function splitStepLines(text){
+  return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);
+}
+// How the Big screen shows a timed step's instruction lines — a blending manager picks one from
+// "Instruction style" on the Production Guide page (recipes), so the team can try a different
+// layout themselves instead of asking for a redesign each time. Kept to four options that work
+// for ANY recipe's instruction text, however many lines or what they say: "Icon-led" (one emoji
+// per line) and "Keyword highlight" (bolding the important words in a rewritten sentence) were
+// both explored but dropped from here — both need understanding what a line actually MEANS
+// (which ingredient is which, which number matters), not just where it sits, so they can't be
+// generated reliably for an arbitrary recipe's free-typed steps the way these four can.
+const BATCH_INSTRUCTION_STYLES = [
+  {id:'numbered', name:'Numbered Steps', desc:'Each line in its own numbered circle, like a mini checklist.'},
+  {id:'unified', name:'Unified Flow', desc:'No headline/detail split — every line reads at the same weight.'},
+  {id:'card', name:'Lead + Card', desc:'One bold lead line, the rest inside a soft tinted card.'},
+  {id:'timeline', name:'Timeline', desc:'A connected vertical line with dots, showing the lines as a sequence.'},
+];
+function currentInstructionStyle(){
+  const id = (state.batchDisplay && state.batchDisplay.instructionStyle) || 'numbered';
+  return BATCH_INSTRUCTION_STYLES.find(s=>s.id===id) ? id : 'numbered';
+}
+function renderBatchInstructionHtml(step){
+  const lines = splitStepLines(step.ingredient);
+  const style = currentInstructionStyle();
+  if(style==='unified'){
+    return `<div class="bf-instr-unified">
+      ${lines.map((line,i)=>`<div class="bf-instr-unified-line${i===0?' lead':''}">${esc(line)}</div>`).join('')}
+    </div>`;
+  }
+  if(style==='card'){
+    const [lead, ...rest] = lines;
+    return `<div class="bf-instr-lead">${esc(lead||'')}</div>
+    ${rest.length ? `<div class="bf-instr-card">
+      ${rest.map(line=>`<div class="bf-instr-card-line">${esc(line)}</div>`).join('')}
+    </div>` : ''}`;
+  }
+  if(style==='timeline'){
+    return `<div class="bf-instr-timeline">
+      ${lines.map((line,i)=>`<div class="bf-instr-timeline-row">
+        <span class="bf-instr-timeline-dot${i===0?' lead':''}"></span>
+        <span class="bf-instr-timeline-text${i===0?' lead':''}">${esc(line)}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+  // 'numbered' (default, and the fallback for an unrecognized saved value)
+  return `<div class="bf-instr-list">
+    ${lines.map((line,i)=>`
+    <div class="bf-instr-row${i===0?' lead':''}">
+      <span class="bf-instr-num">${i+1}</span>
+      <span class="bf-instr-text">${esc(line)}</span>
+    </div>`).join('')}
+  </div>`;
+}
+function openInstructionStyleModal(){ if(canManageBlendBoard()) openModal('instructionstyle'); }
+function renderInstructionStyleModal(){
+  const current = currentInstructionStyle();
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:720px;">
+      <h2>Instruction style</h2>
+      <div class="sub">How a timed step's instructions show on the Big screen. Pick one — it applies for everyone right away.</div>
+      <div class="recipe-grid" style="margin:16px 0;">
+        ${BATCH_INSTRUCTION_STYLES.map(s=>`
+        <div class="recipe-card">
+          <div class="rc-title">${esc(s.name)}</div>
+          <div class="rc-meta">${esc(s.desc)}</div>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            ${s.id===current
+              ? `<span class="btn btn-sm" style="pointer-events:none;background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent-dark);">✓ Selected</span>`
+              : `<button class="btn btn-primary btn-sm" data-pick-instruction-style="${s.id}">Use this style</button>`}
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button type="button" class="btn" id="btn-close-instruction-style">Close</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function applyInstructionStyle(id){
+  if(!canManageBlendBoard()) return;
+  if(!BATCH_INSTRUCTION_STYLES.find(s=>s.id===id)) return;
+  state.batchDisplay = {instructionStyle:id};
+  openModal(null);
+  await save('batchDisplay');
+  showToast('Instruction style updated');
+}
 // 40-50°C reads as the safe/normal working range for these formulas, 55-60 as the watch-it range,
 // 65°C+ as the point it actually needs attention — a traffic-light glow gives the floor a reading
 // they can catch from across the room, not just a small printed number.
@@ -10437,6 +10556,7 @@ function renderRecipesPage(){
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
     <div style="display:flex;gap:8px;">
+      ${canManageBlendBoard() ? `<button class="btn" id="btn-instruction-style">Instruction style</button>` : ''}
       ${state.session && roleCan(state.session.role, 'costing_manage_templates') ? `<button class="btn" id="btn-mixing-templates">Phrases templates</button>` : ''}
       ${state.session && roleCan(state.session.role, 'costing_create_recipe') ? `<button class="btn btn-primary" id="btn-new-recipe">+ New recipe</button>` : ''}
     </div>
@@ -11012,10 +11132,8 @@ function renderBatchFocusOverlay(){
           <div class="bf-side">${batchFocusTempStatHtml(step.temperature)}</div>
         </div>
       ` : (()=>{
-        const parts = splitStepInstruction(step.ingredient);
         return `
-        <div class="bf-ingredient">${esc(parts.headline)}</div>
-        ${parts.detail ? `<div class="bf-detail">${esc(parts.detail)}</div>` : ''}
+        ${renderBatchInstructionHtml(step)}
         <div class="bf-grid">
           <div class="bf-main">
             <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
@@ -11730,6 +11848,7 @@ function renderModal(){
   if(type==='staff') return staffFormModal(id==='new'?null:id);
   if(type==='recipe') return recipeFormModal();
   if(type==='mixingtemplates') return renderMixingTemplatesModal();
+  if(type==='instructionstyle') return renderInstructionStyleModal();
   if(type==='mixingtemplatesteps') return renderTemplateStepsModal();
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
@@ -14282,6 +14401,9 @@ function attachShellHandlers(){
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
   if(byIdEl('btn-mixing-templates')) byIdEl('btn-mixing-templates').onclick = openMixingTemplatesModal;
+  if(byIdEl('btn-instruction-style')) byIdEl('btn-instruction-style').onclick = openInstructionStyleModal;
+  if(byIdEl('btn-close-instruction-style')) byIdEl('btn-close-instruction-style').onclick = ()=>openModal(null);
+  document.querySelectorAll('[data-pick-instruction-style]').forEach(b=>b.addEventListener('click', ()=>applyInstructionStyle(b.dataset.pickInstructionStyle)));
   if(byIdEl('btn-add-mixing-template')) byIdEl('btn-add-mixing-template').onclick = addMixingTemplatePrompt;
   document.querySelectorAll('[data-edit-mixing-template]').forEach(b=>b.addEventListener('click', ()=>openTemplateStepsModal(b.dataset.editMixingTemplate)));
   document.querySelectorAll('[data-delete-mixing-template]').forEach(b=>b.addEventListener('click', ()=>deleteMixingTemplate(b.dataset.deleteMixingTemplate)));

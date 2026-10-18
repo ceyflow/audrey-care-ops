@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018151431">
+<meta name="app-build" content="20261018153213">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -145,12 +145,12 @@ html{ visibility:hidden; }
   .chat-quote-cancel:hover{color:var(--ink);}
   .chat-edit-form textarea{width:260px;max-width:100%;min-height:60px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;}
   .chat-edit-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:6px;}
-  .chat-avatar-shadow{display:inline-flex;border-radius:50%;box-shadow:0 2px 6px rgba(32,41,31,.18);flex-shrink:0;}
-  .chat-role-pill{font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);white-space:nowrap;}
-  #btn-delete-chat-history{background:linear-gradient(135deg,#F3DADA,#F7E6E6);color:#A84B45;border:none;border-radius:999px;box-shadow:0 1px 4px rgba(168,75,69,.15);}
-  #btn-delete-chat-history:hover{filter:brightness(.97);}
-  #chat-input{border-radius:14px;}
-  #chat-form .btn-primary{background:linear-gradient(135deg,var(--accent-dark),#2C7A46);border:none;border-radius:14px;box-shadow:0 3px 10px rgba(44,122,70,.3);}
+  #chat-messages{background:#F6F2EA;}
+  .chat-day-divider{text-align:center;margin:2px 0 4px;}
+  .chat-day-divider span{background:#fff;color:var(--muted);font-size:11.5px;padding:5px 14px;border-radius:999px;box-shadow:0 1px 3px rgba(20,25,20,.08);}
+  #btn-delete-chat-history{border-radius:999px;}
+  #chat-input{border-radius:999px;background:#F6F7F5;}
+  #chat-form .btn-primary{border-radius:50%;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
   .toast svg{width:18px;height:18px;flex-shrink:0;}
   .toast svg path{stroke-dasharray:28;stroke-dashoffset:28;animation:check-draw .45s ease forwards .1s;}
   @keyframes check-draw{to{stroke-dashoffset:0;}}
@@ -12030,6 +12030,13 @@ async function saveBatchSheetSteps(recipeId){
 /* ===================== Team chat ===================== */
 function renderChatPage(){
   const quoted = state.chatQuoteId ? state.chat.find(x=>x.id===state.chatQuoteId) : null;
+  let lastChatDay = null;
+  const messagesHtml = state.chat.map(m=>{
+    const day = new Date(m.at).toDateString();
+    const divider = day!==lastChatDay ? `<div class="chat-day-divider"><span>${new Date(m.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span></div>` : '';
+    lastChatDay = day;
+    return divider + renderChatBubble(m);
+  }).join('');
   return `
   <div class="panel" style="display:flex;flex-direction:column;height:calc(100vh - 190px);margin-bottom:0;">
     ${state.session && roleCan(state.session.role, 'chat_delete_history') && state.chat.length>0 ? `
@@ -12037,8 +12044,7 @@ function renderChatPage(){
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-chat-history">Delete chat history</button>
     </div>` : ''}
     <div id="chat-messages" style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;">
-      ${state.chat.length===0 ? `<div class="empty-state">No messages yet — say hello to the team.</div>` :
-        state.chat.map(m=>renderChatBubble(m)).join('')}
+      ${state.chat.length===0 ? `<div class="empty-state">No messages yet — say hello to the team.</div>` : messagesHtml}
     </div>
     ${quoted ? `
     <div class="chat-quote-banner">
@@ -12048,9 +12054,9 @@ function renderChatPage(){
       </div>
       <button type="button" class="chat-quote-cancel" id="btn-cancel-chat-quote" aria-label="Cancel reply">✕</button>
     </div>` : ''}
-    <form id="chat-form" style="display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);">
+    <form id="chat-form" style="display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);align-items:center;">
       <input id="chat-input" class="search-input" style="flex:1;" placeholder="Type a message…" autocomplete="off">
-      <button type="submit" class="btn btn-primary">Send</button>
+      <button type="submit" class="btn btn-primary" aria-label="Send">➤</button>
     </form>
   </div>`;
 }
@@ -12061,10 +12067,10 @@ function renderChatBubble(m){
   const likes = m.likes || [];
   const iLiked = likes.includes(chatMyName());
   return `<div style="display:flex;gap:8px;align-items:flex-start;max-width:78%;align-self:${mine?'flex-end':'flex-start'};${mine?'flex-direction:row-reverse;':''}">
-    <span class="chat-avatar-shadow">${staffAvatarHtml(m.sender)}</span>
+    ${staffAvatarHtml(m.sender)}
     <div style="min-width:0;position:relative;">
       <div style="font-size:11px;color:var(--muted);margin-bottom:3px;display:flex;align-items:center;gap:6px;${mine?'flex-direction:row-reverse;':''}">
-        <span>${esc(m.sender)} <span class="chat-role-pill">${esc(m.role)}</span> · ${fmtDateTime(m.at)}${m.editedAt?' · edited':''}</span>
+        <span>${esc(m.sender)} · ${esc(m.role)} · ${fmtDateTime(m.at)}${m.editedAt?' · edited':''}</span>
         <button type="button" class="chat-menu-btn" data-chat-menu="${m.id}" aria-label="Message options">⋮</button>
       </div>
       ${menuOpen ? `
@@ -12083,8 +12089,8 @@ function renderChatBubble(m){
           <button type="button" class="btn btn-sm btn-primary" data-chat-save-edit="${m.id}">Save</button>
         </div>
       </div>` : `
-      <div style="background:${mine?'linear-gradient(135deg,var(--accent-dark),#2C7A46)':'#F2F5F2'};color:${mine?'#fff':'var(--ink)'};padding:10px 15px;border-radius:18px;font-size:13.5px;line-height:1.5;box-shadow:${mine?'0 3px 10px rgba(44,122,70,.28)':'0 1px 3px rgba(32,41,31,.07)'};">
-        ${m.quoted ? `<div class="chat-quote-inline" style="${mine?'border-left-color:rgba(255,255,255,.5);':''}"><div class="chat-quote-inline-sender">${esc(m.quoted.sender)}</div>${esc(m.quoted.text)}</div>` : ''}
+      <div style="background:${mine?'#DCF3E3':'#fff'};color:var(--ink);padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.5;box-shadow:0 1px 2px rgba(20,25,20,.06);">
+        ${m.quoted ? `<div class="chat-quote-inline"><div class="chat-quote-inline-sender">${esc(m.quoted.sender)}</div>${esc(m.quoted.text)}</div>` : ''}
         ${esc(m.text)}
       </div>
       ${likes.length ? `<div class="chat-like-badge" style="${mine?'justify-content:flex-end;':''}">👍 ${likes.length}</div>` : ''}

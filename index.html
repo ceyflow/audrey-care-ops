@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018052602">
+<meta name="app-build" content="20261018054228">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -733,6 +733,14 @@ html{ visibility:hidden; }
   .batch-focus-progress{height:10px;width:100%;background:#E3EEE6;flex-shrink:0;}
   .batch-focus-progress-fill{height:100%;background:var(--accent-dark);transition:width .4s ease;}
   .batch-focus-body{flex:1;overflow-y:auto;padding:36px 56px 40px;display:flex;flex-direction:column;text-align:left;}
+  @media (min-width:1100px){
+    /* Wide screens: the step detail and the full step list sit side by side, each scrolling on
+       its own, so "All steps" gets a tall panel of its own room instead of being squeezed below
+       everything else and needing the whole page scrolled past to reach the bottom of it. */
+    .batch-focus-body{flex-direction:row;gap:40px;align-items:stretch;overflow-y:hidden;}
+    .batch-focus .batch-focus-body .bf-main-col{flex:1 1 640px;min-width:0;overflow-y:auto;padding-right:8px;}
+    .batch-focus .batch-focus-body .bf-steps-card{flex:0 0 420px;margin-top:0;overflow-y:auto;}
+  }
   .batch-focus-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
   .batch-focus-close{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #D8E3DA;color:#15201A;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;flex-shrink:0;cursor:pointer;}
   .batch-focus-close:hover{background:#EFF5F1;}
@@ -808,7 +816,9 @@ html{ visibility:hidden; }
   .batch-focus .bf-temp-dot.temp-green{background:#34C759;}
   .batch-focus .bf-temp-dot.temp-yellow{background:#E0A82E;}
   .batch-focus .bf-temp-dot.temp-red{background:#E5484D;}
-  .batch-focus .bf-temp-value{font-family:'Poppins',sans-serif;font-weight:700;font-size:30px;color:var(--accent-dark);}
+  .batch-focus .bf-temp-value{font-family:'Poppins',sans-serif;font-weight:700;font-size:30px;color:#2E8540;}
+  .batch-focus .bf-temp-value.temp-yellow{color:#C98A12;}
+  .batch-focus .bf-temp-value.temp-red{color:#D1484D;}
   .batch-focus .bf-amount{font-size:clamp(18px,2vw,24px);font-weight:600;color:#15201A;}
   .batch-focus .batch-prep-checklist{display:flex;flex-direction:column;}
   .batch-focus .batch-prep-checklist .bpc-row{font-size:17px;font-weight:500;padding:10px 0;border-top:1px solid #EEF3EF;}
@@ -3603,6 +3613,20 @@ async function loadAll(){
       return {...r, permissions: buildRolePermissions(trueIds)};
     });
     kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill role permissions failed', e));
+  }
+  // Production Guide's recipe browsing/management moved to its own "Recipe library" page — a
+  // role's `pages` list is a saved snapshot (see pagesForRole), not a live link to ROLE_PAGES, so
+  // adding 'recipelibrary' to the code's defaults above never reaches a role record that already
+  // existed before this change. Any custom role that could already reach Production Guide (had
+  // 'recipes') should keep that same effective access, not silently lose half of it. Pure
+  // addition, safe to re-check every load.
+  if(state.userRoles.some(r=>Array.isArray(r.pages) && r.pages.includes('recipes') && !r.pages.includes('recipelibrary'))){
+    state.userRoles = state.userRoles.map(r=>
+      (Array.isArray(r.pages) && r.pages.includes('recipes') && !r.pages.includes('recipelibrary'))
+        ? {...r, pages:[...r.pages, 'recipelibrary']}
+        : r
+    );
+    kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill recipelibrary role page failed', e));
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -11209,7 +11233,8 @@ function renderActiveBatchCard(){
 // thresholds via batchTempGlowClass() as the compact tile's status dot, just a calmer, labeled treatment.
 function batchFocusTempStatHtml(temp){
   if(!temp) return '';
-  return `<div class="bf-side-card"><div class="bf-side-label"><span class="bf-temp-dot ${batchTempGlowClass(temp)}"></span>Temperature</div><div class="bf-temp-value">${esc(String(temp))}°C</div></div>`;
+  const glow = batchTempGlowClass(temp);
+  return `<div class="bf-side-card"><div class="bf-side-label"><span class="bf-temp-dot ${glow}"></span>Temperature</div><div class="bf-temp-value ${glow}">${esc(String(temp))}°C</div></div>`;
 }
 function renderBatchFocusOverlay(){
   const b = state.activeBatch;
@@ -11221,6 +11246,7 @@ function renderBatchFocusOverlay(){
   <div class="batch-focus">
     <div class="batch-focus-progress"><div class="batch-focus-progress-fill" style="width:${isDone?100:progressPct}%;"></div></div>
     <div class="batch-focus-body">
+    <div class="bf-main-col">
       <div class="batch-focus-head">
         <div>
           <div class="bf-recipe">${esc(b.recipeName)}</div>
@@ -11266,6 +11292,7 @@ function renderBatchFocusOverlay(){
         ${!isDone ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
         <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
       </div>` : ''}
+    </div>
       <div class="bf-steps-card">
         <div class="bf-main-label">All steps</div>
         ${batchStepsListHtml(b, isDone)}

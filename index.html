@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018085256">
+<meta name="app-build" content="20261018090317">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -11557,7 +11557,7 @@ function recipeBatchSheetModal(recipeId){
         <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:104px;max-width:440px;object-fit:contain;">` : ''}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(new Date().toISOString())}</span>` : ''}
-          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc((state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || uid('BLD'))}" class="bsmc-chip-batch-input">` : ''}
+          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc((state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || uid('BLD'))}" class="bsmc-chip-batch-input" oninput="if(state._recipeDraft) state._recipeDraft.batchNo=this.value;">` : ''}
         </div>
       </div>
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>

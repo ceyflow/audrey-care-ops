@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019204517">
+<meta name="app-build" content="20261019211241">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -526,13 +526,20 @@ html{ visibility:hidden; }
   .reopen-noanim .overlay, .reopen-noanim .modal, .reopen-noanim .drawer, .reopen-noanim .drawer-overlay,
   .reopen-noanim .admin-broadcast-overlay, .reopen-noanim .admin-broadcast-panel{ animation: none !important; }
   .overlay{position:fixed;inset:0;background:rgba(20,25,20,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;overflow-y:auto;animation:overlay-fade .18s ease;}
-  .dally-orb{border-radius:50%;background:radial-gradient(circle at 32% 28%, #A6E6BC 0%, #3C9058 42%, #2A6E42 78%, #1F4F30 100%);box-shadow:0 4px 18px rgba(60,144,88,.4), inset 0 2px 6px rgba(255,255,255,.35);animation:dally-pulse 2.6s ease-in-out infinite;flex-shrink:0;}
-  .dally-orb-lg{width:64px;height:64px;margin:0 auto;}
-  .dally-orb-sm{width:34px;height:34px;}
-  .dally-orb-xs{width:24px;height:24px;margin-bottom:1px;}
-  @keyframes dally-pulse{0%,100%{transform:scale(1);box-shadow:0 4px 18px rgba(60,144,88,.4), inset 0 2px 6px rgba(255,255,255,.35);}50%{transform:scale(1.07);box-shadow:0 6px 26px rgba(60,144,88,.6), inset 0 2px 6px rgba(255,255,255,.4);}}
-  .dally-suggestion-card{text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 13px;font-size:12.5px;font-weight:500;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s;}
-  .dally-suggestion-card:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .dally-orb-wrap{border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .dally-orb-wrap-lg{width:64px;height:64px;--dally-aura-1:16px;--dally-aura-2:26px;}
+  .dally-orb-wrap-sm{width:34px;height:34px;--dally-aura-1:10px;--dally-aura-2:16px;}
+  .dally-orb-wrap-xs{width:24px;height:24px;margin-bottom:1px;--dally-aura-1:7px;--dally-aura-2:11px;}
+  .dally-orb-core{border-radius:50%;background:radial-gradient(circle at 35% 30%, #fff 0%, #9FD0FF 35%, #0A84FF 75%);animation:dally-aura 1.8s ease-out infinite;}
+  .dally-orb-wrap-lg .dally-orb-core{width:26px;height:26px;}
+  .dally-orb-wrap-sm .dally-orb-core{width:14px;height:14px;}
+  .dally-orb-wrap-xs .dally-orb-core{width:10px;height:10px;}
+  @keyframes dally-aura{0%{box-shadow:0 0 0 0 rgba(10,132,255,.55), 0 0 0 0 rgba(191,90,242,.35);}70%{box-shadow:0 0 0 var(--dally-aura-1) rgba(10,132,255,0), 0 0 0 var(--dally-aura-2) rgba(191,90,242,0);}100%{box-shadow:0 0 0 0 rgba(10,132,255,0), 0 0 0 0 rgba(191,90,242,0);}}
+  .dally-rail{width:200px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto;}
+  .dally-rail-title{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:2px 8px 8px;}
+  .dally-rail-item{display:block;width:100%;text-align:left;background:none;border:none;border-radius:8px;padding:9px 10px;font-size:11.5px;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:3px;transition:background .15s;}
+  .dally-rail-item:hover{background:var(--accent-soft);}
+  @media (max-width:760px){ .dally-rail{display:none;} }
   .dally-typing-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;animation:dally-typing 1.1s infinite;}
   .dally-typing-dot:nth-child(2){animation-delay:.15s;}
   .dally-typing-dot:nth-child(3){animation-delay:.3s;}
@@ -6922,7 +6929,7 @@ function renderShell(freshPage){
             <span class="avatar">${initials(state.session.name)}</span>
             <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
           </div>
-          <button class="btn btn-sm" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span class="dally-orb dally-orb-xs" style="margin:0;"></span> Dally</button>
+          <button class="btn btn-sm" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span class="dally-orb-wrap dally-orb-wrap-xs" style="margin:0;"><span class="dally-orb-core"></span></span> Dally</button>
           ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
           ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
           <button class="btn-text" id="btn-switch-role">Log out</button>
@@ -12532,50 +12539,48 @@ function aiBotModal(){
   const who = (state.session && (state.session.staffName || state.session.name)) || '';
   return `
   <div class="overlay" id="overlay">
-    <div class="modal dally-modal" style="max-width:480px;display:flex;flex-direction:column;padding:0;overflow:hidden;">
-      ${chat.length===0 ? `
-      <div style="padding:34px 28px 22px;text-align:center;">
-        <div class="dally-orb dally-orb-lg"></div>
-        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;color:var(--accent-dark);margin-top:14px;">${who?`Hello, ${esc(who)}`:'Hello'}</div>
-        <h2 style="margin:2px 0 0;">How can I assist you today?</h2>
-        <div class="sub" style="margin-top:6px;">I'm Dally — ask me about orders, batches, complaints, revenue, customers, staff, deliveries, recipes, suppliers, ratings, or GMP, or say "go to settings" to jump to a page.</div>
+    <div class="modal dally-modal" style="width:100%;max-width:760px;height:min(560px,80vh);display:flex;padding:0;overflow:hidden;position:relative;">
+      <div class="dally-rail">
+        <div class="dally-rail-title">Quick asks</div>
+        ${AI_SUGGESTIONS.map(s=>`<button type="button" class="dally-rail-item" data-ai-suggestion="${esc(s)}">${esc(s)}</button>`).join('')}
       </div>
-      <div style="padding:0 24px 18px;">
-        <div class="hint" style="margin-bottom:8px;">Try one of these, or type your own question below:</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          ${AI_SUGGESTIONS.map(s=>`<button type="button" class="dally-suggestion-card" data-ai-suggestion="${esc(s)}">${esc(s)}</button>`).join('')}
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        ${chat.length===0 ? `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 32px;overflow-y:auto;">
+          <div class="dally-orb-wrap dally-orb-wrap-lg"><div class="dally-orb-core"></div></div>
+          <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;color:var(--accent-dark);margin-top:14px;">${who?`Hello, ${esc(who)}`:'Hello'}</div>
+          <h2 style="margin:2px 0 0;">How can I assist you today?</h2>
+          <div class="sub" style="margin-top:6px;max-width:380px;">I'm Dally — ask me about orders, batches, complaints, revenue, customers, staff, deliveries, recipes, suppliers, ratings, or GMP, or say "go to settings" to jump to a page.</div>
         </div>
-      </div>
-      ` : `
-      <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);">
-        <div class="dally-orb dally-orb-sm"></div>
-        <div>
-          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;">Dally</div>
-          <div class="hint" style="font-size:11px;">${thinking?'Thinking…':'Workspace assistant'}</div>
-        </div>
-      </div>
-      <div id="aichat-log" style="height:360px;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
-        ${chat.map(m=>`
-        <div style="display:flex;align-items:flex-end;gap:8px;align-self:${m.sender==='user'?'flex-end':'flex-start'};max-width:88%;flex-direction:${m.sender==='user'?'row-reverse':'row'};">
-          ${m.sender==='user' ? '' : '<div class="dally-orb dally-orb-xs"></div>'}
-          <div style="background:${m.sender==='user'?'var(--accent)':'var(--bg)'};color:${m.sender==='user'?'#fff':'var(--ink)'};padding:9px 13px;border-radius:14px;${m.sender==='user'?'border-bottom-right-radius:4px;':'border-bottom-left-radius:4px;'}font-size:13.5px;line-height:1.5;white-space:pre-wrap;">${escBody(m.text)}</div>
-        </div>`).join('')}
-        ${thinking ? `
-        <div style="display:flex;align-items:flex-end;gap:8px;align-self:flex-start;">
-          <div class="dally-orb dally-orb-xs"></div>
-          <div style="background:var(--bg);padding:11px 15px;border-radius:14px;border-bottom-left-radius:4px;display:flex;gap:4px;align-items:center;">
-            <span class="dally-typing-dot"></span><span class="dally-typing-dot"></span><span class="dally-typing-dot"></span>
+        ` : `
+        <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);">
+          <div class="dally-orb-wrap dally-orb-wrap-sm"><div class="dally-orb-core"></div></div>
+          <div>
+            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;">Dally</div>
+            <div class="hint" style="font-size:11px;">${thinking?'Thinking…':'Workspace assistant'}</div>
           </div>
-        </div>` : ''}
+        </div>
+        <div id="aichat-log" style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+          ${chat.map(m=>`
+          <div style="display:flex;align-items:flex-end;gap:8px;align-self:${m.sender==='user'?'flex-end':'flex-start'};max-width:88%;flex-direction:${m.sender==='user'?'row-reverse':'row'};">
+            ${m.sender==='user' ? '' : '<div class="dally-orb-wrap dally-orb-wrap-xs"><div class="dally-orb-core"></div></div>'}
+            <div style="background:${m.sender==='user'?'var(--accent)':'var(--bg)'};color:${m.sender==='user'?'#fff':'var(--ink)'};padding:9px 13px;border-radius:14px;${m.sender==='user'?'border-bottom-right-radius:4px;':'border-bottom-left-radius:4px;'}font-size:13.5px;line-height:1.5;white-space:pre-wrap;">${escBody(m.text)}</div>
+          </div>`).join('')}
+          ${thinking ? `
+          <div style="display:flex;align-items:flex-end;gap:8px;align-self:flex-start;">
+            <div class="dally-orb-wrap dally-orb-wrap-xs"><div class="dally-orb-core"></div></div>
+            <div style="background:var(--bg);padding:11px 15px;border-radius:14px;border-bottom-left-radius:4px;display:flex;gap:4px;align-items:center;">
+              <span class="dally-typing-dot"></span><span class="dally-typing-dot"></span><span class="dally-typing-dot"></span>
+            </div>
+          </div>` : ''}
+        </div>
+        `}
+        <form id="form-aichat" style="display:flex;gap:8px;padding:16px 20px;border-top:1px solid var(--border);flex-shrink:0;">
+          <input id="aichat-input" class="search-input" style="flex:1;" placeholder="Ask Dally anything…" autocomplete="off" ${thinking?'disabled':''}>
+          <button type="submit" class="btn btn-primary" ${thinking?'disabled':''}>Send</button>
+        </form>
       </div>
-      `}
-      <form id="form-aichat" style="display:flex;gap:8px;padding:16px 20px;border-top:1px solid var(--border);">
-        <input id="aichat-input" class="search-input" style="flex:1;" placeholder="Ask Dally anything…" autocomplete="off" ${thinking?'disabled':''}>
-        <button type="submit" class="btn btn-primary" ${thinking?'disabled':''}>Send</button>
-      </form>
-      <div class="modal-actions" style="justify-content:flex-end;padding:0 20px 18px;">
-        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-      </div>
+      <button type="button" id="btn-cancel-modal" title="Close" style="position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;line-height:1;color:var(--muted);">×</button>
     </div>
   </div>`;
 }

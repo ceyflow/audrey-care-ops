@@ -92,3 +92,54 @@ This only wires up **tracking display**. CityPak's API also supports creating or
 printing waybills, directly from our system instead of using CityPak's own portal — and a push API so
 CityPak notifies us the moment a status changes, instead of us asking. None of that is built yet; ask if
 you want it added later.
+
+## Dally, the workspace assistant (Gemini)
+
+The **Dally** button opens a chat that answers questions about live workspace data — orders, blending
+batches, complaints, revenue, customers, ratings, GMP — in plain language, not just the fixed set of
+questions the old keyword-matching assistant understood. Same pattern as SMS/CityPak above: the Gemini
+API key never touches the browser, it lives only in a Supabase Edge Function, which is handed a snapshot
+of the live data and the question, and forwards both to Google's free-tier Gemini API.
+
+Until this is set up, Dally still works using its built-in local answers (the original keyword matcher) —
+it just can't understand open-ended phrasing or hold a real conversation until you complete the steps
+below.
+
+### One-time setup
+
+1. Get a free Gemini API key — no credit card needed for the free tier:
+   - Go to https://aistudio.google.com/apikey, sign in with a Google account, and click **Create API key**.
+2. (If not already done for SMS/CityPak) install the Supabase CLI, log in, and link this project:
+   ```
+   supabase login
+   supabase link --project-ref mntnobzwbvqpvmaxqcuc
+   ```
+3. Set the secrets the function needs (the Gemini key from step 1, plus a password you invent yourself
+   for `DALLY_APP_SECRET` — any long random string):
+   ```
+   supabase secrets set GEMINI_API_KEY=your_gemini_api_key
+   supabase secrets set DALLY_APP_SECRET=some-long-random-string
+   ```
+4. Deploy the function:
+   ```
+   supabase functions deploy ask-dally --no-verify-jwt
+   ```
+5. Open `audrey-care-ops-v9.html`, find `DALLY_APP_SECRET` near `SMS_APP_SECRET`/`CITYPAK_APP_SECRET` in
+   the `<script>` block, and set it to the **exact same string** you used in step 3. Dally keeps using its
+   built-in local answers until this is changed from the placeholder value.
+
+### If Dally gives an error instead of an answer
+
+It falls back to its built-in local answer automatically and shows a small note why (the error Gemini or
+the Edge Function returned). The most common cause is a free-tier model name that's since been retired —
+check https://aistudio.google.com for the current recommended free-tier model, then run
+`supabase secrets set GEMINI_MODEL=that-model-name` and it takes effect immediately, no redeploy needed.
+
+### What data Dally can see
+
+Exactly the same facts the old keyword-matching assistant already exposed in its replies — order counts
+and stages, blending batches, open complaints, revenue, customer/supplier/staff counts and names, recipe
+names, ratings, GMP entry counts — packaged as one JSON snapshot per question instead of hidden behind
+fixed if/else branches. It does not get recipe formulas, costing figures, passwords, or anything beyond
+what `answerAiQuery` in the HTML file already reads from `state`; check that function if you want to see
+the exact fields.

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019194442">
+<meta name="app-build" content="20261019195513">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6640,6 +6640,7 @@ function renderLogin(){
         <div class="lead">Welcome back!</div>
 
         ${migrated ? `
+        <form id="login-form">
         <div class="field">
           <label>Name</label>
           <input id="login-name" type="text" placeholder="Type your name" autocomplete="off" autocapitalize="words" autofocus>
@@ -6652,7 +6653,8 @@ function renderLogin(){
           </div>
           <div class="hint" id="login-error" style="color:var(--danger);"></div>
         </div>
-        <button class="btn btn-primary login-submit" id="login-confirm">Log in</button>
+        <button type="submit" class="btn btn-primary login-submit" id="login-confirm">Log in</button>
+        </form>
         ` : `
         <div class="field">
           <label>Account</label>
@@ -6661,6 +6663,7 @@ function renderLogin(){
           </div>
         </div>
         ${role ? `
+        <form id="login-form">
         ${logins && logins.length ? `
         <div class="field">
           <label>Name</label>
@@ -6674,7 +6677,8 @@ function renderLogin(){
           </div>
           <div class="hint" id="login-error" style="color:var(--danger);"></div>
         </div>
-        <button class="btn btn-primary login-submit" id="login-confirm">Log in</button>` : ''}
+        <button type="submit" class="btn btn-primary login-submit" id="login-confirm">Log in</button>
+        </form>` : ''}
         `}
       </div>
     </div>
@@ -6694,15 +6698,15 @@ function attachLoginHandlers(){
   clearInterval(state._loginClockTimer);
   updateLoginClock();
   state._loginClockTimer = setInterval(updateLoginClock, 1000);
-  const confirmBtn = document.getElementById('login-confirm');
-  if(confirmBtn){
+  const loginForm = document.getElementById('login-form');
+  if(loginForm){
+    // A real <form> + submit button means Enter submits from either field natively (name or
+    // password, whichever has focus) — no per-key guesswork, and it's the one listener for both
+    // pressing Enter and clicking "Log in".
     const doLogin = state.auth.migratedToSupabaseAuth ? confirmLoginV2 : confirmLogin;
-    confirmBtn.addEventListener('click', doLogin);
+    loginForm.addEventListener('submit', e=>{ e.preventDefault(); doLogin(); });
     const passEl = document.getElementById('login-password');
-    if(passEl){
-      passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-      if(!state.auth.migratedToSupabaseAuth) passEl.focus();
-    }
+    if(passEl && !state.auth.migratedToSupabaseAuth) passEl.focus();
   }
   const toggleBtn = document.getElementById('btn-toggle-login-password');
   if(toggleBtn){

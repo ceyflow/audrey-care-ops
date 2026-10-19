@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019074050">
+<meta name="app-build" content="20261019074441">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1197,7 +1197,7 @@ const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
 // (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
 // from here so it stops being fetched on every login for no reason.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','sessionSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -1208,10 +1208,6 @@ const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns','outsta
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
-// 0 = off (nobody gets auto signed-off) until an admin opts in via the "Sign off timer" control
-// next to Log out — this is a workspace-wide security policy, not a personal preference, so it
-// lives in synced settings like orderSettings rather than localStorage.
-const DEFAULT_SESSION_SETTINGS = {inactivityTimeoutMinutes: 0};
 const DEFAULT_BATCH_SHEET_TEMPLATE = {
   showLogo:true, showDate:true, showBatchNo:true, showDescription:true,
   showPH:true, showCombineNote:true, showFooter:true, footerText:'Audrey Care (Pvt) Ltd.',
@@ -2236,7 +2232,7 @@ const PAGE_DATA_KEYS = {
   chat: ['chat','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns','outstandingReminderTemplate'],
   ratings: ['orders'],
-  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','sessionSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
+  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
 };
 // Every mutating action across every page calls logActivity(), and the topbar's Activity log
 // viewer is available regardless of which page is open — so activityLog isn't tied to one page,
@@ -3280,7 +3276,7 @@ function _cachedThemeOrDefault(){
   }catch(e){}
   return {paletteId:'green'};
 }
-const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='sessionSettings' ? {...DEFAULT_SESSION_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : []))))))))));
+const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : [])))))))));
 // One request for all 34 keys instead of 34 separate ones — each kvGet() round-trip has its own
 // latency, and firing them all at once doesn't fully hide that over a slower connection (plus
 // this is on the critical path of every single page load, authenticated or not, so it's worth
@@ -3448,7 +3444,6 @@ async function loadAll(){
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
-  state.sessionSettings = {...DEFAULT_SESSION_SETTINGS, ...(state.sessionSettings||{})};
   state.batchSheetTemplate = {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})};
   state.loginCustomization = {...DEFAULT_LOGIN_CUSTOMIZATION, ...(state.loginCustomization||{})};
   if(!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0){
@@ -6771,37 +6766,15 @@ const PAGE_META = {
   settings:{title:'Settings', sub:'Workspace access, and task templates.'},
 };
 
-// Admin-only control next to Log out: how many minutes of inactivity before everyone's own
-// session signs itself off. A workspace-wide security policy (synced via sessionSettings), not a
-// per-person preference — set once here, picked up by the idle watcher armed near the bottom of
-// this script (setInterval checking Date.now() against the last tracked input event).
-const SIGN_OFF_TIMER_OPTIONS = [5, 10, 15, 20];
-function renderSignOffTimerControl(){
-  const current = (state.sessionSettings && state.sessionSettings.inactivityTimeoutMinutes) || 0;
-  const draft = state.signOffTimerMenuOpen ? (state._signOffTimerDraft || current || SIGN_OFF_TIMER_OPTIONS[0]) : current;
-  return `
-  <div style="position:relative;display:inline-block;">
-    <button type="button" class="btn-text" id="btn-signoff-timer-toggle">Sign off timer${current?` (${current}m)`:''}</button>
-    ${state.signOffTimerMenuOpen ? `
-    <div class="chat-dropdown" style="top:28px;right:0;min-width:170px;">
-      ${SIGN_OFF_TIMER_OPTIONS.map(mins=>`<button type="button" data-signoff-pick="${mins}" style="${draft===mins?'font-weight:700;background:var(--bg);':''}">${draft===mins?'✓ ':''}${mins} minutes</button>`).join('')}
-      <button type="button" id="btn-signoff-timer-save" style="margin-top:4px;border-top:1px solid var(--accent-soft);padding-top:9px;font-weight:600;color:var(--accent-dark);">Save</button>
-    </div>` : ''}
-  </div>`;
-}
-function toggleSignOffTimerMenu(){
-  state.signOffTimerMenuOpen = !state.signOffTimerMenuOpen;
-  if(state.signOffTimerMenuOpen) state._signOffTimerDraft = (state.sessionSettings && state.sessionSettings.inactivityTimeoutMinutes) || SIGN_OFF_TIMER_OPTIONS[0];
-  render();
-}
-function pickSignOffTimerDraft(mins){ state._signOffTimerDraft = Number(mins); render(); }
-async function saveSignOffTimer(){
-  const mins = state._signOffTimerDraft || SIGN_OFF_TIMER_OPTIONS[0];
-  state.sessionSettings = {...state.sessionSettings, inactivityTimeoutMinutes: mins};
-  state.signOffTimerMenuOpen = false;
-  render();
-  await save('sessionSettings');
-  showToast(`Sign off timer set to ${mins} minutes`);
+// How many minutes of inactivity before a signed-in session signs itself off — set per role in
+// Settings → User roles (not a single workspace-wide value), picked up by the idle watcher armed
+// near the bottom of this script (setInterval checking Date.now() against the last tracked input
+// event). A role with no custom record (Blending/Packing/Orders Process/R&D — see pagesForRole)
+// has no timer, same as "Off".
+const ROLE_TIMEOUT_OPTIONS = [0, 5, 10, 15, 20];
+function roleSignOffMinutes(roleName){
+  const custom = (state.userRoles||[]).find(r=>r.name===roleName);
+  return custom ? Number(custom.inactivityTimeoutMinutes)||0 : 0;
 }
 
 function renderShell(freshPage){
@@ -6850,7 +6823,6 @@ function renderShell(freshPage){
           <button class="btn btn-sm" id="btn-open-aibot" title="Ask the workspace assistant" style="display:flex;align-items:center;gap:6px;">${icon('bot')} Assistant</button>
           ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
           ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
-          ${isAdmin() ? renderSignOffTimerControl() : ''}
           <button class="btn-text" id="btn-switch-role">Log out</button>
         </div>
       </header>
@@ -9778,7 +9750,7 @@ function renderUserRolesPanel(){
     <div class="panel-body">
       <div class="hint" style="margin-bottom:14px;">Define who gets to see what. Each role picks exactly which pages it can open — set one to Inactive to lock it out without deleting it. Admin and Sub Admin are built in and can't be renamed or removed, since the app checks those names directly in a few places.</div>
       <table class="data-table" style="margin-bottom:14px;">
-        <thead><tr><th>Role</th><th>Description</th><th>Status</th><th>Pages</th><th>Permissions</th><th></th></tr></thead>
+        <thead><tr><th>Role</th><th>Description</th><th>Status</th><th>Pages</th><th>Permissions</th><th>Sign off timer</th><th></th></tr></thead>
         <tbody>
           ${state.userRoles.map(r=>`
           <tr>
@@ -9787,6 +9759,7 @@ function renderUserRolesPanel(){
             <td>${r.status==='Active' ? '<span class="pill pill-active">Active</span>' : '<span class="hint">Inactive</span>'}</td>
             <td>${(r.pages||[]).length}</td>
             <td>${Object.values(r.permissions||{}).filter(Boolean).length} / ${ALL_PERMISSION_IDS.length}</td>
+            <td>${r.inactivityTimeoutMinutes ? esc(r.inactivityTimeoutMinutes)+'m' : '<span class="hint">Off</span>'}</td>
             <td class="row-actions">
               <button type="button" class="btn btn-sm" data-edit-role="${r.id}" title="Edit">✏️</button>
               ${r.locked ? '' : `<button type="button" class="btn btn-sm btn-danger" data-delete-role="${r.id}" title="Delete">🗑️</button>`}
@@ -9812,6 +9785,13 @@ function renderRoleEditForm(f){
       </div>
     </div>
     <div class="field"><label>Description</label><input id="role-form-description" value="${escAttr(f.description)}" placeholder="What this role is for"></div>
+    <div class="field">
+      <label>Sign off timer</label>
+      <div class="hint" style="margin-bottom:8px;">Auto sign-off anyone on this role after this many minutes of inactivity.</div>
+      <select id="role-form-timeout">
+        ${ROLE_TIMEOUT_OPTIONS.map(mins=>`<option value="${mins}" ${Number(f.inactivityTimeoutMinutes)===mins?'selected':''}>${mins===0?'Off':mins+' minutes'}</option>`).join('')}
+      </select>
+    </div>
     <div class="field">
       <label>Access — departments &amp; pages</label>
       <div class="hint" style="margin-bottom:8px;">Choose exactly which pages this role can open.</div>
@@ -13880,9 +13860,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-open-aibot')) byIdEl('btn-open-aibot').onclick = ()=>openModal('aibot');
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
   if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
-  if(byIdEl('btn-signoff-timer-toggle')) byIdEl('btn-signoff-timer-toggle').onclick = toggleSignOffTimerMenu;
-  document.querySelectorAll('[data-signoff-pick]').forEach(b=>b.addEventListener('click', ()=>pickSignOffTimerDraft(b.dataset.signoffPick)));
-  if(byIdEl('btn-signoff-timer-save')) byIdEl('btn-signoff-timer-save').onclick = saveSignOffTimer;
   document.querySelectorAll('[data-delete-login]').forEach(b=>b.addEventListener('click', ()=>deleteLoginEntry(b.dataset.deleteLogin)));
   if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;
@@ -15528,12 +15505,12 @@ function attachShellHandlers(){
 
   // User roles
   if(byIdEl('btn-new-role')) byIdEl('btn-new-role').onclick = ()=>{
-    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], permissions:{}, locked:false, isNew:true};
+    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], permissions:{}, inactivityTimeoutMinutes:0, locked:false, isNew:true};
     render();
   };
   document.querySelectorAll('[data-edit-role]').forEach(b=>b.addEventListener('click', ()=>{
     const r = state.userRoles.find(x=>x.id===b.dataset.editRole); if(!r) return;
-    state._roleEditForm = {...r, pages:[...(r.pages||[])], permissions:{...(r.permissions||{})}, isNew:false};
+    state._roleEditForm = {...r, pages:[...(r.pages||[])], permissions:{...(r.permissions||{})}, inactivityTimeoutMinutes:Number(r.inactivityTimeoutMinutes)||0, isNew:false};
     render();
   }));
   document.querySelectorAll('[data-delete-role]').forEach(b=>b.addEventListener('click', ()=>{
@@ -15562,6 +15539,7 @@ function attachShellHandlers(){
   if(byIdEl('role-form-name')) byIdEl('role-form-name').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.name = e.target.value; });
   if(byIdEl('role-form-description')) byIdEl('role-form-description').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.description = e.target.value; });
   if(byIdEl('role-form-status')) byIdEl('role-form-status').addEventListener('change', e=>{ if(state._roleEditForm) state._roleEditForm.status = e.target.value; });
+  if(byIdEl('role-form-timeout')) byIdEl('role-form-timeout').addEventListener('change', e=>{ if(state._roleEditForm) state._roleEditForm.inactivityTimeoutMinutes = Number(e.target.value); });
   if(byIdEl('btn-cancel-role-edit')) byIdEl('btn-cancel-role-edit').onclick = ()=>{ state._roleEditForm = null; render(); };
   if(byIdEl('btn-save-role')) byIdEl('btn-save-role').onclick = async ()=>{
     const f = state._roleEditForm; if(!f) return;
@@ -15569,10 +15547,11 @@ function attachShellHandlers(){
     if(!name){ showToast('Enter a role name'); return; }
     const dup = state.userRoles.some(r=>r.name.toLowerCase()===name.toLowerCase() && r.id!==f.id);
     if(dup){ showToast('A role with that name already exists'); return; }
+    const inactivityTimeoutMinutes = Number(f.inactivityTimeoutMinutes)||0;
     if(f.isNew){
-      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, locked:false}];
+      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, inactivityTimeoutMinutes, locked:false}];
     } else {
-      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}} : r);
+      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, inactivityTimeoutMinutes} : r);
     }
     await save('userRoles');
     syncAllRoleDataAccess();
@@ -15670,7 +15649,7 @@ let _lastActivityAt = Date.now();
   document.addEventListener(evt, ()=>{ _lastActivityAt = Date.now(); }, {passive:true});
 });
 setInterval(()=>{
-  const mins = state.session && state.sessionSettings ? state.sessionSettings.inactivityTimeoutMinutes : 0;
+  const mins = state.session ? roleSignOffMinutes(state.session.role) : 0;
   if(!state.session || !mins) return;
   if(Date.now() - _lastActivityAt >= mins*60*1000){
     showToast('Signed off after being inactive');

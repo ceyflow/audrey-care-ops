@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019102656">
+<meta name="app-build" content="20261019103735">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9776,9 +9776,9 @@ function renderUserRolesPanel(){
 }
 function renderRoleEditForm(f){
   return `
-  <div style="padding-top:14px;border-top:1px solid var(--border);">
-    <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:10px;">${f.isNew ? 'New role' : 'Edit role'}</div>
-    <div class="field-row">
+  <div style="padding-top:14px;border-top:1px solid var(--border);display:flex;gap:28px;flex-wrap:wrap;">
+    <div style="width:280px;flex-shrink:0;">
+      <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:10px;">${f.isNew ? 'New role' : 'Edit role'}</div>
       <div class="field"><label>Role name</label><input id="role-form-name" value="${escAttr(f.name)}" ${f.locked?'disabled':''}></div>
       <div class="field"><label>Status</label>
         <select id="role-form-status">
@@ -9786,42 +9786,42 @@ function renderRoleEditForm(f){
           <option value="Inactive" ${f.status==='Inactive'?'selected':''}>Inactive</option>
         </select>
       </div>
-    </div>
-    <div class="field"><label>Description</label><input id="role-form-description" value="${escAttr(f.description)}" placeholder="What this role is for"></div>
-    <div class="field">
-      <label>Sign off timer</label>
-      <div class="hint" style="margin-bottom:8px;">Auto sign-off anyone on this role after this many minutes of inactivity.</div>
-      <select id="role-form-timeout">
-        ${ROLE_TIMEOUT_OPTIONS.map(mins=>`<option value="${mins}" ${Number(f.inactivityTimeoutMinutes)===mins?'selected':''}>${mins===0?'Off':mins+' minutes'}</option>`).join('')}
-      </select>
-    </div>
-    <div class="field">
-      <label>Access — departments &amp; pages</label>
-      <div class="hint" style="margin-bottom:8px;">Choose exactly which pages this role can open.</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${ASSIGNABLE_ROLE_PAGES.map(id=>`
-        <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
-          <input type="checkbox" class="toggle-input" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
-        </label>`).join('')}
+      <div class="field"><label>Sign off timer</label>
+        <select id="role-form-timeout">
+          ${ROLE_TIMEOUT_OPTIONS.map(mins=>`<option value="${mins}" ${Number(f.inactivityTimeoutMinutes)===mins?'selected':''}>${mins===0?'Off':mins+' minutes'}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Description</label><input id="role-form-description" value="${escAttr(f.description)}" placeholder="What this role is for"></div>
+      <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;gap:8px;">
+        <button type="button" class="btn btn-primary" id="btn-save-role">${f.isNew ? 'Insert new role' : 'Save changes'}</button>
+        <button type="button" class="btn" id="btn-cancel-role-edit">Cancel</button>
       </div>
     </div>
-    <div class="field">
-      <label>Fine-grained permissions</label>
-      <div class="hint" style="margin-bottom:10px;">Within a department this role can already open, choose exactly which actions it can take — drag-and-drop, delete, edit after the fact, bulk actions, and so on.</div>
-      ${permissionsByDepartment().map(g=>`
-      <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
-        <div style="font-weight:600;color:var(--ink);font-size:13px;margin-bottom:8px;">${esc(g.label)}</div>
+    <div style="flex:1;min-width:360px;">
+      <div class="field">
+        <label>Access — departments &amp; pages</label>
+        <div class="hint" style="margin-bottom:8px;">Choose exactly which pages this role can open.</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
-          ${g.items.map(p=>`
-          <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:12.5px;">
-            <input type="checkbox" class="toggle-input" data-role-permission="${p.id}" ${f.permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
+          ${ASSIGNABLE_ROLE_PAGES.map(id=>`
+          <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
+            <input type="checkbox" class="toggle-input" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
           </label>`).join('')}
         </div>
-      </div>`).join('')}
-    </div>
-    <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;gap:8px;">
-      <button type="button" class="btn btn-primary" id="btn-save-role">${f.isNew ? 'Insert new role' : 'Save changes'}</button>
-      <button type="button" class="btn" id="btn-cancel-role-edit">Cancel</button>
+      </div>
+      <div class="field">
+        <label>Fine-grained permissions</label>
+        <div class="hint" style="margin-bottom:10px;">Within a department this role can already open, choose exactly which actions it can take — drag-and-drop, delete, edit after the fact, bulk actions, and so on.</div>
+        ${permissionsByDepartment().map(g=>`
+        <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+          <div style="font-weight:600;color:var(--ink);font-size:13px;margin-bottom:8px;">${esc(g.label)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${g.items.map(p=>`
+            <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:12.5px;">
+              <input type="checkbox" class="toggle-input" data-role-permission="${p.id}" ${f.permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
+            </label>`).join('')}
+          </div>
+        </div>`).join('')}
+      </div>
     </div>
   </div>`;
 }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019094625">
+<meta name="app-build" content="20261019102216">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9320,8 +9320,8 @@ function renderTimerAlertSoundPanel(){
 }
 // Settings grew into 11 panels, each one long — rather than a page you scroll through to find
 // one, the jump cards act as accordion tabs: clicking a card shows only that panel below, no
-// scrolling past everything else needed. state._settingsOpenPanel remembers which one, defaulting
-// to the first card so the page never opens looking empty.
+// scrolling past everything else needed. state._settingsOpenPanel remembers which one; the page
+// opens with just the card grid and nothing below until a card is clicked.
 const SETTINGS_PANEL_RENDERERS = {
   'settings-complaint-access': renderComplaintAccessPanel,
   'settings-sidebar-order': renderSidebarOrderPanel,
@@ -9367,8 +9367,8 @@ function renderSettingsPage(){
     {id:'settings-sms-settings', label:'SMS settings', icon:'send', adminOnly:false},
     {id:'settings-backup', label:'Backup & export', icon:'list', adminOnly:true},
   ].filter(c => c.adminOnly ? isAdmin() : (isAdmin() || canSettings)));
-  const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : jumpCards[0].id;
-  const renderOpenPanel = SETTINGS_PANEL_RENDERERS[openId];
+  const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : null;
+  const renderOpenPanel = openId ? SETTINGS_PANEL_RENDERERS[openId] : null;
   return `
   <div class="landing-section">
     <div class="landing-section-title">Jump to <span class="hint" style="font-weight:400;">— drag a card to reorder</span></div>
@@ -9380,7 +9380,7 @@ function renderSettingsPage(){
     </div>
   </div>
 
-  ${renderOpenPanel ? renderOpenPanel() : ''}
+  ${renderOpenPanel ? renderOpenPanel() : `<div class="hint" style="padding:20px 2px;">Pick a category above to see its settings.</div>`}
   `;
 }
 function renderBackupPanel(){

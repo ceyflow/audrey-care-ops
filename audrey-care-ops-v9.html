@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019102216">
+<meta name="app-build" content="20261019102656">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9369,18 +9369,21 @@ function renderSettingsPage(){
   ].filter(c => c.adminOnly ? isAdmin() : (isAdmin() || canSettings)));
   const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : null;
   const renderOpenPanel = openId ? SETTINGS_PANEL_RENDERERS[openId] : null;
+  // Same hub/drill-down pattern as GMP (renderGmpPage/renderGmpHub): clicking a card replaces the
+  // whole grid with just that panel, not an accordion stacked below every other card.
+  if(renderOpenPanel){
+    return `<div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-settings-back>‹ Settings</button></div>${renderOpenPanel()}`;
+  }
   return `
   <div class="landing-section">
     <div class="landing-section-title">Jump to <span class="hint" style="font-weight:400;">— drag a card to reorder</span></div>
     <div class="landing-grid" id="settings-jump-grid">
       ${jumpCards.map(c=>`
-      <button type="button" class="landing-card ${openId===c.id?'landing-card-selected':''}" draggable="true" data-settings-jump="${c.id}">
+      <button type="button" class="landing-card" draggable="true" data-settings-jump="${c.id}">
         ${icon(c.icon)}<span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>
   </div>
-
-  ${renderOpenPanel ? renderOpenPanel() : `<div class="hint" style="padding:20px 2px;">Pick a category above to see its settings.</div>`}
   `;
 }
 function renderBackupPanel(){
@@ -13815,11 +13818,15 @@ function attachShellHandlers(){
     e.preventDefault();
     goTo(el.dataset.nav);
   }));
-  // Settings has grown into 11 panels — these cards act as accordion tabs, swapping which one
-  // shows below instead of making someone scroll past the others to find it.
+  // Settings has grown into 11 panels — same hub/drill-down pattern as GMP: clicking a card
+  // replaces the whole grid with just that panel; "‹ Settings" below goes back to the grid.
   document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
     state._settingsOpenPanel = el.dataset.settingsJump;
+    render();
+  }));
+  document.querySelectorAll('[data-settings-back]').forEach(el=>el.addEventListener('click', ()=>{
+    state._settingsOpenPanel = null;
     render();
   }));
   document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{

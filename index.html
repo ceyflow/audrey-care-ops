@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019074441">
+<meta name="app-build" content="20261019094625">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -543,7 +543,7 @@ html{ visibility:hidden; }
   .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--ink);}
   .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);}
   .field input[type="checkbox"]{width:auto;padding:0;border:none;background:transparent;}
-  .toggle-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;font-weight:500;cursor:pointer;}
+  .toggle-row,.field label.toggle-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;font-weight:500;cursor:pointer;}
   .toggle-input{position:absolute;opacity:0;width:0;height:0;}
   .toggle-track{position:relative;width:34px;height:19px;background:#D9D9D2;border-radius:999px;flex-shrink:0;transition:background .15s;}
   .toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s;}
@@ -9797,7 +9797,7 @@ function renderRoleEditForm(f){
       <div class="hint" style="margin-bottom:8px;">Choose exactly which pages this role can open.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
         ${ASSIGNABLE_ROLE_PAGES.map(id=>`
-        <label class="toggle-row" style="background:var(--bg);border:1px solid var(--border);font-size:13px;">
+        <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
           <input type="checkbox" class="toggle-input" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
         </label>`).join('')}
       </div>
@@ -9810,7 +9810,7 @@ function renderRoleEditForm(f){
         <div style="font-weight:600;color:var(--ink);font-size:13px;margin-bottom:8px;">${esc(g.label)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
           ${g.items.map(p=>`
-          <label class="toggle-row" style="background:var(--bg);border:1px solid var(--border);font-size:12.5px;">
+          <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:12.5px;">
             <input type="checkbox" class="toggle-input" data-role-permission="${p.id}" ${f.permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
           </label>`).join('')}
         </div>

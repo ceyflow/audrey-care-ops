@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019203705">
+<meta name="app-build" content="20261019204517">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6081,7 +6081,8 @@ async function askDally(question, history){
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok || !data.ok){
-      return answerAiQuery(question) + `\n\n(Dally's AI brain had a problem — ${data.error||'error '+res.status} — showing the built-in answer instead.)`;
+      const detail = data.detail ? ' — ' + String(data.detail).slice(0,200) : '';
+      return answerAiQuery(question) + `\n\n(Dally's AI brain had a problem — ${data.error||'error '+res.status}${detail} — showing the built-in answer instead.)`;
     }
     return data.reply;
   }catch(e){

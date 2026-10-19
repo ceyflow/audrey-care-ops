@@ -21,11 +21,11 @@
 // still ships inside the page's JS like the Supabase anon key already does), but it stops casual
 // abuse of the endpoint — same tradeoff as SMS_APP_SECRET and CITYPAK_APP_SECRET.
 //
-// Optional: supabase secrets set GEMINI_MODEL=gemini-2.0-flash to pin a different model if the
+// Optional: supabase secrets set GEMINI_MODEL=gemini-3.8-flash to pin a different model if the
 // default below ever gets deprecated — check https://aistudio.google.com for current free-tier
 // model names.
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_MODEL = "gemini-3.8-flash";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",

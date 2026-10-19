@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019191851">
+<meta name="app-build" content="20261019192043">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3817,6 +3817,9 @@ async function loadAll(){
     // A refresh while a GMP card is open should land back in that card, not the hub — same idea
     // as the costing drill-down restore just below, one level deep instead of two.
     if(state.page==='gmp' && hashParts[1]) state.filters.gmpSection = hashParts[1];
+    // Same one-level restore for Settings: a refresh while a panel is open should land back in
+    // that panel, not the Jump to grid.
+    if(state.page==='settings' && hashParts[1]) state._settingsOpenPanel = hashParts[1];
     // A refresh while deep inside a costing recipe (product + version open) should land back
     // on that exact recipe sheet, not bounce out to the product grid — same drill-down the
     // sidebar page-level hash already gives every other page, one level deeper.
@@ -4344,6 +4347,7 @@ function performGoTo(page){
   state._costingDirty = false;
   state._costingVersionsView = 'active';
   state.filters.gmpSection = null;
+  state._settingsOpenPanel = null;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
   const curHashParts = (location.hash||'').replace('#','').split('/');
   if((curHashParts[0]||'')!==page){
@@ -4357,6 +4361,10 @@ function performGoTo(page){
     // "#gmp/<section>" left over from a card that was open before navigating elsewhere, so a
     // card re-opened from here pushes exactly one history entry, not two.
     history.replaceState(null,'','#gmp');
+  } else if(page==='settings' && curHashParts[1]){
+    // Same cleanup for Settings: re-opening it from the sidebar always lands on the Jump to
+    // grid (reset above), so drop a stale "#settings/<panel>" left over from before.
+    history.replaceState(null,'','#settings');
   }
   render();
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
@@ -13851,16 +13859,20 @@ function attachShellHandlers(){
     e.preventDefault();
     goTo(el.dataset.nav);
   }));
-  // Settings has grown into 11 panels — same hub/drill-down pattern as GMP: clicking a card
-  // replaces the whole grid with just that panel; "‹ Settings" below goes back to the grid.
+  // Settings has grown into 11 panels — same hub/drill-down pattern as GMP, history included:
+  // opening a card pushes a real history entry (#settings/<panel>) so the browser's own Back
+  // button returns to the grid in one step, resynced by the popstate listener below. The in-app
+  // "‹ Settings" button goes through history.back() too, so both ways back stay in sync.
   document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
-    state._settingsOpenPanel = el.dataset.settingsJump;
+    const panel = el.dataset.settingsJump;
+    history.pushState(null,'','#settings/'+panel);
+    state._settingsOpenPanel = panel;
     render();
   }));
   document.querySelectorAll('[data-settings-back]').forEach(el=>el.addEventListener('click', ()=>{
-    state._settingsOpenPanel = null;
-    render();
+    if(((location.hash||'').replace('#','').split('/')[1]||'')) history.back();
+    else { state._settingsOpenPanel = null; render(); }
   }));
   document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{
     card.addEventListener('dragstart', e=>{
@@ -15676,6 +15688,7 @@ window.addEventListener('popstate', ()=>{
   if(!page || !pageAllowed(page)) return;
   state.page = page; state.modal = null;
   if(page==='gmp') state.filters.gmpSection = hashParts[1] || null;
+  if(page==='settings') state._settingsOpenPanel = hashParts[1] || null;
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
   render();

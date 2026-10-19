@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019103735">
+<meta name="app-build" content="20261019190635">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -223,7 +223,7 @@ html{ visibility:hidden; }
 
   /* ---------------- Stat cards ---------------- */
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;transition:transform .18s ease,box-shadow .18s ease;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:0 1px 2px rgba(20,25,20,.04), 0 8px 20px rgba(20,25,20,.05);transition:transform .18s ease,box-shadow .18s ease;}
   .stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(20,25,20,.08);}
   .stat-card .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
   .stat-card .value{font-size:24px;font-weight:600;}
@@ -6966,6 +6966,17 @@ function renderDashboard(){
     {label:'Open Complaints', value: openComplaints, sub:null, danger: openComplaints>0},
   ];
 
+  // Pipeline donut: each stage's conic-gradient slice sized to its share of active orders, using
+  // the same per-stage colors as the Orders Process columns and every stage badge elsewhere, so
+  // the chart reads as the same pipeline rather than a second color language.
+  let _donutAcc = 0;
+  const donutStops = total===0 ? 'var(--border) 0% 100%' : STAGES.map((s,i)=>{
+    const style = STAGE_STYLE[STAGE_KEYS[i]];
+    const from = _donutAcc, to = _donutAcc + (counts[i]/total*100);
+    _donutAcc = to;
+    return `${style.c} ${from}% ${to}%`;
+  }).join(', ');
+
   return `
   <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
     ${stats.map(s=>`
@@ -6974,6 +6985,29 @@ function renderDashboard(){
         <div class="value ${s.danger?'danger':''}">${s.danger?'<span class="pulse-dot"></span>':''}<span class="stat-num" data-target="${s.value}">${s.value}</span></div>
         ${s.sub?`<div class="hint" style="margin-top:4px;">${s.sub}</div>`:''}
       </div>`).join('')}
+  </div>
+
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-head"><h3>Pipeline overview</h3></div>
+    <div class="panel-body" style="display:flex;align-items:center;gap:30px;flex-wrap:wrap;">
+      <div style="position:relative;width:150px;height:150px;flex-shrink:0;">
+        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${donutStops});"></div>
+        <div style="position:absolute;top:22px;left:22px;width:106px;height:106px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div style="font-size:24px;font-weight:700;"><span class="stat-num" data-target="${total}">${total}</span></div>
+          <div class="hint" style="font-size:10.5px;">in motion</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px;">
+        ${STAGES.map((s,i)=>{
+          const style = STAGE_STYLE[STAGE_KEYS[i]];
+          return `<div style="display:flex;align-items:center;gap:9px;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border);">
+            <span style="width:9px;height:9px;border-radius:50%;background:${style.c};flex-shrink:0;"></span>
+            ${esc(s)}
+            <span style="margin-left:auto;font-weight:700;">${counts[i]}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
   </div>
 
   <div class="panel" style="margin-top:20px;">

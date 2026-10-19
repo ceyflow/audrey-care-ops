@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019191235">
+<meta name="app-build" content="20261019191851">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7020,19 +7020,18 @@ function renderDashboard(){
 
   <div class="panel" style="margin-top:20px;">
     <div class="panel-head"><h3>Recent orders</h3>${pageAllowed('orders') ? `<button class="btn btn-sm" id="dash-view-orders">View board</button>` : ''}</div>
-    <div class="panel-body" style="padding:0;">
+    <div class="panel-body">
       ${total===0 ? `<div class="empty-state">Nothing to show yet.</div>` : `
-      <table class="data-table">
-        <thead><tr><th>Customer</th><th>Product</th><th>Stage</th><th>Created</th></tr></thead>
-        <tbody>
-          ${state.orders.slice(0,5).map(o=>{
-            const style = STAGE_STYLE[STAGE_KEYS[o.stage]];
-            return `<tr><td>${esc(o.customer)}</td><td>${richText(o.product)}</td>
-              <td><span class="stage-badge" style="background:${style.bg};color:${style.c};">${STAGES[o.stage]}</span></td>
-              <td>${daysAgo(o.createdAt)} ago</td></tr>`;
-          }).join('')}
-        </tbody>
-      </table>`}
+      ${state.orders.slice(0,5).map((o,i,arr)=>{
+        const style = STAGE_STYLE[STAGE_KEYS[o.stage]];
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;${i<arr.length-1?'border-bottom:1px solid var(--border);':''}">
+          <div>
+            <div style="font-weight:600;font-size:13.5px;">${esc(o.customer)}</div>
+            <div class="hint" style="margin-top:2px;">${daysAgo(o.createdAt)} ago</div>
+          </div>
+          <span class="stage-badge" style="background:${style.bg};color:${style.c};flex-shrink:0;">${STAGES[o.stage]}</span>
+        </div>`;
+      }).join('')}`}
     </div>
   </div>
   `;

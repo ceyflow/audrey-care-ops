@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019192043">
+<meta name="app-build" content="20261019192231">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -12217,11 +12217,12 @@ function renderChatPage(){
   return `
   <div class="panel" style="display:flex;flex-direction:column;height:calc(100vh - 190px);margin-bottom:0;">
     <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 18px 0;position:relative;">
+      ${isAdmin() ? `
       <button type="button" id="btn-chat-theme-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:500;">🎨 Theme</button>
       ${state.chatThemeMenuOpen ? `
       <div class="chat-dropdown" style="top:40px;right:0;min-width:230px;">
         ${CHAT_THEME_ORDER.map(key=>`<button type="button" data-chat-theme-pick="${key}" style="${state.chatTheme===key?'font-weight:700;background:var(--bg);':''}">${state.chatTheme===key?'✓ ':''}${esc(CHAT_THEMES[key].label)}</button>`).join('')}
-      </div>` : ''}
+      </div>` : ''}` : ''}
       ${deleteAllowed ? `<button type="button" style="background:${theme.deleteBg};color:${theme.deleteColor};border:${theme.deleteBorder||'none'};border-radius:${theme.deleteRadius};padding:8px 16px;font-size:12px;font-weight:600;" id="btn-delete-chat-history">Delete chat history</button>` : ''}
     </div>
     <div id="chat-messages" style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:${theme.compactGap?'2px':'14px'};background:${theme.pageBg||'transparent'};">

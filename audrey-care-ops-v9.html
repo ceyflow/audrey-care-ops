@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019071724">
+<meta name="app-build" content="20261019074050">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9509,23 +9509,40 @@ function renderSecureAccountsPanel(){
   const results = state._secureAcctResults;
   const running = !!state._secureAcctRunning;
   const allOk = results && results.length>0 && results.every(r=>r.ok);
+  const accounts = state.auth.secureAccounts||[];
+  const activeCount = accounts.filter(r=>r.active!==false).length;
+  const staleCount = accounts.filter(r=>{
+    if(r.active===false) return false;
+    const last = lastVisitForLoginName(r.name);
+    return !last || (Date.now()-new Date(last).getTime())/86400000>=2;
+  }).length;
   return `
   <div class="panel" id="settings-secure-accounts">
     <div class="panel-head"><h3>User account setup</h3>${migrated?`<span class="pill pill-active">Active</span>`:''}</div>
     <div class="panel-body">
       ${migrated ? `
       <div class="hint" style="margin-bottom:14px;">Real database-backed logins are active. Costing and R&amp;D data now require a genuine signed-in Admin account — not just the app's own password screen.</div>
+      <div class="stat-grid" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="label">Total accounts</div><div class="value"><span class="stat-num" data-target="${accounts.length}">${accounts.length}</span></div></div>
+        <div class="stat-card"><div class="label">Active</div><div class="value accent"><span class="stat-num" data-target="${activeCount}">${activeCount}</span></div></div>
+        <div class="stat-card"><div class="label">Inactive</div><div class="value ${accounts.length-activeCount?'danger':''}"><span class="stat-num" data-target="${accounts.length-activeCount}">${accounts.length-activeCount}</span></div></div>
+        <div class="stat-card"><div class="label">Haven't signed in 2+ days</div><div class="value ${staleCount?'danger':''}"><span class="stat-num" data-target="${staleCount}">${staleCount}</span></div></div>
+      </div>
       <table class="data-table secure-accounts-table" style="margin-bottom:14px;">
-        <thead><tr><th>User login</th><th>Full name</th><th>Access level</th><th>Last visit</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th style="width:24px;"></th><th>User login</th><th>Full name</th><th>Access level</th><th>Last visit</th><th>Status</th><th></th></tr></thead>
         <tbody>
-          ${(state.auth.secureAccounts||[]).map(r=>{
+          ${accounts.map(r=>{
             const last = lastVisitForLoginName(r.name);
             const active = r.active!==false;
+            const ageDays = last ? (Date.now()-new Date(last).getTime())/86400000 : null;
+            const dotRisky = !active || ageDays===null || ageDays>=2;
+            const textRisky = active && ageDays!==null && ageDays>=2;
             return `<tr>
+              <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotRisky?'var(--danger)':'var(--accent-dark)'};" title="${!active?'Inactive':(ageDays===null?"Never signed in":ageDays>=2?"Hasn't signed in for 2+ days":'Recently active')}"></span></td>
               <td style="font-weight:600;">${esc(r.name)}</td>
               <td>${r.fullName ? esc(r.fullName) : '<span class="hint">—</span>'}</td>
               <td>${esc(r.role)}</td>
-              <td>${last ? fmtDateTime(last) : '<span class="hint">Never signed in</span>'}</td>
+              <td style="${textRisky?'color:var(--danger);font-weight:600;':''}">${last ? fmtDateTime(last) : '<span class="hint">Never signed in</span>'}</td>
               <td>
                 <button type="button" class="pill ${active?'pill-active':'pill-inactive'}" style="border:none;cursor:pointer;" data-toggle-secure-account-active="${escAttr(r.name)}" title="${active?'Click to deactivate — blocks sign-in until reactivated':'Click to reactivate'}">${active?'Active':'Inactive'}</button>
               </td>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261018190003">
+<meta name="app-build" content="20261019035338">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8036,8 +8036,8 @@ function renderGmpChecklistsSection(){
 
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="label">Checklists</div><div class="value">${defs.length}</div></div>
-    <div class="stat-card"><div class="label">Tasks tracked</div><div class="value">${def.tasks.length}</div></div>
+    <div class="stat-card"><div class="label">Checklists</div><div class="value"><span class="stat-num" data-target="${defs.length}">${defs.length}</span></div></div>
+    <div class="stat-card"><div class="label">Tasks tracked</div><div class="value"><span class="stat-num" data-target="${def.tasks.length}">${def.tasks.length}</span></div></div>
     <div class="stat-card"><div class="label">Viewing</div><div class="value" style="font-size:16px;">${MONTH_NAMES[month-1]} ${year}</div></div>
   </div>
   <div class="toolbar" style="flex-wrap:wrap;">
@@ -8282,9 +8282,9 @@ function renderComplaintsPage(){
   const resolvedOrClosed = state.complaints.filter(c=>c.status==='Resolved' || c.status==='Closed').length;
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="label">Total complaints</div><div class="value">${state.complaints.length}</div></div>
-    <div class="stat-card"><div class="label">Open</div><div class="value ${open?'danger':''}">${open}</div></div>
-    <div class="stat-card"><div class="label">Resolved / Closed</div><div class="value accent">${resolvedOrClosed}</div></div>
+    <div class="stat-card"><div class="label">Total complaints</div><div class="value"><span class="stat-num" data-target="${state.complaints.length}">${state.complaints.length}</span></div></div>
+    <div class="stat-card"><div class="label">Open</div><div class="value ${open?'danger':''}"><span class="stat-num" data-target="${open}">${open}</span></div></div>
+    <div class="stat-card"><div class="label">Resolved / Closed</div><div class="value accent"><span class="stat-num" data-target="${resolvedOrClosed}">${resolvedOrClosed}</span></div></div>
   </div>
   <div class="toolbar">
     <div class="tabs">
@@ -8470,7 +8470,7 @@ function renderBulkSmsOutstandingTab(){
   const tpl = state.outstandingReminderTemplate;
   return `
   <div class="stat-grid" style="margin-bottom:16px;">
-    <div class="stat-card"><div class="label">Customers owing</div><div class="value">${owing.length}</div></div>
+    <div class="stat-card"><div class="label">Customers owing</div><div class="value"><span class="stat-num" data-target="${owing.length}">${owing.length}</span></div></div>
     <div class="stat-card"><div class="label">Total outstanding</div><div class="value accent">Rs. ${totalOwed.toFixed(2)}</div></div>
   </div>
   <div class="panel">
@@ -8797,7 +8797,7 @@ function renderRatingsPage(){
   const allSelected = rated.length>0 && rated.every(o=>state.selectedRatings.has(o.id));
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="label">Ratings received</div><div class="value">${rated.length}</div></div>
+    <div class="stat-card"><div class="label">Ratings received</div><div class="value"><span class="stat-num" data-target="${rated.length}">${rated.length}</span></div></div>
     <div class="stat-card"><div class="label">Average rating</div><div class="value accent">${rated.length?avg.toFixed(1)+' ★':'—'}</div></div>
   </div>
   ${admin && state.selectedRatings.size>0 ? `

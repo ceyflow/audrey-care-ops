@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020062350">
+<meta name="app-build" content="20261020073847">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6092,6 +6092,11 @@ function buildDallyContext(){
     delivery_lines: (state.deliveryLines||[]).map(l=>({label:l.label, active_count: active.filter(o=>o.courierService===l.key).length})),
   };
 }
+// Turned off by request — Gemini's free-tier latency felt too slow in practice, so Dally stays
+// on the instant built-in keyword matcher only. The Gemini wiring below (Edge Function, secret,
+// streaming) is untouched and still deployed; flip DALLY_DISABLED back to false to re-enable it,
+// no redeploy needed.
+const DALLY_DISABLED = true;
 // Tries Dally's real Gemini brain first (ask-dally Edge Function, streaming); falls back to the
 // original local keyword matcher — silently if Dally isn't configured yet, with a short note
 // appended if it IS configured but the call itself failed (so a real outage is visible, not just
@@ -6099,7 +6104,7 @@ function buildDallyContext(){
 // (once, with the whole text, for the built-in-fallback cases — same callback either way, so the
 // caller doesn't need to know which path produced the answer).
 async function askDally(question, history, onChunk){
-  if(!DALLY_CONFIGURED){ onChunk(answerAiQuery(question)); return; }
+  if(DALLY_DISABLED || !DALLY_CONFIGURED){ onChunk(answerAiQuery(question)); return; }
   try{
     const res = await fetch(SUPABASE_URL + '/functions/v1/ask-dally', {
       method: 'POST',

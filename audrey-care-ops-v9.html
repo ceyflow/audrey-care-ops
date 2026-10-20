@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020073847">
+<meta name="app-build" content="20261020074227">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1243,7 +1243,7 @@ const DALLY_CONFIGURED = DALLY_APP_SECRET !== 'PASTE_DALLY_APP_SECRET';
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
 // (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
 // from here so it stops being fetched on every login for no reason.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -1254,6 +1254,11 @@ const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns','outsta
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
+// Admin-only, workspace-wide switch between Dally's instant built-in answers (default — no
+// network call, never slow) and the real Gemini brain. Synced like any other setting, so one
+// admin's toggle applies for everyone, not just their own browser.
+const DEFAULT_DALLY_SETTINGS = {aiEnabled:false};
+function dallyAiEnabled(){ return !!(state.dallySettings && state.dallySettings.aiEnabled); }
 const DEFAULT_BATCH_SHEET_TEMPLATE = {
   showLogo:true, showDate:true, showBatchNo:true, showDescription:true,
   showPH:true, showCombineNote:true, showFooter:true, footerText:'Audrey Care (Pvt) Ltd.',
@@ -3322,7 +3327,7 @@ function _cachedThemeOrDefault(){
   }catch(e){}
   return {paletteId:'green'};
 }
-const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : [])))))))));
+const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : (k==='dallySettings' ? {...DEFAULT_DALLY_SETTINGS} : []))))))))));
 // One request for all 34 keys instead of 34 separate ones — each kvGet() round-trip has its own
 // latency, and firing them all at once doesn't fully hide that over a slower connection (plus
 // this is on the critical path of every single page load, authenticated or not, so it's worth
@@ -3490,6 +3495,7 @@ async function loadAll(){
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
+  state.dallySettings = {...DEFAULT_DALLY_SETTINGS, ...(state.dallySettings||{})};
   state.batchSheetTemplate = {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})};
   state.loginCustomization = {...DEFAULT_LOGIN_CUSTOMIZATION, ...(state.loginCustomization||{})};
   if(!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0){
@@ -6092,19 +6098,13 @@ function buildDallyContext(){
     delivery_lines: (state.deliveryLines||[]).map(l=>({label:l.label, active_count: active.filter(o=>o.courierService===l.key).length})),
   };
 }
-// Turned off by request — Gemini's free-tier latency felt too slow in practice, so Dally stays
-// on the instant built-in keyword matcher only. The Gemini wiring below (Edge Function, secret,
-// streaming) is untouched and still deployed; flip DALLY_DISABLED back to false to re-enable it,
-// no redeploy needed.
-const DALLY_DISABLED = true;
-// Tries Dally's real Gemini brain first (ask-dally Edge Function, streaming); falls back to the
-// original local keyword matcher — silently if Dally isn't configured yet, with a short note
-// appended if it IS configured but the call itself failed (so a real outage is visible, not just
-// mysteriously dumber answers). onChunk is called with the growing answer text as it streams in
-// (once, with the whole text, for the built-in-fallback cases — same callback either way, so the
-// caller doesn't need to know which path produced the answer).
+// Tries Dally's real Gemini brain first (ask-dally Edge Function, streaming) when an admin has
+// switched it on (dallyAiEnabled()); otherwise — and always as a fallback if the call fails —
+// uses the instant local keyword matcher. onChunk is called with the growing answer text as it
+// streams in (once, with the whole text, for the built-in-answer cases — same callback either
+// way, so the caller doesn't need to know which path produced the answer).
 async function askDally(question, history, onChunk){
-  if(DALLY_DISABLED || !DALLY_CONFIGURED){ onChunk(answerAiQuery(question)); return; }
+  if(!dallyAiEnabled() || !DALLY_CONFIGURED){ onChunk(answerAiQuery(question)); return; }
   try{
     const res = await fetch(SUPABASE_URL + '/functions/v1/ask-dally', {
       method: 'POST',
@@ -6139,6 +6139,12 @@ async function askDally(question, history, onChunk){
   }catch(e){
     onChunk(answerAiQuery(question) + `\n\n(Couldn't reach Dally's AI brain — showing the built-in answer instead.)`);
   }
+}
+async function toggleDallyAi(){
+  if(!isAdmin()) return;
+  state.dallySettings = {...DEFAULT_DALLY_SETTINGS, ...(state.dallySettings||{}), aiEnabled: !dallyAiEnabled()};
+  render();
+  await save('dallySettings');
 }
 // Shared by the suggestion chips and the free-text form — pushes the user turn, then streams
 // Dally's reply into a single growing bot bubble (pushed only once the first chunk arrives, so
@@ -12607,9 +12613,14 @@ function aiBotModal(){
   // otherwise show at the same time.
   const showThinkingDots = thinking && !(chat.length && chat[chat.length-1].sender==='bot');
   const who = (state.session && (state.session.staffName || state.session.name)) || '';
+  const aiOn = dallyAiEnabled();
   return `
   <div class="overlay" id="overlay">
     <div class="modal dally-modal" style="width:100%;max-width:760px;height:min(560px,80vh);display:flex;padding:0;overflow:hidden;position:relative;">
+      ${isAdmin() ? `<button type="button" id="btn-dally-ai-toggle" title="${aiOn?'Gemini is on — click to switch back to instant built-in answers':'Using instant built-in answers — click to turn Gemini on'}" style="position:absolute;top:12px;right:52px;z-index:1;display:flex;align-items:center;gap:6px;padding:0 12px;height:28px;border-radius:999px;border:1px solid ${aiOn?'var(--accent)':'var(--border)'};background:${aiOn?'var(--accent-soft)':'var(--surface)'};color:${aiOn?'var(--accent-dark)':'var(--muted)'};font-size:11.5px;font-weight:600;cursor:pointer;">
+        <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${aiOn?'#3FA968':'var(--muted)'};"></span>
+        Gemini
+      </button>` : ''}
       <div class="dally-rail">
         <div class="dally-rail-title">Quick asks</div>
         ${AI_SUGGESTIONS.map(s=>`<button type="button" class="dally-rail-item" data-ai-suggestion="${esc(s)}">${esc(s)}</button>`).join('')}
@@ -15712,6 +15723,7 @@ function attachShellHandlers(){
 
   if(byIdEl('form-aichat')) byIdEl('form-aichat').addEventListener('submit', sendAiChatMessage);
   document.querySelectorAll('[data-ai-suggestion]').forEach(b=>b.addEventListener('click', ()=>askAiSuggestion(b.dataset.aiSuggestion)));
+  if(byIdEl('btn-dally-ai-toggle')) byIdEl('btn-dally-ai-toggle').onclick = toggleDallyAi;
   scrollAiChatToBottom();
 
   if(byIdEl('form-add-staff')) byIdEl('form-add-staff').addEventListener('submit', addStaffMember);

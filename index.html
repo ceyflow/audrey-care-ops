@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020163949">
+<meta name="app-build" content="20261020165648">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -491,6 +491,30 @@ html{ visibility:hidden; }
   @media (max-width:760px){
     .settings-hub-grid{display:none;}
     .settings-fab-hub{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(58vh,460px);text-align:center;}
+  }
+
+  /* The tab bar's "Settings" icon doubles as a launcher for everything else the six tabs don't
+     cover (see MORE_FAB_ITEMS) — a fan anchored just above the tab bar, centered horizontally
+     so it never runs off either edge, opening upward across the full top half-circle (8 items
+     don't fit in the reference's tight 90° corner without overlapping). Same rotate →
+     translate(radius) → counter-rotate technique as the Settings hub's own fan. */
+  .more-fab-hub{display:none;}
+  .more-fab-backdrop{position:fixed;inset:0;z-index:46;background:transparent;}
+  .more-fab-stage{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));z-index:47;width:0;height:0;}
+  .more-fab-ring{position:absolute;top:0;left:0;list-style:none;margin:0;padding:0;}
+  .more-fab-item{
+    position:absolute;top:0;left:0;margin:0;opacity:0;pointer-events:none;
+    transform:translate(-50%,-50%) rotate(calc(180deg + var(--i) * (180deg / (var(--n) - 1)))) translate(0px) rotate(calc((180deg + var(--i) * (180deg / (var(--n) - 1))) * -1));
+    transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;
+  }
+  .more-fab-ring.open .more-fab-item{
+    opacity:1;pointer-events:auto;transition-delay:calc(var(--i) * 16ms);
+    transform:translate(-50%,-50%) rotate(calc(180deg + var(--i) * (180deg / (var(--n) - 1)))) translate(118px) rotate(calc((180deg + var(--i) * (180deg / (var(--n) - 1))) * -1));
+  }
+  .more-fab-act{width:46px;height:46px;border-radius:50%;border:none;background:#fff;color:var(--accent-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(20,25,20,.18);text-decoration:none;}
+  .more-fab-act svg{width:19px;height:19px;}
+  @media (max-width:760px){
+    .more-fab-hub{display:block;}
   }
 
   /* ---------------- Kanban (Orders) ---------------- */
@@ -1039,6 +1063,9 @@ html{ visibility:hidden; }
   }
   @media (max-width:760px){
     .live-clock-bar{display:none !important;}
+    /* The "Settings" tab's fan (MORE_FAB_ITEMS, above) now covers everything the hamburger
+       drawer was reopened for, so it goes back to hidden here — one overflow menu, not two. */
+    .menu-toggle{display:none !important;}
     main.page{padding-bottom:calc(86px + env(safe-area-inset-bottom)) !important;}
     .topbar-icon-btn{width:38px;height:38px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
     .topbar-icon-btn svg{width:19px;height:19px;}
@@ -4453,6 +4480,7 @@ function performGoTo(page){
   state.filters.gmpSection = null;
   state._settingsOpenPanel = null;
   state._settingsFabOpen = false;
+  state._moreFabOpen = false;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
   const curHashParts = (location.hash||'').replace('#','').split('/');
   if((curHashParts[0]||'')!==page){
@@ -6907,9 +6935,10 @@ function orderedNavItems(group, items){
 }
 function navLabel(item){ return (state.navLabels && state.navLabels[item.id]) || item.label; }
 // Phone-width navigation: a fixed bottom tab bar with exactly these six icon-only stops.
-// Team chat isn't one of them — it moved to the topbar, right next to Dally — and the
-// hamburger menu (next to the page title) stays visible on mobile too, for anything these
-// six don't cover (GMP, Staff, Suppliers, Customers, Bulk SMS, Customer ratings).
+// Team chat isn't one of them — it moved to the topbar, right next to Dally. Everything else
+// (GMP, Staff, Suppliers, Customers, Bulk SMS, Customer ratings, Orders Process, plus the real
+// Settings hub) lives behind the last tab, "Settings", which doubles as a fan-out launcher for
+// the rest of the workspace instead of a direct link — see MORE_FAB_ITEMS/renderMoreFabMenu.
 const MOBILE_TAB_PRIORITY = ['dashboard','orders','blendingdept','customercare','rnd','settings'];
 // Tooltip/icon overrides for this bar only — the real page (its sidebar label, its own icon
 // elsewhere) is untouched. 'orders' shows as "Packing" with a box icon here because that's
@@ -6921,6 +6950,31 @@ function mobileTabItemsFor(navGroups){
   const byId = {}; all.forEach(it=>{ byId[it.id]=it; });
   const primary = MOBILE_TAB_PRIORITY.map(id=>byId[id]).filter(Boolean);
   return { primary, hasMore: false };
+}
+// Everything NOT already reachable from the six-icon tab bar or the topbar's Team chat icon —
+// fanned out from the tab bar's "Settings" icon on phones (see renderMoreFabMenu) instead of
+// sitting behind the hamburger menu, so there's exactly one place on mobile for "the rest of
+// the app". 'settings' itself is included — tapping it opens the real Settings hub page, which
+// still has its own fan for the 12 configuration panels inside it.
+const MORE_FAB_ITEMS = ['customers','suppliers','ordersprocess','gmp','staff','bulksms','ratings','settings'];
+function renderMoreFabMenu(navGroups){
+  if(!state.session) return '';
+  const byId = {}; navGroups.flatMap(g=>g.items).forEach(it=>{ byId[it.id]=it; });
+  const items = MORE_FAB_ITEMS.map(id=>byId[id]).filter(Boolean);
+  if(!items.length) return '';
+  const open = !!state._moreFabOpen;
+  return `
+  <div class="more-fab-hub">
+    ${open ? `<div class="more-fab-backdrop" id="more-fab-backdrop"></div>` : ''}
+    <div class="more-fab-stage">
+      <ul class="more-fab-ring ${open?'open':''}" id="more-fab-menu" style="--n:${items.length};">
+        ${items.map((it,i)=>`
+        <li class="more-fab-item" style="--i:${i};">
+          <a href="#${it.id}" class="more-fab-act" data-nav="${it.id}" title="${esc(navLabel(it))}" aria-label="${esc(navLabel(it))}">${icon(it.icon)}</a>
+        </li>`).join('')}
+      </ul>
+    </div>
+  </div>`;
 }
 function findNavItemById(id){
   for(const g of NAV){
@@ -7085,6 +7139,11 @@ function renderShell(freshPage){
   </div>
   <nav class="mobile-tabbar">
     ${mobileTabs.primary.map(it=>{
+      if(it.id==='settings'){
+        const moreOpen = !!state._moreFabOpen;
+        const inMoreSection = MORE_FAB_ITEMS.includes(state.page) && state.page!=='settings';
+        return `<button type="button" class="mobile-tab ${moreOpen||inMoreSection?'active':''}" id="btn-more-fab-toggle" aria-expanded="${moreOpen?'true':'false'}" aria-controls="more-fab-menu" title="More" aria-label="${moreOpen?'Close more sections':'More sections'}">${icon(moreOpen?'close':'settings')}</button>`;
+      }
       const isActive = state.page===it.id || (it.children && it.children.some(c=>c.id===state.page));
       const tabLabel = MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it);
       const tabIcon = MOBILE_TAB_ICON_OVERRIDE[it.id] || it.icon;
@@ -7092,6 +7151,7 @@ function renderShell(freshPage){
     }).join('')}
     ${mobileTabs.hasMore ? `<button type="button" class="mobile-tab" id="btn-mobile-more" title="More" aria-label="More">${icon('list')}</button>` : ''}
   </nav>
+  ${renderMoreFabMenu(navGroups)}
   ${state.modal ? `<div class="${freshModal?'':'reopen-noanim'}">${renderModal()}</div>` : ''}
   ${state.toast ? renderToast() : ''}
   ${state.chatNotice ? renderChatNotice() : ''}
@@ -14214,6 +14274,8 @@ function attachShellHandlers(){
   }));
   if(byIdEl('btn-settings-fab')) byIdEl('btn-settings-fab').onclick = ()=>{ state._settingsFabOpen = !state._settingsFabOpen; render(); };
   if(byIdEl('settings-fab-backdrop')) byIdEl('settings-fab-backdrop').onclick = ()=>{ state._settingsFabOpen = false; render(); };
+  if(byIdEl('btn-more-fab-toggle')) byIdEl('btn-more-fab-toggle').onclick = ()=>{ state._moreFabOpen = !state._moreFabOpen; render(); };
+  if(byIdEl('more-fab-backdrop')) byIdEl('more-fab-backdrop').onclick = ()=>{ state._moreFabOpen = false; render(); };
   document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{
     card.addEventListener('dragstart', e=>{
       card.classList.add('dragging');
@@ -16027,6 +16089,7 @@ function attachShellHandlers(){
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape' && state.batchFocusMode){ state.batchFocusMode = false; render(); }
   if(e.key==='Escape' && state._settingsFabOpen){ state._settingsFabOpen = false; render(); }
+  if(e.key==='Escape' && state._moreFabOpen){ state._moreFabOpen = false; render(); }
 });
 // Fires when the browser's Back/Forward button pops one of the history entries pushed in
 // performGoTo (the hub sub-pages) — resync app state to whatever page the hash now names.
@@ -16036,6 +16099,7 @@ window.addEventListener('popstate', ()=>{
   const page = hashParts[0] || '';
   if(!page || !pageAllowed(page)) return;
   state.page = page; state.modal = null;
+  state._moreFabOpen = false;
   if(page==='gmp') state.filters.gmpSection = hashParts[1] || null;
   if(page==='settings'){ state._settingsOpenPanel = hashParts[1] || null; state._settingsFabOpen = false; }
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020095530">
+<meta name="app-build" content="20261020100432">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1235,10 +1235,12 @@ const CITYPAK_CONFIGURED = CITYPAK_APP_SECRET !== 'PASTE_CITYPAK_APP_SECRET';
 // built-in local answers (answerAiQuery) instead of calling out to Gemini — see README.md.
 const DALLY_APP_SECRET = 'ceyflow-dally-9f3a7c21-b86e-4d1a-k2p';
 const DALLY_CONFIGURED = DALLY_APP_SECRET !== 'PASTE_DALLY_APP_SECRET';
-// The animated orb — a looping Lottie piece (globe + two rings spinning at different speeds,
-// a spinning shade layer, and a sparkle icon with its own pulse) pulled out of a smartwatch UI
-// animation. Its own files live under assets/dally-orb/ (orb.json + its small image set).
-const DALLY_ORB_JSON = 'assets/dally-orb/orb.json';
+// The animated orb — a looping Lottie piece (a glossy sphere with softly shifting light shapes
+// behind it and tiny twinkling sparkles) pulled out of a smartwatch UI animation. Its own files
+// live under assets/dally-orb/ (orb.json + its small image set). The ?v= ties its cache to the
+// page's own app-build, so editing orb.json alone (no HTML change) still reaches browsers that
+// already cached the old one — the standard deploy step bumps app-build either way.
+const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector('meta[name="app-build"]')||{}).content || '1');
 
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
 // (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped

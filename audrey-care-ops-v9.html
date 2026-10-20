@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020172105">
+<meta name="app-build" content="20261020172739">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -470,7 +470,11 @@ html{ visibility:hidden; }
      bare icons does). */
   .more-fab-hub{display:none;}
   .more-fab-backdrop{position:fixed;inset:0;z-index:46;background:rgba(20,25,20,.28);opacity:0;animation:more-fade .2s ease forwards;}
-  .more-fab-sheet{position:fixed;left:0;right:0;bottom:calc(86px + env(safe-area-inset-bottom));z-index:47;background:var(--surface);border-radius:18px 18px 0 0;box-shadow:0 -10px 28px rgba(20,25,20,.16);padding:18px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(100%);animation:more-slide .3s cubic-bezier(.22,1,.36,1) forwards;}
+  /* bottom: 67px is .mobile-tabbar's own rendered height (13px top padding + .mobile-tab's
+     8px+25px-icon+8px + 13px bottom padding, before the safe-area inset) — sitting the sheet
+     flush on top of it. The 86px used elsewhere (main.page's scroll clearance) is a deliberately
+     bigger buffer, not the tab bar's actual height, so reusing it here left a visible gap. */
+  .more-fab-sheet{position:fixed;left:0;right:0;bottom:calc(67px + env(safe-area-inset-bottom));z-index:47;background:var(--surface);border-radius:18px 18px 0 0;box-shadow:0 -10px 28px rgba(20,25,20,.16);padding:18px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(100%);animation:more-slide .3s cubic-bezier(.22,1,.36,1) forwards;}
   .more-fab-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;}
   .more-fab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;}
   .more-fab-item{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;color:var(--ink);text-align:center;}

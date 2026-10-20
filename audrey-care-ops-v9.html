@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020163352">
+<meta name="app-build" content="20261020163800">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -470,8 +470,10 @@ html{ visibility:hidden; }
      rotate → translate(radius) → counter-rotate chain is what places each item on the circle
      while keeping the icon itself upright. */
   .settings-fab-hub{display:none;}
+  .settings-fab-hint-title{font-size:15px;font-weight:700;color:var(--ink);}
+  .settings-fab-hint-sub{font-size:12.5px;color:var(--muted);max-width:230px;margin-top:3px;}
   .settings-fab-backdrop{position:fixed;inset:0;z-index:38;background:transparent;}
-  .settings-fab-stage{position:relative;height:300px;max-width:340px;margin:10px auto 0;}
+  .settings-fab-stage{position:relative;height:300px;max-width:340px;margin:14px auto 0;}
   .settings-fab-ring{position:absolute;top:50%;left:50%;width:0;height:0;list-style:none;margin:0;padding:0;}
   .settings-fab-item{
     position:absolute;top:0;left:0;margin:0;opacity:0;pointer-events:none;
@@ -489,7 +491,7 @@ html{ visibility:hidden; }
   .settings-fab-btn[aria-expanded="true"] svg{transform:rotate(75deg);}
   @media (max-width:760px){
     .settings-hub-grid{display:none;}
-    .settings-fab-hub{display:block;}
+    .settings-fab-hub{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(58vh,460px);text-align:center;}
   }
 
   /* ---------------- Kanban (Orders) ---------------- */
@@ -9701,6 +9703,8 @@ function renderSettingsPage(){
   </div>
   <div class="settings-fab-hub">
     ${fabOpen ? `<div class="settings-fab-backdrop" id="settings-fab-backdrop"></div>` : ''}
+    <div class="settings-fab-hint-title">Jump to a section</div>
+    <div class="settings-fab-hint-sub">Tap the button to open any of the ${jumpCards.length} settings sections.</div>
     <div class="settings-fab-stage">
       <ul class="settings-fab-ring ${fabOpen?'open':''}" id="settings-fab-menu" style="--n:${jumpCards.length};">
         ${jumpCards.map((c,i)=>`

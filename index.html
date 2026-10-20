@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020161001">
+<meta name="app-build" content="20261020161443">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -152,6 +152,7 @@ html{ visibility:hidden; }
   .chat-role-pill{font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);white-space:nowrap;}
   .chat-grouped-row{opacity:0;transition:opacity .12s;}
   .chat-bubble-wrap:hover .chat-grouped-row{opacity:1;}
+  .chat-bubble-time{float:right;margin:4px 0 -3px 10px;font-size:10px;opacity:.65;white-space:nowrap;}
   #btn-chat-theme-toggle:hover{background:var(--bg);}
   .toast svg{width:18px;height:18px;flex-shrink:0;}
   .toast svg path{stroke-dasharray:28;stroke-dashoffset:28;animation:check-draw .45s ease forwards .1s;}
@@ -12330,7 +12331,7 @@ async function saveBatchSheetSteps(recipeId){
 // the rendering logic itself, only this table. Picked theme is a personal, client-side preference
 // (localStorage), not synced workspace state — it's just how one person likes their own chat to look.
 const CHAT_THEMES = {
-  rounded:   { label:'Clean Rounded Bubbles', avatarSize:36, radius:'12px', pad:'9px 13px', font:'13.5px',
+  rounded:   { label:'Clean Rounded Bubbles', avatarSize:36, radius:'18px', pad:'9px 14px', font:'13.5px',
                mineBg:'var(--accent)', mineColor:'#fff', otherBg:'var(--bg)', otherColor:'var(--ink)',
                pageBg:'', dayDividers:false, grouped:false, avatarShadow:false, rolePill:false, tagColors:false,
                sendBg:'var(--accent)', sendColor:'#fff', sendShape:'rect', sendRadius:'8px',
@@ -12451,20 +12452,24 @@ function renderChatBubble(m, theme, grouped){
   const iLiked = likes.includes(chatMyName());
   const tag = theme.tagColors ? chatTagColor(m.sender) : null;
   const senderLabel = tag ? `<span style="font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:${tag.bg};color:${tag.text};">${esc(m.sender)}</span>` : esc(m.sender);
-  const roleLabel = theme.rolePill ? `<span class="chat-role-pill">${esc(m.role)}</span>` : esc(m.role);
+  const roleLabel = theme.rolePill ? ` <span class="chat-role-pill">${esc(m.role)}</span>` : '';
   const avatarHtml = grouped ? `<span style="width:${theme.avatarSize}px;flex-shrink:0;"></span>`
     : (theme.avatarShadow ? `<span class="chat-avatar-shadow">${staffAvatarHtml(m.sender, theme.avatarSize)}</span>` : staffAvatarHtml(m.sender, theme.avatarSize));
+  // Sender name only up here — the full date/time used to ride along on this line too, which
+  // made it (not the message) the widest thing in the bubble, so every bubble looked like a
+  // stretched box instead of fitting its own text. The time now sits inline at the end of the
+  // message instead (bubbleTime below), WhatsApp-style, so the bubble hugs its own content.
   const metaLine = grouped ? `
-      <div class="chat-grouped-row" style="font-size:10px;color:var(--muted);margin-bottom:3px;display:flex;align-items:center;gap:6px;${mine?'flex-direction:row-reverse;':''}">
-        <span>${fmtDateTime(m.at)}${m.editedAt?' · edited':''}</span>
+      <div class="chat-grouped-row" style="margin-bottom:3px;display:flex;align-items:center;justify-content:${mine?'flex-end':'flex-start'};">
         <button type="button" class="chat-menu-btn" data-chat-menu="${m.id}" aria-label="Message options">⋮</button>
       </div>` : `
       <div style="font-size:11px;color:var(--muted);margin-bottom:3px;display:flex;align-items:center;gap:6px;${mine?'flex-direction:row-reverse;':''}${theme.metaUppercase?'text-transform:uppercase;letter-spacing:.04em;font-weight:700;':''}">
-        <span>${senderLabel} · ${roleLabel} · ${fmtDateTime(m.at)}${m.editedAt?' · edited':''}</span>
+        <span>${senderLabel}${roleLabel}</span>
         <button type="button" class="chat-menu-btn" data-chat-menu="${m.id}" aria-label="Message options">⋮</button>
       </div>`;
   const bubbleBorder = mine ? (theme.mineBorder||'') : (theme.otherBorder||'');
   const bubbleShadow = mine ? (theme.mineShadow||'') : (theme.otherShadow||'');
+  const bubbleTime = `<span class="chat-bubble-time">${fmtTimeOnly(m.at)}${m.editedAt?' · edited':''}</span>`;
   return `<div style="display:flex;gap:8px;align-items:flex-start;max-width:78%;align-self:${mine?'flex-end':'flex-start'};${mine?'flex-direction:row-reverse;':''}">
     ${avatarHtml}
     <div class="chat-bubble-wrap" style="min-width:0;position:relative;">
@@ -12485,9 +12490,9 @@ function renderChatBubble(m, theme, grouped){
           <button type="button" class="btn btn-sm btn-primary" data-chat-save-edit="${m.id}">Save</button>
         </div>
       </div>` : `
-      <div style="background:${mine?theme.mineBg:theme.otherBg};color:${mine?theme.mineColor:theme.otherColor};padding:${theme.pad};border-radius:${theme.radius};font-size:${theme.font};line-height:1.5;${bubbleShadow?`box-shadow:${bubbleShadow};`:''}${bubbleBorder?`border:${bubbleBorder};`:''}${theme.memoStyle?'border-left:3px solid var(--accent-dark);':''}">
+      <div style="background:${mine?theme.mineBg:theme.otherBg};color:${mine?theme.mineColor:theme.otherColor};padding:${theme.pad};border-radius:${theme.radius};font-size:${theme.font};line-height:1.5;overflow:hidden;overflow-wrap:break-word;${bubbleShadow?`box-shadow:${bubbleShadow};`:''}${bubbleBorder?`border:${bubbleBorder};`:''}${theme.memoStyle?'border-left:3px solid var(--accent-dark);':''}">
         ${m.quoted ? `<div class="chat-quote-inline"><div class="chat-quote-inline-sender">${esc(m.quoted.sender)}</div>${esc(m.quoted.text)}</div>` : ''}
-        ${esc(m.text)}
+        ${esc(m.text)}${bubbleTime}
       </div>
       ${likes.length ? `<div class="chat-like-badge" style="${mine?'justify-content:flex-end;':''}">👍 ${likes.length}</div>` : ''}
       `}

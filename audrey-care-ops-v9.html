@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020173331">
+<meta name="app-build" content="20261020173902">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5603,11 +5603,17 @@ async function importCustomersCsv(file){
   const shortNameIdx = findCol(['short name','shortname']);
   const branchNameIdx = findCol(['branch name','branchname','branch']);
   const salesmanIdx = findCol(['salesman','sales man','sales person','salesperson']);
+  const emailIdx = findCol(['email','e-mail']);
+  const typeIdx = findCol(['type','customer type']);
+  const statusIdx = findCol(['status']);
   const dataRows = nameIdx===-1 ? rows : rows.slice(1);
   const cols = nameIdx===-1
-    ? {name:0, phone:1, address:2, city:-1, shortName:-1, branchName:-1, salesman:-1}
-    : {name:nameIdx, phone:phoneIdx, address:addressIdx, city:cityIdx, shortName:shortNameIdx, branchName:branchNameIdx, salesman:salesmanIdx};
+    ? {name:0, phone:1, address:2, city:-1, shortName:-1, branchName:-1, salesman:-1, email:-1, type:-1, status:-1}
+    : {name:nameIdx, phone:phoneIdx, address:addressIdx, city:cityIdx, shortName:shortNameIdx, branchName:branchNameIdx, salesman:salesmanIdx, email:emailIdx, type:typeIdx, status:statusIdx};
   const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
+  // Anything but a recognizable "inactive"-ish value reads as Active — matches what the column
+  // being absent already defaulted to, so files without a Status column behave exactly as before.
+  const normStatus = v => ['inactive','no','0','false'].includes(v.toLowerCase()) ? 'Inactive' : 'Active';
   // Skip rows that match a customer already in the list, so re-importing the same file
   // (or an overlapping one) never creates duplicates. Matched by name or phone, whichever
   // is present — either one being the same customer is enough to count as a duplicate.
@@ -5630,7 +5636,7 @@ async function importCustomersCsv(file){
       shortName: cell(r, cols.shortName), branchName: cell(r, cols.branchName),
       phone, address: cell(r, cols.address), cityArea: cell(r, cols.city),
       salesman: cell(r, cols.salesman) || null,
-      email:'', type:'Individual', status:'Active',
+      email: cell(r, cols.email), type: cell(r, cols.type) || 'Individual', status: normStatus(cell(r, cols.status)),
       createdAt: new Date().toISOString()
     });
     existingNames.add(nName);
@@ -14919,16 +14925,7 @@ function attachShellHandlers(){
   });
   document.querySelectorAll('[data-customer-row]').forEach(r=>r.addEventListener('click', ()=>openModal('customer:'+r.dataset.customerRow)));
   document.querySelectorAll('[data-edit-customer]').forEach(b=>b.addEventListener('click', ()=>openModal('customer:'+b.dataset.editCustomer)));
-  document.querySelectorAll('[data-delete-customer]').forEach(b=>b.addEventListener('click', ()=>{
-    openConfirmModal({
-      title: 'Delete customer', danger: true, confirmLabel: 'Delete',
-      message: 'Delete this customer?',
-      onConfirm: async ()=>{
-        state.customers = state.customers.filter(c=>c.id!==b.dataset.deleteCustomer);
-        await save('customers');
-      },
-    });
-  }));
+  document.querySelectorAll('[data-delete-customer]').forEach(b=>b.addEventListener('click', ()=>deleteCustomer(b.dataset.deleteCustomer)));
   document.querySelectorAll('.customer-select-row').forEach(cb=>cb.addEventListener('change', ()=>{
     if(cb.checked) state.selectedCustomers.add(cb.dataset.customerId); else state.selectedCustomers.delete(cb.dataset.customerId);
     render();

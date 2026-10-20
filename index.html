@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020180649">
+<meta name="app-build" content="20261020181319">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -689,16 +689,40 @@ html{ visibility:hidden; }
   .login-panel .lead{text-align:center;color:var(--muted);font-size:13.5px;margin:4px 0 22px;}
   .login-submit{width:100%;padding:11px 14px;font-size:14px;margin-top:4px;}
   @media (max-width:880px){
-    .login-screen{flex-direction:column;}
-    .login-illustration{flex:none;min-width:0;height:min(40vh,300px);padding:24px 22px 20px;}
-    .login-illustration-logo{height:46px;}
-    .login-hero-greeting{font-size:clamp(20px,5.5vw,26px);max-width:18ch;margin-top:8px;}
+    /* Frosted-glass direction (picked from 10 mockups): the photo fills the whole screen and the
+       sign-in card is a blurred glass panel anchored to the bottom, instead of a separate photo
+       strip stacked above a plain form. The panel is position:absolute, not a negative-margin
+       overlap on a flex sibling — the header card overlap bug taught us margin tricks here are
+       fragile — and the greeting gets a fixed top offset instead of being pushed to the bottom
+       edge by justify-content, so it can never end up hidden under the glass regardless of how
+       tall the panel's content makes it. */
+    .login-screen{flex-direction:column;position:relative;min-height:100vh;}
+    .login-illustration{position:absolute;inset:0;flex:none;height:auto;min-width:0;padding:28px 24px 0;justify-content:flex-start;}
+    .login-illustration-logo{height:40px;}
+    .login-hero-greeting{font-size:clamp(22px,6vw,28px);max-width:13ch;margin-top:72px;}
     .login-hero-sub{display:none;}
-    .login-hero-clock{margin-top:16px;padding-top:14px;}
-    .login-hero-clock .login-clock-time{font-size:26px;}
-    .login-hero-clock .login-clock-date{font-size:11px;}
-    .login-panel{padding:28px 20px;}
-    .login-panel-inner{box-shadow:none;border:none;padding:0;}
+    .login-hero-clock{display:none;}
+    .login-panel{position:relative;z-index:2;min-height:100vh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;}
+    .login-panel .login-blob{display:none;}
+    .login-panel-inner{
+      width:100%;max-width:none;
+      background:rgba(255,255,255,.14);
+      backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+      border:1px solid rgba(255,255,255,.28);border-bottom:none;
+      border-radius:26px 26px 0 0;box-shadow:none;
+      padding:26px 22px calc(26px + env(safe-area-inset-bottom));
+    }
+    .login-panel-inner .login-title{color:#fff;}
+    .login-panel-inner .lead{color:rgba(255,255,255,.72);}
+    .login-panel-inner .field label{color:rgba(255,255,255,.78);}
+    .login-panel-inner .field input,.login-panel-inner .field select{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);color:#fff;}
+    .login-panel-inner .field input::placeholder{color:rgba(255,255,255,.55);}
+    .login-panel-inner .field input:focus,.login-panel-inner .field select:focus{outline:2px solid rgba(255,255,255,.65);}
+    .login-panel-inner .password-toggle-btn{color:rgba(255,255,255,.72);}
+    .login-panel-inner .password-toggle-btn:hover{color:#fff;}
+    .login-panel-inner .role-opt{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff;}
+    .login-panel-inner .role-opt.selected{background:rgba(255,255,255,.26);border-color:#fff;color:#fff;}
+    .login-panel-inner .login-submit{background:#fff;color:var(--ink);border:none;}
   }
   .login-order-list{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
   .login-order-row{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13.5px;}

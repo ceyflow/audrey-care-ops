@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020033119">
+<meta name="app-build" content="20261020061146">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6101,7 +6101,7 @@ async function askDally(question, history){
   // Gemini usually replies in a few seconds, but a flaky connection or an API hiccup could hang
   // indefinitely with nothing but "Thinking…" on screen — this caps the wait so it always
   // resolves into either a real answer or the built-in fallback, never a stuck spinner.
-  const timeoutMs = 10000;
+  const timeoutMs = 30000;
   const controller = new AbortController();
   const timer = setTimeout(()=>controller.abort(), timeoutMs);
   try{

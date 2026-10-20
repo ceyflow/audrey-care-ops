@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020074227">
+<meta name="app-build" content="20261020081849">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6763,9 +6763,22 @@ function attachLoginHandlers(){
   if(loginForm){
     // A real <form> + submit button means Enter submits from either field natively (name or
     // password, whichever has focus) — no per-key guesswork, and it's the one listener for both
-    // pressing Enter and clicking "Log in".
+    // pressing Enter and clicking "Log in". Signing in itself is a real network round trip
+    // (Supabase Auth, then a full data refresh) — can't make that instant, but the button
+    // freezing with no feedback for a second or two makes it FEEL broken, so it flips to a
+    // "Signing in…" state the instant Enter is pressed, before any of that starts.
     const doLogin = state.auth.migratedToSupabaseAuth ? confirmLoginV2 : confirmLogin;
-    loginForm.addEventListener('submit', e=>{ e.preventDefault(); doLogin(); });
+    loginForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const btn = document.getElementById('login-confirm');
+      const origText = btn ? btn.textContent : '';
+      if(btn){ btn.disabled = true; btn.textContent = 'Signing in…'; }
+      await doLogin();
+      // A successful login re-renders the whole shell, detaching this button from the document —
+      // only a failed attempt (which leaves the login screen up with an error message) needs it
+      // restored so the person can try again.
+      if(btn && document.body.contains(btn)){ btn.disabled = false; btn.textContent = origText; }
+    });
     const passEl = document.getElementById('login-password');
     if(passEl && !state.auth.migratedToSupabaseAuth) passEl.focus();
   }

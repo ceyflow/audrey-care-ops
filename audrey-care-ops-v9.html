@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020173902">
+<meta name="app-build" content="20261020175604">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1048,6 +1048,10 @@ html{ visibility:hidden; }
     .topbar{flex-direction:column;align-items:stretch;gap:0;background:linear-gradient(120deg,var(--accent),#5B8EF0 55%,#7FA8F5);padding:20px 18px 26px;}
     .topbar .page-title{color:#fff;font-size:20px;}
     .topbar .page-sub{display:none;}
+    /* Flex-item margins never collapse, so this reserves real clearance below the title before
+       the card's own -14px pulls it back up — without it the card overlapped the title's own
+       line-height and clipped it (the card's margin-top assumed a gap that wasn't actually there). */
+    .topbar > div:first-child{margin-bottom:20px;}
     .header-right{background:var(--surface);border-radius:14px;box-shadow:0 6px 18px rgba(20,25,20,.16);margin-top:-14px;padding:13px 14px;}
     .header-right-top, .header-right-links{display:flex;align-items:center;flex-wrap:wrap;width:100%;}
     .header-right-top{gap:10px;}

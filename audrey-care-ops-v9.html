@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020162152">
+<meta name="app-build" content="20261020163352">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -496,6 +496,17 @@ html{ visibility:hidden; }
   .board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:14px;align-items:start;}
   @media (max-width:1150px){.board{grid-auto-flow:column;grid-auto-columns:78%;overflow-x:auto;padding-bottom:8px;}}
   .board-section{margin-bottom:32px;}
+  /* Phone width: swap the horizontal-scrolling columns for one stage at a time, picked from a
+     tab row — on a narrow screen, sliding the board sideways to find Processing or Picked up
+     meant a lot of blind swiping just to see what was there. */
+  .board-mobile{display:none;}
+  .board-stage-tabs{display:flex;gap:5px;background:var(--bg);border-radius:11px;padding:4px;margin-bottom:10px;}
+  .board-stage-tab{flex:1;min-width:0;text-align:center;padding:9px 4px;border-radius:9px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .board-stage-tab.active{background:#fff;box-shadow:0 1px 3px rgba(20,25,20,.1);}
+  @media (max-width:760px){
+    .board{display:none;}
+    .board-mobile{display:block;}
+  }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
   .column{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
   .column-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);}
@@ -2092,6 +2103,9 @@ function applyFavicon(){
   if(link) link.href = faviconLogo() || LOGO_DATA_URI;
 }
 const STAGES = ['Order Received','Processing','Invoicing & Checking','Picked Up by Delivery'];
+// Short forms for the phone-width stage tab bar (STAGES itself stays full — column heads and
+// everywhere else that already has room for it keep using that).
+const STAGE_TAB_LABELS = ['Received','Processing','Invoicing','Picked up'];
 const STAGE_KEYS = ['received','processing','invoicing','pickedup'];
 const PROCESSING_STAGE = STAGE_KEYS.indexOf('processing');
 const STAGE_STYLE = {
@@ -7316,6 +7330,7 @@ function renderUnassignedBoardSection(active){
     <div class="board">
       ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, '')).join('')}
     </div>
+    ${renderBoardMobile('', lineOrders)}
   </div>`;
 }
 function renderDeliveryBoardSection(line, active){
@@ -7328,6 +7343,29 @@ function renderDeliveryBoardSection(line, active){
     </div>
     <div class="board">
       ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, line.key)).join('')}
+    </div>
+    ${renderBoardMobile(line.key, lineOrders)}
+  </div>`;
+}
+// Phone-width counterpart to the .board grid above: a tab per stage (with its own count) and
+// just that one stage's cards below, instead of four side-by-side columns you scroll sideways
+// through. state._boardMobileStage remembers which tab per delivery line (keyed by courier key,
+// '' for Unassigned) so switching lines doesn't reset which stage you were looking at.
+function renderBoardMobile(courierKey, lineOrders){
+  const activeIdx = (state._boardMobileStage && state._boardMobileStage[courierKey]) || 0;
+  const orders = lineOrders.filter(o=>o.stage===activeIdx).sort((a,b)=>boardOrderOf(a)-boardOrderOf(b));
+  return `
+  <div class="board-mobile">
+    <div class="board-stage-tabs">
+      ${STAGES.map((stageName,i)=>{
+        const style = STAGE_STYLE[STAGE_KEYS[i]];
+        const count = lineOrders.filter(o=>o.stage===i).length;
+        const on = i===activeIdx;
+        return `<button type="button" class="board-stage-tab ${on?'active':''}" data-board-tab-courier="${escAttr(courierKey)}" data-board-tab-stage="${i}" style="${on?`color:${style.c};`:''}">${esc(STAGE_TAB_LABELS[i])} · ${count}</button>`;
+      }).join('')}
+    </div>
+    <div class="column-body" data-stage="${activeIdx}" data-courier="${escAttr(courierKey)}">
+      ${orders.length===0 ? `<div class="empty-col">Nothing here</div>` : orders.map(o=>renderCard(o)).join('')}
     </div>
   </div>`;
 }
@@ -14315,6 +14353,12 @@ function attachShellHandlers(){
     else if(c.dataset.rnd) c.addEventListener('click', ()=>openModal('rnd:'+c.dataset.rnd));
   });
   document.querySelectorAll('[data-order-row]').forEach(r=>r.addEventListener('click', ()=>openModal('order:'+r.dataset.orderRow)));
+
+  document.querySelectorAll('[data-board-tab-stage]').forEach(btn=>btn.addEventListener('click', ()=>{
+    if(!state._boardMobileStage) state._boardMobileStage = {};
+    state._boardMobileStage[btn.dataset.boardTabCourier] = parseInt(btn.dataset.boardTabStage, 10);
+    render();
+  }));
 
   // Drag-and-drop for kanban cards. Orders board dragging is opt-in (Settings → SMS settings →
   // Kanban drag & drop) — off by default so a card can't be bumped to the wrong stage by accident.

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261019212115">
+<meta name="app-build" content="20261020032440">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6098,16 +6098,23 @@ function buildDallyContext(){
 // dumber answers).
 async function askDally(question, history){
   if(!DALLY_CONFIGURED) return answerAiQuery(question);
+  // Gemini usually replies in a few seconds, but a flaky connection or an API hiccup could hang
+  // indefinitely with nothing but "Thinking…" on screen — this caps the wait so it always
+  // resolves into either a real answer or the built-in fallback, never a stuck spinner.
+  const timeoutMs = 20000;
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
   try{
     const res = await fetch(SUPABASE_URL + '/functions/v1/ask-dally', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'x-dally-secret': DALLY_APP_SECRET
       },
-      body: JSON.stringify({ question, context: buildDallyContext(), history })
+      body: JSON.stringify({ question, context: buildDallyContext(), history: history.slice(-12) })
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok || !data.ok){
@@ -6116,7 +6123,10 @@ async function askDally(question, history){
     }
     return data.reply;
   }catch(e){
+    if(e.name==='AbortError') return answerAiQuery(question) + `\n\n(Dally's AI brain is taking too long to reply — showing the built-in answer instead.)`;
     return answerAiQuery(question) + `\n\n(Couldn't reach Dally's AI brain — showing the built-in answer instead.)`;
+  }finally{
+    clearTimeout(timer);
   }
 }
 async function sendAiChatMessage(e){

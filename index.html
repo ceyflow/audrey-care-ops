@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020170431">
+<meta name="app-build" content="20261020172105">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -464,25 +464,21 @@ html{ visibility:hidden; }
   #settings-jump-grid .landing-card.dragging{opacity:.4;cursor:grabbing;}
 
   /* The tab bar's "Settings" icon doubles as a launcher for everything else the six tabs don't
-     cover (see MORE_FAB_ITEMS) — a fan anchored just above the tab bar, centered horizontally
-     so it never runs off either edge, opening upward across the full top half-circle (8 items
-     don't fit in the reference's tight 90° corner without overlapping). Same rotate →
-     translate(radius) → counter-rotate technique as the Settings hub's own fan. */
+     cover (see MORE_FAB_ITEMS) — a rounded sheet that slides up from above the tab bar over a
+     dimmed backdrop, with the items in a labeled grid (picked over a fan: a grid with real
+     labels under each icon reads faster for an 8-item "everything else" list than an arc of
+     bare icons does). */
   .more-fab-hub{display:none;}
-  .more-fab-backdrop{position:fixed;inset:0;z-index:46;background:transparent;}
-  .more-fab-stage{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));z-index:47;width:0;height:0;}
-  .more-fab-ring{position:absolute;top:0;left:0;list-style:none;margin:0;padding:0;}
-  .more-fab-item{
-    position:absolute;top:0;left:0;margin:0;opacity:0;pointer-events:none;
-    transform:translate(-50%,-50%) rotate(calc(180deg + var(--i) * (180deg / (var(--n) - 1)))) translate(0px) rotate(calc((180deg + var(--i) * (180deg / (var(--n) - 1))) * -1));
-    transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;
-  }
-  .more-fab-ring.open .more-fab-item{
-    opacity:1;pointer-events:auto;transition-delay:calc(var(--i) * 16ms);
-    transform:translate(-50%,-50%) rotate(calc(180deg + var(--i) * (180deg / (var(--n) - 1)))) translate(118px) rotate(calc((180deg + var(--i) * (180deg / (var(--n) - 1))) * -1));
-  }
-  .more-fab-act{width:46px;height:46px;border-radius:50%;border:none;background:#fff;color:var(--accent-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(20,25,20,.18);text-decoration:none;}
+  .more-fab-backdrop{position:fixed;inset:0;z-index:46;background:rgba(20,25,20,.28);opacity:0;animation:more-fade .2s ease forwards;}
+  .more-fab-sheet{position:fixed;left:0;right:0;bottom:calc(86px + env(safe-area-inset-bottom));z-index:47;background:var(--surface);border-radius:18px 18px 0 0;box-shadow:0 -10px 28px rgba(20,25,20,.16);padding:18px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(100%);animation:more-slide .3s cubic-bezier(.22,1,.36,1) forwards;}
+  .more-fab-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;}
+  .more-fab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;}
+  .more-fab-item{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;color:var(--ink);text-align:center;}
+  .more-fab-act{width:46px;height:46px;border-radius:14px;background:var(--bg);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;}
   .more-fab-act svg{width:19px;height:19px;}
+  .more-fab-item span{font-size:10.5px;font-weight:600;color:var(--muted);line-height:1.25;}
+  @keyframes more-slide{to{transform:translateY(0);}}
+  @keyframes more-fade{to{opacity:1;}}
   @media (max-width:760px){
     .more-fab-hub{display:block;}
   }
@@ -6921,27 +6917,32 @@ function mobileTabItemsFor(navGroups){
   return { primary, hasMore: false };
 }
 // Everything NOT already reachable from the six-icon tab bar or the topbar's Team chat icon —
-// fanned out from the tab bar's "Settings" icon on phones (see renderMoreFabMenu) instead of
-// sitting behind the hamburger menu, so there's exactly one place on mobile for "the rest of
-// the app". 'settings' itself is included — tapping it opens the real Settings hub page, which
-// still has its own fan for the 12 configuration panels inside it.
+// shown as a bottom sheet from the tab bar's "Settings" icon on phones (see renderMoreFabMenu)
+// instead of sitting behind the hamburger menu, so there's exactly one place on mobile for "the
+// rest of the app". 'settings' itself is included — tapping it opens the real Settings hub page.
 const MORE_FAB_ITEMS = ['customers','suppliers','ordersprocess','gmp','staff','bulksms','ratings','settings'];
+// Short labels for the sheet's grid cells — the real nav label (used for title/aria-label) is
+// sometimes too long to sit under a narrow icon without wrapping awkwardly.
+const MORE_FAB_LABEL_OVERRIDE = {ordersprocess:'Orders', gmp:'GMP', ratings:'Ratings'};
 function renderMoreFabMenu(navGroups){
   if(!state.session) return '';
   const byId = {}; navGroups.flatMap(g=>g.items).forEach(it=>{ byId[it.id]=it; });
   const items = MORE_FAB_ITEMS.map(id=>byId[id]).filter(Boolean);
   if(!items.length) return '';
   const open = !!state._moreFabOpen;
+  if(!open) return '';
   return `
   <div class="more-fab-hub">
-    ${open ? `<div class="more-fab-backdrop" id="more-fab-backdrop"></div>` : ''}
-    <div class="more-fab-stage">
-      <ul class="more-fab-ring ${open?'open':''}" id="more-fab-menu" style="--n:${items.length};">
-        ${items.map((it,i)=>`
-        <li class="more-fab-item" style="--i:${i};">
-          <a href="#${it.id}" class="more-fab-act" data-nav="${it.id}" title="${esc(navLabel(it))}" aria-label="${esc(navLabel(it))}">${icon(it.icon)}</a>
-        </li>`).join('')}
-      </ul>
+    <div class="more-fab-backdrop" id="more-fab-backdrop"></div>
+    <div class="more-fab-sheet" id="more-fab-menu">
+      <div class="more-fab-handle"></div>
+      <div class="more-fab-grid">
+        ${items.map(it=>`
+        <a href="#${it.id}" class="more-fab-item" data-nav="${it.id}" aria-label="${esc(navLabel(it))}">
+          <span class="more-fab-act">${icon(it.icon)}</span>
+          <span>${esc(MORE_FAB_LABEL_OVERRIDE[it.id] || navLabel(it))}</span>
+        </a>`).join('')}
+      </div>
     </div>
   </div>`;
 }

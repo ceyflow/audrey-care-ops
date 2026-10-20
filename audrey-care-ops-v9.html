@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020161443">
+<meta name="app-build" content="20261020162152">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -462,6 +462,35 @@ html{ visibility:hidden; }
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
   #settings-jump-grid .landing-card{cursor:grab;}
   #settings-jump-grid .landing-card.dragging{opacity:.4;cursor:grabbing;}
+
+  /* Settings hub on phones: a tap-to-open fan instead of the full card grid (shown on wider
+     screens). Each item collapses to the center button (opacity 0, radius 0) until '.open' is
+     added, then fans out to its spot on a full circle — 12 sections don't fit in a quarter-arc
+     without overlapping, so this goes all the way around rather than into one corner. The
+     rotate → translate(radius) → counter-rotate chain is what places each item on the circle
+     while keeping the icon itself upright. */
+  .settings-fab-hub{display:none;}
+  .settings-fab-backdrop{position:fixed;inset:0;z-index:38;background:transparent;}
+  .settings-fab-stage{position:relative;height:300px;max-width:340px;margin:10px auto 0;}
+  .settings-fab-ring{position:absolute;top:50%;left:50%;width:0;height:0;list-style:none;margin:0;padding:0;}
+  .settings-fab-item{
+    position:absolute;top:0;left:0;margin:0;opacity:0;pointer-events:none;
+    transform:translate(-50%,-50%) rotate(calc(var(--i) * (360deg / var(--n)))) translate(0px) rotate(calc(var(--i) * (360deg / var(--n)) * -1));
+    transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;
+  }
+  .settings-fab-ring.open .settings-fab-item{
+    opacity:1;pointer-events:auto;transition-delay:calc(var(--i) * 16ms);
+    transform:translate(-50%,-50%) rotate(calc(var(--i) * (360deg / var(--n)))) translate(112px) rotate(calc(var(--i) * (360deg / var(--n)) * -1));
+  }
+  .settings-fab-act{width:46px;height:46px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(20,25,20,.14);}
+  .settings-fab-act svg{width:19px;height:19px;}
+  .settings-fab-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:60px;height:60px;border-radius:50%;border:none;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(var(--accent-rgb),.32);}
+  .settings-fab-btn svg{width:23px;height:23px;transition:transform .25s ease;}
+  .settings-fab-btn[aria-expanded="true"] svg{transform:rotate(75deg);}
+  @media (max-width:760px){
+    .settings-hub-grid{display:none;}
+    .settings-fab-hub{display:block;}
+  }
 
   /* ---------------- Kanban (Orders) ---------------- */
   .board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:14px;align-items:start;}
@@ -4407,6 +4436,7 @@ function performGoTo(page){
   state._costingVersionsView = 'active';
   state.filters.gmpSection = null;
   state._settingsOpenPanel = null;
+  state._settingsFabOpen = false;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
   const curHashParts = (location.hash||'').replace('#','').split('/');
   if((curHashParts[0]||'')!==page){
@@ -9616,14 +9646,31 @@ function renderSettingsPage(){
   if(renderOpenPanel){
     return `<div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-settings-back>‹ Settings</button></div>${renderOpenPanel()}`;
   }
+  // Phone width swaps the card grid for a tap-to-open fan: the grid already sits in the bottom
+  // tab bar's "Settings" icon on mobile, so a second full-page list of the same sections right
+  // under it felt redundant — this fans every section out around one button instead, no footer-
+  // style labels needed under each icon since the tooltip/aria-label already names it.
+  const fabOpen = !!state._settingsFabOpen;
   return `
-  <div class="landing-section">
+  <div class="landing-section settings-hub-grid">
     <div class="landing-section-title">Jump to <span class="hint" style="font-weight:400;">— drag a card to reorder</span></div>
     <div class="landing-grid" id="settings-jump-grid">
       ${jumpCards.map(c=>`
       <button type="button" class="landing-card" draggable="true" data-settings-jump="${c.id}">
         ${icon(c.icon)}<span>${esc(c.label)}</span>
       </button>`).join('')}
+    </div>
+  </div>
+  <div class="settings-fab-hub">
+    ${fabOpen ? `<div class="settings-fab-backdrop" id="settings-fab-backdrop"></div>` : ''}
+    <div class="settings-fab-stage">
+      <ul class="settings-fab-ring ${fabOpen?'open':''}" id="settings-fab-menu" style="--n:${jumpCards.length};">
+        ${jumpCards.map((c,i)=>`
+        <li class="settings-fab-item" style="--i:${i};">
+          <button type="button" class="settings-fab-act" data-settings-jump="${c.id}" title="${esc(c.label)}" aria-label="${esc(c.label)}">${icon(c.icon)}</button>
+        </li>`).join('')}
+      </ul>
+      <button type="button" class="settings-fab-btn" id="btn-settings-fab" aria-expanded="${fabOpen?'true':'false'}" aria-controls="settings-fab-menu" aria-label="${fabOpen?'Close settings sections':'Open settings sections'}">${icon('settings')}</button>
     </div>
   </div>
   `;
@@ -14116,12 +14163,15 @@ function attachShellHandlers(){
     const panel = el.dataset.settingsJump;
     history.pushState(null,'','#settings/'+panel);
     state._settingsOpenPanel = panel;
+    state._settingsFabOpen = false;
     render();
   }));
   document.querySelectorAll('[data-settings-back]').forEach(el=>el.addEventListener('click', ()=>{
     if(((location.hash||'').replace('#','').split('/')[1]||'')) history.back();
-    else { state._settingsOpenPanel = null; render(); }
+    else { state._settingsOpenPanel = null; state._settingsFabOpen = false; render(); }
   }));
+  if(byIdEl('btn-settings-fab')) byIdEl('btn-settings-fab').onclick = ()=>{ state._settingsFabOpen = !state._settingsFabOpen; render(); };
+  if(byIdEl('settings-fab-backdrop')) byIdEl('settings-fab-backdrop').onclick = ()=>{ state._settingsFabOpen = false; render(); };
   document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{
     card.addEventListener('dragstart', e=>{
       card.classList.add('dragging');
@@ -15938,7 +15988,7 @@ window.addEventListener('popstate', ()=>{
   if(!page || !pageAllowed(page)) return;
   state.page = page; state.modal = null;
   if(page==='gmp') state.filters.gmpSection = hashParts[1] || null;
-  if(page==='settings') state._settingsOpenPanel = hashParts[1] || null;
+  if(page==='settings'){ state._settingsOpenPanel = hashParts[1] || null; state._settingsFabOpen = false; }
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
   render();

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020173000">
+<meta name="app-build" content="20261020173331">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -173,6 +173,9 @@ html{ visibility:hidden; }
   .menu-toggle{display:none;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:7px 9px;}
   .mobile-tabbar{display:none;}
   .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  /* display:contents on desktop/tablet: these two groupings are invisible to layout there (same
+     flat row of items as always) and only turn into real two-row blocks at phone width, below. */
+  .header-right-top, .header-right-links{display:contents;}
   .session-chip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
   .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
   .topbar-icon-btn{position:relative;}
@@ -1037,6 +1040,20 @@ html{ visibility:hidden; }
        drawer was reopened for, so it goes back to hidden here — one overflow menu, not two. */
     .menu-toggle{display:none !important;}
     main.page{padding-bottom:calc(86px + env(safe-area-inset-bottom)) !important;}
+    /* Picked from 10 header mockups: a gradient band behind the page title (no subtitle line —
+       "professional, better planned, no sub texts" was the ask), with the session row and the
+       account links as one elevated white card overlapping up into it. The card's own opaque
+       background is what makes the gradient look confined to a band above it — .topbar itself
+       is one gradient-filled box the whole time, the card just sits on top of the lower part. */
+    .topbar{flex-direction:column;align-items:stretch;gap:0;background:linear-gradient(120deg,var(--accent),#5B8EF0 55%,#7FA8F5);padding:20px 18px 26px;}
+    .topbar .page-title{color:#fff;font-size:20px;}
+    .topbar .page-sub{display:none;}
+    .header-right{background:var(--surface);border-radius:14px;box-shadow:0 6px 18px rgba(20,25,20,.16);margin-top:-14px;padding:13px 14px;}
+    .header-right-top, .header-right-links{display:flex;align-items:center;flex-wrap:wrap;width:100%;}
+    .header-right-top{gap:10px;}
+    .header-right-links{gap:16px;margin-top:11px;}
+    .session-chip{background:none;border:none;padding:0;margin-right:auto;}
+    .header-right-links .btn-text{text-decoration:none;font-size:11.5px;font-weight:600;padding:0;}
     .topbar-icon-btn{width:38px;height:38px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
     .topbar-icon-btn svg{width:19px;height:19px;}
     .topbar-icon-btn-label{display:none;}
@@ -7089,15 +7106,19 @@ function renderShell(freshPage){
           </div>
         </div>
         <div class="header-right">
-          <div class="session-chip">
-            <span class="avatar">${initials(state.session.name)}</span>
-            <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
+          <div class="header-right-top">
+            <div class="session-chip">
+              <span class="avatar">${initials(state.session.name)}</span>
+              <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
+            </div>
+            <button type="button" class="btn btn-sm topbar-icon-btn" data-nav="chat" title="Team chat" style="display:flex;align-items:center;gap:6px;">${icon('chat')}<span class="topbar-icon-btn-label">Team chat</span>${state.chatUnread ? '<span class="topbar-icon-btn-dot"></span>' : ''}</button>
+            <button class="btn btn-sm topbar-icon-btn" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span id="dally-orb-topbar" class="dally-orb-lottie dally-orb-lottie-xs" style="margin:0;"></span><span class="topbar-icon-btn-label">Dally</span></button>
           </div>
-          <button type="button" class="btn btn-sm topbar-icon-btn" data-nav="chat" title="Team chat" style="display:flex;align-items:center;gap:6px;">${icon('chat')}<span class="topbar-icon-btn-label">Team chat</span>${state.chatUnread ? '<span class="topbar-icon-btn-dot"></span>' : ''}</button>
-          <button class="btn btn-sm topbar-icon-btn" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span id="dally-orb-topbar" class="dally-orb-lottie dally-orb-lottie-xs" style="margin:0;"></span><span class="topbar-icon-btn-label">Dally</span></button>
-          ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
-          ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
-          <button class="btn-text" id="btn-switch-role">Log out</button>
+          <div class="header-right-links">
+            ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
+            ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
+            <button class="btn-text" id="btn-switch-role">Log out</button>
+          </div>
         </div>
       </header>
       <main class="page ${freshPage?'page-enter':''}">

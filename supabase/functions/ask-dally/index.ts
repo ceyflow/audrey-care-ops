@@ -4,8 +4,11 @@
 // { question, context, history } here — context is a compact JSON snapshot of live app data
 // (orders, complaints, batches, etc.), the same facts the old keyword-matching assistant already
 // exposed, just handed to a real model instead of fixed if/else branches. This function attaches
-// the real Gemini API key and forwards the request to Google's Generative Language API, then
-// returns just the reply text.
+// the real Gemini API key and forwards the request to Google's Generative Language API using its
+// STREAMING endpoint, then re-streams just the answer text back to the client as it's generated —
+// so the chat bubble fills in word by word instead of staying blank until the whole answer is
+// done. A non-200 response is still a single JSON error body (no streaming) so the client's
+// existing error handling doesn't need to guess which shape it got.
 //
 // Deploy:
 //   supabase functions deploy ask-dally --no-verify-jwt
@@ -86,28 +89,72 @@ Deno.serve(async (req) => {
   if (transcript) promptParts.push("Conversation so far:\n" + transcript);
   promptParts.push("New question from the staff member: " + question);
 
+  let geminiRes: Response;
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
+    geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
           contents: [{ role: "user", parts: [{ text: promptParts.join("\n\n") }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 500 },
+          // Capped below the old 500 so a rambling answer can't push out the time to the last
+          // token either — Dally's own instructions already ask for a few sentences, not an essay.
+          generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
         }),
       },
     );
-    const data = await geminiRes.json().catch(() => ({}));
-    if (!geminiRes.ok) {
-      const detail = data?.error?.message || JSON.stringify(data).slice(0, 300);
-      return json({ ok: false, error: "Gemini rejected the request", detail }, 502);
-    }
-    const reply = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-    if (!reply) return json({ ok: false, error: "Dally didn't return an answer — try rephrasing." }, 502);
-    return json({ ok: true, reply: reply.trim() });
   } catch (e) {
     return json({ ok: false, error: "Could not reach Gemini.", detail: String(e) }, 502);
   }
+
+  if (!geminiRes.ok) {
+    const data = await geminiRes.json().catch(() => ({}));
+    const detail = data?.error?.message || JSON.stringify(data).slice(0, 300);
+    return json({ ok: false, error: "Gemini rejected the request", detail }, 502);
+  }
+  if (!geminiRes.body) {
+    return json({ ok: false, error: "Gemini returned no response body." }, 502);
+  }
+
+  // Gemini's SSE stream is a sequence of "data: {...}\n\n" events, each carrying the next slice
+  // of the answer. Parse out just the text and re-emit it as plain UTF-8 text — the client reads
+  // this as a growing string, no JSON parsing needed on its end for the success path.
+  const upstream = geminiRes.body.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
+
+  const stream = new ReadableStream({
+    async pull(controller) {
+      const { done, value } = await upstream.read();
+      if (done) {
+        controller.close();
+        return;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || ""; // the last split piece may be an incomplete event — keep it
+      for (const evt of events) {
+        const line = evt.trim();
+        if (!line.startsWith("data:")) continue;
+        const jsonStr = line.slice(5).trim();
+        if (!jsonStr) continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const text = parsed?.candidates?.[0]?.content?.parts
+            ?.map((p: { text?: string }) => p.text || "").join("") || "";
+          if (text) controller.enqueue(encoder.encode(text));
+        } catch {
+          // a JSON fragment split across chunk boundaries — ignore, the rest arrives next pull
+        }
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "text/plain; charset=utf-8" },
+  });
 });

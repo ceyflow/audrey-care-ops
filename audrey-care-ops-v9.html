@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020061146">
+<meta name="app-build" content="20261020062350">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6092,22 +6092,17 @@ function buildDallyContext(){
     delivery_lines: (state.deliveryLines||[]).map(l=>({label:l.label, active_count: active.filter(o=>o.courierService===l.key).length})),
   };
 }
-// Tries Dally's real Gemini brain first (ask-dally Edge Function); falls back to the original
-// local keyword matcher — silently if Dally isn't configured yet, with a short note appended if
-// it IS configured but the call itself failed (so a real outage is visible, not just mysteriously
-// dumber answers).
-async function askDally(question, history){
-  if(!DALLY_CONFIGURED) return answerAiQuery(question);
-  // Gemini usually replies in a few seconds, but a flaky connection or an API hiccup could hang
-  // indefinitely with nothing but "Thinking…" on screen — this caps the wait so it always
-  // resolves into either a real answer or the built-in fallback, never a stuck spinner.
-  const timeoutMs = 30000;
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+// Tries Dally's real Gemini brain first (ask-dally Edge Function, streaming); falls back to the
+// original local keyword matcher — silently if Dally isn't configured yet, with a short note
+// appended if it IS configured but the call itself failed (so a real outage is visible, not just
+// mysteriously dumber answers). onChunk is called with the growing answer text as it streams in
+// (once, with the whole text, for the built-in-fallback cases — same callback either way, so the
+// caller doesn't need to know which path produced the answer).
+async function askDally(question, history, onChunk){
+  if(!DALLY_CONFIGURED){ onChunk(answerAiQuery(question)); return; }
   try{
     const res = await fetch(SUPABASE_URL + '/functions/v1/ask-dally', {
       method: 'POST',
-      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
@@ -6116,48 +6111,64 @@ async function askDally(question, history){
       },
       body: JSON.stringify({ question, context: buildDallyContext(), history: history.slice(-12) })
     });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok || !data.ok){
+    if(!res.ok){
+      const data = await res.json().catch(()=>({}));
       const detail = data.detail ? ' — ' + String(data.detail).slice(0,200) : '';
-      return answerAiQuery(question) + `\n\n(Dally's AI brain had a problem — ${data.error||'error '+res.status}${detail} — showing the built-in answer instead.)`;
+      onChunk(answerAiQuery(question) + `\n\n(Dally's AI brain had a problem — ${data.error||'error '+res.status}${detail} — showing the built-in answer instead.)`);
+      return;
     }
-    return data.reply;
+    if(!res.body){
+      onChunk(answerAiQuery(question) + `\n\n(Dally's AI brain didn't return a response — showing the built-in answer instead.)`);
+      return;
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let full = '';
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      full += decoder.decode(value, {stream:true});
+      if(full) onChunk(full);
+    }
+    if(!full) onChunk(answerAiQuery(question) + `\n\n(Dally's AI brain didn't return an answer — showing the built-in answer instead.)`);
   }catch(e){
-    if(e.name==='AbortError') return answerAiQuery(question) + `\n\n(Dally's AI brain is taking too long to reply — showing the built-in answer instead.)`;
-    return answerAiQuery(question) + `\n\n(Couldn't reach Dally's AI brain — showing the built-in answer instead.)`;
-  }finally{
-    clearTimeout(timer);
+    onChunk(answerAiQuery(question) + `\n\n(Couldn't reach Dally's AI brain — showing the built-in answer instead.)`);
   }
+}
+// Shared by the suggestion chips and the free-text form — pushes the user turn, then streams
+// Dally's reply into a single growing bot bubble (pushed only once the first chunk arrives, so
+// the "thinking" dots show right up until real text starts appearing).
+async function runDallyTurn(text){
+  if(!text || state._dallyThinking) return;
+  const history = [...state.aiChat];
+  state.aiChat.push({sender:'user', text});
+  state._dallyThinking = true;
+  render();
+  scrollAiChatToBottom();
+  let botMsg = null;
+  await askDally(text, history, (partial)=>{
+    if(!botMsg){
+      botMsg = {sender:'bot', text:''};
+      state.aiChat.push(botMsg);
+    }
+    botMsg.text = partial;
+    render();
+    scrollAiChatToBottom();
+  });
+  state._dallyThinking = false;
+  render();
+  scrollAiChatToBottom();
 }
 async function sendAiChatMessage(e){
   e.preventDefault();
   const input = document.getElementById('aichat-input');
   const text = (input.value||'').trim();
   if(!text || state._dallyThinking) return;
-  const history = [...state.aiChat];
-  state.aiChat.push({sender:'user', text});
   input.value = '';
-  state._dallyThinking = true;
-  render();
-  scrollAiChatToBottom();
-  const reply = await askDally(text, history);
-  state.aiChat.push({sender:'bot', text: reply});
-  state._dallyThinking = false;
-  render();
-  scrollAiChatToBottom();
+  await runDallyTurn(text);
 }
 async function askAiSuggestion(text){
-  if(state._dallyThinking) return;
-  const history = [...state.aiChat];
-  state.aiChat.push({sender:'user', text});
-  state._dallyThinking = true;
-  render();
-  scrollAiChatToBottom();
-  const reply = await askDally(text, history);
-  state.aiChat.push({sender:'bot', text: reply});
-  state._dallyThinking = false;
-  render();
-  scrollAiChatToBottom();
+  await runDallyTurn(text);
 }
 
 /* ===================== Render root ===================== */
@@ -12586,6 +12597,10 @@ const AI_SUGGESTIONS = ["Today's order summary", "Blending batches", "Open compl
 function aiBotModal(){
   const chat = state.aiChat || [];
   const thinking = !!state._dallyThinking;
+  // Dally's reply streams in by growing the last bot bubble in place, so the "thinking" dots only
+  // belong on screen before that bubble exists — once it does, the dots and the live text would
+  // otherwise show at the same time.
+  const showThinkingDots = thinking && !(chat.length && chat[chat.length-1].sender==='bot');
   const who = (state.session && (state.session.staffName || state.session.name)) || '';
   return `
   <div class="overlay" id="overlay">
@@ -12607,7 +12622,7 @@ function aiBotModal(){
           <div class="dally-orb-wrap dally-orb-wrap-sm"><div class="dally-orb-core"></div></div>
           <div>
             <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;">Dally</div>
-            <div class="hint" style="font-size:11px;">${thinking?'Thinking…':'Workspace assistant'}</div>
+            <div class="hint" style="font-size:11px;">${showThinkingDots?'Thinking…':(thinking?'Replying…':'Workspace assistant')}</div>
           </div>
         </div>
         <div id="aichat-log" style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:10px;">
@@ -12615,7 +12630,7 @@ function aiBotModal(){
           <div style="align-self:${m.sender==='user'?'flex-end':'flex-start'};max-width:88%;">
             <div style="background:${m.sender==='user'?'var(--accent)':'var(--bg)'};color:${m.sender==='user'?'#fff':'var(--ink)'};padding:9px 13px;border-radius:14px;${m.sender==='user'?'border-bottom-right-radius:4px;':'border-bottom-left-radius:4px;'}font-size:13.5px;line-height:1.5;white-space:pre-wrap;">${escBody(m.text)}</div>
           </div>`).join('')}
-          ${thinking ? `
+          ${showThinkingDots ? `
           <div style="align-self:flex-start;">
             <div style="background:var(--bg);padding:11px 15px;border-radius:14px;border-bottom-left-radius:4px;display:flex;gap:4px;align-items:center;">
               <span class="dally-typing-dot"></span><span class="dally-typing-dot"></span><span class="dally-typing-dot"></span>

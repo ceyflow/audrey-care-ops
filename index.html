@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261021064539">
+<meta name="app-build" content="20261021075421">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -506,6 +506,44 @@ html{ visibility:hidden; }
   @keyframes more-fade{to{opacity:1;}}
   @media (max-width:760px){
     .more-fab-hub{display:block;}
+  }
+
+  /* ---------------- Personal notes & reminders ---------------- */
+  /* bottom:34px clears the desktop live-clock-bar footer (measured at 34px rendered height);
+     the mobile override below clears the 67px tab bar the same way the More sheet does. */
+  .notes-fab-btn{position:fixed;right:22px;bottom:34px;z-index:48;width:52px;height:52px;border-radius:50%;border:none;background:#2F6FE4;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px -6px rgba(47,111,228,.55);cursor:pointer;}
+  .notes-fab-btn svg{width:22px;height:22px;}
+  .notes-fab-badge{position:absolute;top:5px;right:6px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#fff;color:#2F6FE4;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .notes-fab-backdrop{position:fixed;inset:0;z-index:46;background:transparent;}
+  .notes-fab-popup{position:fixed;right:22px;bottom:94px;z-index:48;width:300px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;box-shadow:0 20px 44px -12px rgba(20,25,20,.3);padding:16px;max-height:min(520px, calc(100vh - 150px));overflow-y:auto;}
+  .notes-fab-popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .notes-fab-popup-head h3{margin:0;font-size:14px;font-weight:700;}
+  .notes-fab-close{width:22px;height:22px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;}
+  .notes-next-card{background:linear-gradient(135deg,#2F6FE4,#4F8DF7);border-radius:12px;padding:13px 14px;color:#fff;margin-bottom:12px;}
+  .notes-next-card .notes-eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85;}
+  .notes-next-card .notes-next-text{font-size:13.5px;font-weight:600;margin-top:4px;}
+  .notes-next-card .notes-next-when{font-size:11px;opacity:.85;margin-top:2px;}
+  .notes-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+  .notes-row:last-child{border-bottom:none;}
+  .notes-row-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+  .notes-row-text{flex:1;font-size:12.5px;line-height:1.4;word-break:break-word;}
+  .notes-row-when{font-size:10px;color:var(--muted);margin-top:2px;}
+  .notes-row-del{width:18px;height:18px;border-radius:50%;border:none;background:none;color:var(--muted);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-size:10px;}
+  .notes-row-del:hover{color:var(--danger);background:var(--danger-soft);}
+  .notes-compose{border-top:1px solid var(--border);margin-top:4px;padding-top:12px;}
+  .notes-compose textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:none;height:44px;margin-bottom:8px;}
+  .notes-compose-row{display:flex;gap:6px;margin-bottom:8px;}
+  .notes-compose-row input[type="date"],.notes-compose-row input[type="time"]{flex:1;min-width:0;border:1.5px solid var(--border);border-radius:7px;padding:6px 7px;font-size:10.5px;font-family:inherit;color:var(--ink);}
+  .notes-color-row{display:flex;gap:6px;}
+  .notes-color-dot{width:16px;height:16px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
+  .notes-color-dot.selected{border-color:var(--ink);}
+  .notes-due-overlay{position:fixed;inset:0;z-index:100;background:rgba(20,25,20,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .notes-due-card{background:#fff;border-radius:16px;padding:26px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 60px rgba(0,0,0,.3);}
+  .notes-due-dot{width:42px;height:42px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;color:#fff;}
+  .notes-due-dot svg{width:20px;height:20px;}
+  @media (max-width:760px){
+    .notes-fab-btn{bottom:calc(77px + env(safe-area-inset-bottom));}
+    .notes-fab-popup{bottom:calc(137px + env(safe-area-inset-bottom));right:14px;}
   }
 
   /* ---------------- Kanban (Orders) ---------------- */
@@ -1381,7 +1419,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
 // (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
 // from here so it stops being fetched on every login for no reason.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -2368,6 +2406,10 @@ const PERMISSION_REGISTRY = [
   {dept:'branding', deptLabel:'Branding', id:'branding_manage', label:'Upload, edit and delete brand assets'},
   // Settings
   {dept:'settings', deptLabel:'Settings', id:'settings_access', label:'Open the Settings page'},
+  // Notes & reminders — a personal sticky-note + reminder widget (floating button, bottom
+  // right), not tied to any one page, so it gets its own department here rather than living
+  // under an existing page's permissions.
+  {dept:'notes', deptLabel:'Notes & reminders', id:'notes_access', label:'Can use the personal notes & reminders widget'},
 ];
 // Every legacy or custom role, seeded to match exactly what that role could already do before this
 // permission system existed — a pure data snapshot of the hardcoded isAdmin()/isPacking()/etc.
@@ -2378,15 +2420,19 @@ function buildRolePermissions(trueIds){
   return perms;
 }
 const ALL_PERMISSION_IDS = PERMISSION_REGISTRY.map(p=>p.id);
+// Notes & reminders ships on by default for every real personal login (added to each role's
+// list below) — 'Orders Process' is deliberately left without it: that role signs into a
+// shared-device public board display (enterBoardMode()), never a personal session, so a
+// personal note/reminder widget has no one to belong to there.
 const LEGACY_ROLE_PERMISSIONS = {
   Admin: ALL_PERMISSION_IDS,
-  'Sub Admin': ['complaints_manage','complaints_edit_after_1hr','complaints_full_edit','complaints_delete_active','complaints_restore','complaints_bulk_delete'],
-  Blending: ['blending_manage'],
-  Packing: ['orders_advance','orders_edit_tracking_only'],
-  'Customer Care': ['complaints_manage','complaints_edit_after_1hr'],
+  'Sub Admin': ['complaints_manage','complaints_edit_after_1hr','complaints_full_edit','complaints_delete_active','complaints_restore','complaints_bulk_delete','notes_access'],
+  Blending: ['blending_manage','notes_access'],
+  Packing: ['orders_advance','orders_edit_tracking_only','notes_access'],
+  'Customer Care': ['complaints_manage','complaints_edit_after_1hr','notes_access'],
   'Orders Process': [],
-  'R&D': ['rnd_manage'],
-  Dashboard: [],
+  'R&D': ['rnd_manage','notes_access'],
+  Dashboard: ['notes_access'],
 };
 // roleCan() is the one place every fine-grained gate should check. A role with a custom record in
 // state.userRoles uses its own permissions map (an Inactive role gets none); a role that's never
@@ -2418,7 +2464,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 5;
+const PAGE_DATA_KEYS_VERSION = 6;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -2449,7 +2495,10 @@ const PAGE_DATA_KEYS = {
 // every role needs it.
 function dataKeysForRole(role){
   const pages = pagesForRole(role);
-  const keys = new Set(['activityLog']);
+  // Like activityLog, personalNotes isn't tied to any one page — the notes FAB (gated on
+  // notes_access, not a page) is reachable from the shell regardless of which page is open, so
+  // every role needs this key the same way every role needs the activity log.
+  const keys = new Set(['activityLog','personalNotes']);
   pages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
   return [...keys];
 }
@@ -3356,7 +3405,8 @@ const ICONS = {
   wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2 2.8-2.8z"/>',
   pest:'<circle cx="12" cy="13.5" r="4"/><path d="M12 9.5V6.5"/><path d="M9.3 7.7 7.5 5.9"/><path d="M14.7 7.7l1.8-1.8"/><path d="M8 13.5H4"/><path d="M20 13.5h-4"/><path d="M9 17l-2 2.8"/><path d="M15 17l2 2.8"/>',
   box:'<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/><path d="M7.5 5l9 4"/>',
-  close:'<path d="M6 6l12 12"/><path d="M18 6L6 18"/>'
+  close:'<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
+  bell:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'
 };
 function icon(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`; }
 const TRACK_STAGE_PATHS = [
@@ -3417,6 +3467,13 @@ let state = {
   theme: {paletteId:'green'},
   batchDisplay: {instructionStyle:'numbered'},
   aiChat: [],
+  // Personal notes & reminders — a normal SYNCED_KEY (see SYNCED_KEYS): holds every logged-in
+  // person's notes together, each tagged with ownerName; ownNotes() filters to the current
+  // session's own list. See its comment for why this isn't a separate per-person key.
+  personalNotes: [],
+  _notesFabOpen: false,
+  _dueNoteAlert: null,
+  _noteComposeDraft: null,
   auth: null,
   loaded: false,
   backendMissing: false,
@@ -4066,6 +4123,12 @@ async function loadAll(){
   };
   runArchiveSweep(); // don't wait for the first interval tick — catch anything already overdue right away
   setInterval(runArchiveSweep, 2*60*1000);
+  // Polls rather than using real timers (setTimeout per reminder) so a reminder set for, say,
+  // next Tuesday doesn't need its own long-lived timer surviving tab sleep/reloads — worst case
+  // it pops up up to 20s late, which is fine for a personal note reminder. Checked once right
+  // away too, for a reminder that was already overdue before this refresh/login happened.
+  checkDueNotes();
+  setInterval(checkDueNotes, 20000);
   // Photo cleanup doesn't need to be prompt like the order/complaint archive sweep above — once
   // every 30 minutes is plenty for deleting old attachments.
   setInterval(async ()=>{
@@ -4144,6 +4207,40 @@ async function logActivity(message){
 
 /* ===================== Utilities ===================== */
 function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,7).toUpperCase(); }
+// Personal notes & reminders: an ordinary SYNCED_KEY like every other data array in this app
+// (see save()/mergeBeforeSave()) — state.personalNotes holds EVERY logged-in person's notes
+// together, each one tagged with ownerName, the same shape as e.g. state.staff holding everyone's
+// staff records. Scoping a note to "only its owner" is purely a client-side filter (ownNotes()
+// below), not a separate storage key — a per-person key would need its own role_data_access row
+// per person, which that table has no way to express (it grants by role, not by name), and would
+// lose the automatic concurrent-edit-safe merge save() already gives every other synced array.
+function ownNotes(){
+  if(!state.session) return [];
+  return (state.personalNotes||[]).filter(n=>n.ownerName===state.session.name);
+}
+// Reads whatever's currently in the compose fields into state before a re-render would otherwise
+// wipe them (picking a color, or closing/reopening the popup) — the DOM nodes get torn down and
+// rebuilt on every render(), so anything not captured back into state first is simply gone.
+function captureNoteComposeDraft(){
+  if(!state._noteComposeDraft) state._noteComposeDraft = {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:''};
+  const textEl = document.getElementById('note-compose-text'), dateEl = document.getElementById('note-compose-date'), timeEl = document.getElementById('note-compose-time');
+  if(textEl) state._noteComposeDraft.text = textEl.value;
+  if(dateEl) state._noteComposeDraft.date = dateEl.value;
+  if(timeEl) state._noteComposeDraft.time = timeEl.value;
+}
+// Checked on an interval (see its setInterval call) rather than only on page load, so a
+// reminder still pops up even if the person never navigates or re-renders in the meantime. Only
+// ever looks at this person's own notes — never fires on, or even looks at, anyone else's.
+function checkDueNotes(){
+  if(!state.session || state._dueNoteAlert) return;
+  const due = ownNotes().find(n=>n.remindAt && !n.fired && new Date(n.remindAt).getTime()<=Date.now());
+  if(due){
+    due.fired = true;
+    state._dueNoteAlert = due;
+    save('personalNotes').catch(()=>{});
+    render();
+  }
+}
 // 0-based index -> A, B, …, Z, AA, AB, … (Excel-column style) — used to letter production-step
 // phrases instead of numbering them.
 function letterLabel(i){
@@ -4453,6 +4550,9 @@ async function confirmLogin(){
   // before anyone was signed in — re-fetch now that we actually are, rather than rendering
   // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see.
   await refreshAppData(true);
+  // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
+  // check for anything already overdue now that they're actually signed in.
+  checkDueNotes();
   // Must run AFTER refreshAppData(), not before — that call overwrites state.rndChemists /
   // state.rndAttendance wholesale with the fresh authenticated fetch, which would silently wipe
   // out (or just race against) a chemist this had only just looked up or auto-created against
@@ -4516,6 +4616,9 @@ async function confirmLoginV2(){
   // have no pre-existing session, so loadAll()'s one and only fetch always ran unauthenticated,
   // and nothing used to ever re-fetch after the login that followed it.
   await refreshAppData(true);
+  // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
+  // check for anything already overdue now that they're actually signed in.
+  checkDueNotes();
   // Must run AFTER refreshAppData(), not before — see the matching comment in confirmLogin()
   // above for why (refreshAppData overwrites rndChemists/rndAttendance wholesale, which would
   // silently invalidate whatever this had just looked up or created against the stale snapshot).
@@ -4527,6 +4630,9 @@ async function logOut(){
   state.aiChat = [];
   state._pendingRndAttendance = null;
   state._rndAttCal = null;
+  state._notesFabOpen = false;
+  state._dueNoteAlert = null;
+  state._noteComposeDraft = null;
   // Every eager (SYNCED_KEYS) value gets freshly overwritten on the next login via
   // refreshAppData(), but a DEFERRED_KEY only re-fetches when its _deferredLoaded flag is false —
   // without clearing this here, a second, different account logging into the same browser tab
@@ -7068,6 +7174,90 @@ function renderMoreFabMenu(navGroups){
     </div>
   </div>`;
 }
+const NOTE_COLOR_PALETTE = ['#2F6FE4','#2E9E5B','#D4A017','#C23B3B','#8B5CF6'];
+function formatNoteWhen(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const time = d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  if(d.toDateString()===now.toDateString()) return `Today, ${time}`;
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
+  if(d.toDateString()===tomorrow.toDateString()) return `Tomorrow, ${time}`;
+  return `${d.toLocaleDateString([], {day:'numeric', month:'short'})}, ${time}`;
+}
+// Floating button + popup for personal notes & reminders — picked from 10 icon/popup mockups
+// ("reminder-forward bell"): a gradient "next up" card for the soonest pending reminder, then
+// every other note, then the compose row. Gated by the notes_access permission (Settings → User
+// roles) so an Admin can turn it off per role; Orders Process never gets the permission at all
+// since that role has no personal session to hang notes off of (see LEGACY_ROLE_PERMISSIONS).
+function renderNotesFab(){
+  if(!state.session || !roleCan(state.session.role, 'notes_access')) return '';
+  const notes = ownNotes().slice().sort((a,b)=>{
+    const ar = a.remindAt ? new Date(a.remindAt).getTime() : Infinity;
+    const br = b.remindAt ? new Date(b.remindAt).getTime() : Infinity;
+    return ar - br;
+  });
+  const open = !!state._notesFabOpen;
+  const next = notes.find(n=>n.remindAt && !n.fired);
+  const draft = state._noteComposeDraft || {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:''};
+  return `
+  <div class="notes-fab-wrap">
+    ${open ? `<div class="notes-fab-backdrop" id="notes-fab-backdrop"></div>` : ''}
+    ${open ? `
+    <div class="notes-fab-popup" id="notes-fab-popup">
+      <div class="notes-fab-popup-head">
+        <h3>Reminders</h3>
+        <button type="button" class="notes-fab-close" id="notes-fab-close" aria-label="Close">${icon('close')}</button>
+      </div>
+      ${next ? `
+      <div class="notes-next-card">
+        <div class="notes-eyebrow">Next up</div>
+        <div class="notes-next-text">${esc(next.text)}</div>
+        <div class="notes-next-when">${esc(formatNoteWhen(next.remindAt))}</div>
+      </div>` : ''}
+      ${notes.length ? notes.map(n=>`
+      <div class="notes-row">
+        <span class="notes-row-dot" style="background:${escAttr(n.color||NOTE_COLOR_PALETTE[0])}"></span>
+        <div class="notes-row-text">
+          ${esc(n.text)}
+          ${n.remindAt ? `<div class="notes-row-when">${esc(formatNoteWhen(n.remindAt))}</div>` : ''}
+        </div>
+        <button type="button" class="notes-row-del" data-delete-note="${n.id}" title="Delete" aria-label="Delete note">${icon('close')}</button>
+      </div>`).join('') : `<div class="hint" style="padding:6px 0 10px;">No notes yet — add one below.</div>`}
+
+      <div class="notes-compose">
+        <textarea id="note-compose-text" placeholder="Type a note…">${esc(draft.text)}</textarea>
+        <div class="notes-compose-row">
+          <input type="date" id="note-compose-date" value="${escAttr(draft.date)}">
+          <input type="time" id="note-compose-time" value="${escAttr(draft.time)}">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="notes-color-row">
+            ${NOTE_COLOR_PALETTE.map(c=>`<button type="button" class="notes-color-dot ${draft.color===c?'selected':''}" data-note-color="${c}" style="background:${c}" aria-label="Choose color"></button>`).join('')}
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-note">Save</button>
+        </div>
+      </div>
+    </div>` : ''}
+    <button type="button" class="notes-fab-btn" id="btn-notes-fab-toggle" aria-expanded="${open?'true':'false'}" aria-controls="notes-fab-popup" title="Notes & reminders" aria-label="${open?'Close notes':'Notes & reminders'}">
+      ${icon(open?'close':'bell')}
+      ${(!open && notes.length) ? `<span class="notes-fab-badge">${notes.length}</span>` : ''}
+    </button>
+  </div>`;
+}
+function renderDueNoteAlert(){
+  const n = state._dueNoteAlert;
+  if(!n) return '';
+  return `
+  <div class="notes-due-overlay" id="notes-due-overlay">
+    <div class="notes-due-card">
+      <div class="notes-due-dot" style="background:${escAttr(n.color||NOTE_COLOR_PALETTE[0])}">${icon('bell')}</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px;">Reminder</div>
+      <div style="font-size:13.5px;color:var(--ink);margin-bottom:20px;line-height:1.5;">${esc(n.text)}</div>
+      <button type="button" class="btn btn-primary" id="btn-dismiss-due-note" style="width:100%;">Got it</button>
+    </div>
+  </div>`;
+}
 function findNavItemById(id){
   for(const g of NAV){
     const it = g.items.find(x=>x.id===id); if(it) return it;
@@ -7248,12 +7438,14 @@ function renderShell(freshPage){
     ${mobileTabs.hasMore ? `<button type="button" class="mobile-tab" id="btn-mobile-more" title="More" aria-label="More">${icon('list')}</button>` : ''}
   </nav>
   ${renderMoreFabMenu(navGroups)}
+  ${renderNotesFab()}
   ${state.modal ? `<div class="${freshModal?'':'reopen-noanim'}">${renderModal()}</div>` : ''}
   ${state.toast ? renderToast() : ''}
   ${state.chatNotice ? renderChatNotice() : ''}
   ${state.complaintNotice ? renderComplaintNotice() : ''}
   ${(state.batchFocusMode && isBatchDisplayActive()) ? renderBatchFocusOverlay() : ''}
   ${state.adminBroadcast ? `<div class="${freshBroadcast?'':'reopen-noanim'}">${renderAdminBroadcastPanel()}</div>` : ''}
+  ${state._dueNoteAlert ? renderDueNoteAlert() : ''}
   `;
 }
 function renderChatNotice(){
@@ -14354,6 +14546,40 @@ function attachShellHandlers(){
   }));
   if(byIdEl('btn-more-fab-toggle')) byIdEl('btn-more-fab-toggle').onclick = ()=>{ state._moreFabOpen = !state._moreFabOpen; render(); };
   if(byIdEl('more-fab-backdrop')) byIdEl('more-fab-backdrop').onclick = ()=>{ state._moreFabOpen = false; render(); };
+  if(byIdEl('btn-notes-fab-toggle')) byIdEl('btn-notes-fab-toggle').onclick = ()=>{
+    // Snapshot whatever's currently typed before toggling, so closing-then-reopening (or a
+    // color click, which re-renders) never loses a draft someone was mid-way through typing.
+    captureNoteComposeDraft();
+    state._notesFabOpen = !state._notesFabOpen;
+    render();
+  };
+  if(byIdEl('notes-fab-backdrop')) byIdEl('notes-fab-backdrop').onclick = ()=>{ state._notesFabOpen = false; render(); };
+  if(byIdEl('notes-fab-close')) byIdEl('notes-fab-close').onclick = ()=>{ state._notesFabOpen = false; render(); };
+  document.querySelectorAll('[data-note-color]').forEach(b=>b.addEventListener('click', ()=>{
+    captureNoteComposeDraft();
+    state._noteComposeDraft.color = b.dataset.noteColor;
+    render();
+  }));
+  if(byIdEl('btn-save-note')) byIdEl('btn-save-note').onclick = async ()=>{
+    const text = (byIdEl('note-compose-text').value||'').trim();
+    if(!text){ showToast('Type a note first'); return; }
+    const date = byIdEl('note-compose-date').value;
+    const time = byIdEl('note-compose-time').value;
+    if((date && !time) || (!date && time)){ showToast('Pick both a date and a time, or leave both blank'); return; }
+    const color = (state._noteComposeDraft && state._noteComposeDraft.color) || NOTE_COLOR_PALETTE[0];
+    const remindAt = (date && time) ? new Date(`${date}T${time}`).toISOString() : null;
+    state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, createdAt: new Date().toISOString()}];
+    state._noteComposeDraft = null;
+    await save('personalNotes');
+    render();
+    showToast('Note saved');
+  };
+  document.querySelectorAll('[data-delete-note]').forEach(b=>b.addEventListener('click', async ()=>{
+    state.personalNotes = (state.personalNotes||[]).filter(n=>n.id!==b.dataset.deleteNote);
+    await save('personalNotes');
+    render();
+  }));
+  if(byIdEl('btn-dismiss-due-note')) byIdEl('btn-dismiss-due-note').onclick = ()=>{ state._dueNoteAlert = null; render(); };
   document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{
     card.addEventListener('dragstart', e=>{
       card.classList.add('dragging');

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261021031505">
+<meta name="app-build" content="20261021032503">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -179,6 +179,11 @@ html{ visibility:hidden; }
   .session-chip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
   .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
   .topbar-icon-btn{position:relative;}
+  /* Team chat has its own full sidebar entry on desktop/tablet — this shortcut is only there
+     for phones, where the sidebar is replaced by the bottom tab bar and chat has no other way
+     in. Desktop showing both was never an intentional affordance, just the two sharing one
+     unconditional markup block; hide it here and the mobile media query below turns it back on. */
+  .topbar-icon-btn[data-nav="chat"]{display:none !important;}
   .topbar-icon-btn-dot{position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface);}
 
   .btn{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;transition:background .15s,border-color .15s,transform .15s ease,box-shadow .15s ease;}
@@ -1083,6 +1088,7 @@ html{ visibility:hidden; }
     .session-chip{background:none;border:none;padding:0;margin-right:auto;}
     .header-right-links .btn-text{text-decoration:none;font-size:11.5px;font-weight:600;padding:0;}
     .topbar-icon-btn{width:38px;height:38px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .topbar-icon-btn[data-nav="chat"]{display:flex !important;}
     .topbar-icon-btn svg{width:19px;height:19px;}
     .topbar-icon-btn-label{display:none;}
     .mobile-tabbar{

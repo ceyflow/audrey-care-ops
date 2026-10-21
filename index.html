@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261021042721">
+<meta name="app-build" content="20261021043351">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -690,8 +690,14 @@ html{ visibility:hidden; }
   .login-panel{
     position:absolute;top:0;right:0;bottom:0;width:440px;z-index:2;
     display:flex;align-items:center;justify-content:center;padding:48px;box-sizing:border-box;
-    background:rgba(255,255,255,.14);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
-    border-left:1px solid rgba(255,255,255,.25);overflow:visible;
+    /* A busy photo (sharp edges, high contrast) smears into visible streaks under a light blur —
+       reads as "stretched" rather than frosted — and the panel sits near the right edge, past
+       where the illustration's own dark overlay has already faded out, so a light glass tint
+       there also risks washing out the white text. A dark "smoked glass" tint flattens whatever
+       photo is behind it into a smooth charcoal wash instead, which keeps white text and inputs
+       readable regardless of how bright or busy that part of the photo happens to be. */
+    background:rgba(18,15,10,.52);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+    border-left:1px solid rgba(255,255,255,.18);overflow:visible;
   }
   .login-panel-inner{
     width:100%;max-width:340px;position:relative;z-index:1;

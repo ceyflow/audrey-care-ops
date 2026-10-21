@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261020181319">
+<meta name="app-build" content="20261021031505">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1469,6 +1469,24 @@ async function kvGet(key){
   const { data, error } = await supabaseClient.from('app_data').select('value').eq('key', key).maybeSingle();
   if(error){ console.error('kvGet '+key, error); return null; }
   return data ? data.value : null;
+}
+// The one read that retries before giving up. Every other kvGet call falls back to an empty
+// list on a transient blip, which is harmless for one page load — but a failed 'auth' read
+// falls back to DEFAULT_AUTH (no migratedToSupabaseAuth flag) and flashes the OLD shared-
+// password role-grid login screen in its place, even though the real data and the real
+// migration are both fine. Confirmed happening from a single transient Supabase hiccup, not
+// an actual lost migration. A couple of quick retries absorb that blip before the login
+// screen ever renders; a genuine outage still falls back exactly as before.
+async function kvGetAuthWithRetry(attempts=3){
+  for(let i=0;i<attempts;i++){
+    try{
+      const { data, error } = await supabaseClient.from('app_data').select('value').eq('key','auth').maybeSingle();
+      if(!error) return data ? data.value : null;
+      console.error('auth fetch attempt '+(i+1)+' failed', error);
+    }catch(e){ console.error('auth fetch attempt '+(i+1)+' threw', e); }
+    if(i<attempts-1) await new Promise(r=>setTimeout(r, 350*(i+1)));
+  }
+  return undefined;
 }
 // Timestamp of the last time WE wrote each key, so the realtime handler can recognize its own
 // echo coming back even in the rare case the content-equality check below misses it (e.g. a
@@ -3537,7 +3555,7 @@ async function loadAll(){
   // migration handling below) so it used to be fetched in its own sequential await AFTER this one
   // finished, adding a full extra network round trip to every single page load for no reason:
   // the two reads don't depend on each other at all.
-  const authFetchPromise = kvGet('auth').catch(()=>undefined);
+  const authFetchPromise = kvGetAuthWithRetry();
   const loadedValues = await refreshAppData(!!_authSession);
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
   // for that key yet, i.e. the raw load came back null/undefined). That's different from the

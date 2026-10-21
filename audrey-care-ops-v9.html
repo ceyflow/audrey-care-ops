@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261021075421">
+<meta name="app-build" content="20261021083629">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -515,7 +515,7 @@ html{ visibility:hidden; }
   .notes-fab-btn svg{width:22px;height:22px;}
   .notes-fab-badge{position:absolute;top:5px;right:6px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#fff;color:#2F6FE4;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;}
   .notes-fab-backdrop{position:fixed;inset:0;z-index:46;background:transparent;}
-  .notes-fab-popup{position:fixed;right:22px;bottom:94px;z-index:48;width:300px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;box-shadow:0 20px 44px -12px rgba(20,25,20,.3);padding:16px;max-height:min(520px, calc(100vh - 150px));overflow-y:auto;}
+  .notes-fab-popup{position:fixed;right:22px;bottom:94px;z-index:48;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;box-shadow:0 20px 44px -12px rgba(20,25,20,.3);padding:18px;max-height:min(600px, calc(100vh - 130px));overflow-y:auto;}
   .notes-fab-popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .notes-fab-popup-head h3{margin:0;font-size:14px;font-weight:700;}
   .notes-fab-close{width:22px;height:22px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;}
@@ -530,13 +530,45 @@ html{ visibility:hidden; }
   .notes-row-when{font-size:10px;color:var(--muted);margin-top:2px;}
   .notes-row-del{width:18px;height:18px;border-radius:50%;border:none;background:none;color:var(--muted);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-size:10px;}
   .notes-row-del:hover{color:var(--danger);background:var(--danger-soft);}
-  .notes-compose{border-top:1px solid var(--border);margin-top:4px;padding-top:12px;}
-  .notes-compose textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:none;height:44px;margin-bottom:8px;}
-  .notes-compose-row{display:flex;gap:6px;margin-bottom:8px;}
-  .notes-compose-row input[type="date"],.notes-compose-row input[type="time"]{flex:1;min-width:0;border:1.5px solid var(--border);border-radius:7px;padding:6px 7px;font-size:10.5px;font-family:inherit;color:var(--ink);}
-  .notes-color-row{display:flex;gap:6px;}
-  .notes-color-dot{width:16px;height:16px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
+  .notes-compose{border-top:1px solid var(--border);margin-top:4px;padding-top:14px;}
+  /* Was a cramped 44px, 12.5px box — "typing space" feedback: a note you're actually writing
+     needs real room, not a sliver that scrolls after two lines. */
+  .notes-compose textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.4;font-family:inherit;resize:vertical;min-height:78px;margin-bottom:10px;}
+  .notes-dt-trigger{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;border:1.5px dashed var(--border);border-radius:9px;padding:9px 11px;background:none;font-size:12.5px;font-family:inherit;color:var(--muted);cursor:pointer;margin-bottom:10px;text-align:left;}
+  .notes-dt-trigger.has-value{border-style:solid;border-color:#2F6FE4;color:#2F6FE4;font-weight:600;background:#EAF1FD;}
+  .notes-dt-trigger svg{width:15px;height:15px;flex-shrink:0;}
+  .notes-color-row{display:flex;gap:7px;}
+  .notes-color-dot{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
   .notes-color-dot.selected{border-color:var(--ink);}
+  /* ---- Custom date/time picker (picked to match a reference circular clock-face picker) ---- */
+  .notes-dt-overlay{position:fixed;inset:0;z-index:101;background:rgba(20,25,20,.45);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .notes-dt-card{background:#fff;border-radius:18px;width:300px;max-width:100%;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.3);}
+  .notes-dt-header{background:linear-gradient(135deg,#2F6FE4,#4F8DF7);padding:18px 20px;color:#fff;}
+  .notes-dt-date-label{display:block;background:none;border:none;color:rgba(255,255,255,.75);font-size:13px;font-weight:600;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer;}
+  .notes-dt-date-label.active{color:#fff;}
+  .notes-dt-time-row{display:flex;align-items:center;gap:6px;}
+  .notes-dt-time-label{background:none;border:none;color:rgba(255,255,255,.6);font-family:'Fraunces',serif;font-size:32px;font-weight:600;padding:0;cursor:pointer;line-height:1;}
+  .notes-dt-time-label.active{color:#fff;}
+  .notes-dt-time-row > span{color:rgba(255,255,255,.6);font-family:'Fraunces',serif;font-size:32px;line-height:1;}
+  .notes-dt-ampm{display:flex;flex-direction:column;margin-left:10px;gap:2px;}
+  .notes-dt-ampm button{background:none;border:none;color:rgba(255,255,255,.55);font-size:11px;font-weight:700;font-family:inherit;padding:1px 0;cursor:pointer;text-align:left;}
+  .notes-dt-ampm button.active{color:#fff;}
+  .notes-dt-body{padding:18px;min-height:260px;display:flex;flex-direction:column;justify-content:center;}
+  .notes-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .notes-cal-nav button{width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--ink);font-size:14px;cursor:pointer;}
+  .notes-cal-nav span{font-size:12.5px;font-weight:700;}
+  .notes-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .notes-cal-dow{text-align:center;font-size:9.5px;font-weight:700;color:var(--muted);padding:4px 0;}
+  .notes-cal-day{aspect-ratio:1;border:none;background:none;border-radius:50%;font-size:12px;font-family:inherit;color:var(--ink);cursor:pointer;}
+  .notes-cal-day:hover{background:var(--bg);}
+  .notes-cal-day.selected{background:#2F6FE4;color:#fff;font-weight:700;}
+  .notes-clock-face{position:relative;width:220px;height:220px;border-radius:50%;background:var(--bg);margin:0 auto;}
+  .notes-clock-center{position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;background:#2F6FE4;transform:translate(-50%,-50%);z-index:2;}
+  .notes-clock-hand{position:absolute;top:50%;left:50%;width:2px;height:38%;background:#2F6FE4;transform-origin:50% 100%;margin-left:-1px;margin-top:-38%;}
+  .notes-clock-num{position:absolute;width:30px;height:30px;border-radius:50%;border:none;background:none;transform:translate(-50%,-50%);font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .notes-clock-num.selected{background:#2F6FE4;color:#fff;}
+  .notes-dt-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 18px 18px;}
+  .notes-dt-actions button{background:none;border:none;color:#2F6FE4;font-weight:700;font-size:12.5px;font-family:inherit;padding:8px 10px;cursor:pointer;}
   .notes-due-overlay{position:fixed;inset:0;z-index:100;background:rgba(20,25,20,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;}
   .notes-due-card{background:#fff;border-radius:16px;padding:26px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 60px rgba(0,0,0,.3);}
   .notes-due-dot{width:42px;height:42px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;color:#fff;}
@@ -3474,6 +3506,7 @@ let state = {
   _notesFabOpen: false,
   _dueNoteAlert: null,
   _noteComposeDraft: null,
+  _noteDtPicker: null,
   auth: null,
   loaded: false,
   backendMissing: false,
@@ -4218,15 +4251,36 @@ function ownNotes(){
   if(!state.session) return [];
   return (state.personalNotes||[]).filter(n=>n.ownerName===state.session.name);
 }
-// Reads whatever's currently in the compose fields into state before a re-render would otherwise
-// wipe them (picking a color, or closing/reopening the popup) — the DOM nodes get torn down and
-// rebuilt on every render(), so anything not captured back into state first is simply gone.
+// Reads whatever's currently typed into the note text before a re-render would otherwise wipe
+// it (picking a color, opening the date/time picker) — the DOM nodes get torn down and rebuilt
+// on every render(), so anything not captured back into state first is simply gone. Date/time
+// themselves are only ever written by the picker's own OK button (below), never read from a DOM
+// input — there isn't one any more.
 function captureNoteComposeDraft(){
   if(!state._noteComposeDraft) state._noteComposeDraft = {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:''};
-  const textEl = document.getElementById('note-compose-text'), dateEl = document.getElementById('note-compose-date'), timeEl = document.getElementById('note-compose-time');
+  const textEl = document.getElementById('note-compose-text');
   if(textEl) state._noteComposeDraft.text = textEl.value;
-  if(dateEl) state._noteComposeDraft.date = dateEl.value;
-  if(timeEl) state._noteComposeDraft.time = timeEl.value;
+}
+// Seeds the picker from whatever's already in the compose draft (editing an existing choice) or
+// from right now, rounded to the nearest 5 minutes (nothing picked yet) — never opens on some
+// arbitrary default like midnight.
+function openNoteDateTimePicker(){
+  captureNoteComposeDraft();
+  const draft = state._noteComposeDraft;
+  const now = new Date();
+  let y=now.getFullYear(), m=now.getMonth(), d=now.getDate(), h24=now.getHours(), min=Math.round(now.getMinutes()/5)*5;
+  if(min===60){ min=0; h24=(h24+1)%24; }
+  if(draft.date){
+    const [dy,dm,dd] = draft.date.split('-').map(Number);
+    if(dy && dm && dd){ y=dy; m=dm-1; d=dd; }
+  }
+  if(draft.time){
+    const [th,tm] = draft.time.split(':').map(Number);
+    if(!isNaN(th) && !isNaN(tm)){ h24=th; min=tm; }
+  }
+  const ampm = h24>=12 ? 'PM' : 'AM';
+  const hour12 = ((h24+11)%12)+1;
+  state._noteDtPicker = {view:'date', year:y, month:m, day:d, hour12, minute:min, ampm};
 }
 // Checked on an interval (see its setInterval call) rather than only on page load, so a
 // reminder still pops up even if the person never navigates or re-renders in the meantime. Only
@@ -7227,10 +7281,10 @@ function renderNotesFab(){
 
       <div class="notes-compose">
         <textarea id="note-compose-text" placeholder="Type a note…">${esc(draft.text)}</textarea>
-        <div class="notes-compose-row">
-          <input type="date" id="note-compose-date" value="${escAttr(draft.date)}">
-          <input type="time" id="note-compose-time" value="${escAttr(draft.time)}">
-        </div>
+        <button type="button" class="notes-dt-trigger ${(draft.date && draft.time)?'has-value':''}" id="btn-open-note-dt">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <span>${(draft.date && draft.time) ? esc(formatNoteWhen(`${draft.date}T${draft.time}`)) : 'Set a reminder (optional)'}</span>
+        </button>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div class="notes-color-row">
             ${NOTE_COLOR_PALETTE.map(c=>`<button type="button" class="notes-color-dot ${draft.color===c?'selected':''}" data-note-color="${c}" style="background:${c}" aria-label="Choose color"></button>`).join('')}
@@ -7243,6 +7297,77 @@ function renderNotesFab(){
       ${icon(open?'close':'bell')}
       ${(!open && notes.length) ? `<span class="notes-fab-badge">${notes.length}</span>` : ''}
     </button>
+  </div>
+  ${state._noteDtPicker ? renderNoteDateTimePicker() : ''}`;
+}
+// A custom circular clock-face + calendar date/time picker, picked to match a reference native
+// picker — replaces plain <input type=date>/<input type=time>, which looked and behaved
+// completely differently across browsers/OSes and gave no visual feedback while picking.
+function renderNoteDateTimePicker(){
+  const p = state._noteDtPicker;
+  if(!p) return '';
+  const dateLabel = new Date(p.year, p.month, p.day).toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+  return `
+  <div class="notes-dt-overlay" id="notes-dt-overlay">
+    <div class="notes-dt-card">
+      <div class="notes-dt-header">
+        <button type="button" class="notes-dt-date-label ${p.view==='date'?'active':''}" data-dt-view="date">${esc(dateLabel)}</button>
+        <div class="notes-dt-time-row">
+          <button type="button" class="notes-dt-time-label ${p.view==='hour'?'active':''}" data-dt-view="hour">${p.hour12}</button>
+          <span>:</span>
+          <button type="button" class="notes-dt-time-label ${p.view==='minute'?'active':''}" data-dt-view="minute">${String(p.minute).padStart(2,'0')}</button>
+          <div class="notes-dt-ampm">
+            <button type="button" class="${p.ampm==='AM'?'active':''}" data-dt-ampm="AM">AM</button>
+            <button type="button" class="${p.ampm==='PM'?'active':''}" data-dt-ampm="PM">PM</button>
+          </div>
+        </div>
+      </div>
+      <div class="notes-dt-body">
+        ${p.view==='date' ? renderNoteCalendar(p) : renderNoteClockFace(p, p.view)}
+      </div>
+      <div class="notes-dt-actions">
+        <button type="button" id="notes-dt-cancel">Cancel</button>
+        <button type="button" id="notes-dt-ok">OK</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderNoteCalendar(p){
+  const first = new Date(p.year, p.month, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(p.year, p.month+1, 0).getDate();
+  const monthLabel = first.toLocaleDateString([], {month:'long', year:'numeric'});
+  const cells = [];
+  for(let i=0;i<startWeekday;i++) cells.push(null);
+  for(let d=1; d<=daysInMonth; d++) cells.push(d);
+  return `
+  <div class="notes-cal">
+    <div class="notes-cal-nav">
+      <button type="button" data-dt-month="-1" aria-label="Previous month">‹</button>
+      <span>${esc(monthLabel)}</span>
+      <button type="button" data-dt-month="1" aria-label="Next month">›</button>
+    </div>
+    <div class="notes-cal-grid">
+      ${['S','M','T','W','T','F','S'].map(d=>`<div class="notes-cal-dow">${d}</div>`).join('')}
+      ${cells.map(d=> d===null ? `<div></div>` : `<button type="button" class="notes-cal-day ${d===p.day?'selected':''}" data-dt-day="${d}">${d}</button>`).join('')}
+    </div>
+  </div>`;
+}
+function renderNoteClockFace(p, mode){
+  const items = mode==='hour' ? [12,1,2,3,4,5,6,7,8,9,10,11] : [0,5,10,15,20,25,30,35,40,45,50,55];
+  const selectedVal = mode==='hour' ? p.hour12 : p.minute;
+  const selIdx = items.indexOf(selectedVal);
+  const handDeg = selIdx>=0 ? selIdx*30 : 0;
+  return `
+  <div class="notes-clock-face">
+    <div class="notes-clock-hand" style="transform:rotate(${handDeg}deg)"></div>
+    <div class="notes-clock-center"></div>
+    ${items.map((n,i)=>{
+      const a = (i*30 - 90) * Math.PI/180;
+      const x = (50 + 38*Math.cos(a)).toFixed(2), y = (50 + 38*Math.sin(a)).toFixed(2);
+      const sel = n===selectedVal;
+      return `<button type="button" class="notes-clock-num ${sel?'selected':''}" data-clock-num="${n}" style="left:${x}%;top:${y}%;">${mode==='minute'?String(n).padStart(2,'0'):n}</button>`;
+    }).join('')}
   </div>`;
 }
 function renderDueNoteAlert(){
@@ -14563,11 +14688,9 @@ function attachShellHandlers(){
   if(byIdEl('btn-save-note')) byIdEl('btn-save-note').onclick = async ()=>{
     const text = (byIdEl('note-compose-text').value||'').trim();
     if(!text){ showToast('Type a note first'); return; }
-    const date = byIdEl('note-compose-date').value;
-    const time = byIdEl('note-compose-time').value;
-    if((date && !time) || (!date && time)){ showToast('Pick both a date and a time, or leave both blank'); return; }
-    const color = (state._noteComposeDraft && state._noteComposeDraft.color) || NOTE_COLOR_PALETTE[0];
-    const remindAt = (date && time) ? new Date(`${date}T${time}`).toISOString() : null;
+    const draft = state._noteComposeDraft || {};
+    const color = draft.color || NOTE_COLOR_PALETTE[0];
+    const remindAt = (draft.date && draft.time) ? new Date(`${draft.date}T${draft.time}`).toISOString() : null;
     state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, createdAt: new Date().toISOString()}];
     state._noteComposeDraft = null;
     await save('personalNotes');
@@ -14580,6 +14703,49 @@ function attachShellHandlers(){
     render();
   }));
   if(byIdEl('btn-dismiss-due-note')) byIdEl('btn-dismiss-due-note').onclick = ()=>{ state._dueNoteAlert = null; render(); };
+  // ---- Custom date/time picker ----
+  if(byIdEl('btn-open-note-dt')) byIdEl('btn-open-note-dt').onclick = ()=>{ openNoteDateTimePicker(); render(); };
+  if(byIdEl('notes-dt-overlay')) byIdEl('notes-dt-overlay').addEventListener('click', e=>{
+    if(e.target.id==='notes-dt-overlay'){ state._noteDtPicker = null; render(); }
+  });
+  if(byIdEl('notes-dt-cancel')) byIdEl('notes-dt-cancel').onclick = ()=>{ state._noteDtPicker = null; render(); };
+  if(byIdEl('notes-dt-ok')) byIdEl('notes-dt-ok').onclick = ()=>{
+    const p = state._noteDtPicker; if(!p) return;
+    captureNoteComposeDraft();
+    const pad = n=>String(n).padStart(2,'0');
+    state._noteComposeDraft.date = `${p.year}-${pad(p.month+1)}-${pad(p.day)}`;
+    let h24 = p.hour12%12; if(p.ampm==='PM') h24 += 12;
+    state._noteComposeDraft.time = `${pad(h24)}:${pad(p.minute)}`;
+    state._noteDtPicker = null;
+    render();
+  };
+  document.querySelectorAll('[data-dt-view]').forEach(b=>b.addEventListener('click', ()=>{
+    if(state._noteDtPicker){ state._noteDtPicker.view = b.dataset.dtView; render(); }
+  }));
+  document.querySelectorAll('[data-dt-ampm]').forEach(b=>b.addEventListener('click', ()=>{
+    if(state._noteDtPicker){ state._noteDtPicker.ampm = b.dataset.dtAmpm; render(); }
+  }));
+  document.querySelectorAll('[data-dt-month]').forEach(b=>b.addEventListener('click', ()=>{
+    const p = state._noteDtPicker; if(!p) return;
+    let m = p.month + parseInt(b.dataset.dtMonth,10), y = p.year;
+    if(m<0){ m=11; y--; } else if(m>11){ m=0; y++; }
+    const daysInNewMonth = new Date(y, m+1, 0).getDate();
+    p.month=m; p.year=y; if(p.day>daysInNewMonth) p.day=daysInNewMonth;
+    render();
+  }));
+  document.querySelectorAll('[data-dt-day]').forEach(b=>b.addEventListener('click', ()=>{
+    const p = state._noteDtPicker; if(!p) return;
+    p.day = parseInt(b.dataset.dtDay,10);
+    p.view = 'hour';
+    render();
+  }));
+  document.querySelectorAll('[data-clock-num]').forEach(b=>b.addEventListener('click', ()=>{
+    const p = state._noteDtPicker; if(!p) return;
+    const n = parseInt(b.dataset.clockNum,10);
+    if(p.view==='hour'){ p.hour12 = n; p.view = 'minute'; }
+    else { p.minute = n; }
+    render();
+  }));
   document.querySelectorAll('#settings-jump-grid .landing-card[draggable="true"]').forEach(card=>{
     card.addEventListener('dragstart', e=>{
       card.classList.add('dragging');

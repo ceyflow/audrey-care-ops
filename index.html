@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261021043351">
+<meta name="app-build" content="20261021064539">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -333,29 +333,42 @@ html{ visibility:hidden; }
      only way to add stock back (new rolls arriving) — not a hidden trick like a negative number.
      Sized to fit all 7 product columns without horizontal scrolling on a normal screen — went
      too big on the previous pass and ran the last columns off-screen. */
-  .sticker-cell{display:flex;gap:3px;align-items:center;}
+  .sticker-cell{display:flex;gap:4px;align-items:center;}
   .sticker-issue-wrap{
-    position:relative;width:27px;height:24px;border-radius:6px;
-    border:1.5px solid #E4C6C2;background:var(--danger-soft);
+    position:relative;width:27px;height:24px;border-radius:999px;
+    border:1.5px solid #F3D4D4;background:var(--danger-soft);
+    transition:width .12s ease;
   }
+  /* Widen just this one pill while its input is actually focused — legible while typing (the
+     complaint: a 9px number squeezed next to the sign was hard to even see what you'd typed)
+     without permanently growing every column and risking the horizontal-scroll regression the
+     table was explicitly sized to avoid. */
+  .sticker-issue-wrap:focus-within{width:40px;z-index:1;}
   .sticker-issue-sign{
-    position:absolute;left:4px;top:50%;transform:translateY(-50%);
+    position:absolute;left:5px;top:50%;transform:translateY(-50%);
     color:var(--danger);font-weight:700;font-size:10px;pointer-events:none;
   }
   table.sticker-table .sticker-issue-input{
-    width:100%;height:100%;border:none;background:transparent;
-    padding-left:10px;font-size:9px;color:var(--danger);font-weight:700;text-align:left;
+    width:100%;height:100%;border:none;background:transparent;border-radius:999px;
+    padding-left:11px;font-size:10px;color:var(--danger);font-weight:700;text-align:left;
   }
-  table.sticker-table .sticker-issue-input:focus{outline:2px solid var(--danger);outline-offset:1px;border-radius:6px;}
+  table.sticker-table .sticker-issue-input:focus{outline:2px solid var(--danger);outline-offset:1px;border-radius:999px;font-size:12px;}
   table.sticker-table .sticker-total-box{
-    min-width:18px;text-align:center;font-size:11px;font-weight:800;color:var(--ink);
+    min-width:16px;text-align:center;font-size:11px;font-weight:800;color:var(--ink);
+    background:var(--bg);border-radius:999px;padding:1px 5px;
   }
+  /* Color the total itself by stock health (the same red/amber/green reading the refined-table
+     mockup used) so a glance across the row shows what needs restocking, without needing a
+     separate legend or a wider cell. */
+  table.sticker-table .sticker-total-box.zero{background:var(--danger-soft);color:var(--danger);}
+  table.sticker-table .sticker-total-box.low{background:#FFF6E0;color:#8A6300;}
   .sticker-add-btn{
-    width:17px;height:17px;border-radius:999px;border:none;background:var(--accent);color:#fff;
+    width:18px;height:18px;border-radius:999px;border:none;background:var(--accent);color:#fff;
     font-size:11px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;padding:0;
+    box-shadow:0 1px 3px rgba(20,25,20,.25);transition:background .15s,transform .15s,box-shadow .15s;
   }
-  .sticker-add-btn:hover{background:var(--accent-dark);}
+  .sticker-add-btn:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 3px 7px rgba(20,25,20,.3);}
   table.sticker-table button.btn-danger{width:22px;height:22px;padding:0;font-size:10px;}
   .sticker-category-card{
     display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--border);
@@ -13004,13 +13017,14 @@ function renderStickerStockPage(){
           <td>${esc(r.name)}</td>
           ${products.map(p=>{
             const total = (r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0;
+            const healthClass = total===0 ? 'zero' : (total<10 ? 'low' : '');
             return `<td>
               <div class="sticker-cell">
                 <div class="sticker-issue-wrap">
                   <span class="sticker-issue-sign">−</span>
                   <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" title="Issued today — subtracts from the total">
                 </div>
-                <div class="sticker-total-box" title="Current total">${total}</div>
+                <div class="sticker-total-box ${healthClass}" title="Current total">${total}</div>
                 <button type="button" class="sticker-add-btn" data-sticker-row="${r.id}" data-sticker-product="${p.id}" data-sticker-name="${escAttr(r.name)}" data-sticker-product-name="${escAttr(p.name)}" title="Add stock (new rolls arrived)">+</button>
               </div>
             </td>`;

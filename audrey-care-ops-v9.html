@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022093540">
+<meta name="app-build" content="20261022100331">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2422,8 +2422,15 @@ const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry
 // nobody has redefined there yet).
 function pagesForRole(role){
   const custom = (state.userRoles||[]).find(r=>r.name===role);
-  if(custom) return custom.status==='Active' && Array.isArray(custom.pages) ? custom.pages : [];
-  return ROLE_PAGES[role] || [];
+  const pages = custom ? (custom.status==='Active' && Array.isArray(custom.pages) ? custom.pages : []) : (ROLE_PAGES[role] || []);
+  // R&D Officer accounts are chemists — they need the R&D page (and Team chat) to do their job no
+  // matter what. Confirmed happening: a Settings record named exactly "R&D Officer" with R&D
+  // visibly checked and saved still left a real login with an empty page list (landing on a bare
+  // Dashboard, nothing in the sidebar) — whatever caused that, this role can never again be left
+  // with no way into R&D over it. Guaranteed as a floor, unioned with whatever Settings actually
+  // has, not dependent on that record being configured exactly right.
+  if(role === 'R&D Officer') return [...new Set([...pages, 'rnd', 'chat'])];
+  return pages;
 }
 // Every fine-grained, non-page-level access decision in the app (which buttons/actions a role
 // can use within a page it can already open), as a flat registry grouped by department — drives
@@ -2512,6 +2519,10 @@ const LEGACY_ROLE_PERMISSIONS = {
 // been opened in Settings → User roles yet falls back to the snapshot above, so nothing changes
 // for Blending/Packing/Orders Process/R&D/Dashboard/Customer Care until someone edits them there.
 function roleCan(role, permId){
+  // Same guarantee as pagesForRole() above: an R&D Officer chemist always needs to manage their
+  // own products/chemists/attendance and the notes widget, regardless of what a Settings record
+  // for this exact name does or doesn't grant.
+  if(role === 'R&D Officer' && (permId === 'rnd_manage' || permId === 'notes_access')) return true;
   const custom = (state.userRoles||[]).find(r=>r.name===role);
   if(custom){
     if(custom.status!=='Active') return false;
@@ -2587,7 +2598,12 @@ function dataKeysForRole(role){
 // User roles, so a brand-new custom role gets real database-level access too, not just a sidebar
 // entry that silently can't read anything.
 function syncableRoleNames(){
-  const legacy = ['Sub Admin','Dashboard','Blending','Packing','Customer Care','Orders Process','R&D'];
+  // 'R&D Officer' is hardcoded here alongside the other built-in roles (not left to only sync
+  // when a custom Settings record happens to exist for it) so its role_data_access grant — now
+  // guaranteed correct by pagesForRole()/roleCan()'s floor above regardless of that record's state
+  // — gets pushed on every version-bump resync and every role save, the same reliable way the
+  // other built-in roles already do, with no dependency on Settings being configured right.
+  const legacy = ['Sub Admin','Dashboard','Blending','Packing','Customer Care','Orders Process','R&D','R&D Officer'];
   const custom = (state.userRoles||[]).map(r=>r.name).filter(n=>n!=='Admin');
   return [...new Set([...legacy, ...custom])];
 }

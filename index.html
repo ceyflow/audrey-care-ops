@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022172122">
+<meta name="app-build" content="20261022173646">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1996,6 +1996,15 @@ async function sendOutstandingSms(){
     onConfirm: ()=>{ executeOutstandingSend(ids, tpl.text); },
   });
 }
+// Shared by the actual send and by each recipient row's own preview, so what gets previewed is
+// never anything other than exactly what would be sent.
+function outstandingMergeVars(c){
+  return {
+    name: c.name, phone: c.phone,
+    amount: 'Rs. ' + (Number(c.outstandingAmount)||0).toFixed(2),
+    date: c.outstandingDueDate ? fmtDateShort(c.outstandingDueDate) : '',
+  };
+}
 async function executeOutstandingSend(customerIds, templateText){
   const btn = document.getElementById('btn-send-outstanding-sms'); if(btn) btn.disabled = true;
   const progressEl = document.getElementById('bulksms-progress');
@@ -2004,8 +2013,7 @@ async function executeOutstandingSend(customerIds, templateText){
   async function worker(){
     while(idx < recipients.length){
       const c = recipients[idx++];
-      const amount = 'Rs. ' + (Number(c.outstandingAmount)||0).toFixed(2);
-      const message = fillTemplate(templateText, {name:c.name, phone:c.phone, amount});
+      const message = fillTemplate(templateText, outstandingMergeVars(c));
       const result = await sendSms(c.phone, message);
       if(result.ok) sent++; else failed++;
       if(progressEl) progressEl.textContent = 'Sending… ' + (sent+failed) + ' of ' + recipients.length + ' (' + sent + ' sent, ' + failed + ' failed)';
@@ -2022,9 +2030,6 @@ async function executeOutstandingSend(customerIds, templateText){
   state.bulkSmsCustomers.clear();
   render();
   showToast('Reminders sent — ' + sent + ' of ' + recipients.length + ' delivered' + (failed ? (', ' + failed + ' failed') : ''), 8000);
-}
-function fillOutstandingSample(text){
-  return fillTemplate(text, {name:'Saman Perera', phone:'0771234567', amount:'Rs. 2,500.00'});
 }
 function openOutstandingTemplateModal(){
   state._outstandingTemplateDraft = null;
@@ -2045,7 +2050,17 @@ async function saveOutstandingTemplateForm(e){
 function previewSavedOutstandingTemplate(){
   const tpl = state.outstandingReminderTemplate;
   if(!tpl || !tpl.text) return;
-  openAlertModal({ title: 'SMS preview', message: fillOutstandingSample(tpl.text) });
+  // Shows the template's literal {name}/{phone}/{amount} placeholders, not a made-up sample
+  // customer standing in for them — that stand-in (a fictional "Saman Perera") read as a real
+  // customer's actual data, not a placeholder demo. Each real customer's own filled-in message is
+  // previewable from their row in the recipient list instead (see previewOutstandingRecipient).
+  openAlertModal({ title: 'SMS preview', message: tpl.text });
+}
+function previewOutstandingRecipient(id){
+  const c = byId(state.customers, id);
+  const tpl = state.outstandingReminderTemplate;
+  if(!c || !tpl || !tpl.text) return;
+  openAlertModal({ title: 'Message to ' + c.name, message: fillTemplate(tpl.text, outstandingMergeVars(c)) });
 }
 async function importOutstandingCsv(file){
   const text = await file.text();
@@ -2055,7 +2070,8 @@ async function importOutstandingCsv(file){
   const findCol = names => header.findIndex(h=>names.includes(h));
   const nameIdx = findCol(['name','customer name','full name']);
   const phoneIdx = findCol(['phone','mobile','mobile number','phone number','contact','contact number','sms phone']);
-  const amountIdx = findCol(['due total amount','due amount','amount','outstanding','outstanding amount','total due','due']);
+  const amountIdx = findCol(['due total amount','due amount','amount','outstanding','outstanding amount','total due']);
+  const dateIdx = findCol(['due date','date due','payment due date','date']);
   if(nameIdx===-1 && phoneIdx===-1){ showToast('Could not find a name or phone column in that file'); return; }
   if(amountIdx===-1){ showToast('Could not find a due amount column in that file'); return; }
   const dataRows = rows.slice(1);
@@ -2066,11 +2082,13 @@ async function importOutstandingCsv(file){
   dataRows.forEach(r=>{
     const name = cell(r, nameIdx), phone = cell(r, phoneIdx);
     const amount = Number(cell(r, amountIdx).replace(/[^0-9.]/g,'')) || 0;
+    const dueDate = dateIdx>-1 ? parseFlexibleDate(cell(r, dateIdx)) : null;
     if(!name && !phone){ skipped++; return; }
     const nPhone = normPhone(phone), nName = normName(name);
     const match = (nPhone && state.customers.find(c=>normPhone(c.phone)===nPhone)) || (nName && state.customers.find(c=>normName(c.name)===nName));
     if(!match){ notFound++; return; }
     match.outstandingAmount = amount;
+    if(dueDate) match.outstandingDueDate = dueDate;
     updated++;
   });
   if(updated>0) await save('customers');
@@ -4464,6 +4482,32 @@ function fmtDateTime(iso){
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
 }
 function fmtDate(iso){ return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+// DD/MM/YYYY (not fmtDate's "Oct 22, 2026") to match how dates are already written in payment
+// reminder messages here.
+function fmtDateShort(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+// A CSV due-date column can realistically show up as ISO (2026-10-22), DD/MM/YYYY (22/10/2026 —
+// the convention used elsewhere here) or DD-MM-YYYY. Tries each in that order before falling back
+// to the browser's own (US-biased, MM/DD first) parser for anything else, e.g. "22 Oct 2026".
+function parseFlexibleDate(str){
+  str = String(str||'').trim();
+  if(!str) return null;
+  let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m){ const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3])); return isNaN(d.getTime()) ? null : d.toISOString(); }
+  m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m){
+    let day = Number(m[1]), month = Number(m[2]);
+    if(month > 12 && day <= 12){ const t = day; day = month; month = t; } // e.g. 10/22/2026 written MM/DD
+    const d = new Date(Number(m[3]), month-1, day);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const t = Date.parse(str);
+  return isNaN(t) ? null : new Date(t).toISOString();
+}
 function fmtTimeOnly(iso){ return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
 function isToday(iso){
   if(!iso) return false;
@@ -5740,7 +5784,8 @@ async function submitCustomer(e){
   const data = {
     name: f.name.value.trim(), shortName: f.shortName.value.trim(), branchName: f.branchName.value.trim(),
     phone: f.phone.value.trim(), address: f.address.value.trim(), salesman: f.salesman.value || null,
-    outstandingAmount: Math.max(0, Number(f.outstandingAmount.value)||0)
+    outstandingAmount: Math.max(0, Number(f.outstandingAmount.value)||0),
+    outstandingDueDate: f.outstandingDueDate.value || null
   };
   if(!data.name) return;
   if(editId){
@@ -9291,7 +9336,7 @@ function renderBulkSmsOutstandingTab(){
       </div>
     </div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">A CSV with columns for name, contact number and due amount updates each matching customer's outstanding amount — customers not already in your list are skipped, with a count shown after import.</div>
+      <div class="hint" style="margin-bottom:12px;">A CSV with columns for name, contact number, due amount and (optionally) due date updates each matching customer — customers not already in your list are skipped, with a count shown after import.</div>
       ${owing.length===0 ? `<div class="empty-state">No customers currently have an outstanding amount set. Import a CSV, or add one from a customer's Edit screen.</div>` : `
       <div class="field">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
@@ -9306,9 +9351,10 @@ function renderBulkSmsOutstandingTab(){
           <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;">
             <input type="checkbox" class="bulksms-customer-row" data-customer-id="${c.id}" ${state.bulkSmsCustomers.has(c.id)?'checked':''}>
             <span style="flex:1;font-size:13.5px;">${esc(c.name)}</span>
-            <span class="hint">${esc(c.phone)}</span>
+            <span class="hint" style="min-width:76px;">${c.outstandingDueDate?esc(fmtDateShort(c.outstandingDueDate)):'—'}</span>
             <span style="font-weight:600;min-width:90px;text-align:right;">Rs. ${(Number(c.outstandingAmount)||0).toFixed(2)}</span>
-            <button type="button" class="btn btn-sm" data-mark-outstanding-paid="${c.id}" style="flex-shrink:0;">Mark paid</button>
+            <button type="button" class="btn btn-sm" data-preview-outstanding="${c.id}" style="flex-shrink:0;" ${(!tpl||!tpl.text)?'disabled title="Save a template first"':'title="View the actual message for this customer"'} onclick="event.stopPropagation()">👁 View</button>
+            <button type="button" class="btn btn-sm" data-mark-outstanding-paid="${c.id}" style="flex-shrink:0;" onclick="event.stopPropagation()">Mark paid</button>
           </label>`).join('')}
         </div>
       </div>`}
@@ -9331,7 +9377,7 @@ function outstandingTemplateModal(){
       <div class="sub">Drag a field into the text below to insert it — the saved structure is what each customer receives, with their own details filled in.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <span class="chip" draggable="true" data-merge-field="name" style="cursor:grab;">Customer name</span>
-        <span class="chip" draggable="true" data-merge-field="phone" style="cursor:grab;">Contact number</span>
+        <span class="chip" draggable="true" data-merge-field="date" style="cursor:grab;">Due date</span>
         <span class="chip" draggable="true" data-merge-field="amount" style="cursor:grab;">Due total amount</span>
       </div>
       <form id="form-outstanding-template">
@@ -14239,6 +14285,7 @@ function customerFormModal(id){
           </select>
         </div>
         <div class="field"><label>Outstanding amount <span class="hint">(what this customer currently owes, if anything)</span></label><input name="outstandingAmount" type="number" min="0" step="0.01" autocomplete="off" value="${c&&c.outstandingAmount?c.outstandingAmount:''}" placeholder="0.00"></div>
+        <div class="field"><label>Due date <span class="hint">(for the payment reminder message's {date} field)</span></label><input name="outstandingDueDate" type="date" autocomplete="off" value="${c&&c.outstandingDueDate?esc(c.outstandingDueDate.slice(0,10)):''}"></div>
         <div class="modal-actions" style="justify-content:space-between;">
           <div>${c?`<button type="button" class="btn btn-danger" id="btn-delete-customer">Delete</button>`:''}</div>
           <div style="display:flex;gap:8px;">
@@ -16289,6 +16336,7 @@ function attachShellHandlers(){
   wireSmsCharCount('quicksms-message', 'quicksms-charcount', 'quicksms-segcount');
   if(byIdEl('btn-send-outstanding-sms')) byIdEl('btn-send-outstanding-sms').onclick = sendOutstandingSms;
   document.querySelectorAll('[data-mark-outstanding-paid]').forEach(b=>b.addEventListener('click', ()=>markOutstandingPaid(b.dataset.markOutstandingPaid)));
+  document.querySelectorAll('[data-preview-outstanding]').forEach(b=>b.addEventListener('click', ()=>previewOutstandingRecipient(b.dataset.previewOutstanding)));
   if(byIdEl('outstanding-import-input')) byIdEl('outstanding-import-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -16303,7 +16351,7 @@ function attachShellHandlers(){
     const textEl = byIdEl('outstanding-template-text');
     const text = (textEl && textEl.value) || '';
     state._outstandingTemplateDraft = text;
-    openAlertModal({ title: 'SMS preview', message: text.trim() ? fillOutstandingSample(text) : '(nothing typed yet)', _returnTo: 'outstandingtemplate' });
+    openAlertModal({ title: 'SMS preview', message: text.trim() ? text : '(nothing typed yet)', _returnTo: 'outstandingtemplate' });
   };
   // Drag a merge-field chip anywhere onto the template textarea to insert its token at the
   // last place the cursor was (click/select to aim it) — plain <textarea> content isn't real

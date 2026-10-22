@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022171236">
+<meta name="app-build" content="20261022172122">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5378,41 +5378,12 @@ function fileToDataUrl(file){
     reader.readAsDataURL(file);
   });
 }
-// Every synced key — branding included — gets downloaded in full on every single login and
-// refresh (one batched query across all of them, see _fetchSyncedKeys). A raw phone photo saved
-// straight through fileToDataUrl can be several MB of base64 text sitting inside that one row, so
-// every refresh for every user pays to download it even though it only displays on the (rarely
-// seen, logged-out) sign-in screen. Downscales to a sane max dimension and re-encodes as JPEG —
-// still sharp as a full-bleed background on any real screen, a small fraction of the size.
-function downscaleImageToDataUrl(file, maxDim, quality){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if(w > maxDim || h > maxDim){
-          const scale = maxDim / Math.max(w, h);
-          w = Math.round(w*scale); h = Math.round(h*scale);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 function dataUrlApproxBytes(dataUrl){
   const i = dataUrl.indexOf(',');
   const b64 = i>=0 ? dataUrl.slice(i+1) : dataUrl;
   return Math.round(b64.length * 0.75); // base64 -> raw bytes
 }
-// One-time self-heal for photos uploaded before downscaleImageToDataUrl existed (or from before
+// One-time self-heal for photos uploaded before the crop tool downscaled on save (or from before
 // this fix at all) — those are sitting in the branding row at full original size, and that row
 // gets downloaded in full on every single login/refresh for every user (see _fetchSyncedKeys),
 // which is exactly what made the site feel slow after someone uploaded a real phone photo as the
@@ -5443,22 +5414,6 @@ async function shrinkOversizedLoginHeroPhotoIfNeeded(){
 }
 async function brandingChangeAddon(addonId, file){
   if(!(state.session && roleCan(state.session.role, 'branding_manage')) || !file) return;
-  // The login hero photo fills the whole pane via background-size:cover at whatever aspect ratio
-  // the viewer's screen happens to be — forcing it through the fixed-frame crop tool first (built
-  // for logos dropped onto a small fixed box) would crop it a second, different way at render
-  // time and just throw away the user's framing. Save a downscaled copy and let CSS do the fitting.
-  if(addonId === 'loginHeroPhoto'){
-    let dataUrl;
-    try{ dataUrl = await downscaleImageToDataUrl(file, 1920, 0.82); }
-    catch(e){ showToast('Could not read that image'); return; }
-    const addons = state.branding.addons || (state.branding.addons = []);
-    const existing = addons.find(a=>a.id===addonId);
-    if(existing){ existing.image = dataUrl; existing.updatedAt = new Date().toISOString(); }
-    else { addons.push({id:addonId, name:'Login hero photo', image:dataUrl, updatedAt:new Date().toISOString()}); }
-    await save('branding'); render();
-    showToast('Login hero photo updated');
-    return;
-  }
   let dataUrl;
   try{ dataUrl = await fileToDataUrl(file); }
   catch(e){ showToast('Could not read that file'); return; }
@@ -5469,19 +5424,28 @@ function brandCropModal(){
   const pc = state.pendingCrop;
   if(!pc) return '';
   const isLogo = pc.addonId === 'logo' || pc.addonId === 'ordersBoardLogo' || pc.addonId === 'trackPageLogo' || pc.addonId === 'welcomeLogo' || pc.addonId === 'loginHeroLogo' || pc.addonId === 'batchSheetLogo';
-  const frameW = isLogo ? 340 : 220;
-  const frameH = isLogo ? 130 : 220;
+  const isHeroPhoto = pc.addonId === 'loginHeroPhoto';
+  const frameW = isHeroPhoto ? 420 : (isLogo ? 340 : 220);
+  const frameH = isHeroPhoto ? 240 : (isLogo ? 130 : 220);
+  // Every other addon's minimum zoom is 100% — the frame can only ever crop in, never show empty
+  // space, which is right for a logo dropped onto a small fixed box. The hero photo is the
+  // opposite case: it gets cover-cropped again at render time onto whatever shape the viewer's
+  // screen happens to be (see .login-illustration.has-photo), so if 100% (filling this frame edge
+  // to edge) is already as tight a shot as the subject can take, there's no way to pull back
+  // further — zooming out here, leaving the subject smaller with margin around it, is the only way
+  // to give that later crop something to work with besides the subject itself.
+  const minZoom = isHeroPhoto ? 30 : 100;
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:460px;">
       <h2>Crop &amp; resize image</h2>
-      <div class="sub">Drag the image to reposition it, use the slider to zoom, then save.</div>
+      <div class="sub">Drag the image to reposition it, use the slider to zoom${isHeroPhoto ? ' — zoom out to leave margin around the subject, since this photo gets cropped again differently on phones vs. PCs' : ''}, then save.</div>
       <div id="crop-frame" style="position:relative;width:${frameW}px;height:${frameH}px;overflow:hidden;border-radius:10px;border:1px solid var(--border);margin:14px auto;background:repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px;cursor:grab;touch-action:none;">
         <img id="crop-img" src="${pc.dataUrl}" draggable="false" style="position:absolute;top:0;left:0;transform-origin:top left;user-select:none;pointer-events:none;">
       </div>
       <div class="field" style="max-width:${frameW}px;margin:0 auto 6px;">
         <label>Zoom</label>
-        <input type="range" id="crop-zoom" min="100" max="300" value="100" style="width:100%;">
+        <input type="range" id="crop-zoom" min="${minZoom}" max="300" value="100" style="width:100%;">
       </div>
       <div class="hint" style="text-align:center;margin-bottom:12px;">Output size: ${frameW*2}×${frameH*2}px</div>
       <div class="modal-actions">
@@ -5535,10 +5499,13 @@ function initCropModal(){
   function clamp(){
     const scale = cs.baseScale*cs.zoom;
     const w = cs.naturalW*scale, h = cs.naturalH*scale;
-    const minX = Math.min(0, frameW - w), maxX = 0;
-    const minY = Math.min(0, frameH - h), maxY = 0;
-    cs.x = Math.min(maxX, Math.max(minX, cs.x));
-    cs.y = Math.min(maxY, Math.max(minY, cs.y));
+    // Every other addon's zoom never goes below 100%, so the image is always at least as big as
+    // the frame and these min/max bounds always bracket a real draggable range. The hero photo's
+    // zoom can go below that (see minZoom above) specifically so the image can end up SMALLER
+    // than the frame — the normal clamp math assumes w>=frameW and would otherwise pin it to the
+    // top-left corner (minX=maxX=0) instead of centering it, the moment it isn't.
+    if(w <= frameW){ cs.x = (frameW-w)/2; } else { cs.x = Math.min(0, Math.max(frameW-w, cs.x)); }
+    if(h <= frameH){ cs.y = (frameH-h)/2; } else { cs.y = Math.min(0, Math.max(frameH-h, cs.y)); }
   }
   function initSize(){
     cs.naturalW = img.naturalWidth; cs.naturalH = img.naturalHeight;
@@ -5586,14 +5553,23 @@ function initCropModal(){
   const saveBtn = document.getElementById('btn-save-crop');
   if(saveBtn){
     saveBtn.onclick = async ()=>{
+      const isHeroPhoto = state.pendingCrop && state.pendingCrop.addonId === 'loginHeroPhoto';
       const outScale = 2;
       const canvas = document.createElement('canvas');
       canvas.width = frameW*outScale; canvas.height = frameH*outScale;
       const ctx = canvas.getContext('2d');
+      // Zooming below 100% (hero photo only) leaves margin the image doesn't cover — fill it
+      // first, since an uncovered canvas region defaults to transparent on PNG but solid BLACK on
+      // JPEG (no alpha channel), and a photo this size is kept as JPEG to stay small (see below).
+      if(isHeroPhoto){ ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
       const scale = cs.baseScale*cs.zoom;
       const sx = -cs.x/scale, sy = -cs.y/scale, sw = frameW/scale, sh = frameH/scale;
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/png');
+      // A full photo (vs. a small logo) as lossless PNG is several times the size a JPEG would be
+      // for the same visual quality — and this is a SYNCED_KEY, downloaded in full by every user
+      // on every login (see _fetchSyncedKeys), so the format matters here in a way it doesn't for
+      // the small logo slots sharing this same save path.
+      const dataUrl = isHeroPhoto ? canvas.toDataURL('image/jpeg', 0.85) : canvas.toDataURL('image/png');
       await finishBrandCrop(dataUrl);
     };
   }

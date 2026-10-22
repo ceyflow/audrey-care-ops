@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022174753">
+<meta name="app-build" content="20261022175822">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2010,12 +2010,18 @@ async function executeOutstandingSend(customerIds, templateText){
   const progressEl = document.getElementById('bulksms-progress');
   const recipients = customerIds.map(id=>byId(state.customers, id)).filter(c=>c && c.phone);
   let sent = 0, failed = 0, idx = 0;
+  const clearedIds = [];
   async function worker(){
     while(idx < recipients.length){
       const c = recipients[idx++];
       const message = fillTemplate(templateText, outstandingMergeVars(c));
       const result = await sendSms(c.phone, message);
-      if(result.ok) sent++; else failed++;
+      // A delivered reminder clears the balance here instead of needing a manual "Mark paid" —
+      // this list is driven by each reminder run (often a fresh CSV import), not a running ledger,
+      // so once someone's been reminded this round there's nothing left for them to do until the
+      // next import brings in whatever they still owe.
+      if(result.ok){ sent++; c.outstandingAmount = 0; c.outstandingDueDate = null; clearedIds.push(c.id); }
+      else failed++;
       if(progressEl) progressEl.textContent = 'Sending… ' + (sent+failed) + ' of ' + recipients.length + ' (' + sent + ' sent, ' + failed + ' failed)';
     }
   }
@@ -2027,6 +2033,7 @@ async function executeOutstandingSend(customerIds, templateText){
     at: new Date().toISOString(), by: state.session.name
   });
   await save('smsCampaigns');
+  if(clearedIds.length) await save('customers');
   state.bulkSmsCustomers.clear();
   render();
   showToast('Reminders sent — ' + sent + ' of ' + recipients.length + ' delivered' + (failed ? (', ' + failed + ' failed') : ''), 8000);
@@ -2110,20 +2117,6 @@ async function importOutstandingCsv(file){
   if(added) notes.push(`${added} new added`);
   if(skipped) notes.push(`skipped ${skipped} with no name or phone`);
   showToast(notes.length ? `Imported — ${notes.join(', ')}` : 'Nothing to import', 8000);
-}
-function markOutstandingPaid(id){
-  const c = byId(state.customers, id); if(!c) return;
-  const prior = Number(c.outstandingAmount)||0;
-  openConfirmModal({
-    title: 'Mark as paid', confirmLabel: 'Mark paid',
-    message: `Clear the Rs. ${prior.toFixed(2)} outstanding balance for ${c.name}?`,
-    onConfirm: async ()=>{
-      c.outstandingAmount = 0;
-      await save('customers');
-      logActivity(`Marked ${c.name}'s outstanding balance as paid (was Rs. ${prior.toFixed(2)})`);
-      showToast('Marked as paid');
-    },
-  });
 }
 function openBulkSmsTemplatesManager(){ state._bulkSmsTemplateForm = null; openModal('bulksmstemplates'); }
 function startNewBulkSmsTemplate(){ state._bulkSmsTemplateForm = {id:null, name:'', message:''}; render(); }
@@ -9376,7 +9369,6 @@ function renderBulkSmsOutstandingTab(){
             <span class="hint" style="min-width:76px;">${c.outstandingDueDate?esc(fmtDateShort(c.outstandingDueDate)):'—'}</span>
             <span style="font-weight:600;min-width:90px;text-align:right;">Rs. ${(Number(c.outstandingAmount)||0).toFixed(2)}</span>
             <button type="button" class="btn btn-sm" data-preview-outstanding="${c.id}" style="flex-shrink:0;" ${(!tpl||!tpl.text)?'disabled title="Save a template first"':'title="View the actual message for this customer"'} onclick="event.stopPropagation()">👁 View</button>
-            <button type="button" class="btn btn-sm" data-mark-outstanding-paid="${c.id}" style="flex-shrink:0;" onclick="event.stopPropagation()">Mark paid</button>
           </label>`).join('')}
         </div>
       </div>`}
@@ -16357,7 +16349,6 @@ function attachShellHandlers(){
   wireSmsCharCount('bulksms-message', 'bulksms-charcount', 'bulksms-segcount');
   wireSmsCharCount('quicksms-message', 'quicksms-charcount', 'quicksms-segcount');
   if(byIdEl('btn-send-outstanding-sms')) byIdEl('btn-send-outstanding-sms').onclick = sendOutstandingSms;
-  document.querySelectorAll('[data-mark-outstanding-paid]').forEach(b=>b.addEventListener('click', ()=>markOutstandingPaid(b.dataset.markOutstandingPaid)));
   document.querySelectorAll('[data-preview-outstanding]').forEach(b=>b.addEventListener('click', ()=>previewOutstandingRecipient(b.dataset.previewOutstanding)));
   if(byIdEl('outstanding-import-input')) byIdEl('outstanding-import-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];

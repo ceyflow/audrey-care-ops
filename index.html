@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022100331">
+<meta name="app-build" content="20261022101101">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1481,13 +1481,18 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
 // (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
 // from here so it stops being fetched on every login for no reason.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes'];
+// rndProjects moved here from DEFERRED_KEYS below — R&D is now in active daily use (chemists
+// marking their own attendance, Admin adding products), and deferred-loading it meant every single
+// visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
+// data, which is already in memory from login. Loading it eagerly with everything else trades a
+// few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
 // so there's nothing anywhere else in the app that needs them before that page is actually opened.
-const DEFERRED_KEYS = ['bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','rndProjects','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'];
-const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate'], rnd: ['rndProjects'],
+const DEFERRED_KEYS = ['bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'];
+const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate'],
   gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
@@ -2874,9 +2879,10 @@ const RND_STAGE_MIGRATION_MAP = {0:0, 1:1, 2:1, 3:2, 4:3};
 // One-time migration: the R&D board went from 5 stages to 4 (Formulating + Sample Testing merged
 // into "On Trial & Formulating"). Remaps any product/history stage index saved under the old 0-4
 // scheme to the new 0-3 one — guarded by _stageSchemaV2 per record so it only ever runs once per
-// product. Called both from loadAll() (a no-op now that rndProjects loads lazily — nothing to
-// migrate before it's fetched) and right after ensureDeferredKeysLoaded actually fetches it, so
-// old-format records still get fixed up whenever they're actually loaded.
+// product. Called from loadAll() right after rndProjects loads in with everything else — it was
+// a DEFERRED_KEY before, fetched only once the R&D page was actually opened, which meant every
+// single visit to the Products tab showed a "Loading…" flash; it's a plain SYNCED_KEY now, so
+// this call is the one that actually matters.
 function migrateRndProjectStages(){
   if(!Array.isArray(state.rndProjects)) return;
   let rndMigrated = false;
@@ -3724,7 +3730,6 @@ async function ensureDeferredKeysLoaded(keys){
     state._deferredLoaded[k] = true;
     snapshotBaseline(k);
   });
-  if(toFetch.includes('rndProjects')) migrateRndProjectStages();
   if(neverSaved.has('gmpPestPoints') && state.gmpPestPoints.length===0){
     state.gmpPestPoints = GMP_DEFAULT_PEST_POINTS.map(name=>({id:uid('PESTPT'), name}));
     save('gmpPestPoints').catch(()=>{});
@@ -3784,10 +3789,7 @@ async function loadAll(){
     delete state.navLabels.blending;
     kvSet('navLabels', state.navLabels).catch(e=>console.error('clear stale blending navLabel failed', e));
   }
-  // rndProjects is now a DEFERRED_KEY (not fetched until the R&D page is opened), so this no-ops
-  // here on a fresh login — see migrateRndProjectStages() itself, which ensureDeferredKeysLoaded
-  // calls right after actually fetching it, so old-format records still get migrated whenever
-  // they're actually loaded, just not necessarily at login time any more.
+  // rndProjects is a plain SYNCED_KEY (see its own comment), already loaded above by this point.
   migrateRndProjectStages();
   // finishBatchIntoBlendingBoard transfers the batch to blendBatches, THEN separately nulls
   // activeBatch — two awaited writes, not one atomic one. If the second write silently fails
@@ -8053,7 +8055,7 @@ function renderRndPage(){
   </div>
   ${view==='chemists' ? renderRndChemistsTab()
     : view==='outcome' ? renderRndOutcomeView(state.filters.rndOutcomeKind)
-    : (!state._deferredLoaded.rndProjects ? `<div class="empty-state"><p class="hint">Loading…</p></div>` : state.rndProjects.length===0 ? `
+    : (state.rndProjects.length===0 ? `
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022191132">
+<meta name="app-build" content="20261022191724">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2675,7 +2675,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 7;
+const PAGE_DATA_KEYS_VERSION = 8;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -2714,7 +2714,16 @@ function dataKeysForRole(role){
   // Settings access still needs to record its OWN login, it just can't see the full company-wide
   // log afterward. Confirmed as a real "Could not save loginHistory" toast on every login for any
   // role lacking Settings.
-  const keys = new Set(['activityLog','personalNotes','loginHistory']);
+  //
+  // userRoles is the odd one out: pagesForRole() (above) reads it to find a CUSTOM role's own
+  // pages list, but it used to only travel with the Settings page (PAGE_DATA_KEYS.settings) —
+  // so any custom role without Settings access could never read its own role record, pagesForRole
+  // fell back to [], and that role's real login landed on a totally empty sidebar no matter what
+  // was actually checked for it in Settings. This is what the R&D Officer page-floor above was a
+  // one-role patch for ("whatever caused that"); it's this. Every role needs read access to
+  // userRoles for the same reason every role needs the other three — it's what tells a custom
+  // role what it's even allowed to see, not something tied to having the Settings page itself.
+  const keys = new Set(['activityLog','personalNotes','loginHistory','userRoles']);
   pages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
   return [...keys];
 }

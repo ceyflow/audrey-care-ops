@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022184254">
+<meta name="app-build" content="20261022184916">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -13967,6 +13967,12 @@ function newOrderModal(presetCourier){
 function renderOrderDrawer(id){
   const o = byId(state.orders,id); if(!o) return '';
   const key = STAGE_KEYS[o.stage]; const style = STAGE_STYLE[key];
+  // Orders link to a customer by name only (no customerId field) — same name-normalized lookup
+  // used everywhere else a customer's salesman shows up (Order inquiry, customerFormModal).
+  const orderSalesman = (()=>{
+    const c = state.customers.find(c=>c.name.trim().toLowerCase()===(o.customer||'').trim().toLowerCase());
+    return c && c.salesman;
+  })();
   const canAdv = canAdvance(o.stage);
   const priority = o.priority || 'Medium';
   const role = state.session && state.session.role;
@@ -13991,7 +13997,10 @@ function renderOrderDrawer(id){
         <h2>${esc(o.customer)}</h2>
         <div class="sub">${o.id} · ${STAGES[o.stage]} · created ${fmtDateTime(o.createdAt)}</div>
       </div>
-      <div class="stat-chip"><div class="k">Days in pipeline</div><div class="v">${daysAgo(o.createdAt)}</div></div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        ${orderSalesman ? `<div class="stat-chip"><div class="k">Sales person</div><div class="v">${esc(orderSalesman)}</div></div>` : ''}
+        <div class="stat-chip"><div class="k">Days in pipeline</div><div class="v">${daysAgo(o.createdAt)}</div></div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
       <span class="stage-badge" style="background:${style.bg};color:${style.c};">${STAGES[o.stage]}</span>

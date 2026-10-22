@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022184916">
+<meta name="app-build" content="20261022185334">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2750,12 +2750,35 @@ async function syncRoleDataAccess(role){
     if(ins.error) throw new Error(`role_data_access insert for "${role}" failed: ${ins.error.message}`);
   }
 }
+// Two calls to this can overlap in practice: the automatic version-bump resync fires in the
+// background on every Admin page load (see loadAll()), and an Admin saving a role in Settings
+// triggers another full resync on top of it. Both run the same delete-then-insert per role with
+// no locking, so when they reach the same role at the same time the second insert collides with
+// rows the first one just wrote — "duplicate key value violates unique constraint
+// role_data_access_pkey". Sharing one in-flight promise across overlapping calls removes that
+// race instead of just reporting it.
+let _roleDataAccessSyncInFlight = null;
 async function syncAllRoleDataAccess(){
   if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
-  try{
-    for(const role of syncableRoleNames()) await syncRoleDataAccess(role);
-    return {ok:true};
-  }catch(e){ return {ok:false, error:e.message||'Sync failed — has the role_data_access table been created yet?'}; }
+  if(_roleDataAccessSyncInFlight) return _roleDataAccessSyncInFlight;
+  _roleDataAccessSyncInFlight = (async ()=>{
+    // One role failing (e.g. the race above, before the in-flight guard catches it, or a genuine
+    // per-row problem) used to throw and abort the whole loop — and since custom roles (every
+    // role actually created in Settings → User roles) are appended AFTER the hardcoded legacy
+    // list in syncableRoleNames(), a failure on any legacy role meant no custom role after it
+    // ever got synced at all. That's how a role like a Customer Care rep's custom role could end
+    // up stuck on stale/partial database-level data access while the toast only ever named some
+    // unrelated legacy role as the failure. Now every role is attempted regardless of earlier
+    // failures, and failures are reported together.
+    const errors = [];
+    for(const role of syncableRoleNames()){
+      try{ await syncRoleDataAccess(role); }
+      catch(e){ errors.push(`${role}: ${e.message||e}`); }
+    }
+    return errors.length ? {ok:false, error: errors.join('; ')} : {ok:true};
+  })();
+  try{ return await _roleDataAccessSyncInFlight; }
+  finally{ _roleDataAccessSyncInFlight = null; }
 }
 function pageAllowed(page){ return !!state.session && pagesForRole(state.session.role).includes(page); }
 const NEXT_ACTION_LABEL = {0:'Start processing',1:'Move to invoicing & checking',2:'Mark picked up by delivery'};

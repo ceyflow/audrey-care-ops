@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022103634">
+<meta name="app-build" content="20261022104434">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1210,6 +1210,7 @@ html{ visibility:hidden; }
     .modal{padding:18px;border-radius:14px;}
     .drawer-hero .stat-chip{padding:7px 12px;}
   }
+  .chat-mobile-back,.chat-mobile-title{display:none;}
   @media (max-width:760px){
     .live-clock-bar{display:none !important;}
     /* The "Settings" tab's fan (MORE_FAB_ITEMS, above) now covers everything the hamburger
@@ -1251,6 +1252,29 @@ html{ visibility:hidden; }
     }
     .mobile-tab svg{width:25px;height:25px;flex-shrink:0;}
     .mobile-tab.active{color:var(--accent-dark);}
+
+    /* Team chat goes full-screen and WhatsApp-style on mobile: the normal tall gradient topbar,
+       bottom tab bar and notes FAB all eat vertical space the chat badly needs, and (worse) the
+       bottom bar/FAB sit at a fixed viewport position that the on-screen keyboard doesn't push
+       out of the way, landing them on top of the message input — see the mangled "Send" button
+       and nav icons showing through the input row. Chat gets its own slim single-row header
+       (.chat-mobile-toolbar, with a back link since the bottom tab bar it would normally use to
+       navigate away is hidden) and the real topbar/tab bar/FAB are hidden while it's open. 100dvh
+       (not 100vh) is the point: it tracks the *visual* viewport, so it shrinks with the keyboard
+       instead of leaving the input stranded off-screen beneath it. */
+    .shell.page-chat{height:100dvh;min-height:0;overflow:hidden;}
+    .shell.page-chat .topbar{display:none;}
+    .shell.page-chat ~ .mobile-tabbar{display:none !important;}
+    .shell.page-chat ~ .notes-fab-wrap{display:none !important;}
+    main.page.page-chat{flex:1;min-height:0;padding:0 !important;overflow:hidden;display:flex;flex-direction:column;}
+    .chat-panel-mobile{height:100% !important;flex:1;min-height:0;border-radius:0 !important;margin-bottom:0 !important;border-left:none;border-right:none;border-bottom:none;}
+    .chat-mobile-toolbar{justify-content:space-between !important;padding:calc(10px + env(safe-area-inset-top)) 14px 10px !important;border-bottom:1px solid var(--border);background:var(--surface);}
+    .chat-mobile-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;color:var(--ink);margin-right:-6px;}
+    .chat-mobile-back svg{width:22px;height:22px;transform:rotate(180deg);}
+    .chat-mobile-title{display:block;font-weight:700;font-size:16.5px;margin-right:auto;}
+    #chat-messages{padding:14px 12px !important;}
+    #chat-form{padding:10px 12px calc(10px + env(safe-area-inset-bottom)) !important;}
+    .chat-bubble-wrap, [style*="max-width:78%"]{max-width:86% !important;}
   }
 
   /* ---------------- Customer order tracker ---------------- */
@@ -7467,7 +7491,7 @@ function renderShell(freshPage){
   const freshBroadcast = broadcastId !== _lastAdminBroadcastId;
   _lastAdminBroadcastId = broadcastId;
   return `
-  <div class="shell ${justLoggedIn?'shell-enter':''}">
+  <div class="shell ${justLoggedIn?'shell-enter':''} ${state.page==='chat'?'page-chat':''}">
     ${state.sidebarOpen ? `<div class="sidebar-backdrop" id="sidebar-backdrop"></div>` : ''}
     <aside class="sidebar ${state.sidebarOpen?'open':''}">
       <div class="brand">
@@ -7509,7 +7533,7 @@ function renderShell(freshPage){
           </div>
         </div>
       </header>
-      <main class="page ${freshPage?'page-enter':''}">
+      <main class="page ${freshPage?'page-enter':''} ${state.page==='chat'?'page-chat':''}">
         ${renderPage()}
       </main>
     </div>
@@ -12956,9 +12980,17 @@ function renderChatPage(){
     return divider + renderChatBubble(m, theme, grouped);
   }).join('');
   const deleteAllowed = state.session && roleCan(state.session.role, 'chat_delete_history') && state.chat.length>0;
+  // Mobile's slim chat header needs somewhere for its back link to go that's guaranteed to
+  // actually be reachable — goTo() silently no-ops on a page the role isn't allowed, so a
+  // hardcoded '#dashboard' would strand anyone whose role doesn't have the Dashboard tab (most
+  // non-Admin roles don't). This is the same "first allowed page" fallback used everywhere else
+  // a role's own page list needs a safe default.
+  const chatBackTarget = (pagesForRole(state.session.role)||[])[0] || 'dashboard';
   return `
-  <div class="panel" style="display:flex;flex-direction:column;height:calc(100vh - 190px);margin-bottom:0;">
-    <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 18px 0;position:relative;">
+  <div class="panel chat-panel-mobile" style="display:flex;flex-direction:column;height:calc(100vh - 190px);margin-bottom:0;">
+    <div class="chat-mobile-toolbar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 18px 0;position:relative;">
+      <a href="#${chatBackTarget}" class="chat-mobile-back" data-nav="${chatBackTarget}" aria-label="Back">${icon('chevron')}</a>
+      <div class="chat-mobile-title">Team chat</div>
       ${isAdmin() ? `
       <button type="button" id="btn-chat-theme-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:500;">🎨 Theme</button>
       ${state.chatThemeMenuOpen ? `

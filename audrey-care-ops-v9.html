@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022192035">
+<meta name="app-build" content="20261022192604">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1489,17 +1489,26 @@ async function supabaseSignIn(role, name, password){
   const primary = await supabaseClient.auth.signInWithPassword({email: stableEmail, password});
   if(!primary.error) return {ok:true, userId: primary.data.user.id};
   // Not found (or wrong password) on the stable email — fall back through every role this
-  // account could have been originally created under on the old scheme, current role first
-  // (the common case) then every other known role. A match here means this is a pre-upgrade
-  // account whose role has since changed; migrate it to the stable email right away so every
-  // later login goes straight through the fast path above and this never has to happen again.
+  // account could have been originally created under on the old scheme. A match here means this
+  // is a pre-upgrade account whose role has since changed; migrate it to the stable email right
+  // away so every later login goes straight through the fast path above and this never has to
+  // happen again.
+  //
+  // Tried in parallel, not one at a time: this list is every legacy role plus every custom role
+  // Settings -> User roles has ever had (it only grows), so a sequential loop meant a login that
+  // missed the fast path got slower every time someone added another role — a real, measured
+  // cause of "signing in" hanging, not just perceived latency. Only the candidate matching this
+  // account's actual original role can ever succeed, so firing them all at once and taking
+  // whichever one resolves with no error is exactly as safe as trying them one at a time, just
+  // bounded by one round trip instead of up to a dozen.
   const candidateRoles = [...new Set([role, ...LEGACY_SECURE_ACCOUNT_ROLES, ...(state.userRoles||[]).map(r=>r.name)])];
-  for(const candidateRole of candidateRoles){
-    const { data, error } = await supabaseClient.auth.signInWithPassword({email: legacyAuthEmailFor(candidateRole, name), password});
-    if(!error){
-      supabaseClient.auth.updateUser({email: stableEmail}).catch(e=>console.error('stable-email migration failed', e));
-      return {ok:true, userId: data.user.id};
-    }
+  const attempts = await Promise.allSettled(candidateRoles.map(candidateRole =>
+    supabaseClient.auth.signInWithPassword({email: legacyAuthEmailFor(candidateRole, name), password})
+  ));
+  const hit = attempts.find(a => a.status==='fulfilled' && !a.value.error);
+  if(hit){
+    supabaseClient.auth.updateUser({email: stableEmail}).catch(e=>console.error('stable-email migration failed', e));
+    return {ok:true, userId: hit.value.data.user.id};
   }
   return {ok:false, error: primary.error.message};
 }

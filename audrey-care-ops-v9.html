@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022142911">
+<meta name="app-build" content="20261022171236">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -786,20 +786,18 @@ html{ visibility:hidden; }
       linear-gradient(100deg, rgba(10,24,16,.5) 0%, rgba(10,24,16,.14) 42%, rgba(10,24,16,0) 62%),
       linear-gradient(195deg,rgba(10,24,16,0) 45%,rgba(7,18,12,.4) 100%);
     pointer-events:none;}
-  /* A full-bleed background-size:cover crop on an uploaded photo whose aspect ratio doesn't match
-     the hero pane (near-certain on mobile's tall portrait pane, since most uploaded photos are
-     wider than they are tall) zooms in far enough that whatever made the photo recognizable — a
-     logo, text, the subject itself — ends up cropped out entirely, leaving just an unrecognizable
-     patch of color. background-size:contain shows the whole photo instead, letterboxed on the
-     gradient (still here as a second background-image layer) rather than the page's plain
-     background color, so it reads as "a framed photo over a colored backdrop" instead of empty
-     bars.  --hero-photo-url is set inline only when a photo is actually uploaded. */
+  /* On the wide desktop pane, background-size:cover on the photo layer looks fine — a reasonably-
+     shaped photo rarely gets cropped badly when the pane itself is wide. Mobile's pane is the
+     problem case (see the max-width:880px override below): tall and narrow, so cover zooms in far
+     enough that whatever made the photo recognizable — a logo, text, the subject itself — gets
+     cropped out entirely, leaving just an unrecognizable patch of color. --hero-photo-url is set
+     inline only when a photo is actually uploaded. */
   .login-illustration.has-photo{
     background-image: var(--hero-photo-url),
       radial-gradient(ellipse 90% 70% at 10% -10%, color-mix(in srgb,var(--accent) 65%,transparent) 0%, transparent 55%),
       radial-gradient(ellipse 100% 80% at 110% 115%, color-mix(in srgb,var(--accent-dark) 70%,transparent) 0%, transparent 60%),
       linear-gradient(155deg, var(--accent-dark) 0%, var(--accent) 58%, color-mix(in srgb,var(--accent) 65%,#F6C97A 35%) 100%);
-    background-size: contain, cover, cover, cover;
+    background-size: cover, cover, cover, cover;
     background-position: center, inherit, inherit, inherit;
     background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
   }
@@ -863,6 +861,11 @@ html{ visibility:hidden; }
        card rides up with it, same fix as team chat's mobile layout. */
     .login-screen{flex-direction:column;position:relative;min-height:100dvh;}
     .login-illustration{position:absolute;inset:0;flex:none;height:auto;min-width:0;padding:28px 24px 0;justify-content:flex-start;}
+    /* This is the actual fix for the photo-cropped-unrecognizable problem — only here, on the
+       tall narrow mobile pane, where cover's crop is severe enough to cut out the whole subject.
+       Desktop's wide pane keeps cover (see .login-illustration.has-photo above): contain there
+       just left an ugly empty gap next to a photo that was never cropped badly to begin with. */
+    .login-illustration.has-photo{background-size: contain, cover, cover, cover;}
     .login-illustration-logo{height:40px;}
     .login-hero-greeting{font-size:clamp(22px,6vw,28px);max-width:13ch;margin-top:72px;}
     .login-hero-sub{display:none;}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022104434">
+<meta name="app-build" content="20261022105159">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -838,13 +838,19 @@ html{ visibility:hidden; }
        fragile — and the greeting gets a fixed top offset instead of being pushed to the bottom
        edge by justify-content, so it can never end up hidden under the glass regardless of how
        tall the panel's content makes it. */
-    .login-screen{flex-direction:column;position:relative;min-height:100vh;}
+    /* min-height uses dvh (dynamic viewport height), not vh — vh is the full layout viewport and
+       never shrinks for the on-screen keyboard, so a plain 100vh here left the card anchored to
+       where the bottom *would* be with no keyboard open, pushing the password field and Log in
+       button down below the keyboard and forcing a scroll to reach them. dvh tracks the actual
+       visible (visual) viewport, so the keyboard opening shrinks this box and the flex-end-docked
+       card rides up with it, same fix as team chat's mobile layout. */
+    .login-screen{flex-direction:column;position:relative;min-height:100dvh;}
     .login-illustration{position:absolute;inset:0;flex:none;height:auto;min-width:0;padding:28px 24px 0;justify-content:flex-start;}
     .login-illustration-logo{height:40px;}
     .login-hero-greeting{font-size:clamp(22px,6vw,28px);max-width:13ch;margin-top:72px;}
     .login-hero-sub{display:none;}
     .login-hero-clock{display:none;}
-    .login-panel{position:relative;z-index:2;min-height:100vh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;}
+    .login-panel{position:relative;z-index:2;min-height:100dvh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;}
     .login-panel .login-blob{display:none;}
     .login-panel-inner{
       width:100%;max-width:none;
@@ -852,8 +858,13 @@ html{ visibility:hidden; }
       backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
       border:1px solid rgba(255,255,255,.28);border-bottom:none;
       border-radius:26px 26px 0 0;box-shadow:none;
-      padding:26px 22px calc(26px + env(safe-area-inset-bottom));
+      padding:18px 22px calc(18px + env(safe-area-inset-bottom));
     }
+    /* Tightened from the desktop/default spacing (22px under the subtitle, 14px per field) —
+       pulls the password field and button up closer to the "Sign in / Welcome back!" text, so
+       there's more clearance left over before the keyboard's shrunk viewport reaches them. */
+    .login-panel .lead{margin:3px 0 12px;}
+    .login-panel-inner .field{margin-bottom:10px;}
     .login-panel-inner .login-title{color:#fff;}
     .login-panel-inner .lead{color:rgba(255,255,255,.72);}
     .login-panel-inner .field label{color:rgba(255,255,255,.78);}

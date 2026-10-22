@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022060310">
+<meta name="app-build" content="20261022061646">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5148,11 +5148,15 @@ async function submitRndChemistForm(e){
   if(editId){
     const c = byId(state.rndChemists, editId); if(!c) return;
     c.name = name;
-    await save('rndChemists'); closeModal();
+    const ok = await save('rndChemists');
+    if(!ok) return; // save() already toasts the failure — a closed modal would hide it and look like it worked
+    closeModal();
     showToast('Chemist updated');
   } else {
     state.rndChemists.unshift({id: uid('CHM'), name, createdAt: new Date().toISOString()});
-    await save('rndChemists'); closeModal();
+    const ok = await save('rndChemists');
+    if(!ok) return;
+    closeModal();
     showToast('Chemist added');
   }
 }
@@ -5187,8 +5191,11 @@ async function rndMarkLogin(chemistId, date){
     rec = {id: uid('ATT'), chemistId, chemistName: chemist.name, date, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
     state.rndAttendance.unshift(rec);
   }
-  await save('rndAttendance');
-  showToast(chemist.name+' logged in');
+  // save() already toasts its own failure — showing "logged in" regardless used to mean a write
+  // the database actually rejected still looked successful right up until the next refresh wiped
+  // the local-only state it had been resting on.
+  const ok = await save('rndAttendance');
+  if(ok) showToast(chemist.name+' logged in');
 }
 async function rndMarkLogout(chemistId, date){
   if(!canManageRnd()) return;
@@ -5198,8 +5205,8 @@ async function rndMarkLogout(chemistId, date){
   if(rec.logoutAt){ showToast(chemist.name+' is already logged out for that day'); return; }
   rec.logoutAt = new Date().toISOString();
   rec.by = state.session.name;
-  await save('rndAttendance');
-  showToast(chemist.name+' logged out');
+  const ok = await save('rndAttendance');
+  if(ok) showToast(chemist.name+' logged out');
 }
 function deleteRndAttendance(id){
   if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
@@ -16419,9 +16426,18 @@ function attachShellHandlers(){
       state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, inactivityTimeoutMinutes} : r);
     }
     await save('userRoles');
-    syncAllRoleDataAccess();
+    // This used to fire-and-forget: if the role_data_access push itself failed (a transient
+    // error, a rights problem on that table), nothing here ever saw it — "Role added/updated"
+    // showed regardless, so a role could look correctly configured in Settings while the
+    // database still silently rejected every read and write it tried to make. Now the save is
+    // only reported as fully done when the access push actually went through too.
+    const syncRes = await syncAllRoleDataAccess();
     state._roleEditForm = null;
-    showToast(f.isNew ? 'Role added' : 'Role updated');
+    if(syncRes && syncRes.ok){
+      showToast(f.isNew ? 'Role added' : 'Role updated');
+    } else {
+      showToast('Role saved, but pushing its data access failed (' + (syncRes && syncRes.error || 'unknown error') + ') — try Save again');
+    }
     render();
   };
 

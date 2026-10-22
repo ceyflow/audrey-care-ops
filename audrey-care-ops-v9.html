@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261021083629">
+<meta name="app-build" content="20261022015114">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -519,17 +519,24 @@ html{ visibility:hidden; }
   .notes-fab-popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .notes-fab-popup-head h3{margin:0;font-size:14px;font-weight:700;}
   .notes-fab-close{width:22px;height:22px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;}
+  .notes-fab-close svg{width:12px;height:12px;}
   .notes-next-card{background:linear-gradient(135deg,#2F6FE4,#4F8DF7);border-radius:12px;padding:13px 14px;color:#fff;margin-bottom:12px;}
   .notes-next-card .notes-eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85;}
   .notes-next-card .notes-next-text{font-size:13.5px;font-weight:600;margin-top:4px;}
   .notes-next-card .notes-next-when{font-size:11px;opacity:.85;margin-top:2px;}
-  .notes-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
-  .notes-row:last-child{border-bottom:none;}
-  .notes-row-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;}
-  .notes-row-text{flex:1;font-size:12.5px;line-height:1.4;word-break:break-word;}
-  .notes-row-when{font-size:10px;color:var(--muted);margin-top:2px;}
-  .notes-row-del{width:18px;height:18px;border-radius:50%;border:none;background:none;color:var(--muted);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-size:10px;}
-  .notes-row-del:hover{color:var(--danger);background:var(--danger-soft);}
+  /* Each note's own chosen color now tints its whole card (a light pastel mix, not the
+     saturated swatch color itself) instead of just a small dot — the dot read as decoration,
+     not as "this note is colored", which was the actual ask. */
+  .notes-row{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:10px;margin-bottom:8px;}
+  .notes-row:last-child{margin-bottom:0;}
+  .notes-row-text{flex:1;font-size:12.5px;line-height:1.4;word-break:break-word;color:var(--ink);font-weight:500;}
+  .notes-row-when{font-size:10px;color:rgba(32,41,31,.6);margin-top:2px;}
+  .notes-row-edit,.notes-row-del{width:18px;height:18px;border-radius:50%;border:none;background:rgba(255,255,255,.65);color:var(--muted);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+  .notes-row-edit svg,.notes-row-del svg{width:12px;height:12px;}
+  .notes-row-edit:hover{color:#2F6FE4;background:#fff;}
+  .notes-row-del:hover{color:var(--danger);background:#fff;}
+  .notes-editing-bar{display:flex;align-items:center;justify-content:space-between;background:#EAF1FD;border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:11px;font-weight:600;color:#2F6FE4;}
+  .notes-editing-bar button{background:none;border:none;color:#2F6FE4;text-decoration:underline;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;}
   .notes-compose{border-top:1px solid var(--border);margin-top:4px;padding-top:14px;}
   /* Was a cramped 44px, 12.5px box — "typing space" feedback: a note you're actually writing
      needs real room, not a sliver that scrolls after two lines. */
@@ -3438,7 +3445,8 @@ const ICONS = {
   pest:'<circle cx="12" cy="13.5" r="4"/><path d="M12 9.5V6.5"/><path d="M9.3 7.7 7.5 5.9"/><path d="M14.7 7.7l1.8-1.8"/><path d="M8 13.5H4"/><path d="M20 13.5h-4"/><path d="M9 17l-2 2.8"/><path d="M15 17l2 2.8"/>',
   box:'<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/><path d="M7.5 5l9 4"/>',
   close:'<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
-  bell:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'
+  bell:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/>'
 };
 function icon(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`; }
 const TRACK_STAGE_PATHS = [
@@ -7269,17 +7277,22 @@ function renderNotesFab(){
         <div class="notes-next-text">${esc(next.text)}</div>
         <div class="notes-next-when">${esc(formatNoteWhen(next.remindAt))}</div>
       </div>` : ''}
-      ${notes.length ? notes.map(n=>`
-      <div class="notes-row">
-        <span class="notes-row-dot" style="background:${escAttr(n.color||NOTE_COLOR_PALETTE[0])}"></span>
+      ${notes.length ? notes.map(n=>{ const c = n.color||NOTE_COLOR_PALETTE[0]; return `
+      <div class="notes-row" style="background:color-mix(in srgb, ${escAttr(c)} 16%, white);border-left:3px solid ${escAttr(c)};">
         <div class="notes-row-text">
           ${esc(n.text)}
           ${n.remindAt ? `<div class="notes-row-when">${esc(formatNoteWhen(n.remindAt))}</div>` : ''}
         </div>
+        <button type="button" class="notes-row-edit" data-edit-note="${n.id}" title="Edit" aria-label="Edit note">${icon('edit')}</button>
         <button type="button" class="notes-row-del" data-delete-note="${n.id}" title="Delete" aria-label="Delete note">${icon('close')}</button>
-      </div>`).join('') : `<div class="hint" style="padding:6px 0 10px;">No notes yet — add one below.</div>`}
+      </div>`;}).join('') : `<div class="hint" style="padding:6px 0 10px;">No notes yet — add one below.</div>`}
 
       <div class="notes-compose">
+        ${draft.editingId ? `
+        <div class="notes-editing-bar">
+          <span>Editing note</span>
+          <button type="button" id="btn-cancel-edit-note">Cancel</button>
+        </div>` : ''}
         <textarea id="note-compose-text" placeholder="Type a note…">${esc(draft.text)}</textarea>
         <button type="button" class="notes-dt-trigger ${(draft.date && draft.time)?'has-value':''}" id="btn-open-note-dt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
@@ -7289,7 +7302,7 @@ function renderNotesFab(){
           <div class="notes-color-row">
             ${NOTE_COLOR_PALETTE.map(c=>`<button type="button" class="notes-color-dot ${draft.color===c?'selected':''}" data-note-color="${c}" style="background:${c}" aria-label="Choose color"></button>`).join('')}
           </div>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-save-note">Save</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-note">${draft.editingId ? 'Update' : 'Save'}</button>
         </div>
       </div>
     </div>` : ''}
@@ -14691,14 +14704,40 @@ function attachShellHandlers(){
     const draft = state._noteComposeDraft || {};
     const color = draft.color || NOTE_COLOR_PALETTE[0];
     const remindAt = (draft.date && draft.time) ? new Date(`${draft.date}T${draft.time}`).toISOString() : null;
-    state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, createdAt: new Date().toISOString()}];
+    const existing = draft.editingId ? (state.personalNotes||[]).find(n=>n.id===draft.editingId) : null;
+    if(existing){
+      existing.text = text; existing.color = color;
+      // Re-arm the reminder if the time actually changed (new, cleared, or moved) — editing a
+      // note someone's already been reminded about, to a genuinely different time, should be
+      // able to remind them again; editing just the text/color with the same time shouldn't
+      // resurface an alert they already dismissed.
+      if(existing.remindAt !== remindAt) existing.fired = false;
+      existing.remindAt = remindAt;
+    } else {
+      state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, createdAt: new Date().toISOString()}];
+    }
     state._noteComposeDraft = null;
     await save('personalNotes');
     render();
-    showToast('Note saved');
+    showToast(existing ? 'Note updated' : 'Note saved');
   };
+  document.querySelectorAll('[data-edit-note]').forEach(b=>b.addEventListener('click', ()=>{
+    const n = (state.personalNotes||[]).find(x=>x.id===b.dataset.editNote);
+    if(!n) return;
+    const d = n.remindAt ? new Date(n.remindAt) : null;
+    const pad = v=>String(v).padStart(2,'0');
+    state._noteComposeDraft = {
+      text: n.text, color: n.color || NOTE_COLOR_PALETTE[0],
+      date: d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '',
+      time: d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '',
+      editingId: n.id,
+    };
+    render();
+  }));
+  if(byIdEl('btn-cancel-edit-note')) byIdEl('btn-cancel-edit-note').onclick = ()=>{ state._noteComposeDraft = null; render(); };
   document.querySelectorAll('[data-delete-note]').forEach(b=>b.addEventListener('click', async ()=>{
     state.personalNotes = (state.personalNotes||[]).filter(n=>n.id!==b.dataset.deleteNote);
+    if(state._noteComposeDraft && state._noteComposeDraft.editingId===b.dataset.deleteNote) state._noteComposeDraft = null;
     await save('personalNotes');
     render();
   }));

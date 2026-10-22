@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022062627">
+<meta name="app-build" content="20261022071204">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4657,7 +4657,7 @@ async function confirmLogin(){
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();
-  autoAddRndOfficerAsChemist();
+  await autoAddRndOfficerAsChemist();
   render();
 }
 // Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
@@ -4733,7 +4733,7 @@ async function confirmLoginV2(){
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();
-  autoAddRndOfficerAsChemist();
+  await autoAddRndOfficerAsChemist();
   render();
 }
 async function logOut(){
@@ -5245,14 +5245,21 @@ function deleteRndAttendance(id){
 // rest of the app. The roster auto-add stays: the first time a given name logs in under this
 // role it's added to the chemist list automatically, since the whole point is not needing Admin
 // to pre-register every visit.
-function autoAddRndOfficerAsChemist(){
+async function autoAddRndOfficerAsChemist(){
   if(!state.session || state.session.role !== 'R&D Officer') return;
   const loginName = (state.session.name||'').trim().toLowerCase();
   if(!loginName) return;
   const exists = state.rndChemists.some(c=>(c.name||'').trim().toLowerCase()===loginName);
   if(exists) return;
-  state.rndChemists = [...state.rndChemists, {id: uid('CHM'), name: (state.session.name||'').trim(), createdAt: new Date().toISOString()}];
-  save('rndChemists').catch(e=>console.error('auto-add chemist on R&D Officer login failed', e));
+  const newChemist = {id: uid('CHM'), name: (state.session.name||'').trim(), createdAt: new Date().toISOString()};
+  state.rndChemists = [...state.rndChemists, newChemist];
+  // This was fire-and-forget (a console.error only) — exactly the kind of silent failure that
+  // made the chemist row look added right up until the next refresh wiped it, with nothing on
+  // screen to explain why. save() already toasts its own failure; on top of that, undo the
+  // optimistic add here too, so a rejected write doesn't keep showing a chemist record that was
+  // never actually written.
+  const ok = await save('rndChemists');
+  if(!ok) state.rndChemists = state.rndChemists.filter(c=>c.id!==newChemist.id);
 }
 function rndAttendanceCountThisMonth(chemistId){
   const now = new Date();

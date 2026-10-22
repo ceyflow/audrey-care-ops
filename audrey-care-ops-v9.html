@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022044403">
+<meta name="app-build" content="20261022052934">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5324,7 +5324,14 @@ async function markOwnRndAttendance(date){
     rec = {id: uid('ATT'), chemistId: chemist.id, chemistName: chemist.name, date: d, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
     state.rndAttendance = [...state.rndAttendance, rec];
   }
-  await save('rndAttendance');
+  // save() already retries and toasts its own "Could not save" on failure — but it never used to
+  // be checked here, so a write the database actually rejected (this role's row missing from
+  // role_data_access, an RLS reject on the insert) still let today's gate clear and the person
+  // into the app. Next login then found no record for today after all and asked again — looking
+  // exactly like "marking it didn't stick," because it hadn't. Only let the gate clear on a save
+  // that genuinely went through.
+  const ok = await save('rndAttendance');
+  if(!ok){ render(); return; }
   // Only marking TODAY actually unlocks the app — filling in a past day from the calendar is
   // just completing the record, not today's check-in.
   if(d===todayStr()){
@@ -5346,7 +5353,8 @@ async function markOwnRndLogout(date){
   if(rec.logoutAt){ showToast('Already logged out for that day'); return; }
   rec.logoutAt = new Date().toISOString();
   rec.by = state.session.name;
-  await save('rndAttendance');
+  const ok = await save('rndAttendance');
+  if(ok) showToast('Logged out');
   render();
 }
 function rndAttendanceCountThisMonth(chemistId){
@@ -8128,6 +8136,7 @@ function renderRndPage(){
       <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>
       ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-2">+ Add the first product</button>` : ''}
+      ${!isAdmin() ? `<div class="hint" style="margin-top:14px;max-width:360px;">Expecting to see products someone else already added? The database only shows this role what Settings → User roles has granted it — ask your Admin to open this role there and click Save again (even if nothing looks changed), so its access is pushed through.</div>` : ''}
     </div>
   ` : `
   <div class="board">

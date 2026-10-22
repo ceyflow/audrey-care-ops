@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022181240">
+<meta name="app-build" content="20261022181906">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5621,7 +5621,14 @@ function initCropModal(){
   if(saveBtn){
     saveBtn.onclick = async ()=>{
       const isHeroPhoto = state.pendingCrop && state.pendingCrop.addonId === 'loginHeroPhoto';
-      const outScale = 2;
+      // Every other addon here is a small logo, shown at a fixed small size — 2x the editing
+      // frame (840x480 max) is already sharp at that size. The hero photo is shown full-bleed on
+      // a real desktop screen (background-size:cover, often 1920px+ wide) — at 2x it was CSS-
+      // upscaling an 840px-wide image across the whole screen, visibly softening it. The original
+      // upload has plenty of real detail even zoomed in (fileToDataUrl never downscales it before
+      // this), so the fix is just rendering the crop itself at a resolution that screen can
+      // actually show sharp, not stretching a small canvas further after the fact.
+      const outScale = isHeroPhoto ? 5 : 2;
       const canvas = document.createElement('canvas');
       canvas.width = frameW*outScale; canvas.height = frameH*outScale;
       const ctx = canvas.getContext('2d');

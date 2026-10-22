@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022175822">
+<meta name="app-build" content="20261022180418">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1800,8 +1800,12 @@ async function mergeBeforeSave(key){
   return reconcileRecordArray(key, serverArr);
 }
 /* Sends an SMS via the send-sms Edge Function (which holds the real send.lk API key).
-   Returns {ok:true} or {ok:false, error}. Never throws. */
-async function sendSms(recipient, message){
+   Returns {ok:true} or {ok:false, error}. Never throws.
+   purpose is optional — pass 'outstanding' for payment reminders, which the Edge Function sends
+   under a separate SEND_LK_SENDER_ID_OUTSTANDING sender ID if one is configured; everything else
+   (order/packing notifications, bulk campaigns, quick send) omits it and keeps using the default
+   sender ID, unchanged. */
+async function sendSms(recipient, message, purpose){
   if(!SMS_CONFIGURED) return { ok:false, error:'SMS is not set up yet (see SMS_APP_SECRET in the code).' };
   if(!recipient) return { ok:false, error:'No phone number on this order.' };
   try{
@@ -1813,7 +1817,7 @@ async function sendSms(recipient, message){
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'x-sms-secret': SMS_APP_SECRET
       },
-      body: JSON.stringify({ recipient, message })
+      body: JSON.stringify(purpose ? { recipient, message, purpose } : { recipient, message })
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok || !data.ok){
@@ -2015,7 +2019,7 @@ async function executeOutstandingSend(customerIds, templateText){
     while(idx < recipients.length){
       const c = recipients[idx++];
       const message = fillTemplate(templateText, outstandingMergeVars(c));
-      const result = await sendSms(c.phone, message);
+      const result = await sendSms(c.phone, message, 'outstanding');
       // A delivered reminder clears the balance here instead of needing a manual "Mark paid" —
       // this list is driven by each reminder run (often a fresh CSV import), not a running ledger,
       // so once someone's been reminded this round there's nothing left for them to do until the

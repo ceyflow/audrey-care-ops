@@ -10,6 +10,12 @@
 // Secrets (set once, from the project root):
 //   supabase secrets set SEND_LK_API_TOKEN=xxxxx SEND_LK_SENDER_ID=xxxxx SMS_APP_SECRET=some-long-random-string
 //
+// SEND_LK_SENDER_ID_OUTSTANDING is optional — only the payment-reminder feature requests it (via
+// body.purpose === "outstanding"), everything else (order/packing notifications, bulk campaigns,
+// quick send) always uses the default SEND_LK_SENDER_ID above, unchanged. Falls back to the
+// default sender ID if this one isn't set, so nothing breaks before it's configured:
+//   supabase secrets set SEND_LK_SENDER_ID_OUTSTANDING=xxxxx
+//
 // SMS_APP_SECRET is a shared password between this function and the frontend (see
 // SMS_APP_SECRET near SUPABASE_URL in the HTML file) so random visitors who find the
 // function URL can't send SMS through your account. It is not cryptographically
@@ -53,7 +59,7 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: "unauthorized" }, 401);
   }
 
-  let body: { recipient?: string; message?: string };
+  let body: { recipient?: string; message?: string; purpose?: string };
   try {
     body = await req.json();
   } catch {
@@ -66,7 +72,11 @@ Deno.serve(async (req) => {
   if (!message) return json({ ok: false, error: "message is required" }, 400);
 
   const apiToken = Deno.env.get("SEND_LK_API_TOKEN");
-  const senderId = Deno.env.get("SEND_LK_SENDER_ID");
+  const defaultSenderId = Deno.env.get("SEND_LK_SENDER_ID");
+  // purpose selects between a small, fixed set of server-side secrets — the client can never pass
+  // an arbitrary sender ID through directly, only pick which pre-configured one applies.
+  const senderId = (body.purpose === "outstanding" && Deno.env.get("SEND_LK_SENDER_ID_OUTSTANDING")) ||
+    defaultSenderId;
   if (!apiToken || !senderId) {
     return json({ ok: false, error: "SMS gateway is not configured (missing secrets)" }, 500);
   }

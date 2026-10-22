@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022052934">
+<meta name="app-build" content="20261022055331">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1714,9 +1714,20 @@ async function mergeBeforeSave(key){
   const local = state[key];
   if(!isMergeableRecordArray(local)) return local;
   if(!Array.isArray(_syncBaseline[key])) return local; // no baseline yet to diff against — save as-is
+  // A fresh fetch here that comes back not-an-array is indistinguishable, from this one request,
+  // between "a real transient blip" and "this role's read of this key is silently RLS-blocked" —
+  // Postgrest returns an empty/null result for both, never an error, so there's no way to tell
+  // them apart from the response alone (see kvGet's comment on the same ambiguity). The old
+  // behavior treated that as "nothing to merge against" and returned the local array as-is,
+  // which for a role that CAN write but can't read is exactly how one locally-added record wiped
+  // an entire shared list down to itself: concretely reproduced — an R&D-permissioned role whose
+  // read access hadn't been synced added one product, and it overwrote every product anyone else
+  // had added, because the merge had nothing real to diff the new record against. A merge this
+  // blind to the server's actual contents must never reach kvSet. Throwing routes this through
+  // _saveOnce's existing retry-then-"Could not save" path instead of writing anything.
   let serverArr;
-  try{ serverArr = await kvGet(key); }catch(e){ return local; }
-  if(!Array.isArray(serverArr)) return local;
+  try{ serverArr = await kvGet(key); }catch(e){ throw e; }
+  if(!Array.isArray(serverArr)) throw new Error(`mergeBeforeSave(${key}): could not confirm the server's current contents — refusing to overwrite a shared list blind`);
   return reconcileRecordArray(key, serverArr);
 }
 /* Sends an SMS via the send-sms Edge Function (which holds the real send.lk API key).

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022105159">
+<meta name="app-build" content="20261022110047">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -850,7 +850,12 @@ html{ visibility:hidden; }
     .login-hero-greeting{font-size:clamp(22px,6vw,28px);max-width:13ch;margin-top:72px;}
     .login-hero-sub{display:none;}
     .login-hero-clock{display:none;}
-    .login-panel{position:relative;z-index:2;min-height:100dvh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;}
+    /* The desktop rule above hardcodes width:440px (the card docks to the right edge of a wide
+       screen) — nothing here was resetting it, so on any phone narrower than 440px the card (and
+       everything inside it: inputs, the Log in button) ran off the right edge of the screen. That
+       was the real "not fitted, can't see the image" complaint — the background photo itself was
+       fine, it's that the sign-in card sitting on top of it was wider than the viewport. */
+    .login-panel{position:relative;z-index:2;width:100%;min-height:100dvh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;}
     .login-panel .login-blob{display:none;}
     .login-panel-inner{
       width:100%;max-width:none;

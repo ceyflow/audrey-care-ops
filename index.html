@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022192604">
+<meta name="app-build" content="20261022192852">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2105,7 +2105,7 @@ function outstandingCsvFormatModal(){
         <strong>Phone Number</strong> — also accepts "Phone", "Mobile", "Contact" or "Contact number".<br>
         <strong>Amount</strong> — also accepts "Due amount", "Outstanding" or "Total due". Commas (100,000) are fine.<br>
         <strong>Date</strong> — optional. Also accepts "Due date". Use DD/MM/YYYY (22/10/2026) or YYYY-MM-DD.<br><br>
-        A name already in your customer list gets updated; anyone new is added as a customer automatically.
+        A name already in your customer list gets updated. Anyone not already a customer is skipped — add them as a customer first (even just name + phone), then re-import.
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-primary" id="btn-close-outstanding-csv-format">Got it</button>
@@ -2128,7 +2128,7 @@ async function importOutstandingCsv(file){
   const dataRows = rows.slice(1);
   const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
   const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-  let updated = 0, added = 0, skipped = 0;
+  let updated = 0, notFound = 0, skipped = 0;
   dataRows.forEach(r=>{
     const name = cell(r, nameIdx), phone = cell(r, phoneIdx);
     const amount = Number(cell(r, amountIdx).replace(/[^0-9.]/g,'')) || 0;
@@ -2141,24 +2141,19 @@ async function importOutstandingCsv(file){
       if(dueDate) match.outstandingDueDate = dueDate;
       updated++;
     } else {
-      // Not every debtor is necessarily already in the Customers list — this reminder run may be
-      // the first the business has ever recorded them. Rather than requiring them to be added by
-      // hand first, the CSV row itself is enough: it becomes a real (lightweight) customer record,
-      // the same one any other screen in the app would show and let you build on later.
-      state.customers.unshift({
-        id: uid('CUS'), name: name || phone, phone, address: '', salesman: null, cityArea: '', email: '',
-        type: 'Individual', status: 'Active', createdAt: new Date().toISOString(),
-        outstandingAmount: amount, outstandingDueDate: dueDate,
-      });
-      added++;
+      // Used to auto-create a lightweight customer record for a name/phone not already on file —
+      // reverted: that record only ever had name/phone/amount/date, missing everything else
+      // (address, salesman, type, email…) every other screen in the app expects a customer to
+      // have. Skip it instead and say so, so whoever's importing adds it as a real customer first.
+      notFound++;
     }
   });
-  if(updated>0 || added>0) await save('customers');
+  if(updated>0) await save('customers');
   render();
-  if(updated>0 || added>0) logActivity(`Imported outstanding amounts from CSV — ${updated} existing customer${updated===1?'':'s'} updated, ${added} new added`);
+  if(updated>0) logActivity(`Imported outstanding amounts from CSV — ${updated} existing customer${updated===1?'':'s'} updated`);
   const notes = [];
   if(updated) notes.push(`${updated} existing updated`);
-  if(added) notes.push(`${added} new added`);
+  if(notFound) notes.push(`${notFound} not found — add ${notFound===1?'them':'them'} as a customer first`);
   if(skipped) notes.push(`skipped ${skipped} with no name or phone`);
   showToast(notes.length ? `Imported — ${notes.join(', ')}` : 'Nothing to import', 8000);
 }

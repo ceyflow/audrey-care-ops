@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022180418">
+<meta name="app-build" content="20261022181240">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1550,14 +1550,16 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
 // so there's nothing anywhere else in the app that needs them before that page is actually opened.
-const DEFERRED_KEYS = ['bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'];
-const DEFERRED_KEY_PAGES = { bulksms: ['bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate'],
-  gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'] };
+// (Bulk SMS's own keys used to live here too — moved to SYNCED_KEYS for the same reason rndProjects
+// was: a "Loading…" flash on every single visit to the page, instead of being there instantly like
+// the rest of the app.)
+const DEFERRED_KEYS = ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'];
+const DEFERRED_KEY_PAGES = { gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -9315,9 +9317,6 @@ function renderBulkSmsPage(){
 // .bulksms-customer-row, bulksms-recipient-count, bulksms-send-count) so the same selection,
 // search, and count wiring handles both tabs with no page-specific JS of its own.
 function renderBulkSmsOutstandingTab(){
-  if(!state._deferredLoaded.bulkSmsTemplates || !state._deferredLoaded.smsCampaigns || !state._deferredLoaded.outstandingReminderTemplate){
-    return `<div class="empty-state"><p class="hint">Loading…</p></div>`;
-  }
   const q = (state.filters.bulkSmsCustomerSearch||'').toLowerCase();
   const owing = state.customers.filter(c=>c.phone && (Number(c.outstandingAmount)||0) > 0);
   const rows = owing.filter(c=> !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q))
@@ -9414,9 +9413,6 @@ function outstandingTemplateModal(){
   </div>`;
 }
 function renderBulkSmsCampaignTab(){
-  if(!state._deferredLoaded.bulkSmsTemplates || !state._deferredLoaded.smsCampaigns){
-    return `<div class="empty-state"><p class="hint">Loading…</p></div>`;
-  }
   const q = (state.filters.bulkSmsCustomerSearch||'').toLowerCase();
   const withPhone = state.customers.filter(c=>c.phone);
   const rows = withPhone.filter(c=> !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q));

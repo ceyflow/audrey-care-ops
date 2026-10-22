@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022031744">
+<meta name="app-build" content="20261022044403">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -516,6 +516,19 @@ html{ visibility:hidden; }
   .notes-fab-badge{position:absolute;top:5px;right:6px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#fff;color:#2F6FE4;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;}
   .notes-fab-backdrop{position:fixed;inset:0;z-index:46;background:transparent;}
   .notes-fab-popup{position:fixed;right:22px;bottom:94px;z-index:48;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;box-shadow:0 20px 44px -12px rgba(20,25,20,.3);padding:18px;max-height:min(600px, calc(100vh - 130px));overflow-y:auto;}
+  /* Staggered-cascade open (picked from 10 opening-animation mockups): the popup itself settles
+     in quickly, then its head, next-up card and each row follow in sequence instead of all
+     popping in at once. Each piece gets its own animation-delay set inline per render (the row
+     count varies per user) so this stays one declarative animation, not JS-timed. Only plays on
+     open — the popup is removed from the DOM on close, not hidden, so there's nothing to animate
+     out, and a fresh mount re-triggers the entrance every time it reopens. */
+  .notes-fab-popup{animation:notes-panel-in .22s cubic-bezier(.2,.8,.3,1) both;}
+  @keyframes notes-panel-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .notes-fab-popup-head,.notes-next-card,.notes-row,.notes-compose{animation:notes-row-in .32s cubic-bezier(.2,.8,.3,1) both;}
+  @keyframes notes-row-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion:reduce){
+    .notes-fab-popup,.notes-fab-popup-head,.notes-next-card,.notes-row,.notes-compose{animation:none;}
+  }
   .notes-fab-popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .notes-fab-popup-head h3{margin:0;font-size:14px;font-weight:700;}
   .notes-fab-close{width:22px;height:22px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;}
@@ -7277,18 +7290,18 @@ function renderNotesFab(){
     ${open ? `<div class="notes-fab-backdrop" id="notes-fab-backdrop"></div>` : ''}
     ${open ? `
     <div class="notes-fab-popup" id="notes-fab-popup">
-      <div class="notes-fab-popup-head">
+      <div class="notes-fab-popup-head" style="animation-delay:0ms;">
         <h3>Reminders</h3>
         <button type="button" class="notes-fab-close" id="notes-fab-close" aria-label="Close">${icon('close')}</button>
       </div>
       ${next ? `
-      <div class="notes-next-card">
+      <div class="notes-next-card" style="animation-delay:50ms;">
         <div class="notes-eyebrow">Next up</div>
         <div class="notes-next-text">${esc(next.text)}</div>
         <div class="notes-next-when">${esc(formatNoteWhen(next.remindAt))}</div>
       </div>` : ''}
-      ${notes.length ? notes.map(n=>{ const c = n.color||NOTE_COLOR_PALETTE[0]; return `
-      <div class="notes-row" style="background:color-mix(in srgb, ${escAttr(c)} 16%, white);border-left:3px solid ${escAttr(c)};">
+      ${notes.length ? notes.map((n,i)=>{ const c = n.color||NOTE_COLOR_PALETTE[0]; return `
+      <div class="notes-row" style="animation-delay:${90+i*55}ms;background:color-mix(in srgb, ${escAttr(c)} 16%, white);border-left:3px solid ${escAttr(c)};">
         <div class="notes-row-text">
           ${esc(n.text)}
           ${n.remindAt ? `<div class="notes-row-when">${esc(formatNoteWhen(n.remindAt))}</div>` : ''}
@@ -7297,7 +7310,7 @@ function renderNotesFab(){
         <button type="button" class="notes-row-del" data-delete-note="${n.id}" title="Delete" aria-label="Delete note">${icon('close')}</button>
       </div>`;}).join('') : `<div class="hint" style="padding:6px 0 10px;">No notes yet — add one below.</div>`}
 
-      <div class="notes-compose">
+      <div class="notes-compose" style="animation-delay:${90+notes.length*55+30}ms;">
         ${draft.editingId ? `
         <div class="notes-editing-bar">
           <span>Editing note</span>

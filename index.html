@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022055855">
+<meta name="app-build" content="20261022060310">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2859,14 +2859,22 @@ const RND_STAGE_MIGRATION_MAP = {0:0, 1:1, 2:1, 3:2, 4:3};
 function migrateRndProjectStages(){
   if(!Array.isArray(state.rndProjects)) return;
   let rndMigrated = false;
+  // Guards against a null/malformed entry (a bad p, or a null slot in p.history) throwing here —
+  // this runs synchronously right inside ensureDeferredKeysLoaded(), with nothing above it ever
+  // catching a rejection, so one bad record used to be able to leave the R&D page frozen on
+  // "Loading…" forever: the fetch itself had finished, but the promise chain that flips
+  // _deferredLoaded and re-renders never got to run.
   state.rndProjects.forEach(p=>{
-    if(p._stageSchemaV2) return;
+    if(!p || p._stageSchemaV2) return;
     if(typeof p.stage==='number') p.stage = RND_STAGE_MIGRATION_MAP[p.stage] ?? Math.min(p.stage,3);
-    if(Array.isArray(p.history)) p.history.forEach(h=>{ if(typeof h.stage==='number') h.stage = RND_STAGE_MIGRATION_MAP[h.stage] ?? Math.min(h.stage,3); });
+    if(Array.isArray(p.history)) p.history.forEach(h=>{ if(h && typeof h.stage==='number') h.stage = RND_STAGE_MIGRATION_MAP[h.stage] ?? Math.min(h.stage,3); });
     p._stageSchemaV2 = true;
     rndMigrated = true;
   });
-  if(rndMigrated) kvSet('rndProjects', state.rndProjects).catch(e=>console.error('rnd stage migration failed', e));
+  // Through save(), not a raw kvSet — this is the same shared, multi-writer rndProjects row
+  // every create/advance goes through mergeBeforeSave() to touch safely; writing it directly
+  // here would skip that protection for exactly the kind of overwrite it exists to prevent.
+  if(rndMigrated) save('rndProjects').catch(e=>console.error('rnd stage migration failed', e));
 }
 function canManageRnd(){ return !!state.session && roleCan(state.session.role, 'rnd_manage'); }
 function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
@@ -4776,7 +4784,13 @@ function performGoTo(page){
   if(page==='chat'){ startChatPolling(); scrollChatToBottom(); } else { stopChatPolling(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
   const deferredKeys = DEFERRED_KEY_PAGES[page];
-  if(deferredKeys) ensureDeferredKeysLoaded(deferredKeys).then(fetched => { if(fetched) render(); });
+  // Without a .catch() here, anything that threw inside ensureDeferredKeysLoaded() (a one-time
+  // migration step choking on a malformed record, say) became an unhandled rejection: the .then()
+  // never ran, _deferredLoaded never flipped true, and the page sat on its "Loading…" state with
+  // nothing left to trigger a re-render — indistinguishable from "just slow" until the person gave
+  // up and reloaded. Now a failure still re-renders, so whatever the page does with an unloaded
+  // key (Loading…, or its own empty-state) at least settles instead of hanging forever.
+  if(deferredKeys) ensureDeferredKeysLoaded(deferredKeys).then(fetched => { if(fetched) render(); }).catch(e => { console.error('deferred load for '+page+' failed', e); render(); });
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022181906">
+<meta name="app-build" content="20261022183208">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2074,6 +2074,35 @@ function previewOutstandingRecipient(id){
   const tpl = state.outstandingReminderTemplate;
   if(!c || !tpl || !tpl.text) return;
   openAlertModal({ title: 'Message to ' + c.name, message: fillTemplate(tpl.text, outstandingMergeVars(c)) });
+}
+function outstandingCsvFormatModal(){
+  const sampleRows = [
+    ['Rumesh Sanjeewa', '772227915', '100,000', '22/10/2026'],
+    ['Vihanga Sudaraka', '776836012', '200,000', '22/10/2026'],
+  ];
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:480px;">
+      <h2>CSV format</h2>
+      <div class="sub">Column order doesn't matter, only the header names — any of these work for each column:</div>
+      <table class="data-table" style="margin:12px 0;">
+        <thead><tr><th>Name</th><th>Phone Number</th><th>Amount</th><th>Date</th></tr></thead>
+        <tbody>
+          ${sampleRows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="hint" style="line-height:1.6;">
+        <strong>Name</strong> — also accepts "Customer name" or "Full name".<br>
+        <strong>Phone Number</strong> — also accepts "Phone", "Mobile", "Contact" or "Contact number".<br>
+        <strong>Amount</strong> — also accepts "Due amount", "Outstanding" or "Total due". Commas (100,000) are fine.<br>
+        <strong>Date</strong> — optional. Also accepts "Due date". Use DD/MM/YYYY (22/10/2026) or YYYY-MM-DD.<br><br>
+        A name already in your customer list gets updated; anyone new is added as a customer automatically.
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-outstanding-csv-format">Got it</button>
+      </div>
+    </div>
+  </div>`;
 }
 async function importOutstandingCsv(file){
   const text = await file.text();
@@ -9355,6 +9384,7 @@ function renderBulkSmsOutstandingTab(){
       <h3>Customers with an outstanding balance</h3>
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="hint" id="bulksms-recipient-count">${selectedCount} recipient${selectedCount===1?'':'s'} selected</span>
+        <button type="button" class="btn btn-sm" id="btn-outstanding-csv-format">CSV Format</button>
         <label class="btn btn-sm" style="cursor:pointer;margin:0;">⬆ Import CSV
           <input type="file" id="outstanding-import-input" accept=".csv,text/csv" style="display:none;">
         </label>
@@ -13197,6 +13227,7 @@ function renderModal(){
   if(type==='brandaddon') return brandingPreviewModal(parts.slice(1).join(':'));
   if(type==='brandnew') return brandingAddAddonModal();
   if(type==='brandcrop') return brandCropModal();
+  if(type==='outstandingcsvformat') return outstandingCsvFormatModal();
   if(type==='managelines') return manageDeliveryLinesModal();
   if(type==='managestaffcategories') return manageStaffCategoriesModal();
   if(type==='salespersoncolors') return salesPersonColorsModal();
@@ -16356,6 +16387,8 @@ function attachShellHandlers(){
   wireSmsCharCount('bulksms-message', 'bulksms-charcount', 'bulksms-segcount');
   wireSmsCharCount('quicksms-message', 'quicksms-charcount', 'quicksms-segcount');
   if(byIdEl('btn-send-outstanding-sms')) byIdEl('btn-send-outstanding-sms').onclick = sendOutstandingSms;
+  if(byIdEl('btn-outstanding-csv-format')) byIdEl('btn-outstanding-csv-format').onclick = ()=>openModal('outstandingcsvformat');
+  if(byIdEl('btn-close-outstanding-csv-format')) byIdEl('btn-close-outstanding-csv-format').onclick = closeModal;
   document.querySelectorAll('[data-preview-outstanding]').forEach(b=>b.addEventListener('click', ()=>previewOutstandingRecipient(b.dataset.previewOutstanding)));
   if(byIdEl('outstanding-import-input')) byIdEl('outstanding-import-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];

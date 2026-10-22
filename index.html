@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022061646">
+<meta name="app-build" content="20261022062627">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4694,10 +4694,26 @@ async function confirmLoginV2(){
   if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
   // The role on file in User account setup (secureAccounts, looked up above as `role`) is always
   // current — it's what Admin actually edits. profiles.role is only ever set once, at signup, and
-  // never updated after, so it goes stale the moment someone's access level changes; it's only
-  // consulted here for the display name, never for which role they sign in as.
+  // never updated after, so it goes stale the moment someone's access level changes.
+  //
+  // That staleness isn't harmless: role_data_access is enforced server-side by RLS policies that
+  // have no way to ask the client what role it claims to be — the only role the database can ever
+  // know this user as IS profiles.role. So the moment Admin changes someone's Access level in
+  // Settings, the database silently keeps enforcing their OLD role's data access forever after,
+  // no matter how many times the new role gets re-saved — re-syncing role_data_access for the new
+  // role was never going to help, because this user is never actually recognized as that role in
+  // the first place. Root-caused from the R&D Officer access that never worked no matter what got
+  // re-saved: that account's profiles.role never matched what Settings said it should be.
+  // Self-heal it here, right after sign-in: this request is authenticated as this exact person, so
+  // it can correct its own profile row the same way any ordinary "update your own profile" policy
+  // already allows — no elevated access needed — and it runs before the data fetch below that
+  // depends on it, so a stale role gets fixed before this same login ever uses it.
   const profile = await supabaseFetchProfile(res.userId);
   const sessionRole = role;
+  if(profile && profile.role !== sessionRole){
+    const { error: roleFixError } = await supabaseClient.from('profiles').update({role: sessionRole}).eq('id', res.userId);
+    if(roleFixError) console.error('profiles.role self-heal failed', roleFixError);
+  }
   const sessionName = (profile && profile.staff_name) || typedName;
   state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null};
   state.page = (pagesForRole(sessionRole)||['dashboard'])[0] || 'dashboard';

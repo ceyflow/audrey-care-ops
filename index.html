@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022055331">
+<meta name="app-build" content="20261022055855">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4649,13 +4649,7 @@ async function confirmLogin(){
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();
-  // Must run AFTER refreshAppData(), not before — that call overwrites state.rndChemists /
-  // state.rndAttendance wholesale with the fresh authenticated fetch, which would silently wipe
-  // out (or just race against) a chemist this had only just looked up or auto-created against
-  // the stale pre-login snapshot, leaving _pendingRndAttendance pointing at an id that no longer
-  // existed in the array by the time "Mark attendance" was clicked — the button then found
-  // nothing and did nothing, with no error at all.
-  checkRndAttendanceGate();
+  autoAddRndOfficerAsChemist();
   render();
 }
 // Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
@@ -4715,16 +4709,12 @@ async function confirmLoginV2(){
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();
-  // Must run AFTER refreshAppData(), not before — see the matching comment in confirmLogin()
-  // above for why (refreshAppData overwrites rndChemists/rndAttendance wholesale, which would
-  // silently invalidate whatever this had just looked up or created against the stale snapshot).
-  checkRndAttendanceGate();
+  autoAddRndOfficerAsChemist();
   render();
 }
 async function logOut(){
   state.session = null; state._pendingRole = null;
   state.aiChat = [];
-  state._pendingRndAttendance = null;
   state._rndAttCal = null;
   state._notesFabOpen = false;
   state._dueNoteAlert = null;
@@ -5210,163 +5200,22 @@ function deleteRndAttendance(id){
     },
   });
 }
-// R&D Officer accounts mark their OWN attendance as the very first thing after logging in each
-// day — this is deliberately a mandatory gate (checkRndAttendanceGate() / renderRndAttendanceGate()
-// below), not an easily-skipped button buried in the Chemists tab, since that's exactly what
-// wasn't getting done reliably. Matched by login name against the chemist roster; the first time
-// a given name logs in under this role it's added to the roster automatically, since the whole
-// point is not needing Admin to pre-register every visit. Only triggers once per calendar day —
-// logging out and back in the same day they already marked doesn't ask again.
-function checkRndAttendanceGate(){
-  if(state.session.role !== 'R&D Officer') return;
-  // Trimmed on both sides, not just lower-cased: a name typed or stored with stray leading/
-  // trailing whitespace anywhere (the chemist roster entry, a staff_name on an older account,
-  // etc.) would otherwise fail this exact-equality check and silently create a SECOND chemist
-  // record for the same person — which is exactly how a login's attendance write can end up
-  // linked to a different chemist id than the one Admin's table is actually showing for that
-  // name, making it look like the record never saved at all.
+// R&D Officer accounts used to be blocked behind a mandatory full-page attendance calendar on
+// every login before they could reach anything else. Removed in favor of the same manual
+// "Attendance" button Admin already uses in the Chemists tab (rndAttendanceModal below) — an
+// R&D Officer login has the rnd_manage permission by default, so that button is right there for
+// them too, and attendance is now a deliberate action taken whenever, not a gate blocking the
+// rest of the app. The roster auto-add stays: the first time a given name logs in under this
+// role it's added to the chemist list automatically, since the whole point is not needing Admin
+// to pre-register every visit.
+function autoAddRndOfficerAsChemist(){
+  if(!state.session || state.session.role !== 'R&D Officer') return;
   const loginName = (state.session.name||'').trim().toLowerCase();
-  let chemist = state.rndChemists.find(c=>(c.name||'').trim().toLowerCase()===loginName);
-  if(!chemist){
-    chemist = {id: uid('CHM'), name: (state.session.name||'').trim(), createdAt: new Date().toISOString()};
-    state.rndChemists = [...state.rndChemists, chemist];
-    save('rndChemists').catch(e=>console.error('auto-add chemist on R&D Officer login failed', e));
-  }
-  if(!rndAttLoginAt(rndAttRecFor(chemist.id, todayStr()))){
-    state._pendingRndAttendance = chemist.id;
-  }
-}
-// Same calendar used by Admin's own Attendance button (rndAttendanceModal) — reused directly
-// here rather than rebuilt, so Sudath sees the real month-by-month history (not just a bare
-// "mark today" button) and the two stay visually and behaviorally identical. Rendered as the
-// gate's own full-page content (no overlay/modal wrapper) since this blocks the whole app, not
-// a dismissible dialog over it.
-function renderRndAttendanceGate(){
-  const chemistId = state._pendingRndAttendance;
-  const chemist = byId(state.rndChemists, chemistId);
-  if(!chemist) return '';
-  if(!state._rndAttCal || state._rndAttCal.chemistId!==chemistId){
-    state._rndAttCal = {chemistId, month: todayStr().slice(0,7), selectedDate: todayStr()};
-  }
-  const cal = state._rndAttCal;
-  const [y,m] = cal.month.split('-').map(Number);
-  const firstOfMonth = new Date(y, m-1, 1);
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const startWeekday = firstOfMonth.getDay();
-  const monthLabel = firstOfMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
-  const today = todayStr();
-
-  let cells = '';
-  for(let i=0;i<startWeekday;i++) cells += `<div class="rnd-cal-cell rnd-cal-empty"></div>`;
-  for(let d=1; d<=daysInMonth; d++){
-    const dateStr = `${cal.month}-${String(d).padStart(2,'0')}`;
-    const rec = rndAttRecFor(chemistId, dateStr);
-    const inAt = rndAttLoginAt(rec);
-    const detail = inAt ? `<div class="rnd-cal-detail"><span class="rnd-cal-in">In ${fmtTimeOnly(inAt)}</span>${rec.logoutAt?`<span class="rnd-cal-out">Out ${fmtTimeOnly(rec.logoutAt)}</span>`:''}</div>` : '';
-    cells += `<div class="rnd-cal-cell ${dateStr===today?'rnd-cal-today':''} ${dateStr===cal.selectedDate?'rnd-cal-selected':''} ${inAt?'rnd-cal-marked':''}" data-rnd-gate-cal-date="${dateStr}">
-      <div class="rnd-cal-daynum">${d}</div>
-      ${detail}
-    </div>`;
-  }
-  const weekdayHeaders = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w=>`<div class="rnd-cal-wd">${w}</div>`).join('');
-
-  const selRec = cal.selectedDate ? rndAttRecFor(chemistId, cal.selectedDate) : null;
-  const selInAt = rndAttLoginAt(selRec);
-  const canLogin = !!cal.selectedDate && !selInAt;
-  const canLogout = !!cal.selectedDate && !!selInAt && !(selRec && selRec.logoutAt);
-  const selDateLabel = cal.selectedDate ? (()=>{ const [sy,sm,sd]=cal.selectedDate.split('-').map(Number); return new Date(sy,sm-1,sd).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}); })() : '';
-
-  return `
-  <div style="max-width:480px;margin:36px auto;padding:0 20px;">
-    <div style="text-align:center;margin-bottom:18px;">
-      <div style="font-size:21px;font-weight:700;color:var(--ink);">Welcome, ${esc(chemist.name)}</div>
-      <div class="hint">Mark today's attendance to continue into the system.</div>
-    </div>
-    <div class="rnd-cal-nav">
-      <button type="button" class="btn btn-sm" id="btn-rnd-gate-cal-prev">‹</button>
-      <div class="rnd-cal-month">${monthLabel}</div>
-      <button type="button" class="btn btn-sm" id="btn-rnd-gate-cal-next">›</button>
-    </div>
-    <div class="rnd-cal-grid">
-      ${weekdayHeaders}
-      ${cells}
-    </div>
-    ${cal.selectedDate ? `
-    <div class="rnd-cal-detail-panel">
-      <div class="rnd-cal-detail-date">${selDateLabel}</div>
-      <div style="display:flex;gap:8px;">
-        <button type="button" class="btn ${canLogin?'btn-primary':''}" id="btn-rnd-gate-login" ${canLogin?'':'disabled'}>${selInAt ? '✓ Logged in '+fmtTimeOnly(selInAt) : 'Login'}</button>
-        <button type="button" class="btn ${canLogout?'btn-primary':''}" id="btn-rnd-gate-logout" ${canLogout?'':'disabled'}>${selRec && selRec.logoutAt ? '✓ Logged out '+fmtTimeOnly(selRec.logoutAt) : 'Logout'}</button>
-      </div>
-      ${!selInAt ? `<div class="hint" style="margin-top:8px;">Log in first — logout unlocks once that day has a login.</div>` : ''}
-    </div>` : ''}
-    <div style="text-align:center;margin-top:18px;">
-      <button type="button" class="btn" id="btn-skip-rnd-attendance-logout" style="font-size:13px;">Not me — log out</button>
-    </div>
-  </div>`;
-}
-function attachRndAttendanceGateHandlers(){
-  const skipBtn = document.getElementById('btn-skip-rnd-attendance-logout');
-  if(skipBtn) skipBtn.onclick = ()=>{ state._pendingRndAttendance = null; state._rndAttCal = null; logOut(); };
-  const prevBtn = document.getElementById('btn-rnd-gate-cal-prev');
-  if(prevBtn) prevBtn.onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, -1); render(); };
-  const nextBtn = document.getElementById('btn-rnd-gate-cal-next');
-  if(nextBtn) nextBtn.onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, 1); render(); };
-  document.querySelectorAll('[data-rnd-gate-cal-date]').forEach(cell=>cell.addEventListener('click', ()=>{
-    state._rndAttCal.selectedDate = cell.dataset.rndGateCalDate; render();
-  }));
-  const loginBtn = document.getElementById('btn-rnd-gate-login');
-  if(loginBtn) loginBtn.onclick = ()=>markOwnRndAttendance(state._rndAttCal.selectedDate);
-  const logoutBtn = document.getElementById('btn-rnd-gate-logout');
-  if(logoutBtn) logoutBtn.onclick = ()=>markOwnRndLogout(state._rndAttCal.selectedDate);
-}
-// Self-service versions of rndMarkLogin/rndMarkLogout — deliberately NOT gated by
-// canManageRnd(), since the whole point is the R&D Officer marking THEIR OWN attendance without
-// needing the broader "manage all of R&D" permission. Always scoped to the chemist this exact
-// session is gated against (state._pendingRndAttendance), never an arbitrary id from outside.
-async function markOwnRndAttendance(date){
-  const chemistId = state._pendingRndAttendance;
-  const chemist = byId(state.rndChemists, chemistId);
-  if(!chemist) return;
-  const d = date || todayStr();
-  let rec = rndAttRecFor(chemist.id, d);
-  if(rec){ rec.loginAt = new Date().toISOString(); rec.by = state.session.name; }
-  else{
-    rec = {id: uid('ATT'), chemistId: chemist.id, chemistName: chemist.name, date: d, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
-    state.rndAttendance = [...state.rndAttendance, rec];
-  }
-  // save() already retries and toasts its own "Could not save" on failure — but it never used to
-  // be checked here, so a write the database actually rejected (this role's row missing from
-  // role_data_access, an RLS reject on the insert) still let today's gate clear and the person
-  // into the app. Next login then found no record for today after all and asked again — looking
-  // exactly like "marking it didn't stick," because it hadn't. Only let the gate clear on a save
-  // that genuinely went through.
-  const ok = await save('rndAttendance');
-  if(!ok){ render(); return; }
-  // Only marking TODAY actually unlocks the app — filling in a past day from the calendar is
-  // just completing the record, not today's check-in.
-  if(d===todayStr()){
-    state._pendingRndAttendance = null;
-    state._rndAttCal = null;
-    showToast('Attendance marked — welcome!');
-  } else {
-    showToast('Attendance updated for '+d);
-  }
-  render();
-}
-async function markOwnRndLogout(date){
-  const chemistId = state._pendingRndAttendance;
-  const chemist = byId(state.rndChemists, chemistId);
-  if(!chemist) return;
-  const d = date || todayStr();
-  const rec = rndAttRecFor(chemist.id, d);
-  if(!rndAttLoginAt(rec)){ showToast('Log in first before marking logout'); return; }
-  if(rec.logoutAt){ showToast('Already logged out for that day'); return; }
-  rec.logoutAt = new Date().toISOString();
-  rec.by = state.session.name;
-  const ok = await save('rndAttendance');
-  if(ok) showToast('Logged out');
-  render();
+  if(!loginName) return;
+  const exists = state.rndChemists.some(c=>(c.name||'').trim().toLowerCase()===loginName);
+  if(exists) return;
+  state.rndChemists = [...state.rndChemists, {id: uid('CHM'), name: (state.session.name||'').trim(), createdAt: new Date().toISOString()}];
+  save('rndChemists').catch(e=>console.error('auto-add chemist on R&D Officer login failed', e));
 }
 function rndAttendanceCountThisMonth(chemistId){
   const now = new Date();
@@ -6733,9 +6582,6 @@ function renderInner(){
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
   if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
-  // R&D Officer accounts must mark today's attendance before reaching the rest of the app — set
-  // by checkRndAttendanceGate() right after login; see that function for why.
-  if(state._pendingRndAttendance){ app.innerHTML = renderRndAttendanceGate(); attachRndAttendanceGateHandlers(); return; }
   if(!pageAllowed(state.page)){ state.page = (pagesForRole(state.session.role)||['dashboard'])[0] || 'dashboard'; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022110047">
+<meta name="app-build" content="20261022142054">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -786,6 +786,23 @@ html{ visibility:hidden; }
       linear-gradient(100deg, rgba(10,24,16,.5) 0%, rgba(10,24,16,.14) 42%, rgba(10,24,16,0) 62%),
       linear-gradient(195deg,rgba(10,24,16,0) 45%,rgba(7,18,12,.4) 100%);
     pointer-events:none;}
+  /* A full-bleed background-size:cover crop on an uploaded photo whose aspect ratio doesn't match
+     the hero pane (near-certain on mobile's tall portrait pane, since most uploaded photos are
+     wider than they are tall) zooms in far enough that whatever made the photo recognizable — a
+     logo, text, the subject itself — ends up cropped out entirely, leaving just an unrecognizable
+     patch of color. background-size:contain shows the whole photo instead, letterboxed on the
+     gradient (still here as a second background-image layer) rather than the page's plain
+     background color, so it reads as "a framed photo over a colored backdrop" instead of empty
+     bars.  --hero-photo-url is set inline only when a photo is actually uploaded. */
+  .login-illustration.has-photo{
+    background-image: var(--hero-photo-url),
+      radial-gradient(ellipse 90% 70% at 10% -10%, color-mix(in srgb,var(--accent) 65%,transparent) 0%, transparent 55%),
+      radial-gradient(ellipse 100% 80% at 110% 115%, color-mix(in srgb,var(--accent-dark) 70%,transparent) 0%, transparent 60%),
+      linear-gradient(155deg, var(--accent-dark) 0%, var(--accent) 58%, color-mix(in srgb,var(--accent) 65%,#F6C97A 35%) 100%);
+    background-size: contain, cover, cover, cover;
+    background-position: center, inherit, inherit, inherit;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  }
   .login-illustration-logo{height:100px;width:auto;max-width:none;display:block;align-self:flex-start;flex:0 0 auto;position:relative;z-index:1;filter:brightness(0) invert(1);opacity:.95;object-fit:contain;}
   .login-hero-bottom{position:relative;z-index:1;}
   .login-eyebrow{margin:0;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.7);}
@@ -7017,11 +7034,11 @@ function renderLogin(){
   const cfg = loginCustomization();
   const heroLogoSrc = loginHeroLogo() || currentLogo();
   const heroPhotoSrc = loginHeroPhoto();
-  const heroBgStyle = heroPhotoSrc ? `background-image:url('${esc(heroPhotoSrc)}');background-size:cover;background-position:center;` : '';
+  const heroBgStyle = heroPhotoSrc ? `--hero-photo-url:url('${esc(heroPhotoSrc)}');` : '';
   const eyeIcon = passwordEyeIconHtml(true, cfg.passwordIconStyle);
   return `
   <div class="login-screen">
-    <div class="login-illustration" style="${heroBgStyle}">
+    <div class="login-illustration ${heroPhotoSrc?'has-photo':''}" style="${heroBgStyle}">
       <img src="${heroLogoSrc}" alt="Audrey" class="login-illustration-logo">
       <div class="login-hero-bottom">
         ${renderLoginHeroSections(cfg)}
@@ -9722,7 +9739,7 @@ function renderLoginCustomizationPanel(){
 
       <div class="hint" style="margin-bottom:8px;">Live preview — this is the wide, two-pane layout PC visitors see (phones just get the sign-in card)</div>
       <div class="login-preview-frame">
-        <div class="login-illustration login-illustration-preview" style="${loginHeroPhoto() ? `background-image:url('${esc(loginHeroPhoto())}');background-size:cover;background-position:center;` : ''}">
+        <div class="login-illustration login-illustration-preview ${loginHeroPhoto()?'has-photo':''}" style="${loginHeroPhoto() ? `--hero-photo-url:url('${esc(loginHeroPhoto())}');` : ''}">
           <img src="${loginHeroLogo() || currentLogo()}" alt="" class="login-illustration-logo">
           <div class="login-hero-bottom">
             ${renderLoginHeroSections(cfg)}

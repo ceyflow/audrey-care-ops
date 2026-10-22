@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022031326">
+<meta name="app-build" content="20261022031744">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1117,6 +1117,16 @@ html{ visibility:hidden; }
   .batch-focus .bf-controls .btn-primary{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
   .batch-focus .bf-controls .btn-primary:hover{background:var(--accent-dark);filter:brightness(.88);}
   .batch-focus .bf-controls .btn-primary:disabled,.batch-focus .bf-controls .btn-primary:active{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;opacity:1;}
+  /* This full-screen batch timer was built desktop-first — 56px of side padding plus a fixed
+     300px temperature/amount panel next to the checklist never fit a phone's width, forcing a
+     sideways scroll a factory-floor phone shouldn't need. Same edge padding the drawer already
+     settled on for mobile, and the side panel drops its fixed width to stack full-width below
+     the checklist instead of squeezing in beside it. */
+  @media (max-width:760px){
+    .batch-focus-body{padding:20px 18px 28px;}
+    .batch-focus .bf-grid{gap:16px;}
+    .batch-focus .bf-side{width:100%;}
+  }
   .hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
 
   .drawer-overlay{position:fixed;inset:0;background:rgba(20,25,20,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:110;animation:overlay-fade .2s ease;}

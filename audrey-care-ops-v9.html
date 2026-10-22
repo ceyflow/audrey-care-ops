@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022071204">
+<meta name="app-build" content="20261022093540">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2537,7 +2537,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 6;
+const PAGE_DATA_KEYS_VERSION = 7;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -2570,8 +2570,13 @@ function dataKeysForRole(role){
   const pages = pagesForRole(role);
   // Like activityLog, personalNotes isn't tied to any one page — the notes FAB (gated on
   // notes_access, not a page) is reachable from the shell regardless of which page is open, so
-  // every role needs this key the same way every role needs the activity log.
-  const keys = new Set(['activityLog','personalNotes']);
+  // every role needs this key the same way every role needs the activity log. loginHistory used
+  // to only come along with the Settings page (where it's viewed), but every role writes to it
+  // the moment they sign in (logLoginEvent(), called unconditionally on login) — a role without
+  // Settings access still needs to record its OWN login, it just can't see the full company-wide
+  // log afterward. Confirmed as a real "Could not save loginHistory" toast on every login for any
+  // role lacking Settings.
+  const keys = new Set(['activityLog','personalNotes','loginHistory']);
   pages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
   return [...keys];
 }

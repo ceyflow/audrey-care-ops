@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022102547">
+<meta name="app-build" content="20261022103634">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -610,13 +610,11 @@ html{ visibility:hidden; }
   .board-stage-tab{flex:1;min-width:0;text-align:center;padding:9px 4px;border-radius:9px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .board-stage-tab.active{background:#fff;box-shadow:0 1px 3px rgba(20,25,20,.1);}
   @media (max-width:760px){
-    /* Only the Orders board has a dedicated .board-mobile replacement (the stage-tabs view
-       below) to swap in here — R&D's product board reuses this same .board/.column styling but
-       has no mobile alternative of its own, so blanket-hiding every .board on phones left it with
-       nothing in its place at all: a completely empty page, not just an awkward one. Scoped so
-       Orders still gets its swap and R&D instead falls back to the horizontal-scroll columns the
-       @media(max-width:1150px) rule above already provides. */
-    .board:not(.rnd-board){display:none;}
+    /* R&D's product board (renderRndBoardMobile()) now renders its own .board-mobile stage-tabs
+       view too, the same pattern Orders/Packing already use — so it swaps out here exactly like
+       theirs does, instead of the horizontal-scroll fallback this used briefly before that
+       existed. */
+    .board{display:none;}
     .board-mobile{display:block;}
   }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
@@ -7235,13 +7233,13 @@ function renderNotesFab(){
       ${next ? `
       <div class="notes-next-card" style="animation-delay:50ms;">
         <div class="notes-eyebrow">Next up</div>
-        <div class="notes-next-text">${esc(next.text)}</div>
+        <div class="notes-next-text">${esc(unbr(next.text))}</div>
         <div class="notes-next-when">${esc(formatNoteWhen(next.remindAt))}</div>
       </div>` : ''}
       ${notes.length ? notes.map((n,i)=>{ const c = n.color||NOTE_COLOR_PALETTE[0]; return `
       <div class="notes-row" style="animation-delay:${90+i*55}ms;background:color-mix(in srgb, ${escAttr(c)} 16%, white);border-left:3px solid ${escAttr(c)};">
         <div class="notes-row-text">
-          ${esc(n.text)}
+          ${esc(unbr(n.text))}
           ${n.remindAt ? `<div class="notes-row-when">${esc(formatNoteWhen(n.remindAt))}</div>` : ''}
         </div>
         <button type="button" class="notes-row-edit" data-edit-note="${n.id}" title="Edit" aria-label="Edit note">${icon('edit')}</button>
@@ -7254,7 +7252,7 @@ function renderNotesFab(){
           <span>Editing note</span>
           <button type="button" id="btn-cancel-edit-note">Cancel</button>
         </div>` : ''}
-        <textarea id="note-compose-text" placeholder="Type a note…">${esc(draft.text)}</textarea>
+        <textarea id="note-compose-text" placeholder="Type a note…">${escBody(unbr(draft.text))}</textarea>
         <button type="button" class="notes-dt-trigger ${(draft.date && draft.time)?'has-value':''}" id="btn-open-note-dt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           <span>${(draft.date && draft.time) ? esc(formatNoteWhen(`${draft.date}T${draft.time}`)) : 'Set a reminder (optional)'}</span>
@@ -7352,7 +7350,7 @@ function renderDueNoteAlert(){
     <div class="notes-due-card">
       <div class="notes-due-dot" style="background:${escAttr(n.color||NOTE_COLOR_PALETTE[0])}">${icon('bell')}</div>
       <div style="font-weight:700;font-size:15px;margin-bottom:6px;">Reminder</div>
-      <div style="font-size:13.5px;color:var(--ink);margin-bottom:20px;line-height:1.5;">${esc(n.text)}</div>
+      <div style="font-size:13.5px;color:var(--ink);margin-bottom:20px;line-height:1.5;">${esc(unbr(n.text))}</div>
       <button type="button" class="btn btn-primary" id="btn-dismiss-due-note" style="width:100%;">Got it</button>
     </div>
   </div>`;
@@ -8071,7 +8069,8 @@ function renderRndPage(){
   ` : `
   <div class="board rnd-board">
     ${RND_STAGES.slice(0,-1).map((stageName,i)=>renderRndColumn(stageName,i)).join('')}
-  </div>`)}
+  </div>
+  ${renderRndBoardMobile()}`)}
   `;
 }
 function renderRndColumn(stageName, i){
@@ -8083,6 +8082,27 @@ function renderRndColumn(stageName, i){
       <span class="name">${stageName}</span><span class="count">${projects.length}</span>
     </div>
     <div class="column-body" data-rnd-stage="${i}">
+      ${projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join('')}
+    </div>
+  </div>`;
+}
+// Phone-width counterpart to the .board grid above, same pattern renderBoardMobile() already
+// uses for Orders/Packing's board: a tab per stage (with its own count) and just that one
+// stage's cards below, instead of columns you scroll sideways through.
+function renderRndBoardMobile(){
+  const activeIdx = state._rndBoardMobileStage || 0;
+  const projects = state.rndProjects.filter(p=>p.stage===activeIdx).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  return `
+  <div class="board-mobile">
+    <div class="board-stage-tabs">
+      ${RND_STAGES.slice(0,-1).map((stageName,i)=>{
+        const key = RND_STAGE_KEYS[i]; const style = RND_STAGE_STYLE[key];
+        const count = state.rndProjects.filter(p=>p.stage===i).length;
+        const on = i===activeIdx;
+        return `<button type="button" class="board-stage-tab ${on?'active':''}" data-rnd-mobile-tab-stage="${i}" style="${on?`color:${style.c};`:''}">${esc(stageName)} · ${count}</button>`;
+      }).join('')}
+    </div>
+    <div class="column-body" data-rnd-stage="${activeIdx}">
       ${projects.length===0 ? `<div class="empty-col">Nothing here</div>` : projects.map(p=>renderRndCard(p)).join('')}
     </div>
   </div>`;
@@ -14896,6 +14916,10 @@ function attachShellHandlers(){
     state._boardMobileStage[btn.dataset.boardTabCourier] = parseInt(btn.dataset.boardTabStage, 10);
     render();
   }));
+  document.querySelectorAll('[data-rnd-mobile-tab-stage]').forEach(btn=>btn.addEventListener('click', ()=>{
+    state._rndBoardMobileStage = parseInt(btn.dataset.rndMobileTabStage, 10);
+    render();
+  }));
 
   // Drag-and-drop for kanban cards. Orders board dragging is opt-in (Settings → SMS settings →
   // Kanban drag & drop) — off by default so a card can't be bumped to the wrong stage by accident.
@@ -16667,6 +16691,24 @@ if('serviceWorker' in navigator){
     setInterval(checkForUpdate, 5 * 60 * 1000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') checkForUpdate(); });
   });
+})();
+
+// ===================== Lock out pinch/double-tap zoom on mobile browsers =====================
+// The viewport meta's user-scalable=no/maximum-scale=1 (see <head>) already blocks zoom on most
+// mobile browsers, but iOS Safari has deliberately ignored that meta tag since iOS 10 (an
+// accessibility decision, not a bug) — so on iPhone/iPad a visitor can still pinch-zoom or
+// double-tap-zoom the layout out of shape. This is the standard belt-and-suspenders JS fix:
+// gesturestart is a Safari-only event fired at the start of a pinch; suppressing it, plus
+// treating two taps under 300ms apart as a double-tap-zoom attempt, closes the gap everywhere
+// the meta tag alone can't reach.
+(function(){
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if(now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, {passive:false});
 })();
 </script>
 </body>

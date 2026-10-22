@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022173646">
+<meta name="app-build" content="20261022174753">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2077,8 +2077,7 @@ async function importOutstandingCsv(file){
   const dataRows = rows.slice(1);
   const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
   const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-  const normPhone = s => String(s||'').replace(/\D/g,'');
-  let updated = 0, notFound = 0, skipped = 0;
+  let updated = 0, added = 0, skipped = 0;
   dataRows.forEach(r=>{
     const name = cell(r, nameIdx), phone = cell(r, phoneIdx);
     const amount = Number(cell(r, amountIdx).replace(/[^0-9.]/g,'')) || 0;
@@ -2086,18 +2085,31 @@ async function importOutstandingCsv(file){
     if(!name && !phone){ skipped++; return; }
     const nPhone = normPhone(phone), nName = normName(name);
     const match = (nPhone && state.customers.find(c=>normPhone(c.phone)===nPhone)) || (nName && state.customers.find(c=>normName(c.name)===nName));
-    if(!match){ notFound++; return; }
-    match.outstandingAmount = amount;
-    if(dueDate) match.outstandingDueDate = dueDate;
-    updated++;
+    if(match){
+      match.outstandingAmount = amount;
+      if(dueDate) match.outstandingDueDate = dueDate;
+      updated++;
+    } else {
+      // Not every debtor is necessarily already in the Customers list — this reminder run may be
+      // the first the business has ever recorded them. Rather than requiring them to be added by
+      // hand first, the CSV row itself is enough: it becomes a real (lightweight) customer record,
+      // the same one any other screen in the app would show and let you build on later.
+      state.customers.unshift({
+        id: uid('CUS'), name: name || phone, phone, address: '', salesman: null, cityArea: '', email: '',
+        type: 'Individual', status: 'Active', createdAt: new Date().toISOString(),
+        outstandingAmount: amount, outstandingDueDate: dueDate,
+      });
+      added++;
+    }
   });
-  if(updated>0) await save('customers');
+  if(updated>0 || added>0) await save('customers');
   render();
-  if(updated>0) logActivity(`Imported outstanding amounts for ${updated} customer${updated===1?'':'s'} from CSV`);
+  if(updated>0 || added>0) logActivity(`Imported outstanding amounts from CSV — ${updated} existing customer${updated===1?'':'s'} updated, ${added} new added`);
   const notes = [];
-  if(notFound) notes.push(`${notFound} not found — add them as customers first`);
+  if(updated) notes.push(`${updated} existing updated`);
+  if(added) notes.push(`${added} new added`);
   if(skipped) notes.push(`skipped ${skipped} with no name or phone`);
-  showToast(`Updated ${updated} customer${updated===1?'':'s'}${notes.length?`, ${notes.join(', ')}`:''}`, 8000);
+  showToast(notes.length ? `Imported — ${notes.join(', ')}` : 'Nothing to import', 8000);
 }
 function markOutstandingPaid(id){
   const c = byId(state.customers, id); if(!c) return;
@@ -4508,6 +4520,18 @@ function parseFlexibleDate(str){
   const t = Date.parse(str);
   return isNaN(t) ? null : new Date(t).toISOString();
 }
+// Sri Lankan mobile numbers show up written as 0772227915, 772227915, +94772227915 or 94772227915
+// — all the same number. CSV matching (customers, suppliers, outstanding-balance import) needs to
+// treat them as equal, or a row whose phone is formatted differently than what's already on file
+// reports "not found" (or, for de-duplication, lets an actual duplicate in) instead of recognizing
+// the match. Length-gated rather than a blind prefix strip, so a short/malformed number that
+// merely happens to start with "0" or "94" isn't miscut.
+function normPhone(s){
+  let d = String(s||'').replace(/\D/g,'');
+  if(d.length===11 && d.startsWith('94')) d = d.slice(2);
+  else if(d.length===10 && d.startsWith('0')) d = d.slice(1);
+  return d;
+}
 function fmtTimeOnly(iso){ return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
 function isToday(iso){
   if(!iso) return false;
@@ -5924,7 +5948,6 @@ async function importCustomersCsv(file){
   // (or an overlapping one) never creates duplicates. Matched by name or phone, whichever
   // is present — either one being the same customer is enough to count as a duplicate.
   const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-  const normPhone = s => String(s||'').replace(/\D/g,'');
   const existingNames = new Set(state.customers.map(c=>normName(c.name)));
   const existingPhones = new Set(state.customers.map(c=>normPhone(c.phone)).filter(Boolean));
   let added = 0, skipped = 0, duplicates = 0;
@@ -6015,7 +6038,6 @@ async function importSuppliersCsv(file){
   // Skip rows that match a supplier already in the list, so re-importing the same file
   // (or an overlapping one) never creates duplicates.
   const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-  const normPhone = s => String(s||'').replace(/\D/g,'');
   const existingNames = new Set(state.suppliers.map(s=>normName(s.name)));
   const existingPhones = new Set(state.suppliers.map(s=>normPhone(s.phone)).filter(Boolean));
   const existingVendorIds = new Set(state.suppliers.map(s=>normName(s.vendorId)).filter(Boolean));
@@ -9336,7 +9358,7 @@ function renderBulkSmsOutstandingTab(){
       </div>
     </div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">A CSV with columns for name, contact number, due amount and (optionally) due date updates each matching customer — customers not already in your list are skipped, with a count shown after import.</div>
+      <div class="hint" style="margin-bottom:12px;">A CSV with columns for name, contact number, due amount and (optionally) due date updates each matching customer — anyone not already in your customer list is added as a new one, so every name in the file gets a personalized reminder either way.</div>
       ${owing.length===0 ? `<div class="empty-state">No customers currently have an outstanding amount set. Import a CSV, or add one from a customer's Edit screen.</div>` : `
       <div class="field">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">

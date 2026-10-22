@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022190445">
+<meta name="app-build" content="20261022191132">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -237,7 +237,7 @@ html{ visibility:hidden; }
   /* ---------------- Stat cards ---------------- */
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:0 1px 2px rgba(20,25,20,.04), 0 8px 20px rgba(20,25,20,.05);transition:transform .18s ease,box-shadow .18s ease;}
-  .stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(20,25,20,.08);}
+  .stat-card:hover{box-shadow:0 10px 22px rgba(20,25,20,.08);}
   .stat-card .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
   .stat-card .value{font-size:24px;font-weight:600;}
   .stat-card .value.accent{color:var(--accent-dark);}
@@ -477,7 +477,7 @@ html{ visibility:hidden; }
   .landing-section-title{font-size:14.5px;font-weight:700;color:var(--ink);padding-bottom:9px;border-bottom:1px solid var(--border);margin-bottom:14px;}
   .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
   .landing-card{position:relative;display:flex;align-items:center;gap:8px;background:var(--accent-grad);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
-  .landing-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(var(--accent-rgb),.28);}
+  .landing-card:hover{box-shadow:0 10px 24px rgba(var(--accent-rgb),.28);}
   .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(var(--accent-rgb),.28);}
   .landing-card svg{width:15px;height:15px;flex-shrink:0;}
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
@@ -957,7 +957,7 @@ html{ visibility:hidden; }
 
   /* ---------------- Recipes / batch timer ---------------- */
   .recipe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(20,25,20,.06);transition:box-shadow .18s ease,transform .18s ease,border-color .15s;}
-  .recipe-card:hover{box-shadow:0 10px 24px rgba(20,25,20,.12);transform:translateY(-3px);border-color:var(--accent);}
+  .recipe-card:hover{box-shadow:0 10px 24px rgba(20,25,20,.12);border-color:var(--accent);}
   .recipe-card .rc-title{font-weight:600;font-size:14.5px;}
   .recipe-card .rc-meta{font-size:12px;color:var(--muted);}
   .recipe-card.clickable-card:hover{background:var(--accent-soft);}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022183208">
+<meta name="app-build" content="20261022184254">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3806,8 +3806,11 @@ async function _fetchSyncedKeys(){
 // first runs — incognito is just the one case that can never have that head start.
 // knownAuthenticated skips the extra "wait for a session to confirm it's really there" dance —
 // pass true when called right after a login call already succeeded.
-async function refreshAppData(knownAuthenticated){
-  let loadedValues = await _fetchSyncedKeys();
+// The retry-on-empty / state-assignment / logged-out-cache-refresh logic refreshAppData() does
+// after its own fetch — split out so a caller that already has a fresh SYNCED_KEYS result in hand
+// (see confirmLoginV2's parallel profile+data fetch) can apply it directly without fetching all
+// over again just to reach this part.
+async function _applySyncedKeysFetch(loadedValues, knownAuthenticated){
   if(knownAuthenticated){
     const sentinelKeys = ['orders','customers','staff'];
     const looksEmpty = () => sentinelKeys.every(k=>{ const v = loadedValues[SYNCED_KEYS.indexOf(k)]; return !v || (Array.isArray(v) && v.length===0); });
@@ -3832,6 +3835,10 @@ async function refreshAppData(knownAuthenticated){
     if(loadedValues[SYNCED_KEYS.indexOf('loginCustomization')] != null) _cacheLoginCustomizationForLoggedOutView();
   }
   return loadedValues;
+}
+async function refreshAppData(knownAuthenticated){
+  const loadedValues = await _fetchSyncedKeys();
+  return _applySyncedKeysFetch(loadedValues, knownAuthenticated);
 }
 // Fetches a DEFERRED_KEY the first time it's actually needed (see performGoTo) instead of on
 // every login/refresh. Sets the baseline the same way loadAll() does for every other key, so
@@ -4889,13 +4896,21 @@ async function confirmLoginV2(){
   // re-saved: that account's profiles.role never matched what Settings said it should be.
   // Self-heal it here, right after sign-in: this request is authenticated as this exact person, so
   // it can correct its own profile row the same way any ordinary "update your own profile" policy
-  // already allows — no elevated access needed — and it runs before the data fetch below that
-  // depends on it, so a stale role gets fixed before this same login ever uses it.
-  const profile = await supabaseFetchProfile(res.userId);
+  // already allows — no elevated access needed.
+  //
+  // The profile check and the main data fetch below don't actually depend on each other — only on
+  // the fix itself, which is the rare case (once per person, right after Admin changes their
+  // Access level; never again after). So they run in parallel rather than one after the other,
+  // keeping login down to two round trips instead of three whenever the role's already correct —
+  // the data fetch only has to be redone, sequentially, in the rare case it isn't (that fetch ran
+  // under the OLD role's RLS visibility before the fix landed, so it can't be trusted).
   const sessionRole = role;
+  const [profile, parallelLoadedValues] = await Promise.all([ supabaseFetchProfile(res.userId), _fetchSyncedKeys() ]);
+  let roleWasStale = false;
   if(profile && profile.role !== sessionRole){
     const { error: roleFixError } = await supabaseClient.from('profiles').update({role: sessionRole}).eq('id', res.userId);
     if(roleFixError) console.error('profiles.role self-heal failed', roleFixError);
+    roleWasStale = true;
   }
   const sessionName = (profile && profile.staff_name) || typedName;
   state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null};
@@ -4912,7 +4927,8 @@ async function confirmLoginV2(){
   // the fix for the incognito-dashboard-shows-zero-orders bug: that scenario is guaranteed to
   // have no pre-existing session, so loadAll()'s one and only fetch always ran unauthenticated,
   // and nothing used to ever re-fetch after the login that followed it.
-  await refreshAppData(true);
+  if(roleWasStale) await refreshAppData(true);
+  else await _applySyncedKeysFetch(parallelLoadedValues, true);
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();

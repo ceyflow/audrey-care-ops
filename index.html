@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022101101">
+<meta name="app-build" content="20261022102547">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -610,7 +610,13 @@ html{ visibility:hidden; }
   .board-stage-tab{flex:1;min-width:0;text-align:center;padding:9px 4px;border-radius:9px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .board-stage-tab.active{background:#fff;box-shadow:0 1px 3px rgba(20,25,20,.1);}
   @media (max-width:760px){
-    .board{display:none;}
+    /* Only the Orders board has a dedicated .board-mobile replacement (the stage-tabs view
+       below) to swap in here — R&D's product board reuses this same .board/.column styling but
+       has no mobile alternative of its own, so blanket-hiding every .board on phones left it with
+       nothing in its place at all: a completely empty page, not just an awkward one. Scoped so
+       Orders still gets its swap and R&D instead falls back to the horizontal-scroll columns the
+       @media(max-width:1150px) rule above already provides. */
+    .board:not(.rnd-board){display:none;}
     .board-mobile{display:block;}
   }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
@@ -8063,7 +8069,7 @@ function renderRndPage(){
       ${!isAdmin() ? `<div class="hint" style="margin-top:14px;max-width:360px;">Expecting to see products someone else already added? The database only shows this role what Settings → User roles has granted it — ask your Admin to open this role there and click Save again (even if nothing looks changed), so its access is pushed through.</div>` : ''}
     </div>
   ` : `
-  <div class="board">
+  <div class="board rnd-board">
     ${RND_STAGES.slice(0,-1).map((stageName,i)=>renderRndColumn(stageName,i)).join('')}
   </div>`)}
   `;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261023132616">
+<meta name="app-build" content="20261023132732">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -14174,6 +14174,7 @@ function renderOrderDrawer(id){
 
       <div class="modal-actions" style="justify-content:space-between;">
         <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm" data-copy-order-track-link="${escAttr(o.id)}" title="Copy a link the customer can open to see this order's live status, to send however you like">🔗 Copy tracking link</button>
           ${role && roleCan(role, 'orders_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-order">Delete</button>` : ''}
           ${role && roleCan(role, 'orders_archive_now') && o.stage===STAGES.length-1 && !o.archived ? `<button type="button" class="btn" id="btn-archive-order-now" title="Move straight to Order Inquiry without waiting for the automatic 2-hour sweep">Archive now</button>` : ''}
         </div>
@@ -16680,6 +16681,11 @@ function attachShellHandlers(){
   if(byIdEl('btn-sms-confirm-no')) byIdEl('btn-sms-confirm-no').onclick = ()=>closeModal();
   if(byIdEl('btn-delete-order')) byIdEl('btn-delete-order').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteOrder(id); };
   if(byIdEl('btn-archive-order-now')) byIdEl('btn-archive-order-now').onclick = ()=>{ const id=state.modal.split(':')[1]; archiveOrderNow(id); };
+  document.querySelectorAll('[data-copy-order-track-link]').forEach(b=>b.addEventListener('click', async ()=>{
+    const link = orderTrackLink(b.dataset.copyOrderTrackLink);
+    try{ await navigator.clipboard.writeText(link); showToast('Tracking link copied'); }
+    catch(e){ showToast('Copy failed — link: '+link); }
+  }));
   if(byIdEl('form-order-edit')) byIdEl('form-order-edit').addEventListener('submit', submitOrderEdit);
   if(byIdEl('btn-copy-board-link')) byIdEl('btn-copy-board-link').onclick = async ()=>{
     const link = location.origin + location.pathname + '#board';

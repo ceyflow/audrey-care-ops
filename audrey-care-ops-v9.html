@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261023131859">
+<meta name="app-build" content="20261023132616">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1351,6 +1351,7 @@ html{ visibility:hidden; }
   .cob-row:last-child{border-bottom:none;}
   .cob-row-clickable{cursor:pointer;transition:background-color .12s;}
   .cob-row-clickable:hover{background:var(--bg);}
+  .cob-row-locked{color:var(--muted);cursor:default;}
   .cob-empty{padding:20px 18px;text-align:center;color:var(--muted);font-size:12.5px;}
   .cob-updated{text-align:center;font-size:11.5px;color:var(--muted);margin-top:16px;display:flex;align-items:center;justify-content:center;gap:6px;}
 
@@ -7655,7 +7656,7 @@ const PAGE_META = {
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
   customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
-  ongoingorders:{title:'Ongoing orders', sub:'Track your own orders from received to delivered — view only.'},
+  ongoingorders:{title:'Ongoing orders', sub:'Every order in the pipeline — click to open only your own.'},
   blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, recipe library, or costing.'},
   blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
@@ -8143,23 +8144,21 @@ function renderCustomerCarePage(){
 }
 // Same 4-column board look as the public Orders Process board (renderOrdersProcessColumns) and
 // the Dashboard's own copy of it — reused here, not duplicated, via the shared .cob-* classes.
-// For anyone but Admin, filtered down to just the orders whose customer's Sales person matches
-// this account's own Employer code (see normEmployerCode/orderSalesmanFor) — that's the actual
-// link between the two fields the Admin sets up in Settings and Customers. Every row opens the
-// real order drawer, forced read-only by renderOrderDrawer's own state.page==='ongoingorders'
-// check, so a rep can look but never edit from here.
+// Shows every active order to everyone — the privacy boundary isn't which orders are visible,
+// it's which ones can be OPENED: a row only opens the real order drawer when its customer's Sales
+// person matches this account's own Employer code (see normEmployerCode/orderSalesmanFor), the
+// actual link between the two fields the Admin sets up in Settings and Customers. Every order
+// an owning rep opens is forced read-only by renderOrderDrawer's own state.page==='ongoingorders'
+// check, so they can look but never edit, even on their own orders.
 function renderOngoingOrdersPage(){
   const admin = isAdmin();
-  const myCode = state.session && state.session.employerCode;
-  if(!admin && !myCode){
-    return `<div class="empty-state">Your account doesn't have an Employer code set yet — ask your Admin to set one in Settings → User account setup (matching your Sales person code) so your orders show up here.</div>`;
-  }
-  const code = normEmployerCode(myCode);
-  const orders = admin ? activeOrders() : activeOrders().filter(o=>normEmployerCode(orderSalesmanFor(o))===code);
+  const code = normEmployerCode(state.session && state.session.employerCode);
+  const orders = activeOrders();
   return `
   <div class="panel">
-    <div class="panel-head"><h3>${admin ? 'All ongoing orders' : 'Your ongoing orders'}</h3></div>
+    <div class="panel-head"><h3>Ongoing orders</h3></div>
     <div class="panel-body">
+      ${(!admin && !code) ? `<div class="hint" style="margin-bottom:12px;">Your account doesn't have an Employer code set yet — ask your Admin to set one in Settings → User account setup (matching your Sales person code) so you can open your own orders below.</div>` : ''}
       <div class="cob-columns">
         ${STAGES.map((s,i)=>{
           const list = orders.filter(o=>o.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
@@ -8171,7 +8170,12 @@ function renderOngoingOrdersPage(){
               <span>${esc(s)}</span>
             </div>
             <div class="cob-col-body">
-              ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>`<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`).join('')}
+              ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>{
+                const mine = admin || (!!code && normEmployerCode(orderSalesmanFor(o))===code);
+                return mine
+                  ? `<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`
+                  : `<div class="cob-row cob-row-locked" title="Assigned to another sales person — you can only open your own orders">${esc(o.customer||o.orderNumber||o.id)}</div>`;
+              }).join('')}
             </div>
           </div>`;
         }).join('')}

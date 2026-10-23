@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261023124317">
+<meta name="app-build" content="20261023131859">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1349,6 +1349,8 @@ html{ visibility:hidden; }
   .cob-col-body{padding:6px 0;min-height:60px;}
   .cob-row{padding:11px 18px;border-bottom:1px solid var(--border);font-size:14px;}
   .cob-row:last-child{border-bottom:none;}
+  .cob-row-clickable{cursor:pointer;transition:background-color .12s;}
+  .cob-row-clickable:hover{background:var(--bg);}
   .cob-empty{padding:20px 18px;text-align:center;color:var(--muted);font-size:12.5px;}
   .cob-updated{text-align:center;font-size:11.5px;color:var(--muted);margin-top:16px;display:flex;align-items:center;justify-content:center;gap:6px;}
 
@@ -2497,6 +2499,17 @@ function ordersOutsideLines(list){
 }
 const ORDER_ARCHIVE_AFTER_MS = 2*60*60*1000; // completed orders auto-archive 2 hours after pickup
 function activeOrders(){ return state.orders.filter(o=>!o.archived); }
+// Orders link to a customer by name only (no customerId field) — this is the one shared,
+// name-normalized lookup for "which salesperson owns this order", used by the Order Drawer's
+// hero chip and by the Ongoing orders view's own-orders filter, so both always agree.
+function orderSalesmanFor(o){
+  const c = state.customers.find(c=>c.name.trim().toLowerCase()===(o.customer||'').trim().toLowerCase());
+  return c && c.salesman;
+}
+// Employer code (User account setup) and Sales person (Customers) are meant to be the same short
+// code, entered by hand in two different places — normalized the same way phone/name matching
+// elsewhere in the app is, so "SA1 - PM" vs "sa1-pm " still count as the same code.
+function normEmployerCode(s){ return String(s||'').trim().toLowerCase().replace(/\s+/g,' '); }
 function archivedOrders(){ return state.orders.filter(o=>o.archived).sort((a,b)=>new Date(b.archivedAt||b.completedAt||0)-new Date(a.archivedAt||a.completedAt||0)); }
 function sweepCompletedOrders(){
   const lastStage = STAGES.length-1;
@@ -2547,7 +2560,7 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
   Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
   Packing: ['orders','stickerstock','chat'],
@@ -2557,7 +2570,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -2690,7 +2703,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 9;
+const PAGE_DATA_KEYS_VERSION = 10;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -2699,6 +2712,7 @@ const PAGE_DATA_KEYS = {
   orders: ['orders','deliveryLines','customers'],
   customercare: ['complaints'],
   orderinquiry: ['orders','customers','salesPersonColors'],
+  ongoingorders: ['orders','customers'],
   blendingdept: [],
   blending: ['blendBatches'],
   recipes: ['recipes','activeBatch','mixingStepTemplates'],
@@ -4249,6 +4263,18 @@ async function loadAll(){
     );
     kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill recipelibrary role page failed', e));
   }
+  // Same deal for the new Ongoing orders page: any role that can already reach the Customer Care
+  // hub should get it automatically, not require someone to go re-check a new box in Settings ->
+  // User roles before it works — a role's saved `pages` snapshot otherwise never picks up a page
+  // added to the hub after that role was last saved. Pure addition, safe to re-check every load.
+  if(state.userRoles.some(r=>Array.isArray(r.pages) && r.pages.includes('customercare') && !r.pages.includes('ongoingorders'))){
+    state.userRoles = state.userRoles.map(r=>
+      (Array.isArray(r.pages) && r.pages.includes('customercare') && !r.pages.includes('ongoingorders'))
+        ? {...r, pages:[...r.pages, 'ongoingorders']}
+        : r
+    );
+    kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill ongoingorders role page failed', e));
+  }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
     const SEED_STAFF = [
@@ -4960,7 +4986,10 @@ async function confirmLoginV2(){
     roleWasStale = true;
   }
   const sessionName = (profile && profile.staff_name) || typedName;
-  state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null};
+  // Employer code (User account setup) is how Ongoing orders (Customer Care) knows which orders
+  // are "theirs" — acctEntry was already looked up above (for the deactivated check) from the
+  // same secureAccounts roster this field lives on, by this same login name.
+  state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null, employerCode: (acctEntry && acctEntry.fullName) || null};
   state.page = (pagesForRole(sessionRole)||['dashboard'])[0] || 'dashboard';
   state._justLoggedIn = true;
   state.aiChat = [];
@@ -5001,7 +5030,7 @@ async function logOut(){
 }
 // These pages are only ever opened from their department hub's cards (Blending Department /
 // Customer Care) — mapped to that hub so Back can return there. See performGoTo/popstate below.
-const SUBPAGE_PARENT_HUB = { blending:'blendingdept', recipes:'blendingdept', recipelibrary:'blendingdept', costing:'blendingdept', orderinquiry:'customercare', complaints:'customercare' };
+const SUBPAGE_PARENT_HUB = { blending:'blendingdept', recipes:'blendingdept', recipelibrary:'blendingdept', costing:'blendingdept', orderinquiry:'customercare', complaints:'customercare', ongoingorders:'customercare' };
 function goTo(page){
   if(!pageAllowed(page)) return;
   if(state.page==='costing' && state._costingDirty){
@@ -7317,6 +7346,7 @@ const NAV = [
     {id:'customercare', label:'Customer Care', icon:'headset', children:[
       {id:'orderinquiry', label:'Order inquiry'},
       {id:'complaints', label:'Complaints'},
+      {id:'ongoingorders', label:'Ongoing orders'},
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
     {id:'suppliers', label:'Suppliers', icon:'suppliers'},
@@ -7625,6 +7655,7 @@ const PAGE_META = {
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
   customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
+  ongoingorders:{title:'Ongoing orders', sub:'Track your own orders from received to delivered — view only.'},
   blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, recipe library, or costing.'},
   blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
@@ -7801,6 +7832,7 @@ function renderPage(){
     case 'orders': return renderOrdersPage();
     case 'customercare': return renderCustomerCarePage();
     case 'orderinquiry': return renderOrderInquiryPage();
+    case 'ongoingorders': return renderOngoingOrdersPage();
     case 'ordersprocess': return renderOrdersProcessPage();
     case 'blendingdept': return renderBlendingDeptPage();
     case 'blending': return renderBlendingBoardPage();
@@ -8093,6 +8125,7 @@ function renderCustomerCarePage(){
   const cards = [
     {id:'orderinquiry', label:'Order inquiry', icon:'orders'},
     {id:'complaints', label:'Complaints', icon:'headset', badge: openComplaints || null},
+    {id:'ongoingorders', label:'Ongoing orders', icon:'list'},
   ].filter(c=>pageAllowed(c.id));
   return `
   <div class="landing-section">
@@ -8105,6 +8138,46 @@ function renderCustomerCarePage(){
         ${icon(c.icon)}<span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>`}
+  </div>
+  `;
+}
+// Same 4-column board look as the public Orders Process board (renderOrdersProcessColumns) and
+// the Dashboard's own copy of it — reused here, not duplicated, via the shared .cob-* classes.
+// For anyone but Admin, filtered down to just the orders whose customer's Sales person matches
+// this account's own Employer code (see normEmployerCode/orderSalesmanFor) — that's the actual
+// link between the two fields the Admin sets up in Settings and Customers. Every row opens the
+// real order drawer, forced read-only by renderOrderDrawer's own state.page==='ongoingorders'
+// check, so a rep can look but never edit from here.
+function renderOngoingOrdersPage(){
+  const admin = isAdmin();
+  const myCode = state.session && state.session.employerCode;
+  if(!admin && !myCode){
+    return `<div class="empty-state">Your account doesn't have an Employer code set yet — ask your Admin to set one in Settings → User account setup (matching your Sales person code) so your orders show up here.</div>`;
+  }
+  const code = normEmployerCode(myCode);
+  const orders = admin ? activeOrders() : activeOrders().filter(o=>normEmployerCode(orderSalesmanFor(o))===code);
+  return `
+  <div class="panel">
+    <div class="panel-head"><h3>${admin ? 'All ongoing orders' : 'Your ongoing orders'}</h3></div>
+    <div class="panel-body">
+      <div class="cob-columns">
+        ${STAGES.map((s,i)=>{
+          const list = orders.filter(o=>o.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+          const style = STAGE_STYLE[STAGE_KEYS[i]];
+          return `
+          <div class="cob-col">
+            <div class="cob-col-head" style="background:${style.bg};color:${style.c};">
+              <span class="cob-col-icon">${trackStageIcon(i)}</span>
+              <span>${esc(s)}</span>
+            </div>
+            <div class="cob-col-body">
+              ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>`<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="cob-updated"><span class="pulse-dot" style="background:var(--accent);"></span>Live — updates automatically</div>
+    </div>
   </div>
   `;
 }
@@ -10556,7 +10629,7 @@ function renderAddSecureAccountForm(){
   <div style="max-width:420px;">
     <div class="field"><label>User login</label><input id="add-acct-name" value="${escAttr(f.name)}" placeholder="What they type to sign in"></div>
     <div class="field"><label>Password</label><input type="password" id="add-acct-password" value="${escAttr(f.password)}" autocomplete="new-password"></div>
-    <div class="field"><label>Employer code</label><input id="add-acct-fullname" value="${escAttr(f.fullName)}"></div>
+    <div class="field"><label>Employer code <span class="hint">(match a customer's Sales person code to show this account only their own orders in Ongoing orders)</span></label><input id="add-acct-fullname" value="${escAttr(f.fullName)}"></div>
     <div class="field"><label>Access level</label>
       <select id="add-acct-role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${f.role===role?'selected':''}>${role}</option>`).join('')}</select>
     </div>
@@ -10699,7 +10772,7 @@ function editSecureAccountModal(){
       <div class="sub">User login: ${esc(name)} (can't be changed — it's what they sign in with)</div>
       <form id="form-edit-secure-account">
         <div class="field"><label>Password</label><input type="password" value="••••••••" disabled></div>
-        <div class="field"><label>Employer code</label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
+        <div class="field"><label>Employer code <span class="hint">(match a customer's Sales person code to show this account only their own orders in Ongoing orders)</span></label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
         <div class="field"><label>Access level</label>
           <select name="role">${[...new Set([current.role, ...secureAccountRoleNames()])].map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>
@@ -14017,20 +14090,18 @@ function newOrderModal(presetCourier){
 function renderOrderDrawer(id){
   const o = byId(state.orders,id); if(!o) return '';
   const key = STAGE_KEYS[o.stage]; const style = STAGE_STYLE[key];
-  // Orders link to a customer by name only (no customerId field) — same name-normalized lookup
-  // used everywhere else a customer's salesman shows up (Order inquiry, customerFormModal).
-  const orderSalesman = (()=>{
-    const c = state.customers.find(c=>c.name.trim().toLowerCase()===(o.customer||'').trim().toLowerCase());
-    return c && c.salesman;
-  })();
+  const orderSalesman = orderSalesmanFor(o);
   const canAdv = canAdvance(o.stage);
   const priority = o.priority || 'Medium';
   const role = state.session && state.session.role;
   const canEditFull = !!role && roleCan(role, 'orders_edit_full');
   const canEditTrackingOnly = !!role && roleCan(role, 'orders_edit_tracking_only');
   // Archived orders (2h+ after pickup, shown in Order inquiry) are view-only for roles without
-  // full edit rights; a role with full edit rights can still edit and save.
-  const ro = !canEditFull;
+  // full edit rights; a role with full edit rights can still edit and save. Also forced read-only
+  // whenever this was opened from the Ongoing orders view (Customer Care): that page's whole
+  // purpose is giving a sales rep visibility into their own orders' status, never editing — true
+  // no matter what orders_edit_full happens to be set to for their role elsewhere.
+  const ro = !canEditFull || state.page === 'ongoingorders';
   const roAttr = ro ? 'readonly' : '';
   const roDis = ro ? 'disabled' : '';
   // A role with just the tracking-only permission (e.g. Packing/Dispatch, who marks orders picked

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261022193423">
+<meta name="app-build" content="20261023124317">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -10486,7 +10486,7 @@ function renderSecureAccountsPanel(){
         <div class="stat-card"><div class="label">Haven't signed in 2+ days</div><div class="value ${staleCount?'danger':''}"><span class="stat-num" data-target="${staleCount}">${staleCount}</span></div></div>
       </div>
       <table class="data-table secure-accounts-table" style="margin-bottom:14px;">
-        <thead><tr><th style="width:24px;"></th><th>User login</th><th>Full name</th><th>Access level</th><th>Last visit</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th style="width:24px;"></th><th>User login</th><th>Employer code</th><th>Access level</th><th>Last visit</th><th>Status</th><th></th></tr></thead>
         <tbody>
           ${accounts.map(r=>{
             const last = lastVisitForLoginName(r.name);
@@ -10556,7 +10556,7 @@ function renderAddSecureAccountForm(){
   <div style="max-width:420px;">
     <div class="field"><label>User login</label><input id="add-acct-name" value="${escAttr(f.name)}" placeholder="What they type to sign in"></div>
     <div class="field"><label>Password</label><input type="password" id="add-acct-password" value="${escAttr(f.password)}" autocomplete="new-password"></div>
-    <div class="field"><label>Full name</label><input id="add-acct-fullname" value="${escAttr(f.fullName)}"></div>
+    <div class="field"><label>Employer code</label><input id="add-acct-fullname" value="${escAttr(f.fullName)}"></div>
     <div class="field"><label>Access level</label>
       <select id="add-acct-role">${secureAccountRoleNames().map(role=>`<option value="${role}" ${f.role===role?'selected':''}>${role}</option>`).join('')}</select>
     </div>
@@ -10699,7 +10699,7 @@ function editSecureAccountModal(){
       <div class="sub">User login: ${esc(name)} (can't be changed — it's what they sign in with)</div>
       <form id="form-edit-secure-account">
         <div class="field"><label>Password</label><input type="password" value="••••••••" disabled></div>
-        <div class="field"><label>Full name</label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
+        <div class="field"><label>Employer code</label><input name="fullName" value="${escAttr(current.fullName||'')}"></div>
         <div class="field"><label>Access level</label>
           <select name="role">${[...new Set([current.role, ...secureAccountRoleNames()])].map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>

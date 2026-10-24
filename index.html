@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261024233041">
+<meta name="app-build" content="20261024233618">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -885,7 +885,15 @@ html{ visibility:hidden; }
        everything inside it: inputs, the Log in button) ran off the right edge of the screen. That
        was the real "not fitted, can't see the image" complaint — the background photo itself was
        fine, it's that the sign-in card sitting on top of it was wider than the viewport. */
-    .login-panel{position:relative;z-index:2;width:100%;min-height:100dvh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;}
+    /* backdrop-filter:blur(40px) on the desktop rule above is scoped correctly there — a narrow
+       440px right-edge strip — but this override never reset it, so once .login-panel becomes
+       full-width and full-height here, that same 40px blur sampled everything behind it across
+       the ENTIRE screen: the whole photo, not just the area behind the visible glass card. This
+       is what actually made the mobile photo look soft/out-of-focus, separately from the
+       background-position bug fixed above — the stored photo was never low-resolution. The real
+       glass effect on mobile already lives on .login-panel-inner (backdrop-filter:blur(22px),
+       scoped to just the visible card at the bottom), so the outer .login-panel needs none. */
+    .login-panel{position:relative;z-index:2;width:100%;min-height:100dvh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;backdrop-filter:none;-webkit-backdrop-filter:none;}
     .login-panel .login-blob{display:none;}
     .login-panel-inner{
       width:100%;max-width:none;

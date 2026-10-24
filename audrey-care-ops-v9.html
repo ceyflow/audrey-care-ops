@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261024123705">
+<meta name="app-build" content="20261024233041">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -798,7 +798,17 @@ html{ visibility:hidden; }
       radial-gradient(ellipse 100% 80% at 110% 115%, color-mix(in srgb,var(--accent-dark) 70%,transparent) 0%, transparent 60%),
       linear-gradient(155deg, var(--accent-dark) 0%, var(--accent) 58%, color-mix(in srgb,var(--accent) 65%,#F6C97A 35%) 100%);
     background-size: cover, cover, cover, cover;
-    background-position: center, inherit, inherit, inherit;
+    /* A single value here applies to every background layer — the gradients don't actually care
+       since each positions itself via its own "at X% Y%", only the photo layer needs this. This
+       used to be "center, inherit, inherit, inherit": inherit is a CSS-wide keyword and is invalid
+       mixed into one value of a comma-separated multi-layer list, so the browser threw out the
+       WHOLE background-position declaration as invalid and fell back to its default, 0% 0% (top
+       left) — not "center" as every comment here assumed. Invisible on desktop, where cover
+       already fills the wide pane close enough to edge-to-edge that the wrong anchor barely
+       shows; glaring on mobile, where contain leaves the photo small enough that a top-left
+       anchor pins it to one corner instead of centering it — this was the actual root cause of
+       the "photo only shows a sliver at the top, cut off" mobile bug, not background-size at all. */
+    background-position: center;
     background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
   }
   .login-illustration-logo{height:100px;width:auto;max-width:none;display:block;align-self:flex-start;flex:0 0 auto;position:relative;z-index:1;filter:brightness(0) invert(1);opacity:.95;object-fit:contain;}

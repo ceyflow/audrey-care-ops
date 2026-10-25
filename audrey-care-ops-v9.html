@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261025181530">
+<meta name="app-build" content="20261025183138">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -654,10 +654,6 @@ html{ visibility:hidden; }
   .card:hover{border-color:var(--accent);box-shadow:0 10px 22px rgba(20,25,20,.1);}
   .card.dragging{opacity:.45;}
   .column-body.drag-over{background:var(--accent-soft);border-radius:8px;}
-  /* R&D board touch drag (phones) — a floating clone that follows the finger, plus a dashed
-     placeholder marking where the card will land if released right now. */
-  .rnd-touch-ghost{box-shadow:0 10px 24px rgba(20,25,20,.28);opacity:.95;transform:scale(1.03);pointer-events:none;margin:0;}
-  .rnd-touch-placeholder{border:2px dashed var(--accent);border-radius:8px;background:var(--accent-soft);}
   .nav-order-list{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
   .nav-order-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13.5px;font-weight:500;cursor:grab;transition:opacity .15s,border-color .15s;}
   .nav-order-row:hover{border-color:var(--accent);}
@@ -15075,179 +15071,6 @@ function mountDallyOrbs(){
     _dallyOrbInstances[id] = lottie.loadAnimation({ container: el, renderer:'svg', loop:true, autoplay:true, path: DALLY_ORB_JSON });
   });
 }
-// R&D board — touch drag-and-drop. Phones never fire the native HTML5 dragstart/dragover/drop
-// events the desktop board's cardDragAfterElement-based reordering relies on (that API only
-// answers to a mouse) — a product card on a phone looked draggable (cursor:grab, draggable="true")
-// but dragging it never did anything. This reimplements the same reorder-within-a-column /
-// move-to-a-different-stage behavior on top of raw touch events instead, scoped to the mobile
-// tab-board layout only (desktop keeps using native drag; a touchscreen laptop at desktop width
-// still gets the existing mouse-drag behavior, untouched).
-//
-// Since the mobile board shows only one stage's column at a time (a tab row, not side-by-side
-// columns), "dragging to another stage" means dragging onto that stage's tab and holding there —
-// a short dwell switches the visible column while the card is still being carried, same as
-// hovering a folder in a file manager. A quick tap still opens the product's drawer (we never
-// preventDefault unless a drag has actually engaged), and a fast swipe is left alone to scroll
-// the page — dragging only "engages" after a short press-and-hold with the finger roughly still.
-let _rndTouch = null;
-function initRndTouchDrag(){
-  if(!window.matchMedia('(max-width:760px)').matches) return;
-  document.querySelectorAll('.card[data-rnd]').forEach(card=>{
-    if(card.getAttribute('draggable')!=='true') return;
-    card.addEventListener('touchstart', e=>rndTouchStart(e, card), {passive:true});
-  });
-}
-function rndTouchStart(e, card){
-  if(e.touches.length!==1 || _rndTouch) return;
-  const t = e.touches[0];
-  _rndTouch = {
-    id: card.dataset.rnd, card,
-    startX: t.clientX, startY: t.clientY,
-    dragging: false, ghost:null, placeholder:null, currentCol:null, currentStage:null,
-    hoverTabStage:null, hoverTabTimer:null,
-  };
-  _rndTouch.longPressTimer = setTimeout(()=>rndTouchEngage(t.clientX, t.clientY), 160);
-  _rndTouch.moveHandler = e2=>rndTouchMove(e2);
-  _rndTouch.endHandler = e2=>rndTouchEnd(e2);
-  _rndTouch.cancelHandler = ()=>rndTouchCancel();
-  document.addEventListener('touchmove', _rndTouch.moveHandler, {passive:false});
-  document.addEventListener('touchend', _rndTouch.endHandler, {passive:false});
-  document.addEventListener('touchcancel', _rndTouch.cancelHandler, {passive:true});
-}
-function rndTouchEngage(x,y){
-  if(!_rndTouch || _rndTouch.dragging) return;
-  _rndTouch.dragging = true;
-  const card = _rndTouch.card;
-  const rect = card.getBoundingClientRect();
-  _rndTouch.offsetX = x-rect.left; _rndTouch.offsetY = y-rect.top;
-  const ghost = card.cloneNode(true);
-  ghost.classList.add('rnd-touch-ghost');
-  ghost.removeAttribute('id');
-  ghost.style.position='fixed'; ghost.style.left=rect.left+'px'; ghost.style.top=rect.top+'px';
-  ghost.style.width=rect.width+'px'; ghost.style.zIndex='9999';
-  document.body.appendChild(ghost);
-  _rndTouch.ghost = ghost;
-  const col = card.closest('.column-body[data-rnd-stage]');
-  const emptyEl = col.querySelector('.empty-col'); if(emptyEl) emptyEl.remove();
-  const placeholder = document.createElement('div');
-  placeholder.className = 'rnd-touch-placeholder';
-  placeholder.style.height = rect.height+'px';
-  col.insertBefore(placeholder, card);
-  card.style.display = 'none';
-  col.classList.add('drag-over');
-  _rndTouch.placeholder = placeholder;
-  _rndTouch.currentCol = col;
-  _rndTouch.currentStage = parseInt(col.dataset.rndStage, 10);
-  if(navigator.vibrate) navigator.vibrate(8);
-}
-function rndTouchMove(e){
-  if(!_rndTouch) return;
-  const t = e.touches[0];
-  const dx = t.clientX-_rndTouch.startX, dy = t.clientY-_rndTouch.startY;
-  if(!_rndTouch.dragging){
-    // Moved more than a few px before the press-and-hold threshold fired — that's a scroll
-    // swipe, not a drag. Back off entirely so the page scrolls normally.
-    if(Math.hypot(dx,dy) > 10){ clearTimeout(_rndTouch.longPressTimer); rndTouchTeardownListeners(); _rndTouch = null; }
-    return;
-  }
-  e.preventDefault();
-  _rndTouch.ghost.style.left = (t.clientX-_rndTouch.offsetX)+'px';
-  _rndTouch.ghost.style.top = (t.clientY-_rndTouch.offsetY)+'px';
-  rndTouchUpdateDropTarget(t.clientX, t.clientY);
-}
-function rndTouchUpdateDropTarget(x,y){
-  const el = document.elementFromPoint(x,y);
-  if(!el) return;
-  const tab = el.closest('.board-stage-tab[data-rnd-mobile-tab-stage]');
-  if(tab){
-    const stage = parseInt(tab.dataset.rndMobileTabStage, 10);
-    if(stage !== _rndTouch.hoverTabStage){
-      _rndTouch.hoverTabStage = stage;
-      clearTimeout(_rndTouch.hoverTabTimer);
-      if(stage !== state._rndBoardMobileStage) _rndTouch.hoverTabTimer = setTimeout(()=>rndTouchSwitchTab(stage), 450);
-    }
-    return;
-  }
-  _rndTouch.hoverTabStage = null; clearTimeout(_rndTouch.hoverTabTimer);
-  const col = el.closest('.column-body[data-rnd-stage]');
-  if(!col || col!==_rndTouch.currentCol) return;
-  const after = rndTouchAfterElement(col, y);
-  if(after===_rndTouch.placeholder) return;
-  if(after==null) col.appendChild(_rndTouch.placeholder); else col.insertBefore(_rndTouch.placeholder, after);
-}
-function rndTouchAfterElement(container, y){
-  const els = [...container.querySelectorAll('.card[data-rnd]')].filter(c=>c.dataset.rnd!==_rndTouch.id);
-  return els.reduce((closest, child)=>{
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height/2;
-    if(offset < 0 && offset > closest.offset) return { offset, element: child };
-    return closest;
-  }, { offset: -Infinity, element: null }).element;
-}
-function rndTouchSwitchTab(stage){
-  if(!_rndTouch) return;
-  if(_rndTouch.currentCol) _rndTouch.currentCol.classList.remove('drag-over');
-  state._rndBoardMobileStage = stage;
-  render();
-  const col = document.querySelector(`.column-body[data-rnd-stage="${stage}"]`);
-  if(!col) return;
-  const emptyEl = col.querySelector('.empty-col'); if(emptyEl) emptyEl.remove();
-  // If the dragged product somehow already lives in this stage (the same-stage reorder path),
-  // keep it hidden here too, same as the column it started in.
-  const sameCard = col.querySelector(`.card[data-rnd="${_rndTouch.id}"]`);
-  if(sameCard) sameCard.style.display='none';
-  const placeholder = document.createElement('div');
-  placeholder.className = 'rnd-touch-placeholder';
-  placeholder.style.height = _rndTouch.ghost.getBoundingClientRect().height+'px';
-  col.appendChild(placeholder);
-  col.classList.add('drag-over');
-  _rndTouch.placeholder = placeholder;
-  _rndTouch.currentCol = col;
-  _rndTouch.currentStage = stage;
-}
-function rndTouchTeardownListeners(){
-  if(!_rndTouch) return;
-  document.removeEventListener('touchmove', _rndTouch.moveHandler);
-  document.removeEventListener('touchend', _rndTouch.endHandler);
-  document.removeEventListener('touchcancel', _rndTouch.cancelHandler);
-}
-function rndTouchEnd(e){
-  if(!_rndTouch) return;
-  clearTimeout(_rndTouch.longPressTimer);
-  clearTimeout(_rndTouch.hoverTabTimer);
-  const wasDragging = _rndTouch.dragging;
-  rndTouchTeardownListeners();
-  if(!wasDragging){ _rndTouch = null; return; }
-  e.preventDefault();
-  const id = _rndTouch.id, targetStage = _rndTouch.currentStage, col = _rndTouch.currentCol;
-  const placeholder = _rndTouch.placeholder, ghost = _rndTouch.ghost, originalCard = _rndTouch.card;
-  if(ghost) ghost.remove();
-  if(col) col.classList.remove('drag-over');
-  let orderedIds = [];
-  if(col){
-    orderedIds = [...col.children].map(el=>{
-      if(el===placeholder) return id;
-      if(el===originalCard) return null; // the hidden original — already represented by the placeholder
-      if(el.classList && el.classList.contains('card') && el.dataset.rnd) return el.dataset.rnd;
-      return null;
-    }).filter(Boolean);
-  }
-  if(placeholder) placeholder.remove();
-  if(originalCard) originalCard.style.display='';
-  _rndTouch = null;
-  if(col) moveRndToStage(id, targetStage, orderedIds);
-}
-function rndTouchCancel(){
-  if(!_rndTouch) return;
-  clearTimeout(_rndTouch.longPressTimer);
-  clearTimeout(_rndTouch.hoverTabTimer);
-  rndTouchTeardownListeners();
-  if(_rndTouch.currentCol) _rndTouch.currentCol.classList.remove('drag-over');
-  if(_rndTouch.ghost) _rndTouch.ghost.remove();
-  if(_rndTouch.placeholder) _rndTouch.placeholder.remove();
-  if(_rndTouch.card) _rndTouch.card.style.display='';
-  _rndTouch = null;
-}
 /* ===================== Event wiring ===================== */
 function attachShellHandlers(){
   const byIdEl = id => document.getElementById(id);
@@ -15958,7 +15781,6 @@ function attachShellHandlers(){
       state._draggedRndId = null;
     });
   });
-  initRndTouchDrag();
   if(byIdEl('form-new-rnd')) byIdEl('form-new-rnd').addEventListener('submit', createRndProject);
   if(byIdEl('form-rnd-edit')) byIdEl('form-rnd-edit').addEventListener('submit', submitRndEdit);
   if(byIdEl('form-rnd-log')) byIdEl('form-rnd-log').addEventListener('submit', async e=>{

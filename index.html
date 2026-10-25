@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261025104400">
+<meta name="app-build" content="20261025104958">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -881,6 +881,19 @@ html{ visibility:hidden; }
        dimensions before shipping this. cover also reads as one continuous full-bleed photo behind
        the logo and greeting text, matching desktop's look, instead of contain's disconnected
        letterboxed band that was the actual subject of the most recent complaint. */
+    /* --hero-photo-url-mobile, set inline only when a mobile-specific photo has actually been
+       uploaded (Settings -> Login panel customization), swaps in here in place of the shared
+       desktop photo. The var() fallback (to --hero-photo-url) means a phone with no
+       mobile-specific photo uploaded keeps using the desktop one automatically — this rule only
+       needs to redeclare background-image (not just the one layer) because CSS background-image
+       is one list per rule; the gradient layers behind the photo are unchanged from the base rule
+       above, just repeated here so the swap can happen at all. */
+    .login-illustration.has-photo{
+      background-image: var(--hero-photo-url-mobile, var(--hero-photo-url)),
+        radial-gradient(ellipse 90% 70% at 10% -10%, color-mix(in srgb,var(--accent) 65%,transparent) 0%, transparent 55%),
+        radial-gradient(ellipse 100% 80% at 110% 115%, color-mix(in srgb,var(--accent-dark) 70%,transparent) 0%, transparent 60%),
+        linear-gradient(155deg, var(--accent-dark) 0%, var(--accent) 58%, color-mix(in srgb,var(--accent) 65%,#F6C97A 35%) 100%);
+    }
     .login-illustration-logo{height:40px;}
     .login-hero-greeting{font-size:clamp(22px,6vw,28px);max-width:13ch;margin-top:72px;}
     .login-hero-sub{display:none;}
@@ -1723,6 +1736,16 @@ function loginHeroLogo(){
 function loginHeroPhoto(){
   const addons = (state.branding && state.branding.addons) || [];
   const found = addons.find(a=>a.id==='loginHeroPhoto');
+  return (found && found.image) || null;
+}
+// Independent from loginHeroPhoto() on purpose — the same photo cover-cropped onto a wide
+// desktop pane vs. a tall narrow phone screen frames completely differently (what reads as a
+// nicely composed shot on one can end up cropped too tight, or missing the subject, on the
+// other), and no single crop satisfies both. Falls back to the shared desktop photo in CSS
+// (--hero-photo-url-mobile, --hero-photo-url) when nothing's been uploaded here specifically.
+function loginHeroPhotoMobile(){
+  const addons = (state.branding && state.branding.addons) || [];
+  const found = addons.find(a=>a.id==='loginHeroPhotoMobile');
   return (found && found.image) || null;
 }
 function loginGreeting(){
@@ -5680,9 +5703,14 @@ function brandCropModal(){
   const pc = state.pendingCrop;
   if(!pc) return '';
   const isLogo = pc.addonId === 'logo' || pc.addonId === 'ordersBoardLogo' || pc.addonId === 'trackPageLogo' || pc.addonId === 'welcomeLogo' || pc.addonId === 'loginHeroLogo' || pc.addonId === 'batchSheetLogo';
-  const isHeroPhoto = pc.addonId === 'loginHeroPhoto';
-  const frameW = isHeroPhoto ? 420 : (isLogo ? 340 : 220);
-  const frameH = isHeroPhoto ? 240 : (isLogo ? 130 : 220);
+  const isMobileHeroPhoto = pc.addonId === 'loginHeroPhotoMobile';
+  const isHeroPhoto = pc.addonId === 'loginHeroPhoto' || isMobileHeroPhoto;
+  // The mobile hero photo gets its own tall, narrow frame (roughly a phone's own proportions)
+  // instead of the desktop photo's wide one — composing a crop in a frame shaped like a phone
+  // screen is how the admin actually sees whether the subject survives that aspect ratio,
+  // instead of guessing from a wide preview.
+  const frameW = isMobileHeroPhoto ? 220 : (isHeroPhoto ? 420 : (isLogo ? 340 : 220));
+  const frameH = isMobileHeroPhoto ? 390 : (isHeroPhoto ? 240 : (isLogo ? 130 : 220));
   // Every other addon's minimum zoom is 100% — the frame can only ever crop in, never show empty
   // space, which is right for a logo dropped onto a small fixed box. The hero photo is the
   // opposite case: it gets cover-cropped again at render time onto whatever shape the viewer's
@@ -5695,7 +5723,7 @@ function brandCropModal(){
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:460px;">
       <h2>Crop &amp; resize image</h2>
-      <div class="sub">Drag the image to reposition it, use the slider to zoom${isHeroPhoto ? ' — zoom out to leave margin around the subject, since this photo gets cropped again differently on phones vs. PCs' : ''}, then save.</div>
+      <div class="sub">Drag the image to reposition it, use the slider to zoom${isHeroPhoto ? (isMobileHeroPhoto ? ' — this crop is used only on phones; zoom out to leave margin if the subject feels too tight' : ' — zoom out to leave margin around the subject, since this photo gets cropped again on top of this crop') : ''}, then save.</div>
       <div id="crop-frame" style="position:relative;width:${frameW}px;height:${frameH}px;overflow:hidden;border-radius:10px;border:1px solid var(--border);margin:14px auto;background:repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px;cursor:grab;touch-action:none;">
         <img id="crop-img" src="${pc.dataUrl}" draggable="false" style="position:absolute;top:0;left:0;transform-origin:top left;user-select:none;pointer-events:none;">
       </div>
@@ -5809,7 +5837,7 @@ function initCropModal(){
   const saveBtn = document.getElementById('btn-save-crop');
   if(saveBtn){
     saveBtn.onclick = async ()=>{
-      const isHeroPhoto = state.pendingCrop && state.pendingCrop.addonId === 'loginHeroPhoto';
+      const isHeroPhoto = state.pendingCrop && (state.pendingCrop.addonId === 'loginHeroPhoto' || state.pendingCrop.addonId === 'loginHeroPhotoMobile');
       // Every other addon here is a small logo, shown at a fixed small size — 2x the editing
       // frame (840x480 max) is already sharp at that size. The hero photo is shown full-bleed on
       // a real desktop screen (background-size:cover, often 1920px+ wide) — at 2x it was CSS-
@@ -5842,6 +5870,7 @@ const BRAND_ADDON_NAMES = {
   trackPageLogo: 'Track order page logo', welcomeLogo: 'Welcome screen logo',
   favicon: 'Favicon (browser tab icon)', batchSheetLogo: 'Batch sheet logo (printed sheet)',
   loginHeroLogo: 'Login hero logo (sign-in screen)', loginHeroPhoto: 'Login hero photo (sign-in screen)',
+  loginHeroPhotoMobile: 'Login hero photo — mobile (sign-in screen)',
 };
 async function finishBrandCrop(dataUrl){
   const pc = state.pendingCrop;
@@ -7275,11 +7304,13 @@ function renderLogin(){
   const cfg = loginCustomization();
   const heroLogoSrc = loginHeroLogo() || currentLogo();
   const heroPhotoSrc = loginHeroPhoto();
-  const heroBgStyle = heroPhotoSrc ? `--hero-photo-url:url('${esc(heroPhotoSrc)}');` : '';
+  const heroPhotoMobileSrc = loginHeroPhotoMobile();
+  const heroBgStyle = (heroPhotoSrc ? `--hero-photo-url:url('${esc(heroPhotoSrc)}');` : '')
+    + (heroPhotoMobileSrc ? `--hero-photo-url-mobile:url('${esc(heroPhotoMobileSrc)}');` : '');
   const eyeIcon = passwordEyeIconHtml(true, cfg.passwordIconStyle);
   return `
   <div class="login-screen">
-    <div class="login-illustration ${heroPhotoSrc?'has-photo':''}" style="${heroBgStyle}">
+    <div class="login-illustration ${(heroPhotoSrc||heroPhotoMobileSrc)?'has-photo':''}" style="${heroBgStyle}">
       <img src="${heroLogoSrc}" alt="Audrey" class="login-illustration-logo">
       <div class="login-hero-bottom">
         ${renderLoginHeroSections(cfg)}
@@ -10023,7 +10054,7 @@ function renderLoginCustomizationPanel(){
     <div class="panel-body">
       <div class="hint" style="margin-bottom:16px;">Customize the sign-in screen everyone sees before logging in — logo, background photo, text, section order, fonts and icon style. Saved changes apply immediately for everyone.</div>
 
-      <div class="hint" style="margin-bottom:8px;">Live preview — this is the wide, two-pane layout PC visitors see (phones just get the sign-in card)</div>
+      <div class="hint" style="margin-bottom:8px;">Live preview — this is the wide, two-pane layout PC visitors see. Phones get this same photo full-bleed behind the sign-in card, unless a separate phone photo is uploaded below.</div>
       <div class="login-preview-frame">
         <div class="login-illustration login-illustration-preview ${loginHeroPhoto()?'has-photo':''}" style="${loginHeroPhoto() ? `--hero-photo-url:url('${esc(loginHeroPhoto())}');` : ''}">
           <img src="${loginHeroLogo() || currentLogo()}" alt="" class="login-illustration-logo">
@@ -10058,12 +10089,22 @@ function renderLoginCustomizationPanel(){
             </tr>
             <tr>
               <td>${loginHeroPhoto() ? `<img src="${esc(loginHeroPhoto())}" style="height:28px;width:48px;object-fit:cover;border-radius:4px;">` : `<span class="hint">using gradient</span>`}</td>
-              <td>Background photo <span class="hint">(replaces the gradient)</span></td>
+              <td>Background photo <span class="hint">(replaces the gradient — PCs/wide screens)</span></td>
               <td class="row-actions">
                 <label class="btn btn-sm" style="cursor:pointer;">Upload
                   <input type="file" class="brand-change-input" data-addon="loginHeroPhoto" style="display:none;" accept="image/*">
                 </label>
                 ${loginHeroPhoto() ? `<button type="button" class="btn btn-sm btn-danger" data-brand-delete="loginHeroPhoto">Remove</button>` : ''}
+              </td>
+            </tr>
+            <tr>
+              <td>${loginHeroPhotoMobile() ? `<img src="${esc(loginHeroPhotoMobile())}" style="height:28px;width:48px;object-fit:cover;border-radius:4px;">` : `<span class="hint">using PC photo</span>`}</td>
+              <td>Background photo <span class="hint">(phones — optional, own crop; falls back to the PC photo above if not set)</span></td>
+              <td class="row-actions">
+                <label class="btn btn-sm" style="cursor:pointer;">Upload
+                  <input type="file" class="brand-change-input" data-addon="loginHeroPhotoMobile" style="display:none;" accept="image/*">
+                </label>
+                ${loginHeroPhotoMobile() ? `<button type="button" class="btn btn-sm btn-danger" data-brand-delete="loginHeroPhotoMobile">Remove</button>` : ''}
               </td>
             </tr>
           </tbody>

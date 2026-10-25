@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261025113849">
+<meta name="app-build" content="20261025171951">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5486,10 +5486,21 @@ async function submitRndEdit(e){
   logActivity(`Edited R&D product ${p.name}`);
   showToast('Product updated');
 }
-async function moveRndToStage(id, newStage){
-  const p = byId(state.rndProjects, id); if(!p || p.stage===newStage || !canManageRnd()) return;
+function applyRndBoardOrder(orderedIds){
+  if(!orderedIds) return;
+  orderedIds.forEach((id,i)=>{ const p=byId(state.rndProjects,id); if(p) p.rndOrder=i; });
+}
+function rndOrderOf(p){ return p.rndOrder!=null ? p.rndOrder : new Date(p.createdAt).getTime(); }
+async function moveRndToStage(id, newStage, orderedIds){
+  const p = byId(state.rndProjects, id); if(!p || !canManageRnd()) return;
+  if(p.stage===newStage){
+    // Same column — this is a pure drag-to-reorder, not a stage change.
+    if(orderedIds){ applyRndBoardOrder(orderedIds); await save('rndProjects'); }
+    return;
+  }
   p.stage = newStage;
   p.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
+  applyRndBoardOrder(orderedIds);
   await save('rndProjects');
   logActivity(`Moved R&D product ${p.name} to ${RND_STAGES[newStage]}`);
   showToast('Moved to '+RND_STAGES[newStage]);
@@ -8463,7 +8474,7 @@ function renderRndPage(){
 }
 function renderRndColumn(stageName, i){
   const key = RND_STAGE_KEYS[i]; const style = RND_STAGE_STYLE[key];
-  const projects = state.rndProjects.filter(p=>p.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const projects = state.rndProjects.filter(p=>p.stage===i).sort((a,b)=>rndOrderOf(a)-rndOrderOf(b));
   return `
   <div class="column">
     <div class="column-head" style="background:${style.bg};color:${style.c};">
@@ -8479,7 +8490,7 @@ function renderRndColumn(stageName, i){
 // stage's cards below, instead of columns you scroll sideways through.
 function renderRndBoardMobile(){
   const activeIdx = state._rndBoardMobileStage || 0;
-  const projects = state.rndProjects.filter(p=>p.stage===activeIdx).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const projects = state.rndProjects.filter(p=>p.stage===activeIdx).sort((a,b)=>rndOrderOf(a)-rndOrderOf(b));
   return `
   <div class="board-mobile">
     <div class="board-stage-tabs">
@@ -8515,7 +8526,7 @@ function renderRndOutcomeView(kind){
 }
 function renderRndCard(p){
   return `
-  <div class="card" draggable="${canManageRnd()?'true':'false'}" data-rnd="${p.id}">
+  <div class="card" draggable="${canManageRnd()?'true':'false'}" data-rnd="${p.id}" ${canManageRnd()?'style="cursor:grab;"':''}>
     <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
     ${p.outcome==='quarantined' && p.quarantineReason ? `<div class="hint" style="margin-top:4px;">${esc(p.quarantineReason)}</div>` : ''}
   </div>`;
@@ -15753,13 +15764,20 @@ function attachShellHandlers(){
     openQuarantinePrompt();
   };
   document.querySelectorAll('.column-body[data-rnd-stage]').forEach(col=>{
-    col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragover', e=>{
+      e.preventDefault(); col.classList.add('drag-over');
+      const dragging = document.querySelector('.card.dragging');
+      if(!dragging) return;
+      const after = cardDragAfterElement(col, e.clientY);
+      if(after==null) col.appendChild(dragging); else col.insertBefore(dragging, after);
+    });
     col.addEventListener('dragleave', ()=>col.classList.remove('drag-over'));
     col.addEventListener('drop', e=>{
       e.preventDefault(); col.classList.remove('drag-over');
       const rndId = state._draggedRndId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
       const targetStage = parseInt(col.dataset.rndStage, 10);
-      if(rndId) moveRndToStage(rndId, targetStage);
+      const orderedIds = [...col.querySelectorAll('.card[data-rnd]')].map(c=>c.dataset.rnd);
+      if(rndId) moveRndToStage(rndId, targetStage, orderedIds);
       state._draggedRndId = null;
     });
   });

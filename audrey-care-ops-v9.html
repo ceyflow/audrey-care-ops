@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261025183138">
+<meta name="app-build" content="20261025183245">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -14505,6 +14505,7 @@ function renderRndDrawer(id){
       <div>${state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-rnd">Delete</button>` : ''}</div>
       <div style="display:flex;gap:8px;">
         ${!ro && canAdv ? `<button type="button" class="btn" id="btn-advance-rnd">${RND_NEXT_ACTION_LABEL[p.stage]}</button>` : ''}
+        ${!ro && p.stage===RND_STAGES.length-2 ? `<button type="button" class="btn" id="btn-back-rnd">Transfer to ${esc(RND_STAGES[p.stage-1])}</button>` : ''}
         ${!ro && p.stage===RND_STAGES.length-2 ? `<button type="button" class="btn btn-danger" id="btn-quarantine-rnd">Transfer to Quarantined</button>` : ''}
         ${!ro ? `<button type="submit" form="form-rnd-edit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
       </div>
@@ -15802,6 +15803,11 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-advance-rnd')) byIdEl('btn-advance-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceRndProject(id); };
+  if(byIdEl('btn-back-rnd')) byIdEl('btn-back-rnd').onclick = ()=>{
+    const id = state.modal.split(':')[1];
+    const p = byId(state.rndProjects, id); if(!p) return;
+    moveRndToStage(id, p.stage-1);
+  };
   if(byIdEl('btn-delete-rnd')) byIdEl('btn-delete-rnd').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteRndProject(id); };
 
   // R&D chemists & attendance

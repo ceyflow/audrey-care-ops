@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261024233618">
+<meta name="app-build" content="20261025103919">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -895,11 +895,16 @@ html{ visibility:hidden; }
        scoped to just the visible card at the bottom), so the outer .login-panel needs none. */
     .login-panel{position:relative;z-index:2;width:100%;min-height:100dvh;align-items:flex-end;justify-content:stretch;padding:0;background:transparent;overflow:visible;backdrop-filter:none;-webkit-backdrop-filter:none;}
     .login-panel .login-blob{display:none;}
+    /* Same dark "smoked glass" tint as the desktop .login-panel (rgba(18,15,10,.52),
+       blur(40px)), not the lighter rgba(255,255,255,.14) this used before — the desktop panel's
+       own comment explains why: a dark tint flattens whatever photo is behind it into a smooth
+       charcoal wash so white text and inputs read cleanly regardless of how bright or busy that
+       part of the photo is, instead of a light tint that can wash out against a bright photo. */
     .login-panel-inner{
       width:100%;max-width:none;
-      background:rgba(255,255,255,.14);
-      backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
-      border:1px solid rgba(255,255,255,.28);border-bottom:none;
+      background:rgba(18,15,10,.52);
+      backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+      border:1px solid rgba(255,255,255,.18);border-bottom:none;
       border-radius:26px 26px 0 0;box-shadow:none;
       padding:18px 22px calc(18px + env(safe-area-inset-bottom));
     }

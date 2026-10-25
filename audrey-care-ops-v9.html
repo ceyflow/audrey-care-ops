@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261025104958">
+<meta name="app-build" content="20261025105202">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1271,7 +1271,13 @@ html{ visibility:hidden; }
   @keyframes bootCometSpin{to{transform:rotate(360deg);}}
   .boot-mono{position:relative;z-index:1;width:48px;height:48px;border-radius:13px;background:#fff;box-shadow:0 2px 10px rgba(20,40,90,.12),inset 0 0 0 1px rgba(20,40,90,.06);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:23px;color:#2a2f38;}
   .boot-tag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
-  @media (prefers-reduced-motion: reduce){ .boot-comet-ring{animation-duration:3s;} }
+  /* A slow, continuous wave through the wordmark's own letters — each one dims and lifts in turn
+     rather than the whole word just sitting static under the ring. Loops cleanly forever (no
+     reset to catch), which matters here since there's no way to know how long loadAll() will
+     actually take — a one-shot reveal would just go still and look stuck if loading runs long. */
+  .boot-word span{display:inline-block;opacity:.4;transform:translateY(3px);animation:bootLetterWave 2.6s cubic-bezier(.45,0,.4,1) infinite;}
+  @keyframes bootLetterWave{0%,100%{opacity:.4;transform:translateY(3px);}50%{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){ .boot-comet-ring{animation-duration:3s;} .boot-word span{animation:none;opacity:1;transform:none;} }
   .login-card{background:#fff;border-radius:14px;padding:32px;max-width:420px;width:100%;border:1px solid var(--border);}
   .login-card .wordmark{font-size:28px;color:var(--accent-dark);display:block;text-align:center;}
   .login-card .lead{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 22px;}
@@ -1473,7 +1479,7 @@ try{
 </script>
 <div id="app"><div class="boot-splash">
   <div class="boot-comet"><div class="boot-comet-ring"></div><div class="boot-mono">A</div></div>
-  <span class="wordmark" style="display:block;text-align:center;font-size:24px;color:var(--accent-dark);">Audrey Care</span>
+  <span class="wordmark boot-word" style="display:block;text-align:center;font-size:24px;color:var(--accent-dark);"><span style="animation-delay:.00s">A</span><span style="animation-delay:.07s">u</span><span style="animation-delay:.14s">d</span><span style="animation-delay:.21s">r</span><span style="animation-delay:.28s">e</span><span style="animation-delay:.35s">y</span><span style="animation-delay:.42s">&nbsp;</span><span style="animation-delay:.49s">C</span><span style="animation-delay:.56s">a</span><span style="animation-delay:.63s">r</span><span style="animation-delay:.70s">e</span></span>
   <div class="boot-tag">Operations</div>
 </div></div>
 <div id="print-area"></div>

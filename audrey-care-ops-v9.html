@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026192723">
+<meta name="app-build" content="20261026194439">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4000,7 +4000,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
+  filters: { complaintStatus: 'Open', customerSearch:'', customerSalesman:'', supplierSearch:'', orderInquirySearch:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -8919,7 +8919,12 @@ function renderOrdersProcessPage(){
 
 function renderCustomersPage(){
   const q = state.filters.customerSearch.toLowerCase();
-  const rows = state.customers.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q));
+  const salesmanF = state.filters.customerSalesman||'';
+  const allSalesmen = [...new Set(state.customers.map(c=>c.salesman).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const rows = state.customers.filter(c => {
+    if(salesmanF && c.salesman!==salesmanF) return false;
+    return !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q);
+  });
   const active = state.customers.filter(c=>c.status==='Active').length;
   return `
   <div class="stat-grid">
@@ -8928,7 +8933,13 @@ function renderCustomersPage(){
     <div class="stat-card"><div class="label">Inactive</div><div class="value"><span class="stat-num" data-target="${state.customers.length-active}">${state.customers.length-active}</span></div></div>
   </div>
   <div class="toolbar">
-    <input class="search-input" id="customer-search" placeholder="Search by name or phone…" value="${esc(state.filters.customerSearch)}">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input class="search-input" id="customer-search" placeholder="Search by name or phone…" value="${esc(state.filters.customerSearch)}">
+      <select id="customer-salesman-filter" class="btn btn-sm" style="${salesmanF?`background:${(state.salesPersonColors||{})[salesmanF]||'var(--accent-soft)'};border-color:${(state.salesPersonColors||{})[salesmanF]||'var(--accent)'};color:${readableTextOn((state.salesPersonColors||{})[salesmanF]||'#E5EEF5')};`:''}">
+        <option value="">Search by sales person</option>
+        ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
+      </select>
+    </div>
     ${(state.session && roleCan(state.session.role, 'customers_manage')) ? `
     <div style="display:flex;gap:8px;align-items:center;">
       ${state.selectedCustomers.size>0 ? `
@@ -8944,7 +8955,7 @@ function renderCustomersPage(){
     </div>` : ''}
   </div>
   <div class="panel">
-    ${rows.length===0 ? `<div class="empty-state">No customers ${q?'match your search':'yet'}.</div>` : `
+    ${rows.length===0 ? `<div class="empty-state">No customers ${(q||salesmanF)?'match your search':'yet'}.</div>` : `
     <table class="data-table">
       <thead><tr>
         ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
@@ -16153,6 +16164,7 @@ function attachShellHandlers(){
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');
   if(byIdEl('customer-search')) byIdEl('customer-search').addEventListener('input', e=>{ state.filters.customerSearch = e.target.value; render(); });
+  if(byIdEl('customer-salesman-filter')) byIdEl('customer-salesman-filter').addEventListener('change', e=>{ state.filters.customerSalesman = e.target.value; render(); });
   if(byIdEl('order-inquiry-search')) byIdEl('order-inquiry-search').addEventListener('input', e=>{ state.filters.orderInquirySearch = e.target.value; render(); });
   if(byIdEl('order-inquiry-salesman-filter')) byIdEl('order-inquiry-salesman-filter').addEventListener('change', e=>{ state.filters.orderInquirySalesman = e.target.value; render(); });
   if(byIdEl('btn-order-inquiry-more')) byIdEl('btn-order-inquiry-more').onclick = ()=>{

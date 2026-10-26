@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026190433">
+<meta name="app-build" content="20261026191154">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1038,7 +1038,6 @@ html{ visibility:hidden; }
   .batch-prep-checklist .bpc-field-input:focus{outline:none;border-color:var(--accent-dark);background:#fff;}
   .batch-prep-checklist .bpc-field-input::placeholder{color:#8A9B8F;font-weight:400;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
-  @keyframes pipeline-sweep{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
   .batch-steplist{display:flex;flex-direction:column;gap:0;margin-top:18px;border-top:1px solid #E1EAE3;}
   .batch-steplist .bs-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E1EAE3;font-size:13px;color:#5B6E61;}
   .batch-steplist .bs-row.current{color:#15201A;font-weight:600;}
@@ -8216,11 +8215,11 @@ function animateStatCards(){
   });
 }
 
-// Dashboard's Pipeline overview ring: draws itself in once (each stage's arc growing from 0 to
-// its real length, the center count ticking up in step), then leaves a faint highlight circling
-// the ring forever as a quiet "this is live" cue. Gated by freshPage exactly like
-// animateStatCards() above — a background re-render while the user is already looking at the
-// dashboard (a realtime order update elsewhere) must never replay this from zero; the markup
+// Dashboard's Pipeline overview ring: draws itself in once on a fresh visit — each stage's arc
+// growing from 0 to its real length in lockstep with the center count ticking 0 to its total
+// ("Synced Count-Up", design gallery option 4, chosen 2026-10-26). Gated by freshPage exactly
+// like animateStatCards() above — a background re-render while the user is already looking at
+// the dashboard (a realtime order update elsewhere) must never replay this from zero; the markup
 // itself always renders every segment at its true final dasharray, so a render this ISN'T called
 // after shows the correct ring with no animation. No-ops off the Dashboard page.
 function animatePipelineDonut(){
@@ -8247,12 +8246,6 @@ function animatePipelineDonut(){
       if(p < 1) requestAnimationFrame(tick); else numEl.textContent = target;
     };
     requestAnimationFrame(tick);
-  }
-  const glow = wrap.querySelector('.pipeline-glow');
-  if(glow && segs.length){
-    glow.style.animation = 'none';
-    glow.getBoundingClientRect();
-    setTimeout(()=>{ glow.style.animation = 'pipeline-sweep 2600ms linear infinite'; }, dur);
   }
 }
 /* ===================== Dashboard ===================== */
@@ -8303,7 +8296,6 @@ function renderDashboard(){
           <g style="transform:rotate(-90deg);transform-origin:75px 75px;">
             ${total===0 ? `<circle cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" style="stroke:var(--border);" stroke-dasharray="${DONUT_CIRC} 0"/>` :
               donutSegs.map(seg=>`<circle class="pipeline-seg" cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" stroke-linecap="butt" style="stroke:${seg.color};" stroke-dasharray="${seg.len.toFixed(2)} ${(DONUT_CIRC-seg.len).toFixed(2)}" stroke-dashoffset="${(-seg.start).toFixed(2)}"/>`).join('')}
-            ${total>0 ? `<circle class="pipeline-glow" cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" stroke-linecap="round" style="stroke:rgba(255,255,255,.85);mix-blend-mode:screen;transform-origin:75px 75px;" stroke-dasharray="8 ${(DONUT_CIRC-8).toFixed(2)}"/>` : ''}
           </g>
         </svg>
         <div style="position:absolute;top:22px;left:22px;width:106px;height:106px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;">

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026064428">
+<meta name="app-build" content="20261026073752">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2244,7 +2244,7 @@ async function saveOutstandingTemplateForm(e){
   const text = f.text.value.trim();
   if(!text){ showToast('Enter the template text'); return; }
   state.outstandingReminderTemplate = { text, updatedAt: new Date().toISOString(), by: state.session.name };
-  await save('outstandingReminderTemplate');
+  if(!(await save('outstandingReminderTemplate'))) return;
   state._outstandingTemplateDraft = null;
   logActivity('Saved the payment reminder message template');
   closeModal();
@@ -2365,8 +2365,9 @@ async function saveBulkSmsTemplateForm(e){
     state.bulkSmsTemplates.push({id: uid('SMSTPL'), name, message});
   }
   state._bulkSmsTemplateForm = null;
-  await save('bulkSmsTemplates');
+  const ok = await save('bulkSmsTemplates');
   render();
+  if(!ok) return;
   showToast('Template saved');
 }
 async function deleteBulkSmsTemplate(id){
@@ -2456,7 +2457,7 @@ async function sendOrderReviewSms(orderId, platform){
   const result = await sendSms(o.phone, msg);
   if(result.ok){
     o[sentField] = new Date().toISOString();
-    await save('orders');
+    if(!(await save('orders'))) return;
     showToast(label+' review link sent to '+o.customer);
   } else showToast('SMS not sent: ' + result.error, 8000);
 }
@@ -5370,7 +5371,7 @@ async function createOrder(e){
     if(result.url){ order.photo = result.url; order.photoUploadedAt = new Date().toISOString(); } else photoError = result.error;
   }
   state.orders.unshift(order);
-  await save('orders');
+  if(!(await save('orders'))) return;
   logActivity(`Created order ${order.orderNumber} (${order.customer})`);
   closeModal();
   showToast(photoError ? `Order created, but the picture could not be uploaded: ${photoError}` : 'Order created', photoError?9000:undefined);
@@ -5405,7 +5406,7 @@ async function archiveOrderNow(id){
   const o = byId(state.orders,id);
   if(!o || o.stage!==STAGES.length-1 || o.archived) return;
   o.archived = true; o.archivedAt = new Date().toISOString();
-  await save('orders');
+  if(!(await save('orders'))) return;
   closeModal();
   showToast('Order moved to Order Inquiry');
 }
@@ -5417,7 +5418,7 @@ async function advanceOrder(id){
   const justCompleted = o.stage===lastStage;
   if(justCompleted) o.completedAt = new Date().toISOString();
   o.history.push({stage:o.stage, at:new Date().toISOString(), by:state.session.name});
-  await save('orders');
+  if(!(await save('orders'))) return;
   logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[o.stage]}`);
   showToast(justCompleted ? 'Order picked up by delivery' : 'Moved to '+STAGES[o.stage]);
   await triggerAutoOrderSms(o, orderAutoSmsKind(o.stage));
@@ -5451,7 +5452,7 @@ async function moveOrderToStage(id, newStage, newCourierService, orderedIds){
   else { o.completedAt = null; o.archived = false; o.archivedAt = null; }
   o.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
   applyBoardOrder(orderedIds);
-  await save('orders');
+  if(!(await save('orders'))) return;
   logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[newStage]}`);
   showToast(courierChanged ? `Moved to ${STAGES[newStage]} — now ${newCourierService||'unassigned'} delivery` : 'Moved to '+STAGES[newStage]);
   // Only text the customer when the order actually progresses forward — a card dragged backwards
@@ -5502,7 +5503,7 @@ async function restoreOrder(id){
   if(!state.session || !roleCan(state.session.role, 'orders_restore_archived')) return;
   const o = byId(state.orders,id); if(!o || !o.archived) return;
   o.archived = false; o.archivedAt = null;
-  await save('orders');
+  if(!(await save('orders'))) return;
   showToast('Order restored to the board');
 }
 function deleteOrder(id){
@@ -5531,7 +5532,7 @@ async function createBlendBatch(e){
     history: [{stage:0, at:new Date().toISOString(), by:state.session.name}]
   };
   state.blendBatches.unshift(batch);
-  await save('blendBatches');
+  if(!(await save('blendBatches'))) return;
   logActivity(`Created blend batch ${batch.batchNo}`);
   closeModal();
   showToast('Batch added');
@@ -5542,7 +5543,7 @@ async function advanceBlendBatch(id){
   if(!b || b.stage>=lastStage || !canAdvanceBlend(b.stage)) return;
   b.stage += 1;
   b.history.push({stage:b.stage, at:new Date().toISOString(), by:state.session.name});
-  await save('blendBatches');
+  if(!(await save('blendBatches'))) return;
   logActivity(`Moved blend batch ${b.batchNo} to ${BLEND_STAGES[b.stage]}`);
   showToast(b.stage===lastStage ? 'Batch dispatched to stock' : 'Moved to '+BLEND_STAGES[b.stage]);
 }
@@ -5562,7 +5563,7 @@ async function moveBlendToStage(id, newStage){
   const b = byId(state.blendBatches, id); if(!b || b.stage===newStage || !canManageBlendBoard()) return;
   b.stage = newStage;
   b.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
-  await save('blendBatches');
+  if(!(await save('blendBatches'))) return;
   logActivity(`Moved blend batch ${b.batchNo} to ${BLEND_STAGES[newStage]}`);
   showToast('Moved to '+BLEND_STAGES[newStage]);
 }
@@ -5611,7 +5612,7 @@ async function createRndProject(e){
     _stageSchemaV2: true,
   };
   state.rndProjects.unshift(project);
-  await save('rndProjects');
+  if(!(await save('rndProjects'))) return;
   logActivity(`Created R&D product ${project.name}`);
   closeModal();
   showToast('Product added');
@@ -5622,7 +5623,7 @@ async function advanceRndProject(id){
   if(!p || p.stage>=lastStage || !canAdvanceRnd(p.stage)) return;
   p.stage += 1;
   p.history.push({stage:p.stage, at:new Date().toISOString(), by:state.session.name});
-  await save('rndProjects');
+  if(!(await save('rndProjects'))) return;
   logActivity(`Moved R&D product ${p.name} to ${RND_STAGES[p.stage]}`);
   showToast(p.stage===lastStage ? 'Marked as completed' : 'Moved to '+RND_STAGES[p.stage]);
 }
@@ -5656,7 +5657,7 @@ async function moveRndToStage(id, newStage, orderedIds){
   p.stage = newStage;
   p.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
   applyRndBoardOrder(orderedIds);
-  await save('rndProjects');
+  if(!(await save('rndProjects'))) return;
   logActivity(`Moved R&D product ${p.name} to ${RND_STAGES[newStage]}`);
   showToast('Moved to '+RND_STAGES[newStage]);
 }
@@ -5670,7 +5671,7 @@ async function quarantineRndProject(id, reason){
   p.outcome = 'quarantined';
   p.quarantineReason = reason;
   p.history.push({stage:lastStage, at:new Date().toISOString(), by:state.session.name});
-  await save('rndProjects');
+  if(!(await save('rndProjects'))) return;
   logActivity(`Quarantined R&D product ${p.name}: ${reason}`);
   showToast('Product moved to Quarantined');
 }
@@ -6188,7 +6189,7 @@ async function uploadStaffPhoto(staffId, file){
   try{ dataUrl = await fileToDataUrl(file); }
   catch(e){ showToast('Could not read that file'); return; }
   s.photo = dataUrl;
-  await save('staff');
+  if(!(await save('staff'))) return;
   showToast('Photo updated');
 }
 async function removeStaffPhoto(staffId){
@@ -6549,7 +6550,7 @@ async function restoreComplaint(id){
   if(!allowed) return;
   c.status = 'In Progress';
   c.closedAt = null; c.archived = false; c.archivedAt = null;
-  await save('complaints');
+  if(!(await save('complaints'))) return;
   showToast('Complaint restored to the active list');
 }
 async function addComplaintUpdate(id){
@@ -6574,7 +6575,7 @@ async function addComplaintUpdate(id){
       if(uploaded.length < Math.min(photoInput.files.length, remaining)) showToast('Some images could not be uploaded', 6000);
     }
   }
-  await save('complaints');
+  if(!(await save('complaints'))) return;
   showToast('Update added');
 }
 
@@ -6700,7 +6701,7 @@ function deleteChatHistory(){
     message: 'Delete the entire team chat history? This clears it for everyone and cannot be undone.',
     onConfirm: async ()=>{
       state.chat = [];
-      await save('chat');
+      if(!(await save('chat'))) return;
       showToast('Chat history deleted');
     },
   });
@@ -10389,9 +10390,10 @@ async function submitLoginCustomization(e){
   syncLoginDraftFromDOM();
   state.loginCustomization = {...state._loginCustomDraft};
   state._loginCustomDraft = null;
-  await save('loginCustomization');
-  showToast('Login panel customization saved');
+  const ok = await save('loginCustomization');
   render();
+  if(!ok) return;
+  showToast('Login panel customization saved');
 }
 function resetLoginCustomization(){
   state._loginCustomDraft = {...DEFAULT_LOGIN_CUSTOMIZATION};
@@ -10573,9 +10575,10 @@ async function submitBatchSheetTemplate(e){
   syncBatchSheetTemplateDraftFromDOM();
   state.batchSheetTemplate = {...state._batchSheetTemplateDraft};
   state._batchSheetTemplateDraft = null;
-  await save('batchSheetTemplate');
-  showToast('Batch sheet template saved');
+  const ok = await save('batchSheetTemplate');
   render();
+  if(!ok) return;
+  showToast('Batch sheet template saved');
 }
 function resetBatchSheetTemplate(){
   state._batchSheetTemplateDraft = {...DEFAULT_BATCH_SHEET_TEMPLATE};
@@ -10952,7 +10955,10 @@ async function runAddSecureAccount(){
       state.auth = {...state.auth, secureAccounts: [...(state.auth.secureAccounts||[]), {
         role:f.role, name:f.name.trim(), fullName:(f.fullName||'').trim(),
       }]};
-      await saveAuth();
+      // saveAuth() already shows its own "Could not save account changes" toast and retries
+      // twice on failure — closing the form and claiming success here regardless of whether it
+      // actually landed is exactly how an account change looks "saved" but silently isn't.
+      if(!(await saveAuth())) return;
       state._addAcctForm = null;
       showToast(`${f.name.trim()} already had a login — reused it, reset the password to what you typed, and added them back to the list`);
       render();
@@ -10963,7 +10969,7 @@ async function runAddSecureAccount(){
   state.auth = {...state.auth, secureAccounts: [...(state.auth.secureAccounts||[]), {
     role:f.role, name:f.name.trim(), fullName:(f.fullName||'').trim(),
   }]};
-  await saveAuth();
+  if(!(await saveAuth())) return;
   state._addAcctForm = null;
   showToast(f.name.trim()+' can now sign in');
   render();
@@ -11027,7 +11033,9 @@ function toggleSecureAccountActive(name){
   }
   const apply = async ()=>{
     state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(x=>x.name===name?{...x, active:nowActive}:x)};
-    await saveAuth();
+    // saveAuth() already shows its own failure toast and retries twice — only claim this
+    // succeeded if it actually did.
+    if(!(await saveAuth())) return;
     showToast(nowActive ? `${name} reactivated` : `${name} deactivated — they can't sign in until reactivated`);
   };
   if(nowActive){ apply(); return; }
@@ -11046,7 +11054,7 @@ function removeSecureAccount(name){
     message: `${name} will no longer be able to sign in. This doesn't free up their login name to re-add later — if they just need a new password, use 🔑 Reset password instead.`,
     onConfirm: async ()=>{
       state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).filter(r=>r.name!==name)};
-      await saveAuth();
+      if(!(await saveAuth())) return;
       showToast(name+' removed');
     },
   });
@@ -11082,7 +11090,11 @@ async function submitEditSecureAccount(e){
   const role = f.role.value;
   const fullName = f.fullName.value.trim();
   state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role, fullName}:r)};
-  await saveAuth();
+  // saveAuth() already shows its own "Could not save account changes" toast and retries twice —
+  // closing the modal and claiming "Access level updated" regardless of whether it actually
+  // landed is exactly how an Employer code / Access level edit looks saved but silently isn't,
+  // with the edit form itself then gone so there's nothing left open to just retry.
+  if(!(await saveAuth())) return;
   state._editSecureAccountName = null;
   closeModal();
   showToast('Access level updated');
@@ -11236,7 +11248,7 @@ async function runSecureAccountsMigration(){
 async function activateSecureAccounts(){
   const roster = state._secureAcctForm.map(r=>({role:r.role, name:r.name}));
   state.auth = {...state.auth, migratedToSupabaseAuth:true, secureAccounts: roster};
-  await saveAuth();
+  if(!(await saveAuth())) return;
   state._secureAcctForm = null; state._secureAcctResults = null;
   showToast('New login is now active.');
   render();
@@ -11247,7 +11259,7 @@ function rollbackSecureAccounts(){
     message:'Everyone goes back to the old role-password login. Do this only if something looks wrong with the new one.',
     onConfirm: async ()=>{
       state.auth = {...state.auth, migratedToSupabaseAuth:false};
-      await saveAuth();
+      if(!(await saveAuth())) return;
       showToast('Reverted to the old login.');
     },
   });
@@ -11509,7 +11521,7 @@ async function applyInstructionStyle(id){
   if(!BATCH_INSTRUCTION_STYLES.find(s=>s.id===id)) return;
   state.batchDisplay = {instructionStyle:id};
   openModal(null);
-  await save('batchDisplay');
+  if(!(await save('batchDisplay'))) return;
   showToast('Instruction style updated');
 }
 // 40-50°C reads as the safe/normal working range for these formulas, 55-60 as the watch-it range,
@@ -11858,7 +11870,10 @@ async function saveTemplateSteps(){
   if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const t = templateById(d.id);
   if(t){ t.name = name; t.steps = steps; }
-  await save('mixingStepTemplates');
+  // Gated on success, and the draft stays put on failure — save() already shows its own
+  // "Could not save" toast and retries twice; clearing the draft and navigating away regardless
+  // would silently lose the edit with no easy way to retry it.
+  if(!(await save('mixingStepTemplates'))) return;
   state._templateDraft = null;
   showToast('Template saved');
   openMixingTemplatesModal();
@@ -13423,9 +13438,10 @@ async function saveBatchSheetSteps(recipeId){
   // what was just saved to r.steps — otherwise further edits here would mutate the saved recipe
   // directly, bypassing Save entirely, the same reference-sharing bug fixed for the template editor.
   d.steps = steps.map(s => s.type==='preparation' ? {...s, checklist:s.checklist.map(c=>({...c}))} : {...s});
-  await save('recipes');
-  showToast('Batch sheet saved');
+  const ok = await save('recipes');
   render();
+  if(!ok) return;
+  showToast('Batch sheet saved');
 }
 
 /* ===================== Team chat ===================== */
@@ -14030,7 +14046,7 @@ async function setDeliveryOutcome(orderId, outcome){
   if(!o) return;
   o.deliveryOutcome = outcome;
   o.deliveryOutcomeAt = new Date().toISOString();
-  await save('orders');
+  if(!(await save('orders'))) return;
   closeModal();
 }
 
@@ -15287,8 +15303,9 @@ function attachShellHandlers(){
       state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, createdAt: new Date().toISOString()}];
     }
     state._noteComposeDraft = null;
-    await save('personalNotes');
+    const ok = await save('personalNotes');
     render();
+    if(!ok) return;
     showToast(existing ? 'Note updated' : 'Note saved');
   };
   document.querySelectorAll('[data-edit-note]').forEach(b=>b.addEventListener('click', ()=>{
@@ -15436,8 +15453,14 @@ function attachShellHandlers(){
     if(!entry){ if(errEl) errEl.textContent = 'Could not find your login — contact Admin.'; return; }
     const ok = await passwordMatches(f.current.value, entry.password);
     if(!ok){ if(errEl) errEl.textContent = 'Current password is incorrect.'; return; }
-    entry.password = await sha256Hex(f.next.value);
-    await saveAuth();
+    // Rebuilt immutably (not entry.password = ... in place), same reasoning as the lazy
+    // password-hash upgrade in confirmLogin().
+    const hashed = await sha256Hex(f.next.value);
+    state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: logins.map(l=>l.name===entry.name ? {...l, password:hashed} : l)}};
+    // saveAuth() already shows its own failure toast and retries twice — a changed password that
+    // silently failed to save but still closed the modal with "Password changed" would leave
+    // someone locked out next time, with no sign anything went wrong.
+    if(!(await saveAuth())) return;
     closeModal();
     showToast('Password changed');
   });
@@ -15487,7 +15510,7 @@ function attachShellHandlers(){
       onConfirm: async ()=>{
         state.orders = state.orders.filter(o=>!state.selectedOrders.has(o.id));
         state.selectedOrders.clear();
-        await save('orders');
+        if(!(await save('orders'))) return;
         showToast(`Deleted ${n} order${n===1?'':'s'}`);
       },
     });
@@ -15564,7 +15587,7 @@ function attachShellHandlers(){
       newOrder[list.dataset.navGroup] = [...list.querySelectorAll('.nav-order-row:not(.nav-order-child)')].map(r=>r.dataset.navItem);
     });
     state.navOrder = newOrder;
-    await save('navOrder');
+    if(!(await save('navOrder'))) return;
     showToast('Sidebar order saved');
   };
   document.querySelectorAll('[data-rename-nav-item]').forEach(b=>b.addEventListener('click', ()=>renameNavItem(b.dataset.renameNavItem)));
@@ -15616,7 +15639,7 @@ function attachShellHandlers(){
     const byKey = {}; state._deliveryLinesDraft.forEach(l=>{ byKey[l.key]=l; });
     state.deliveryLines = orderedKeys.map(k=>byKey[k]).filter(Boolean);
     state._deliveryLinesDraft = null;
-    await save('deliveryLines');
+    if(!(await save('deliveryLines'))) return;
     closeModal();
     showToast('Lists updated');
   };
@@ -15738,7 +15761,7 @@ function attachShellHandlers(){
     const byKey = {}; state._staffCategoriesDraft.forEach(c=>{ byKey[c.key]=c; });
     state.staffCategories = orderedKeys.map(k=>byKey[k]).filter(Boolean);
     state._staffCategoriesDraft = null;
-    await save('staffCategories');
+    if(!(await save('staffCategories'))) return;
     closeModal();
     showToast('Categories updated');
   };
@@ -15756,7 +15779,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-save-salesperson-colors')) byIdEl('btn-save-salesperson-colors').onclick = async ()=>{
     state.salesPersonColors = {...state._salesPersonColorsDraft};
     state._salesPersonColorsDraft = null;
-    await save('salesPersonColors');
+    if(!(await save('salesPersonColors'))) return;
     closeModal();
     showToast('Sales person colors saved');
   };
@@ -15811,7 +15834,7 @@ function attachShellHandlers(){
     const ordered = list ? [...list.querySelectorAll('.nav-order-row')].map(r=>r.dataset.navItem) : [];
     state.complaintCategories = ordered.filter(v=>state._complaintReasonsDraft.includes(v));
     state._complaintReasonsDraft = null;
-    await save('complaintCategories');
+    if(!(await save('complaintCategories'))) return;
     closeModal();
     showToast('Reasons updated');
   };
@@ -15866,7 +15889,7 @@ function attachShellHandlers(){
     const ordered = list ? [...list.querySelectorAll('.nav-order-row')].map(r=>r.dataset.navItem) : [];
     state.complaintPriorities = ordered.filter(v=>state._complaintPrioritiesDraft.includes(v));
     state._complaintPrioritiesDraft = null;
-    await save('complaintPriorities');
+    if(!(await save('complaintPriorities'))) return;
     closeModal();
     showToast('Priorities updated');
   };
@@ -16032,7 +16055,7 @@ function attachShellHandlers(){
       onConfirm: async ()=>{
         state.customers = state.customers.filter(c=>!state.selectedCustomers.has(c.id));
         state.selectedCustomers.clear();
-        await save('customers');
+        if(!(await save('customers'))) return;
         showToast(`Deleted ${n} customer${n===1?'':'s'}`);
       },
     });
@@ -16069,7 +16092,7 @@ function attachShellHandlers(){
           }
         });
         state.selectedRatings.clear();
-        await save('orders');
+        if(!(await save('orders'))) return;
         showToast(`Deleted ${n} rating${n===1?'':'s'}`);
       },
     });
@@ -16119,7 +16142,7 @@ function attachShellHandlers(){
       onConfirm: async ()=>{
         state.suppliers = state.suppliers.filter(s=>!state.selectedSuppliers.has(s.id));
         state.selectedSuppliers.clear();
-        await save('suppliers');
+        if(!(await save('suppliers'))) return;
         showToast(`Deleted ${n} supplier${n===1?'':'s'}`);
       },
     });
@@ -16173,7 +16196,7 @@ function attachShellHandlers(){
       onConfirm: async ()=>{
         state.complaints = state.complaints.filter(c=>!state.selectedComplaints.has(c.id));
         state.selectedComplaints.clear();
-        await save('complaints');
+        if(!(await save('complaints'))) return;
         showToast(`Deleted ${n} complaint${n===1?'':'s'}`);
       },
     });
@@ -16187,7 +16210,7 @@ function attachShellHandlers(){
       message: `Reset the archive? This permanently deletes ${n} archived complaint${n===1?'':'s'} and cannot be undone.`,
       onConfirm: async ()=>{
         state.complaints = state.complaints.filter(c=>!c.archived);
-        await save('complaints');
+        if(!(await save('complaints'))) return;
         showToast('Archive reset');
       },
     });
@@ -16409,7 +16432,7 @@ function attachShellHandlers(){
     if(!name) return;
     const productId = e.target.productId.value.trim();
     state.costingProducts.push({id:uid('CPROD'), name, productId, versions:[]});
-    await save('costingProducts');
+    if(!(await save('costingProducts'))) return;
     logActivity(`Created product costing "${name}"`);
     closeModal();
   });
@@ -16435,7 +16458,7 @@ function attachShellHandlers(){
     const oldName = product.name;
     product.name = name;
     product.productId = e.target.productId.value.trim();
-    await save('costingProducts');
+    if(!(await save('costingProducts'))) return;
     logActivity(`Edited product costing "${oldName}"${oldName!==name?` to "${name}"`:''}`);
     closeModal();
     showToast('Saved');
@@ -16522,7 +16545,7 @@ function attachShellHandlers(){
     if(!name) return;
     const oldName = version.name;
     version.name = name;
-    await save('costingProducts');
+    if(!(await save('costingProducts'))) return;
     logActivity(`Renamed costing version "${oldName}" to "${name}" (${product.name})`);
     closeModal();
     showToast('Renamed');
@@ -16562,7 +16585,7 @@ function attachShellHandlers(){
         };
         if(!Array.isArray(state.recipes)) state.recipes = [];
         state.recipes.unshift(newRecipe);
-        await save('recipes');
+        if(!(await save('recipes'))) return;
         logActivity(`Transferred costing version "${version.name}" (${product.name}) to Production Guide as a ${batchSizeKg}kg batch sheet`);
         showToast(`Created a ${batchSizeKg}kg batch sheet in Production Guide`);
         goTo('recipes');
@@ -16594,9 +16617,8 @@ function attachShellHandlers(){
     version.archived = false;
     version.archivedAt = null;
     version.archivedBy = null;
-    await save('costingProducts');
-    logActivity(`Restored costing version "${version.name}" (${product.name})`);
-    showToast('Restored');
+    const ok = await save('costingProducts');
+    if(ok){ logActivity(`Restored costing version "${version.name}" (${product.name})`); showToast('Restored'); }
     render();
   }));
   document.querySelectorAll('[data-delete-costing-version-permanent]').forEach(b=>b.addEventListener('click', ()=>{
@@ -16697,7 +16719,7 @@ function attachShellHandlers(){
     version.productionMethod = draft.productionMethod||'';
     version.editedBy = state.session.staffName || state.session.name;
     version.editedAt = new Date().toISOString();
-    await save('costingProducts');
+    if(!(await save('costingProducts'))) return;
     logActivity(`Edited costing version "${version.name}" (${product.name})`);
     state._costingDirty = false;
     closeModal();
@@ -16727,7 +16749,7 @@ function attachShellHandlers(){
     product.versions.push(newVersion);
     state._costingOpenVersionId = newVersion.id;
     state._costingDirty = false;
-    await save('costingProducts');
+    if(!(await save('costingProducts'))) return;
     logActivity(`Created costing version "${name}" (${product.name})`);
     closeModal();
     showToast('Saved as "'+name+'"');
@@ -17002,7 +17024,7 @@ function attachShellHandlers(){
     state.theme = { paletteId: btn.dataset.themePalette };
     applyTheme();
     render();
-    await save('theme');
+    if(!(await save('theme'))) return;
     showToast('Color palette updated');
   }));
 
@@ -17075,7 +17097,7 @@ function attachShellHandlers(){
       message: `Delete "${r.name}"? Any account still set to this access level keeps working, but you won't be able to pick it again until you re-add it.`,
       onConfirm: async ()=>{
         state.userRoles = state.userRoles.filter(x=>x.id!==r.id);
-        await save('userRoles');
+        if(!(await save('userRoles'))) return;
         syncAllRoleDataAccess();
         showToast('Role deleted');
       },
@@ -17108,7 +17130,14 @@ function attachShellHandlers(){
     } else {
       state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, inactivityTimeoutMinutes} : r);
     }
-    await save('userRoles');
+    // save('userRoles') already shows its own "Could not save userRoles" toast and retries twice
+    // on failure — the code below used to run regardless, closing the edit form and (once
+    // syncAllRoleDataAccess succeeded) showing "Role added"/"Role updated" right on top of that
+    // failure toast. Reopening the editor afterward then just showed the pre-edit permissions
+    // again, with no clear sign the save itself never actually landed — concretely, this is how a
+    // permission checked and saved in Settings → User roles (e.g. a role's drag-and-drop access)
+    // could look saved but silently not be.
+    if(!(await save('userRoles'))) return;
     // This used to fire-and-forget: if the role_data_access push itself failed (a transient
     // error, a rights problem on that table), nothing here ever saw it — "Role added/updated"
     // showed regardless, so a role could look correctly configured in Settings while the
@@ -17134,8 +17163,8 @@ function attachShellHandlers(){
     });
     state.smsTemplates = nextTemplates;
     state.orderSettings = {...state.orderSettings, smsAutoSend: f.smsAutoSend.value==='yes'};
-    await save('smsTemplates');
-    await save('orderSettings');
+    if(!(await save('smsTemplates'))) return;
+    if(!(await save('orderSettings'))) return;
     showToast('SMS settings updated');
   });
 
@@ -17147,7 +17176,7 @@ function attachShellHandlers(){
     if(!state.branding) state.branding = {addons: []};
     state.branding.alertSound = picked;
     state.branding.alertDurationSeconds = duration;
-    await save('branding');
+    if(!(await save('branding'))) return;
     showToast('Timer alert sound saved');
   });
   document.querySelectorAll('[data-preview-sound]').forEach(b=>b.addEventListener('click', ()=>{

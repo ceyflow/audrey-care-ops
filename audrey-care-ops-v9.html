@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026073752">
+<meta name="app-build" content="20261026075654">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2144,9 +2144,10 @@ async function executeBulkSmsSend(recipients, message, campaignName, btnId){
     at: new Date().toISOString(),
     by: state.session.name
   });
-  await save('smsCampaigns');
+  const ok = await save('smsCampaigns');
   state.bulkSmsCustomers.clear();
   render();
+  if(!ok) return;
   showToast('Campaign sent — ' + sent + ' of ' + recipients.length + ' delivered' + (failed ? (', ' + failed + ' failed') : ''), 8000);
 }
 async function sendQuickSms(){
@@ -2225,13 +2226,17 @@ async function executeOutstandingSend(recipientIds, templateText){
     recipientCount: recipients.length, sentCount: sent, failedCount: failed,
     at: new Date().toISOString(), by: state.session.name
   });
-  await save('smsCampaigns');
+  const campaignOk = await save('smsCampaigns');
+  let recipientsOk = true;
   if(sentIds.length){
     state.outstandingRecipients = (state.outstandingRecipients||[]).filter(r=>!sentIds.includes(r.id));
-    await save('outstandingRecipients');
+    // If this fails, a reminded recipient stays in the sending list and could get texted again
+    // next time — worse than just a wrong toast, so this one gates the success message too.
+    recipientsOk = await save('outstandingRecipients');
   }
   state.bulkSmsCustomers.clear();
   render();
+  if(!campaignOk || !recipientsOk) return;
   showToast('Reminders sent — ' + sent + ' of ' + recipients.length + ' delivered' + (failed ? (', ' + failed + ' failed') : ''), 8000);
 }
 function openOutstandingTemplateModal(){
@@ -2333,8 +2338,9 @@ async function importOutstandingCsv(file){
       added++;
     }
   });
-  if(updated>0 || added>0) await save('outstandingRecipients');
+  const saved = (updated>0 || added>0) ? await save('outstandingRecipients') : true;
   render();
+  if(!saved) return;
   if(updated>0 || added>0) logActivity(`Imported outstanding amounts from CSV — ${updated} updated, ${added} added (sending list only, not added as customers)`);
   const notes = [];
   if(updated) notes.push(`${updated} updated`);
@@ -2412,7 +2418,7 @@ function fillTemplate(str, vars){ return str.replace(/\{(\w+)\}/g, (m,k)=> (k in
 async function sendOrderTrackingSms(o){
   const msg = fillTemplate(smsTemplate('orderPickedUp'), {customer:o.customer, orderNumber:o.orderNumber||o.id, trackLink:orderTrackLink(o.id), reviewLink:FACEBOOK_REVIEW_LINK});
   const result = await sendSms(o.phone, msg);
-  if(result.ok){ o.smsSentAt = new Date().toISOString(); await save('orders'); showToast('SMS sent to customer'); }
+  if(result.ok){ o.smsSentAt = new Date().toISOString(); if(await save('orders')) showToast('SMS sent to customer'); }
   else{ showToast('SMS not sent: ' + result.error, 8000); }
   return result;
 }
@@ -2425,7 +2431,7 @@ async function sendOrderProcessingSms(o){
 async function sendOrderTrackingUpdatedSms(o){
   const msg = fillTemplate(smsTemplate('trackingUpdated'), {customer:o.customer, orderNumber:o.orderNumber||o.id, trackLink:orderTrackLink(o.id)});
   const result = await sendSms(o.phone, msg);
-  if(result.ok){ o.smsSentAt = new Date().toISOString(); await save('orders'); showToast('SMS sent to customer'); }
+  if(result.ok){ o.smsSentAt = new Date().toISOString(); if(await save('orders')) showToast('SMS sent to customer'); }
   else{ showToast('SMS not sent: ' + result.error, 8000); }
   return result;
 }
@@ -3577,7 +3583,7 @@ async function deleteGmpLogEntry(id){
   const e = (state.gmpLogEntries||[]).find(x=>x.id===id);
   const defName = e && gmpLogDefById(e.defId) ? gmpLogDefById(e.defId).name : (e?e.defId:id);
   state.gmpLogEntries = (state.gmpLogEntries||[]).filter(e=>e.id!==id);
-  await save('gmpLogEntries');
+  if(!(await save('gmpLogEntries'))) return;
   logActivity(`Deleted GMP ${defName} entry`);
 }
 // Summary-table cell for one of a log def's `summaryCols` — all of them are plain-text or date
@@ -3725,14 +3731,16 @@ function calibrationDueStatus(nextDate){
 }
 async function saveCalibrationInstrument(id, data){
   const list = state.gmpCalibrationInstruments||[];
-  if(id){ const r = list.find(x=>x.id===id); if(r) Object.assign(r, data); logActivity(`Edited calibration instrument ${data.name}`); }
-  else { state.gmpCalibrationInstruments = [...list, {id:uid('CALINST'), ...data}]; logActivity(`Added calibration instrument ${data.name}`); }
-  await save('gmpCalibrationInstruments');
+  const label = id ? `Edited calibration instrument ${data.name}` : `Added calibration instrument ${data.name}`;
+  if(id){ const r = list.find(x=>x.id===id); if(r) Object.assign(r, data); }
+  else { state.gmpCalibrationInstruments = [...list, {id:uid('CALINST'), ...data}]; }
+  if(!(await save('gmpCalibrationInstruments'))) return;
+  logActivity(label);
 }
 async function deleteCalibrationInstrument(id){
   const r = (state.gmpCalibrationInstruments||[]).find(x=>x.id===id);
   state.gmpCalibrationInstruments = (state.gmpCalibrationInstruments||[]).filter(r=>r.id!==id);
-  await save('gmpCalibrationInstruments');
+  if(!(await save('gmpCalibrationInstruments'))) return;
   logActivity(`Deleted calibration instrument ${r?r.name:id}`);
 }
 
@@ -3740,15 +3748,18 @@ async function deleteCalibrationInstrument(id){
 // x an annual grid of weeks, click-to-cycle like the Cleaning grid but yearly, not monthly.
 async function saveMaintenanceMachine(id, name, machineNo){
   const list = state.gmpMaintenanceMachines||[];
-  if(id){ const m = list.find(x=>x.id===id); if(m){ m.name = name; m.machineNo = machineNo; } logActivity(`Edited maintenance machine ${name}`); }
-  else { state.gmpMaintenanceMachines = [...list, {id:uid('MACH'), name, machineNo}]; logActivity(`Added maintenance machine ${name}`); }
-  await save('gmpMaintenanceMachines');
+  const label = id ? `Edited maintenance machine ${name}` : `Added maintenance machine ${name}`;
+  if(id){ const m = list.find(x=>x.id===id); if(m){ m.name = name; m.machineNo = machineNo; } }
+  else { state.gmpMaintenanceMachines = [...list, {id:uid('MACH'), name, machineNo}]; }
+  if(!(await save('gmpMaintenanceMachines'))) return;
+  logActivity(label);
 }
 async function deleteMaintenanceMachine(id){
   const m = (state.gmpMaintenanceMachines||[]).find(x=>x.id===id);
   state.gmpMaintenanceMachines = (state.gmpMaintenanceMachines||[]).filter(m=>m.id!==id);
   state.gmpMaintenanceEntries = (state.gmpMaintenanceEntries||[]).filter(e=>e.machineId!==id);
-  await save('gmpMaintenanceMachines'); await save('gmpMaintenanceEntries');
+  if(!(await save('gmpMaintenanceMachines'))) return;
+  if(!(await save('gmpMaintenanceEntries'))) return;
   logActivity(`Deleted maintenance machine ${m?m.name:id}`);
 }
 function gmpMaintenanceEntryFor(machineId, year){
@@ -3773,14 +3784,16 @@ const GMP_PEST_TYPES = [
 ];
 async function savePestPoint(id, name){
   const list = state.gmpPestPoints||[];
-  if(id){ const p = list.find(x=>x.id===id); if(p) p.name = name; logActivity(`Edited pest control point ${name}`); }
-  else { state.gmpPestPoints = [...list, {id:uid('PESTPT'), name}]; logActivity(`Added pest control point ${name}`); }
-  await save('gmpPestPoints');
+  const label = id ? `Edited pest control point ${name}` : `Added pest control point ${name}`;
+  if(id){ const p = list.find(x=>x.id===id); if(p) p.name = name; }
+  else { state.gmpPestPoints = [...list, {id:uid('PESTPT'), name}]; }
+  if(!(await save('gmpPestPoints'))) return;
+  logActivity(label);
 }
 async function deletePestPoint(id){
   const p = (state.gmpPestPoints||[]).find(x=>x.id===id);
   state.gmpPestPoints = (state.gmpPestPoints||[]).filter(p=>p.id!==id);
-  await save('gmpPestPoints');
+  if(!(await save('gmpPestPoints'))) return;
   logActivity(`Deleted pest control point ${p?p.name:id}`);
 }
 function gmpPestEntryFor(year, month){
@@ -5487,7 +5500,7 @@ async function submitOrderEdit(e){
   } else if(f.elements['removeOrderPhoto'] && f.elements['removeOrderPhoto'].value==='1'){
     o.photo = null; o.photoUploadedAt = null;
   }
-  await save('orders');
+  if(!(await save('orders'))) return;
   logActivity(`Edited order ${o.orderNumber||o.id} (${o.customer})`);
   showToast(photoError ? `Order updated, but the picture could not be uploaded: ${photoError}` : 'Order updated', photoError?9000:undefined);
   const trackingChanged = o.courierNumber && o.courierNumber!==oldCourierNumber;
@@ -5513,7 +5526,7 @@ function deleteOrder(id){
     message: 'Delete this order? This cannot be undone.',
     onConfirm: async ()=>{
       state.orders = state.orders.filter(x=>x.id!==id);
-      await save('orders');
+      if(!(await save('orders'))) return;
       logActivity(`Deleted order ${o?(o.orderNumber||o.id):id}${o&&o.customer?' ('+o.customer+')':''}`);
     },
   });
@@ -5555,7 +5568,8 @@ async function submitBlendEdit(e){
     batchNo: f.batchNo.value.trim() || b.batchNo,
     qty: f.qty.value.trim(), variation: f.variation.value.trim()
   });
-  await save('blendBatches'); closeModal();
+  if(!(await save('blendBatches'))) return;
+  closeModal();
   logActivity(`Edited blend batch ${b.batchNo}`);
   showToast('Batch updated');
 }
@@ -5575,7 +5589,7 @@ function deleteBlendBatch(id){
     message: 'Delete this batch? This cannot be undone.',
     onConfirm: async ()=>{
       state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
-      await save('blendBatches');
+      if(!(await save('blendBatches'))) return;
       logActivity(`Deleted blend batch ${b?b.batchNo:id}`);
     },
   });
@@ -5638,7 +5652,8 @@ async function submitRndEdit(e){
     sampleDate: f.sampleDate.value || '',
     outcome: f.outcome ? f.outcome.value : (p.outcome||''),
   });
-  await save('rndProjects'); closeModal();
+  if(!(await save('rndProjects'))) return;
+  closeModal();
   logActivity(`Edited R&D product ${p.name}`);
   showToast('Product updated');
 }
@@ -5683,7 +5698,7 @@ function deleteRndProject(id){
     message: 'Delete this product? This cannot be undone.',
     onConfirm: async ()=>{
       state.rndProjects = state.rndProjects.filter(x=>x.id!==id);
-      await save('rndProjects');
+      if(!(await save('rndProjects'))) return;
       logActivity(`Deleted R&D product ${p?p.name:id}`);
     },
   });
@@ -5777,7 +5792,7 @@ function deleteRndAttendance(id){
     message: `Delete the attendance record for ${a?a.chemistName:'this chemist'}${a?' on '+a.date:''}?`,
     onConfirm: async ()=>{
       state.rndAttendance = state.rndAttendance.filter(x=>x.id!==id);
-      await save('rndAttendance');
+      if(!(await save('rndAttendance'))) return;
       logActivity(`Deleted attendance record for ${a?a.chemistName:id}${a?' ('+a.date+')':''}`);
     },
   });
@@ -6060,7 +6075,8 @@ async function finishBrandCrop(dataUrl){
   if(existing){ existing.image = dataUrl; existing.updatedAt = new Date().toISOString(); }
   else { addons.push({id:pc.addonId, name: label, image:dataUrl, updatedAt:new Date().toISOString()}); }
   state.pendingCrop = null;
-  await save('branding'); applyFavicon(); closeModal();
+  if(!(await save('branding'))) return;
+  applyFavicon(); closeModal();
   showToast(label+' updated');
 }
 async function brandingAddAddon(e){
@@ -6077,7 +6093,8 @@ async function brandingAddAddon(e){
   }
   const addons = state.branding.addons || (state.branding.addons = []);
   addons.push({id: uid('BRND'), name, image: dataUrl, updatedAt: new Date().toISOString()});
-  await save('branding'); closeModal();
+  if(!(await save('branding'))) return;
+  closeModal();
   showToast('Addon added');
 }
 function brandingDeleteAddon(id){
@@ -6161,12 +6178,15 @@ async function addStaffMember(e){
       if(touchedOrders) saves.push(save('orders'));
       if(touchedBatches) saves.push(save('blendBatches'));
     }
-    await Promise.all(saves); closeModal();
+    const results = await Promise.all(saves);
+    if(!results.every(Boolean)) return;
+    closeModal();
     logActivity(`Edited staff member ${oldName}${oldName!==name?` (renamed to ${name})`:''}`);
     showToast('Staff member updated');
   } else {
     state.staff.push({id:uid('STF'), name, title, category});
-    await save('staff'); closeModal();
+    if(!(await save('staff'))) return;
+    closeModal();
     logActivity(`Added staff member ${name}`);
     showToast('Staff added');
   }
@@ -6178,7 +6198,7 @@ function removeStaffMember(id){
     message: 'Remove this staff member?',
     onConfirm: async ()=>{
       state.staff = state.staff.filter(s=>s.id!==id);
-      await save('staff');
+      if(!(await save('staff'))) return;
       logActivity(`Removed staff member ${s?s.name:id}`);
     },
   });
@@ -6220,7 +6240,8 @@ async function submitCustomer(e){
   } else {
     state.customers.unshift({id:uid('CUS'), ...data, cityArea:'', email:'', type:'Individual', status:'Active', createdAt:new Date().toISOString()});
   }
-  await save('customers'); closeModal();
+  if(!(await save('customers'))) return;
+  closeModal();
   logActivity(`${editId?'Edited':'Created'} customer ${data.name}`);
   showToast(editId ? 'Customer updated' : 'Customer added');
 }
@@ -6231,7 +6252,7 @@ function deleteCustomer(id){
     message: 'Delete this customer?',
     onConfirm: async ()=>{
       state.customers = state.customers.filter(c=>c.id!==id);
-      await save('customers');
+      if(!(await save('customers'))) return;
       logActivity(`Deleted customer ${c?c.name:id}`);
     },
   });
@@ -6375,8 +6396,9 @@ async function importCustomersCsv(file){
     if(nPhone) existingPhones.add(nPhone);
     added++;
   });
-  if(added>0) await save('customers');
+  const saved = added>0 ? await save('customers') : true;
   render();
+  if(!saved) return;
   const notes = [];
   if(duplicates) notes.push(`skipped ${duplicates} already in your list`);
   if(skipped) notes.push(`skipped ${skipped} with no name`);
@@ -6397,7 +6419,8 @@ async function submitSupplier(e){
   } else {
     state.suppliers.unshift({id:uid('SUP'), ...data, createdAt:new Date().toISOString()});
   }
-  await save('suppliers'); closeModal();
+  if(!(await save('suppliers'))) return;
+  closeModal();
   logActivity(`${editId?'Edited':'Created'} supplier ${data.name}`);
   showToast(editId ? 'Supplier updated' : 'Supplier added');
 }
@@ -6408,7 +6431,7 @@ function deleteSupplier(id){
     message: 'Delete this supplier?',
     onConfirm: async ()=>{
       state.suppliers = state.suppliers.filter(s=>s.id!==id);
-      await save('suppliers');
+      if(!(await save('suppliers'))) return;
       logActivity(`Deleted supplier ${s?s.name:id}`);
     },
   });
@@ -6467,8 +6490,9 @@ async function importSuppliersCsv(file){
     if(nVendorId) existingVendorIds.add(nVendorId);
     added++;
   });
-  if(added>0) await save('suppliers');
+  const saved = added>0 ? await save('suppliers') : true;
   render();
+  if(!saved) return;
   const notes = [];
   if(duplicates) notes.push(`skipped ${duplicates} already in your list`);
   if(skipped) notes.push(`skipped ${skipped} with no name`);
@@ -6517,7 +6541,8 @@ async function submitComplaint(e){
     complaint.photos.push(...uploaded);
     if(uploaded.length < Math.min(photoInput.files.length, remaining)) showToast('Some images could not be uploaded', 6000);
   }
-  await save('complaints'); closeModal();
+  if(!(await save('complaints'))) return;
+  closeModal();
   logActivity(`${editId?'Edited':'Logged'} complaint from ${complaint.customer}`);
   showToast(editId ? 'Complaint updated' : 'Complaint logged');
   if(statusChanged) sendComplaintStatusSms(complaint);
@@ -6532,7 +6557,7 @@ function deleteComplaint(id){
     message: 'Delete this complaint?',
     onConfirm: async ()=>{
       state.complaints = state.complaints.filter(x=>x.id!==id);
-      await save('complaints');
+      if(!(await save('complaints'))) return;
       logActivity(`Deleted complaint${c&&c.customer?' from '+c.customer:''}${c&&c.headline?': '+c.headline:''}`);
     },
   });
@@ -7329,7 +7354,15 @@ async function submitPublicComplaint(e){
     assignedTo:'', description:text, phone, invoiceNumber, createdAt:new Date().toISOString()
   };
   state.complaints.unshift(c);
-  await save('complaints');
+  if(!(await save('complaints'))){
+    // Customer-facing — don't switch to the "submitted" confirmation view or text them a status
+    // update about a complaint that never actually saved. Drop it back out of local state and
+    // show the same inline error the validation checks above use.
+    state.complaints = state.complaints.filter(x=>x.id!==c.id);
+    state.publicComplaintError = 'Could not submit — please try again.';
+    render();
+    return;
+  }
   state.publicComplaintId = c.id;
   state.publicComplaintError = '';
   history.replaceState(null,'','#complaint/'+encodeURIComponent(c.id));
@@ -11900,7 +11933,7 @@ function addMixingTemplatePrompt(){
       if(!name) return;
       const t = {id: uid('MTPL'), name, steps: [newStepDraft()]};
       state.mixingStepTemplates.push(t);
-      await save('mixingStepTemplates');
+      if(!(await save('mixingStepTemplates'))) return;
       openTemplateStepsModal(t.id);
     },
   });
@@ -12032,7 +12065,8 @@ async function submitRecipe(e){
   }else{
     state.recipes.unshift({id:uid('RCP'), ...fields, createdAt:new Date().toISOString()});
   }
-  await save('recipes'); state._recipeDraft = null; closeModal();
+  if(!(await save('recipes'))) return;
+  state._recipeDraft = null; closeModal();
   logActivity(`${wasEdit?'Edited':'Created'} recipe ${fields.name}`);
   showToast('Recipe saved');
 }
@@ -12043,7 +12077,7 @@ function deleteRecipe(id){
     message: `Delete "${r?r.name:'this recipe'}"? This does not affect any batch currently running.`,
     onConfirm: async ()=>{
       state.recipes = state.recipes.filter(x=>x.id!==id);
-      await save('recipes');
+      if(!(await save('recipes'))) return;
       logActivity(`Deleted recipe ${r?r.name:id}`);
     },
   });
@@ -12070,7 +12104,8 @@ async function startBatch(recipeId, extra){
     status: 'running', stepDeadline: new Date(Date.now()+batchStepWaitMinutes(first)*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
   };
-  await saveActiveBatchVerified(); startBatchTicker();
+  if(!(await saveActiveBatchVerified())) return;
+  startBatchTicker();
   showToast('Batch started: '+r.name);
 }
 // activeBatch is a single shared object, not an array-of-records, so it gets none of the
@@ -12146,7 +12181,7 @@ async function nextBatchStep(){
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  await saveActiveBatchVerified();
+  if(!(await saveActiveBatchVerified())) return;
   showToast('Now: '+batchStepLabel(step)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
 }
 async function prevBatchStep(){
@@ -12179,7 +12214,9 @@ function stopBatch(){
       return;
     }
     state.activeBatch = null;
-    await saveActiveBatchVerified(); stopBatchTicker();
+    const ok = await saveActiveBatchVerified();
+    stopBatchTicker();
+    if(!ok) return;
     showToast('Batch stopped');
   };
   if(isDone){ doStop(); return; }
@@ -12217,7 +12254,7 @@ async function finishBatchIntoBlendingBoard(b){
     productionSteps: b.steps.map(s=> s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s}),
   };
   state.blendBatches.unshift(batch);
-  await save('blendBatches');
+  if(!(await save('blendBatches'))) return;
   state.activeBatch = null;
   // Not saveActiveBatchVerified(): the transfer above already landed and is the part that
   // matters — this is just clearing the now-stale activeBatch slot behind it. That save's own
@@ -16443,7 +16480,7 @@ function attachShellHandlers(){
       message: `Delete "${product?product.name:'this product'}"’s costing sheet, including all its versions? This cannot be undone.`,
       onConfirm: async ()=>{
         state.costingProducts = state.costingProducts.filter(p=>p.id!==b.dataset.deleteCostingProduct);
-        await save('costingProducts');
+        if(!(await save('costingProducts'))) return;
         logActivity(`Deleted product costing "${product?product.name:b.dataset.deleteCostingProduct}"`);
       },
     });
@@ -16527,7 +16564,7 @@ function attachShellHandlers(){
     const newVersion = {id:uid('CVER'), name:'Version '+nextNum, materials:[], batchSizes:[], batchColors:{}, fixedCosts:defaultFixedCosts(), notes:'', productionMethod:'', createdBy:who, createdAt:now, editedBy:who, editedAt:now};
     if(!product.versions) product.versions = [];
     product.versions.push(newVersion);
-    await save('costingProducts');
+    if(!(await save('costingProducts'))) return;
     logActivity(`Created costing version "${newVersion.name}" (${product.name})`);
     state._costingOpenVersionId = newVersion.id;
     state._costingDraft = {materials:[], batchSizes:[], batchColors:{}, fixedCosts:JSON.parse(JSON.stringify(newVersion.fixedCosts)), notes:'', productionMethod:''};
@@ -16603,7 +16640,7 @@ function attachShellHandlers(){
           version.archived = true;
           version.archivedAt = new Date().toISOString();
           version.archivedBy = state.session.staffName || state.session.name;
-          await save('costingProducts');
+          if(!(await save('costingProducts'))) return;
           logActivity(`Archived costing version "${version.name}" (${product.name})`);
           state._costingVersionsView = 'archive';
         }
@@ -16630,7 +16667,7 @@ function attachShellHandlers(){
       onConfirm: async ()=>{
         if(product){
           product.versions = (product.versions||[]).filter(v=>v.id!==b.dataset.deleteCostingVersionPermanent);
-          await save('costingProducts');
+          if(!(await save('costingProducts'))) return;
           logActivity(`Permanently deleted costing version "${version?version.name:b.dataset.deleteCostingVersionPermanent}" (${product.name})`);
         }
       },

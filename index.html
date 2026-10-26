@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026081446">
+<meta name="app-build" content="20261026083232">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2862,6 +2862,11 @@ function roleCan(role, permId){
   // own products/chemists/attendance and the notes widget, regardless of what a Settings record
   // for this exact name does or doesn't grant.
   if(role === 'R&D Officer' && (permId === 'rnd_manage' || permId === 'notes_access')) return true;
+  // Same pattern, for Sub Admin's drag-and-drop on the Orders board specifically — explicitly
+  // requested as a guarantee, independent of whatever state.userRoles' Sub Admin record does or
+  // doesn't currently hold (a Settings save that hasn't landed, a role record that hasn't
+  // finished syncing, a stale read on one particular account — none of it can block this).
+  if(role === 'Sub Admin' && permId === 'orders_drag') return true;
   const custom = (state.userRoles||[]).find(r=>r.name===role);
   if(custom){
     if(custom.status!=='Active') return false;
@@ -8430,7 +8435,11 @@ function renderColumn(stageName, i, sourceOrders, courierKey){
 }
 function renderCard(o){
   const priority = o.priority || 'Medium';
-  const dragOn = state.session && roleCan(state.session.role, 'orders_drag') && orderDragEnabled();
+  // Sub Admin's drag guarantee also covers the global master switch, not just the per-role
+  // permission above — if one specific account's read of orderSettings ever comes back stale or
+  // empty (falling back to the off-by-default DEFAULT_ORDER_SETTINGS), the switch being
+  // confirmed ON everywhere else shouldn't matter less than that one unreliable read.
+  const dragOn = state.session && roleCan(state.session.role, 'orders_drag') && (orderDragEnabled() || state.session.role === 'Sub Admin');
   return `
   <div class="card" data-order="${o.id}" draggable="${dragOn?'true':'false'}" ${dragOn?'style="cursor:grab;"':''}>
     <div class="top-row"><span class="customer">${esc(o.customer)}</span><span class="order-id">${esc(o.orderNumber||o.id)}</span></div>

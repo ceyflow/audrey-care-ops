@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026083232">
+<meta name="app-build" content="20261026131436">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8482,37 +8482,51 @@ function renderCustomerCarePage(){
 function renderOngoingOrdersPage(){
   const admin = isAdmin();
   const code = normEmployerCode(state.session && state.session.employerCode);
-  const orders = activeOrders();
+  const active = activeOrders();
+  // Same split the Orders board itself uses — one section per delivery list (Citypak Deliveries,
+  // AC Deliveries, etc.), plus Unassigned for anything that doesn't match a current list. Keeps
+  // every real delivery line visible even when it's empty (consistent, predictable layout), but
+  // only shows Unassigned when there's actually something in it — same as the Orders board.
+  const sections = state.deliveryLines.filter(l=>!l.hidden).map(l=>({key:l.key, label:l.label, orders: ordersInLine(active, l.key)}));
+  const unassigned = ordersOutsideLines(active);
+  if(unassigned.length) sections.push({key:'', label:'Unassigned', orders: unassigned});
   return `
   <div class="panel">
     <div class="panel-head"><h3>Ongoing orders</h3></div>
     <div class="panel-body">
       ${(!admin && !code) ? `<div class="hint" style="margin-bottom:12px;">Your account doesn't have an Employer code set yet — ask your Admin to set one in Settings → User account setup (matching your Sales person code) so you can open your own orders below.</div>` : ''}
-      <div class="cob-columns">
-        ${STAGES.map((s,i)=>{
-          const list = orders.filter(o=>o.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
-          const style = STAGE_STYLE[STAGE_KEYS[i]];
-          return `
-          <div class="cob-col">
-            <div class="cob-col-head" style="background:${style.bg};color:${style.c};">
-              <span class="cob-col-icon">${trackStageIcon(i)}</span>
-              <span>${esc(s)}</span>
-            </div>
-            <div class="cob-col-body">
-              ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>{
-                const mine = admin || (!!code && normEmployerCode(orderSalesmanFor(o))===code);
-                return mine
-                  ? `<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`
-                  : `<div class="cob-row cob-row-locked" title="Assigned to another sales person — you can only open your own orders">${esc(o.customer||o.orderNumber||o.id)}</div>`;
-              }).join('')}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
+      ${sections.map(sec=>renderOngoingOrdersSection(sec, admin, code)).join('')}
       <div class="cob-updated"><span class="pulse-dot" style="background:var(--accent);"></span>Live — updates automatically</div>
     </div>
   </div>
   `;
+}
+function renderOngoingOrdersSection(sec, admin, code){
+  return `
+  <div class="board-section">
+    <div class="board-section-title">${esc(sec.label)}</div>
+    <div class="cob-columns">
+      ${STAGES.map((s,i)=>{
+        const list = sec.orders.filter(o=>o.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+        const style = STAGE_STYLE[STAGE_KEYS[i]];
+        return `
+        <div class="cob-col">
+          <div class="cob-col-head" style="background:${style.bg};color:${style.c};">
+            <span class="cob-col-icon">${trackStageIcon(i)}</span>
+            <span>${esc(s)}</span>
+          </div>
+          <div class="cob-col-body">
+            ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>{
+              const mine = admin || (!!code && normEmployerCode(orderSalesmanFor(o))===code);
+              return mine
+                ? `<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`
+                : `<div class="cob-row cob-row-locked" title="Assigned to another sales person — you can only open your own orders">${esc(o.customer||o.orderNumber||o.id)}</div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
 }
 
 /* ===================== Order inquiry (delivered orders, read-only) ===================== */

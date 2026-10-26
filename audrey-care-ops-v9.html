@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026131436">
+<meta name="app-build" content="20261026190433">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1038,6 +1038,7 @@ html{ visibility:hidden; }
   .batch-prep-checklist .bpc-field-input:focus{outline:none;border-color:var(--accent-dark);background:#fff;}
   .batch-prep-checklist .bpc-field-input::placeholder{color:#8A9B8F;font-weight:400;}
   @keyframes pulse-dot-lite{0%,100%{opacity:1;}50%{opacity:.55;}}
+  @keyframes pipeline-sweep{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
   .batch-steplist{display:flex;flex-direction:column;gap:0;margin-top:18px;border-top:1px solid #E1EAE3;}
   .batch-steplist .bs-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E1EAE3;font-size:13px;color:#5B6E61;}
   .batch-steplist .bs-row.current{color:#15201A;font-weight:600;}
@@ -2663,6 +2664,12 @@ const STAGE_STYLE = {
   invoicing:{c:'var(--s-dispatch)',bg:'var(--s-dispatch-soft)'},
   pickedup:{c:'var(--s-delivered)',bg:'var(--s-delivered-soft)'}
 };
+// Geometry for the Dashboard's Pipeline overview ring (an SVG stroke-based donut, not a CSS
+// conic-gradient, so it can be drawn in with a stroke-dasharray transition — see
+// animatePipelineDonut()). Shared between renderDashboard(), which computes each stage's
+// dasharray/offset from these, and animatePipelineDonut(), which needs DONUT_CIRC to reset a
+// segment to "undrawn" before animating it in.
+const DONUT_R = 64, DONUT_CIRC = 2*Math.PI*DONUT_R;
 const PRIORITIES = ['Low','Medium','High'];
 // The orders board is split into one line per delivery service, in this order. Admin-editable
 // via "Manage Lists" (state.deliveryLines); this is only the seed used the first time the app runs.
@@ -7207,7 +7214,7 @@ function renderInner(){
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
-  if(freshPage) animateStatCards();
+  if(freshPage){ animateStatCards(); animatePipelineDonut(); }
 }
 
 /* ===================== Customer order tracker ===================== */
@@ -8208,6 +8215,46 @@ function animateStatCards(){
     }, Math.min(i, 3)*70);
   });
 }
+
+// Dashboard's Pipeline overview ring: draws itself in once (each stage's arc growing from 0 to
+// its real length, the center count ticking up in step), then leaves a faint highlight circling
+// the ring forever as a quiet "this is live" cue. Gated by freshPage exactly like
+// animateStatCards() above — a background re-render while the user is already looking at the
+// dashboard (a realtime order update elsewhere) must never replay this from zero; the markup
+// itself always renders every segment at its true final dasharray, so a render this ISN'T called
+// after shows the correct ring with no animation. No-ops off the Dashboard page.
+function animatePipelineDonut(){
+  const wrap = document.getElementById('pipeline-donut');
+  if(!wrap) return;
+  const segs = wrap.querySelectorAll('.pipeline-seg');
+  const dur = 1000;
+  segs.forEach(c=>{
+    const final = c.getAttribute('stroke-dasharray');
+    c.style.transition = 'none';
+    c.setAttribute('stroke-dasharray', `0 ${DONUT_CIRC}`);
+    c.getBoundingClientRect();
+    c.style.transition = `stroke-dasharray ${dur}ms cubic-bezier(.4,0,.2,1)`;
+    requestAnimationFrame(()=>{ c.setAttribute('stroke-dasharray', final); });
+  });
+  const numEl = document.getElementById('pipeline-total-num');
+  if(numEl){
+    const target = parseInt(numEl.dataset.target, 10) || 0;
+    numEl.textContent = '0';
+    const start = performance.now();
+    const tick = now=>{
+      const p = Math.min(1, (now-start)/dur);
+      numEl.textContent = Math.round(target*p);
+      if(p < 1) requestAnimationFrame(tick); else numEl.textContent = target;
+    };
+    requestAnimationFrame(tick);
+  }
+  const glow = wrap.querySelector('.pipeline-glow');
+  if(glow && segs.length){
+    glow.style.animation = 'none';
+    glow.getBoundingClientRect();
+    setTimeout(()=>{ glow.style.animation = 'pipeline-sweep 2600ms linear infinite'; }, dur);
+  }
+}
 /* ===================== Dashboard ===================== */
 function renderDashboard(){
   const orders = activeOrders();
@@ -8225,16 +8272,18 @@ function renderDashboard(){
     {label:'Open Complaints', value: openComplaints, sub:null, danger: openComplaints>0},
   ];
 
-  // Pipeline donut: each stage's conic-gradient slice sized to its share of active orders, using
-  // the same per-stage colors as the Orders Process columns and every stage badge elsewhere, so
-  // the chart reads as the same pipeline rather than a second color language.
+  // Pipeline donut: each stage's arc sized to its share of active orders, using the same
+  // per-stage colors as the Orders Process columns and every stage badge elsewhere, so the chart
+  // reads as the same pipeline rather than a second color language. Built as SVG stroke segments
+  // (not a CSS conic-gradient) so the ring can draw itself in — see animatePipelineDonut().
   let _donutAcc = 0;
-  const donutStops = total===0 ? 'var(--border) 0% 100%' : STAGES.map((s,i)=>{
+  const donutSegs = total===0 ? [] : STAGES.map((s,i)=>{
     const style = STAGE_STYLE[STAGE_KEYS[i]];
-    const from = _donutAcc, to = _donutAcc + (counts[i]/total*100);
-    _donutAcc = to;
-    return `${style.c} ${from}% ${to}%`;
-  }).join(', ');
+    const len = counts[i]/total*DONUT_CIRC;
+    const start = _donutAcc;
+    _donutAcc += len;
+    return {color: style.c, len, start};
+  });
 
   return `
   <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
@@ -8249,10 +8298,16 @@ function renderDashboard(){
   <div class="panel" style="margin-top:20px;">
     <div class="panel-head"><h3>Pipeline overview</h3></div>
     <div class="panel-body" style="display:flex;align-items:center;gap:30px;flex-wrap:wrap;">
-      <div style="position:relative;width:150px;height:150px;flex-shrink:0;">
-        <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${donutStops});"></div>
+      <div id="pipeline-donut" style="position:relative;width:150px;height:150px;flex-shrink:0;">
+        <svg viewBox="0 0 150 150" width="150" height="150" style="overflow:visible;">
+          <g style="transform:rotate(-90deg);transform-origin:75px 75px;">
+            ${total===0 ? `<circle cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" style="stroke:var(--border);" stroke-dasharray="${DONUT_CIRC} 0"/>` :
+              donutSegs.map(seg=>`<circle class="pipeline-seg" cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" stroke-linecap="butt" style="stroke:${seg.color};" stroke-dasharray="${seg.len.toFixed(2)} ${(DONUT_CIRC-seg.len).toFixed(2)}" stroke-dashoffset="${(-seg.start).toFixed(2)}"/>`).join('')}
+            ${total>0 ? `<circle class="pipeline-glow" cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" stroke-linecap="round" style="stroke:rgba(255,255,255,.85);mix-blend-mode:screen;transform-origin:75px 75px;" stroke-dasharray="8 ${(DONUT_CIRC-8).toFixed(2)}"/>` : ''}
+          </g>
+        </svg>
         <div style="position:absolute;top:22px;left:22px;width:106px;height:106px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div style="font-size:24px;font-weight:700;"><span class="stat-num" data-target="${total}">${total}</span></div>
+          <div style="font-size:24px;font-weight:700;"><span id="pipeline-total-num" class="stat-num" data-target="${total}">${total}</span></div>
           <div class="hint" style="font-size:10.5px;">in motion</div>
         </div>
       </div>

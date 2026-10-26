@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026062838">
+<meta name="app-build" content="20261026064428">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4139,6 +4139,15 @@ async function loadAll(){
   // the two reads don't depend on each other at all.
   const authFetchPromise = kvGetAuthWithRetry();
   const loadedValues = await refreshAppData(!!_authSession);
+  // Baseline snapshot moved here (used to be taken once, much later, after every seed/backfill
+  // migration below had already run) so those migrations' own writes — via saveQuietly() below,
+  // not a raw kvSet — get real merge protection: the baseline now reflects what the server
+  // actually had BEFORE this tab's local-only migration changes, so mergeBeforeSave can tell a
+  // migration's own edit apart from a genuinely different concurrent edit (made in another tab in
+  // the brief window between this fetch and that write actually landing) instead of blindly
+  // overwriting whichever lands last. Without this, every migration write below behaved exactly
+  // like the 'auth' bug: no baseline yet means mergeBeforeSave just returns the local copy as-is.
+  SYNCED_KEYS.forEach(k=>snapshotBaseline(k));
   // Some keys get a one-time "seed a starter example" on a brand-new workspace (nothing saved
   // for that key yet, i.e. the raw load came back null/undefined). That's different from the
   // key existing but currently not containing the named example — e.g. an admin who deliberately
@@ -4154,7 +4163,7 @@ async function loadAll(){
   // title now that 'blending' refers to the board itself.
   if(state.navLabels && state.navLabels.blending === 'Blending Department'){
     delete state.navLabels.blending;
-    kvSet('navLabels', state.navLabels).catch(e=>console.error('clear stale blending navLabel failed', e));
+    saveQuietly('navLabels').catch(()=>{});
   }
   // rndProjects is a plain SYNCED_KEY (see its own comment), already loaded above by this point.
   migrateRndProjectStages();
@@ -4191,30 +4200,30 @@ async function loadAll(){
   state.loginCustomization = {...DEFAULT_LOGIN_CUSTOMIZATION, ...(state.loginCustomization||{})};
   if(!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0){
     state.deliveryLines = JSON.parse(JSON.stringify(DEFAULT_DELIVERY_LINES));
-    kvSet('deliveryLines', state.deliveryLines).catch(e=>console.error('seed deliveryLines failed', e));
+    saveQuietly('deliveryLines').catch(()=>{});
   } else if(!state.deliveryLines.some(l=>l.key==='CustomerPickup')){
     state.deliveryLines = [...state.deliveryLines, {key:'CustomerPickup', label:'Customer Pickup', hidden:true}];
-    kvSet('deliveryLines', state.deliveryLines).catch(e=>console.error('add CustomerPickup line failed', e));
+    saveQuietly('deliveryLines').catch(()=>{});
   } else {
     // Customer Pickup was added as a visible board section before it was decided to keep it
     // out of the board by default — hide it for anyone who already has it from that rollout.
     const existing = state.deliveryLines.find(l=>l.key==='CustomerPickup');
     if(existing && existing.hidden===undefined){
       existing.hidden = true;
-      kvSet('deliveryLines', state.deliveryLines).catch(e=>console.error('hide CustomerPickup line failed', e));
+      saveQuietly('deliveryLines').catch(()=>{});
     }
   }
   if(!Array.isArray(state.staffCategories) || state.staffCategories.length===0){
     state.staffCategories = JSON.parse(JSON.stringify(DEFAULT_STAFF_CATEGORIES));
-    kvSet('staffCategories', state.staffCategories).catch(e=>console.error('seed staffCategories failed', e));
+    saveQuietly('staffCategories').catch(()=>{});
   }
   if(!Array.isArray(state.complaintCategories) || state.complaintCategories.length===0){
     state.complaintCategories = [...DEFAULT_COMPLAINT_CATEGORIES];
-    kvSet('complaintCategories', state.complaintCategories).catch(e=>console.error('seed complaintCategories failed', e));
+    saveQuietly('complaintCategories').catch(()=>{});
   }
   if(!Array.isArray(state.complaintPriorities) || state.complaintPriorities.length===0){
     state.complaintPriorities = [...DEFAULT_COMPLAINT_PRIORITIES];
-    kvSet('complaintPriorities', state.complaintPriorities).catch(e=>console.error('seed complaintPriorities failed', e));
+    saveQuietly('complaintPriorities').catch(()=>{});
   }
   if(!Array.isArray(state.recipes)) state.recipes = [];
   if(recipesNeverSaved && !state.recipes.some(r=>r.name==='Body Lotion - Hotel Range')){
@@ -4238,19 +4247,19 @@ async function loadAll(){
       ],
       createdAt: new Date().toISOString()
     });
-    kvSet('recipes', state.recipes).catch(e=>console.error('seed Body Lotion recipe failed', e));
+    saveQuietly('recipes').catch(()=>{});
   }
   if(!Array.isArray(state.mixingStepTemplates)) state.mixingStepTemplates = [];
   if(mixingStepTemplatesNeverSaved && state.mixingStepTemplates.length===0){
     const DEFAULT_MIXING_TEMPLATE_NAMES = ['Shower Gel', 'Shampoo', 'Conditioner', 'Body Lotion', 'Hand Wash'];
     state.mixingStepTemplates = DEFAULT_MIXING_TEMPLATE_NAMES.map(name => ({id: uid('MTPL'), name, steps: [newStepDraft()]}));
-    kvSet('mixingStepTemplates', state.mixingStepTemplates).catch(e=>console.error('seed mixingStepTemplates failed', e));
+    saveQuietly('mixingStepTemplates').catch(()=>{});
   }
   if(!Array.isArray(state.costingProducts)) state.costingProducts = [];
   if(state.costingProducts.length===0){
     const DEFAULT_COSTING_PRODUCTS = ['Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Hand Wash', 'Bubble Bath'];
     state.costingProducts = DEFAULT_COSTING_PRODUCTS.map(name => ({id:uid('CPROD'), name, versions:[]}));
-    kvSet('costingProducts', state.costingProducts).catch(e=>console.error('seed costingProducts failed', e));
+    saveQuietly('costingProducts').catch(()=>{});
   }
   // Costing sheets used to store one flat {materials, batchSizes} per product — now each
   // product holds named, dated versions so past formulations stay on record. Wrap any still-flat
@@ -4283,7 +4292,7 @@ async function loadAll(){
         });
       });
     });
-    if(migrated) kvSet('costingProducts', state.costingProducts).catch(e=>console.error('migrate costingProducts failed', e));
+    if(migrated) saveQuietly('costingProducts').catch(()=>{});
   }
   // Packing's 5L sticker stock — one row per fragrance, one count per existing costing product
   // (so it always lines up with whatever products Costing actually has, instead of keeping its
@@ -4317,7 +4326,7 @@ async function loadAll(){
       });
       return {id: uid('STICK'), name, counts: byProductId};
     });
-    kvSet('stickerStock', state.stickerStock).catch(e=>console.error('seed stickerStock failed', e));
+    saveQuietly('stickerStock').catch(()=>{});
   }
   // The initial sticker-stock seed above left out Air Freshener (not a Costing product yet at
   // the time) and three fragrance rows (Strawberry, Lavender, Apple) that weren't visible in the
@@ -4328,7 +4337,7 @@ async function loadAll(){
     if(!airFreshener){
       airFreshener = {id: uid('CPROD'), name:'Air Freshener', versions:[]};
       state.costingProducts = [...state.costingProducts, airFreshener];
-      kvSet('costingProducts', state.costingProducts).catch(e=>console.error('add Air Freshener product failed', e));
+      saveQuietly('costingProducts').catch(()=>{});
     }
     let stickerBackfilled = false;
     const cinnamonRow = state.stickerStock.find(r=>r.name==='Cinnamon');
@@ -4351,7 +4360,7 @@ async function loadAll(){
       state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts: byProductId}];
       stickerBackfilled = true;
     });
-    if(stickerBackfilled) kvSet('stickerStock', state.stickerStock).catch(e=>console.error('backfill stickerStock failed', e));
+    if(stickerBackfilled) saveQuietly('stickerStock').catch(()=>{});
   }
   // A third pass over the team's Notion board turned up more rows below what the first two
   // passes captured: two the team's own table never named differently (Ocean Breeze, Lemon),
@@ -4383,7 +4392,7 @@ async function loadAll(){
       });
       state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts: byProductId}];
     });
-    kvSet('stickerStock', state.stickerStock).catch(e=>console.error('third-pass stickerStock seed failed', e));
+    saveQuietly('stickerStock').catch(()=>{});
   }
   // Groups the sticker stock rows into cards (Dallin 5L Stickers, Vas Ceylon, Fabric Care, …) —
   // the client-specific batches were only ever single rows, so each is its own one-row category;
@@ -4394,7 +4403,7 @@ async function loadAll(){
       if(r.category) return;
       r.category = CLIENT_BATCH_NAMES.includes(r.name) ? r.name : 'Dallin 5L Stickers';
     });
-    kvSet('stickerStock', state.stickerStock).catch(e=>console.error('categorize stickerStock failed', e));
+    saveQuietly('stickerStock').catch(()=>{});
   }
   // Settings → User roles: replaces the old fixed role list with Admin-defined ones. Admin and
   // Sub Admin are seeded locked (their names are checked literally elsewhere — isAdmin()/
@@ -4409,7 +4418,7 @@ async function loadAll(){
       {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes','recipelibrary'], permissions:buildRolePermissions(['blending_manage'])},
       {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders and sticker stock for packing and dispatch.', status:'Active', pages:['orders','stickerstock'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'])},
     ];
-    kvSet('userRoles', state.userRoles).catch(e=>console.error('seed userRoles failed', e));
+    saveQuietly('userRoles').catch(()=>{});
   } else if(state.userRoles.some(r=>!r.permissions)){
     // Backfill for anyone who already had the 5 roles from before this permission system existed —
     // same starting values as the fresh seed above, so this changes nothing until an Admin edits
@@ -4424,7 +4433,7 @@ async function loadAll(){
       const trueIds = LEGACY_ROLE_PERMISSIONS[r.name] || NEW_ROLE_DEFAULTS[r.name] || [];
       return {...r, permissions: buildRolePermissions(trueIds)};
     });
-    kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill role permissions failed', e));
+    saveQuietly('userRoles').catch(()=>{});
   }
   // Production Guide's recipe browsing/management moved to its own "Recipe library" page — a
   // role's `pages` list is a saved snapshot (see pagesForRole), not a live link to ROLE_PAGES, so
@@ -4438,7 +4447,7 @@ async function loadAll(){
         ? {...r, pages:[...r.pages, 'recipelibrary']}
         : r
     );
-    kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill recipelibrary role page failed', e));
+    saveQuietly('userRoles').catch(()=>{});
   }
   // Same deal for the new Ongoing orders page: any role that can already reach the Customer Care
   // hub should get it automatically, not require someone to go re-check a new box in Settings ->
@@ -4450,7 +4459,7 @@ async function loadAll(){
         ? {...r, pages:[...r.pages, 'ongoingorders']}
         : r
     );
-    kvSet('userRoles', state.userRoles).catch(e=>console.error('backfill ongoingorders role page failed', e));
+    saveQuietly('userRoles').catch(()=>{});
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -4479,7 +4488,7 @@ async function loadAll(){
       }
     });
     if(staffChanged){
-      kvSet('staff', state.staff).catch(e=>console.error('seed staff failed', e));
+      saveQuietly('staff').catch(()=>{});
     }
   }
   try{ const s = localStorage.getItem('audrey_session'); state.session = s ? JSON.parse(s) : null; }
@@ -4598,7 +4607,10 @@ async function loadAll(){
       }
     }
   }
-  SYNCED_KEYS.forEach(k=>snapshotBaseline(k));
+  // (Baselines for every SYNCED_KEY were already taken right after the fetch, near the top of this
+  // function, before any of the migrations above ran — see that comment. Each migration that wrote
+  // something re-snapshots its own key on success via saveQuietly(); nothing here needs a second,
+  // blanket re-snapshot.)
   render();
   // A refresh landing directly on the Production Guide page (hash restore, above) bypasses
   // performGoTo and the popstate handler — the only two places that otherwise start this —
@@ -4695,6 +4707,37 @@ async function _saveOnce(key){
   }
   console.error('save '+key+' failed');
   showToast('Could not save '+key+' — please try again');
+  return false;
+}
+// Same queue + merge-before-write protection as save()/_saveOnce(), but silent on failure
+// (console.error only — no "Could not save X" toast). For the one-time seed/backfill writes
+// loadAll() fires automatically on every page load: a transient failure there is harmless and
+// self-heals on the next load (the same unmet condition just re-checks and re-fires), so a toast
+// would only ever confuse someone who didn't do anything to cause it — the exact reasoning
+// activeBatch's own writes (left as raw kvSet, see their comments) were already carved out for.
+// Shares _saveQueues with save() so a quiet background migration and a loud user-initiated save on
+// the SAME key still serialize against each other instead of racing.
+function saveQuietly(key){
+  const prior = _saveQueues[key] || Promise.resolve();
+  const run = prior.then(()=>_saveOnceQuietly(key), ()=>_saveOnceQuietly(key));
+  _saveQueues[key] = run;
+  return run;
+}
+async function _saveOnceQuietly(key){
+  for(let attempt=0; attempt<2; attempt++){
+    try{
+      const merged = await mergeBeforeSave(key);
+      const ok = await kvSet(key, merged);
+      if(ok){
+        state[key] = merged; snapshotBaseline(key);
+        if(key==='branding') _cacheBrandingForLoggedOutView();
+        if(key==='loginCustomization') _cacheLoginCustomizationForLoggedOutView();
+        return true;
+      }
+    }catch(e){ console.error('saveQuietly '+key, e); }
+    await new Promise(r=>setTimeout(r, 500));
+  }
+  console.error('saveQuietly '+key+' failed after retries');
   return false;
 }
 function saveSession(){

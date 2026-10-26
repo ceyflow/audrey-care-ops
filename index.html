@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261025183939">
+<meta name="app-build" content="20261026062838">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1856,6 +1856,13 @@ let _syncBaseline = {};
 function snapshotBaseline(key){
   _syncBaseline[key] = Array.isArray(state[key]) ? JSON.parse(JSON.stringify(state[key])) : state[key];
 }
+// auth gets its own always-deep-clone snapshot rather than sharing the generic snapshotBaseline
+// above — that one only clones arrays, assigning everything else (including an object like auth)
+// by reference on the assumption nothing mutates a SYNCED_KEY's object in place. auth has exactly
+// one spot that used to do that (a legacy login's password getting hashed in place on its roleLogins
+// entry — fixed below to rebuild immutably instead, but this clone is the belt-and-braces version:
+// even a future in-place edit can't quietly corrupt the baseline this diffs against).
+function snapshotAuthBaseline(){ _syncBaseline.auth = JSON.parse(JSON.stringify(state.auth)); }
 function isMergeableRecordArray(arr){
   return Array.isArray(arr) && arr.length>0 && arr.every(r=>r && typeof r==='object' && 'id' in r);
 }
@@ -1914,6 +1921,68 @@ async function mergeBeforeSave(key){
   try{ serverArr = await kvGet(key); }catch(e){ throw e; }
   if(!Array.isArray(serverArr)) throw new Error(`mergeBeforeSave(${key}): could not confirm the server's current contents — refusing to overwrite a shared list blind`);
   return reconcileRecordArray(key, serverArr);
+}
+// 'auth' isn't a SYNCED_KEY (see saveAuth below for why) so it never went through the
+// mergeBeforeSave/reconcileRecordArray protection above — every write to it used to be a raw,
+// unmerged kvSet('auth', state.auth), including fire-and-forget write-backs on every page load and
+// after the role_data_access version resync (which can take several seconds — plenty of time for
+// an Admin to save an Employer code via Settings while it's still running). Whichever write landed
+// last simply won, silently reverting anything the other one had just saved — concretely confirmed
+// as the cause of an Employer code disappearing after being re-entered: the resync's write-back
+// used this tab's load-time snapshot of state.auth, which still had the OLD roleDataAccessSyncVersion
+// too, so overwriting with it could make the resync (and its blind overwrite) fire all over again on
+// the next load. This pair gives 'auth' the same diff-against-baseline protection as every other
+// SYNCED_KEY — just at the single top-level object's own fields, with secureAccounts (no `id`
+// field, keyed by `name` instead) reconciled the same way reconcileRecordArray does for the rest.
+function reconcileSecureAccountsArray(local, baseline, server){
+  if(!Array.isArray(local) || local.length===0) return Array.isArray(server) ? server : local;
+  if(!Array.isArray(server)) return local;
+  if(!Array.isArray(baseline)) return server; // no baseline yet to diff against
+  const baselineByName = new Map(baseline.map(r=>[r.name, r]));
+  const localByName = new Map(local.map(r=>[r.name, r]));
+  const merged = [];
+  const seen = new Set();
+  server.forEach(serverRec=>{
+    seen.add(serverRec.name);
+    const localRec = localByName.get(serverRec.name);
+    const baseRec = baselineByName.get(serverRec.name);
+    if(!localRec){
+      if(!baseRec) merged.push(serverRec); // new on the server (someone else added it) — keep
+      return; // else: we deleted it locally — respect that rather than resurrecting it
+    }
+    const localChanged = JSON.stringify(localRec) !== JSON.stringify(baseRec);
+    merged.push(localChanged ? localRec : serverRec);
+  });
+  local.forEach(localRec=>{
+    if(seen.has(localRec.name)) return;
+    if(!baselineByName.has(localRec.name)) merged.push(localRec); // created locally, not seen before
+  });
+  return merged;
+}
+// Synchronous core shared by the realtime handler (which already has the server's fresh value
+// handed to it in the payload) and mergeAuthBeforeSave below (which has to go fetch it first).
+function reconcileAuthObject(server){
+  const local = state.auth;
+  const baseline = _syncBaseline.auth;
+  const full = {...DEFAULT_AUTH, ...(server||{})};
+  if(!baseline || typeof baseline!=='object') return full; // nothing local known-synced to protect — trust the server/incoming value
+  const merged = {...full};
+  Object.keys(local).forEach(k=>{
+    if(k==='secureAccounts'){
+      merged.secureAccounts = reconcileSecureAccountsArray(local.secureAccounts, baseline.secureAccounts, full.secureAccounts);
+      return;
+    }
+    const localChanged = JSON.stringify(local[k]) !== JSON.stringify(baseline[k]);
+    if(localChanged) merged[k] = local[k];
+  });
+  return merged;
+}
+async function mergeAuthBeforeSave(){
+  if(!_syncBaseline.auth || typeof _syncBaseline.auth!=='object') return state.auth; // no baseline yet — save as-is, same as mergeBeforeSave's first-save fallback above
+  let serverAuth;
+  try{ serverAuth = await kvGetAuthWithRetry(); }catch(e){ throw e; }
+  if(serverAuth===undefined) throw new Error("mergeBeforeSave(auth): could not confirm the server's current contents — refusing to overwrite blind");
+  return reconcileAuthObject(serverAuth);
 }
 /* Sends an SMS via the send-sms Edge Function (which holds the real send.lk API key).
    Returns {ok:true} or {ok:false, error}. Never throws.
@@ -2419,7 +2488,12 @@ function subscribeRealtime(){
       if(k==='auth'){
         const incoming = payload.new ? payload.new.value : null;
         if(stableStringify(state.auth)===stableStringify(incoming) || recentlySavedByUs(k)) return;
-        state.auth = incoming; render(); return;
+        // Reconciled the same way a save merges in mergeAuthBeforeSave, not a blind replace — an
+        // in-flight local edit (a Save click whose saveAuth() call hasn't finished yet) stays local
+        // instead of getting stomped by this broadcast the instant it arrives.
+        state.auth = reconcileAuthObject(incoming);
+        snapshotAuthBaseline();
+        render(); return;
       }
       // A DEFERRED_KEY only joins live realtime handling once it's actually been fetched (see
       // ensureDeferredKeysLoaded) — before that there's no local copy to reconcile against, and no
@@ -4414,6 +4488,10 @@ async function loadAll(){
   try{
     const a = await authFetchPromise;
     state.auth = a ? {...DEFAULT_AUTH, ...a} : {...DEFAULT_AUTH};
+    // Baseline reflects what was actually just fetched, before the local-only rolePages-clearing
+    // change below — so saveAuth()'s merge correctly sees that change as local and keeps it,
+    // instead of diffing against an already-cleared copy and treating it as "nothing changed".
+    snapshotAuthBaseline();
     // Settings → Page access (the per-role sidebar override screen) is gone — clear out any
     // custom overrides an Admin had saved there so every role falls back to its hardcoded
     // ROLE_PAGES list. Re-synced below once the database row itself is saved.
@@ -4431,7 +4509,9 @@ async function loadAll(){
     // auth config (migratedToSupabaseAuth, secureAccounts, saved passwords…) with nothing. This
     // was confirmed as a real production incident: one bad read silently wiped
     // migratedToSupabaseAuth back to unset for everyone, with no merge protection to catch it.
-    if(a) kvSet('auth', state.auth).catch(e=>console.error('auth write-back failed', e));
+    // Routed through saveAuth() (merge + queue) rather than a raw kvSet — see saveAuth's own
+    // comment for why a raw write here was also part of the Employer code data-loss bug.
+    if(a) saveAuth().catch(e=>console.error('auth write-back failed', e));
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
   if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
     syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));
@@ -4454,7 +4534,10 @@ async function loadAll(){
     syncAllRoleDataAccess().then(res=>{
       if(res && res.ok){
         state.auth = {...state.auth, roleDataAccessSyncVersion: PAGE_DATA_KEYS_VERSION};
-        kvSet('auth', state.auth).catch(e=>console.error('roleDataAccessSyncVersion write-back failed', e));
+        // Routed through saveAuth() — this resync can take several seconds, plenty of time for an
+        // Admin to save an Employer code via Settings while it's still running; a raw kvSet here
+        // used to win that race and silently revert it (see saveAuth's own comment).
+        saveAuth().catch(e=>console.error('roleDataAccessSyncVersion write-back failed', e));
         showToast('Synced data permissions for all roles');
       } else {
         console.error('role_data_access version resync did not report ok', res);
@@ -4558,7 +4641,6 @@ function pollCitypakTrackingIfActive(){
   if(cached && cached.ok && cached.data && cached.data.is_delivered) return;
   ensureCitypakTracking(o.courierNumber, true);
 }
-async function saveAuth(){ try{ await kvSet('auth', state.auth); }catch(e){ console.error('save auth failed', e); } }
 // Two overlapping save() calls for the SAME key (e.g. the background archive sweep firing while
 // a manual edit is mid-save) would each fetch-merge-write independently and could interleave —
 // the later write's merge wouldn't yet know about the earlier write's change, discarding it. This
@@ -4570,6 +4652,31 @@ function save(key){
   const run = prior.then(()=>_saveOnce(key), ()=>_saveOnce(key));
   _saveQueues[key] = run;
   return run;
+}
+// auth used to be a single unqueued, unmerged `kvSet('auth', state.auth)` — now routed through the
+// same queue + retry + merge-before-write shape as save()/_saveOnce() above (via mergeAuthBeforeSave,
+// since auth's shape — one object, secureAccounts keyed by name — doesn't fit the generic
+// id-keyed-array mergeBeforeSave(key) path). Every other write-back to 'auth' elsewhere in the file
+// now goes through this one function instead of calling kvSet('auth', ...) directly, so they all
+// share the same queue and can no longer interleave or blindly clobber each other.
+function saveAuth(){
+  const prior = _saveQueues.auth || Promise.resolve();
+  const run = prior.then(()=>_saveAuthOnce(), ()=>_saveAuthOnce());
+  _saveQueues.auth = run;
+  return run;
+}
+async function _saveAuthOnce(){
+  for(let attempt=0; attempt<2; attempt++){
+    try{
+      const merged = await mergeAuthBeforeSave();
+      const ok = await kvSet('auth', merged);
+      if(ok){ state.auth = merged; snapshotAuthBaseline(); return true; }
+    }catch(e){ console.error('save auth failed', e); }
+    await new Promise(r=>setTimeout(r, 500));
+  }
+  console.error('save auth failed');
+  showToast('Could not save account changes — please try again');
+  return false;
 }
 async function _saveOnce(key){
   // Two attempts: the second covers a transient/rate-limit error on the first.
@@ -4997,8 +5104,13 @@ async function confirmLogin(){
     }
     sessionName = match.name;
     if(!looksHashed(match.password)){
-      match.password = await sha256Hex(password);
-      kvSet('auth', state.auth).catch(e=>console.error('lazy password hash upgrade failed', e));
+      // Rebuilt immutably (not match.password = ... in place) to match how every other state.auth
+      // edit in the file works — snapshotAuthBaseline() deep-clones, so an in-place mutation here
+      // wouldn't actually corrupt that snapshot, but every other write goes through a fresh object
+      // via spread and this one should too rather than being the one silent exception.
+      const hashed = await sha256Hex(password);
+      state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: logins.map(l=>l.name===match.name ? {...l, password:hashed} : l)}};
+      saveAuth().catch(e=>console.error('lazy password hash upgrade failed', e));
     }
   } else {
     const expected = legacySharedPasswordFor(role);

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026191154">
+<meta name="app-build" content="20261026192723">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4000,7 +4000,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
+  filters: { complaintStatus: 'Open', customerSearch:'', supplierSearch:'', orderInquirySearch:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -8583,29 +8583,37 @@ function renderOngoingOrdersSection(sec, admin, code){
 const ORDER_INQUIRY_PAGE_SIZE = 60;
 function renderOrderInquiryPage(){
   const q = (state.filters.orderInquirySearch||'').toLowerCase();
+  const salesmanF = state.filters.orderInquirySalesman||'';
+  // Orders link to a customer by name only (no customerId field), matching how the rest of the
+  // app already looks up a customer's salesman — see the same name-normalized pattern in
+  // customerFormModal. Indexed once per render rather than a per-row .find() over state.customers.
+  // Built before the search filter below since the salesman filter needs it too.
+  const salesmanByCustomerName = {};
+  state.customers.forEach(c=>{ if(c.salesman) salesmanByCustomerName[c.name.trim().toLowerCase()] = c.salesman; });
+  const allSalesmen = [...new Set(state.customers.map(c=>c.salesman).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   // With years of history, archivedOrders() can hold thousands of rows — rendering all of them
   // unconditionally made this page (and scrolling on it) very slow on weaker machines. A search
   // shows every match (search results are naturally small); otherwise show only the most recent
   // page, with a button to reveal more.
   const matches = archivedOrders().filter(o=>{
+    if(salesmanF && salesmanByCustomerName[(o.customer||'').trim().toLowerCase()]!==salesmanF) return false;
     if(!q) return true;
     return (o.customer||'').toLowerCase().includes(q)
       || (o.orderNumber||o.id||'').toLowerCase().includes(q)
       || (o.phone||'').includes(q);
   });
-  const limit = q ? matches.length : (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE);
+  const limit = (q||salesmanF) ? matches.length : (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE);
   const rows = matches.slice(0, limit);
   const hiddenCount = matches.length - rows.length;
-  // Orders link to a customer by name only (no customerId field), matching how the rest of the
-  // app already looks up a customer's salesman — see the same name-normalized pattern in
-  // customerFormModal. Indexed once per render rather than a per-row .find() over state.customers.
-  const salesmanByCustomerName = {};
-  state.customers.forEach(c=>{ if(c.salesman) salesmanByCustomerName[c.name.trim().toLowerCase()] = c.salesman; });
   return `
   <div class="toolbar">
     <input class="search-input" id="order-inquiry-search" placeholder="Search by customer name…" value="${esc(state.filters.orderInquirySearch||'')}">
+    <select id="order-inquiry-salesman-filter" class="btn btn-sm" style="${salesmanF?`background:${(state.salesPersonColors||{})[salesmanF]||'var(--accent-soft)'};border-color:${(state.salesPersonColors||{})[salesmanF]||'var(--accent)'};color:${readableTextOn((state.salesPersonColors||{})[salesmanF]||'#E5EEF5')};`:''}">
+      <option value="">Search by sales person</option>
+      ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
+    </select>
   </div>
-  ${rows.length===0 ? `<div class="empty-state">${q?'No matching orders.':'Nothing here yet — orders show up 2 hours after being picked up by delivery.'}</div>` : `
+  ${rows.length===0 ? `<div class="empty-state">${(q||salesmanF)?'No matching orders.':'Nothing here yet — orders show up 2 hours after being picked up by delivery.'}</div>` : `
   <div class="panel">
     ${rows.map(o=>{
       const canResend = !!state.session && roleCan(state.session.role, 'orderinquiry_resend_review');
@@ -16146,6 +16154,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');
   if(byIdEl('customer-search')) byIdEl('customer-search').addEventListener('input', e=>{ state.filters.customerSearch = e.target.value; render(); });
   if(byIdEl('order-inquiry-search')) byIdEl('order-inquiry-search').addEventListener('input', e=>{ state.filters.orderInquirySearch = e.target.value; render(); });
+  if(byIdEl('order-inquiry-salesman-filter')) byIdEl('order-inquiry-salesman-filter').addEventListener('change', e=>{ state.filters.orderInquirySalesman = e.target.value; render(); });
   if(byIdEl('btn-order-inquiry-more')) byIdEl('btn-order-inquiry-more').onclick = ()=>{
     state.filters.orderInquiryLimit = (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE) + ORDER_INQUIRY_PAGE_SIZE;
     render();

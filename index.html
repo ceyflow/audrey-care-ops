@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026075654">
+<meta name="app-build" content="20261026080328">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -10806,6 +10806,14 @@ function renderSmsTemplatesPanel(){
           </select>
           <div class="hint">When "No", moving an order to Processing or Picked Up by Delivery asks before texting the customer, instead of sending right away.</div>
         </div>
+        <div class="field" style="max-width:360px;">
+          <label>Kanban drag &amp; drop</label>
+          <select name="dragEnabled">
+            <option value="no" ${!orderDragEnabled()?'selected':''}>Off — move orders with the stage buttons only</option>
+            <option value="yes" ${orderDragEnabled()?'selected':''}>On — allow dragging cards between stages</option>
+          </select>
+          <div class="hint">Also needs the "Drag cards between stages" permission for a role in Settings → User roles — this is the master switch, that's the per-role one.</div>
+        </div>
         <div class="hint" style="font-weight:600;color:var(--ink);margin:16px 0 6px;">Message wording</div>
         ${Object.keys(SMS_TEMPLATE_INFO).map(key=>`
         <div class="field">
@@ -17199,7 +17207,7 @@ function attachShellHandlers(){
       if(val) nextTemplates[key] = val;
     });
     state.smsTemplates = nextTemplates;
-    state.orderSettings = {...state.orderSettings, smsAutoSend: f.smsAutoSend.value==='yes'};
+    state.orderSettings = {...state.orderSettings, smsAutoSend: f.smsAutoSend.value==='yes', dragEnabled: f.dragEnabled.value==='yes'};
     if(!(await save('smsTemplates'))) return;
     if(!(await save('orderSettings'))) return;
     showToast('SMS settings updated');

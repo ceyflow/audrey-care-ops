@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026080328">
+<meta name="app-build" content="20261026081446">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2845,7 +2845,7 @@ const ALL_PERMISSION_IDS = PERMISSION_REGISTRY.map(p=>p.id);
 // personal note/reminder widget has no one to belong to there.
 const LEGACY_ROLE_PERMISSIONS = {
   Admin: ALL_PERMISSION_IDS,
-  'Sub Admin': ['complaints_manage','complaints_edit_after_1hr','complaints_full_edit','complaints_delete_active','complaints_restore','complaints_bulk_delete','notes_access'],
+  'Sub Admin': ['complaints_manage','complaints_edit_after_1hr','complaints_full_edit','complaints_delete_active','complaints_restore','complaints_bulk_delete','notes_access','orders_drag'],
   Blending: ['blending_manage','notes_access'],
   Packing: ['orders_advance','orders_edit_tracking_only','notes_access'],
   'Customer Care': ['complaints_manage','complaints_edit_after_1hr','notes_access'],
@@ -4472,6 +4472,16 @@ async function loadAll(){
       (Array.isArray(r.pages) && r.pages.includes('customercare') && !r.pages.includes('ongoingorders'))
         ? {...r, pages:[...r.pages, 'ongoingorders']}
         : r
+    );
+    saveQuietly('userRoles').catch(()=>{});
+  }
+  // Sub Admin should be able to drag order cards between stages the same as Admin — this is the
+  // most reliable way to guarantee it regardless of whether a past Settings → User roles save
+  // actually landed (several of those silently failed before today's fixes). Pure addition to
+  // Sub Admin's own permissions, safe to re-check every load.
+  if(state.userRoles.some(r=>r.name==='Sub Admin' && !(r.permissions && r.permissions.orders_drag))){
+    state.userRoles = state.userRoles.map(r=>
+      r.name==='Sub Admin' ? {...r, permissions:{...(r.permissions||{}), orders_drag:true}} : r
     );
     saveQuietly('userRoles').catch(()=>{});
   }
@@ -15288,6 +15298,19 @@ function mountDallyOrbs(){
     _dallyOrbInstances[id] = lottie.loadAnimation({ container: el, renderer:'svg', loop:true, autoplay:true, path: DALLY_ORB_JSON });
   });
 }
+// Checking a page/permission box in Settings → User roles used to only update the local draft —
+// nothing actually persisted until "Save changes" was clicked separately, which is how a checked
+// box could look done and not be (compounded by the save-failure bugs fixed earlier today). Each
+// toggle now saves itself immediately, the same write Save changes already does, just fired per
+// click instead of batched. Only applies to an EXISTING role being edited — a brand-new role
+// (isNew) has nothing in state.userRoles yet to patch; its checkboxes still wait for "Insert new
+// role" to actually create the record first.
+async function autoSaveRoleToggle(){
+  const f = state._roleEditForm; if(!f || f.isNew) return;
+  state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, pages:[...f.pages], permissions:{...f.permissions}} : r);
+  if(!(await save('userRoles'))) return;
+  syncAllRoleDataAccess();
+}
 /* ===================== Event wiring ===================== */
 function attachShellHandlers(){
   const byIdEl = id => document.getElementById(id);
@@ -17153,10 +17176,12 @@ function attachShellHandlers(){
     const id = cb.dataset.rolePage;
     if(cb.checked){ if(!state._roleEditForm.pages.includes(id)) state._roleEditForm.pages.push(id); }
     else{ state._roleEditForm.pages = state._roleEditForm.pages.filter(p=>p!==id); }
+    autoSaveRoleToggle();
   }));
   document.querySelectorAll('[data-role-permission]').forEach(cb=>cb.addEventListener('change', ()=>{
     if(!state._roleEditForm) return;
     state._roleEditForm.permissions[cb.dataset.rolePermission] = cb.checked;
+    autoSaveRoleToggle();
   }));
   if(byIdEl('role-form-name')) byIdEl('role-form-name').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.name = e.target.value; });
   if(byIdEl('role-form-description')) byIdEl('role-form-description').addEventListener('input', e=>{ if(state._roleEditForm) state._roleEditForm.description = e.target.value; });

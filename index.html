@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261027082546">
+<meta name="app-build" content="20261027083826">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1661,7 +1661,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','stickerStock','rawMaterialStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -2687,15 +2687,6 @@ const ORDER_COLOR_TAGS = [
   {name:'Green', v:'#4C9A5B'}, {name:'Blue', v:'#3B82C4'}, {name:'Purple', v:'#7A5FC4'},
   {name:'Pink', v:'#C45FA0'}, {name:'Gray', v:'#8A8F99'},
 ];
-// A material is "low" once its on-hand quantity has dropped to (or past) the minimum someone set
-// for it — the whole point of the Raw Material Stock tracker (see renderRawMaterialStockPage),
-// since there was no notification anywhere before this that a material had run short, only the
-// BOM/recipe percentages in Costing & recipe (which has no on-hand quantity at all). A material
-// with no minimum set (minQty 0, the unconfigured default) never counts as low — Admin has to
-// actually set a threshold first, same reasoning as orderDragEnabled() defaulting off.
-function lowStockMaterials(){
-  return (state.rawMaterialStock||[]).filter(m => Number(m.minQty)>0 && Number(m.qty)<=Number(m.minQty));
-}
 // The orders board is split into one line per delivery service, in this order. Admin-editable
 // via "Manage Lists" (state.deliveryLines); this is only the seed used the first time the app runs.
 // A line's "key" is the value stored on orders (order.courierService) and never changes once
@@ -2776,7 +2767,7 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','rawmaterialstock','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
   Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
   Packing: ['orders','stickerstock','chat'],
@@ -2786,7 +2777,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','rawmaterialstock','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -3978,7 +3969,6 @@ let state = {
   complaintPriorities: [],
   costingProducts: [],
   stickerStock: [],
-  rawMaterialStock: [],
   activityLog: [],
   _costingOpenProductId: null,
   _costingOpenVersionId: null,
@@ -4027,7 +4017,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', customerSalesman:'', supplierSearch:'', orderInquirySearch:'', orderInquirySalesman:'', rawMaterialSearch:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
+  filters: { complaintStatus: 'Open', customerSearch:'', customerSalesman:'', supplierSearch:'', orderInquirySearch:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -4513,14 +4503,14 @@ async function loadAll(){
     );
     saveQuietly('userRoles').catch(()=>{});
   }
-  // Same deal for the new Inventory page: Admin's own saved `pages` snapshot (if Settings → User
-  // roles was ever opened and saved for Admin, which overrides the hardcoded ROLE_PAGES.Admin
-  // list — see pagesForRole) predates this page, so it would otherwise never show in the sidebar
-  // no matter what the hardcoded list says. Pure addition, safe to re-check every load.
-  if(state.userRoles.some(r=>r.name==='Admin' && Array.isArray(r.pages) && !r.pages.includes('rawmaterialstock'))){
+  // The Inventory (raw material stock) feature was removed entirely, by request — this cleans the
+  // page id back out of any role's saved `pages` snapshot it had already been backfilled into
+  // (see the matching addition this replaces), so it doesn't sit there as dead, inert state.
+  // Pure removal, safe to re-check every load; a no-op once nobody has it anymore.
+  if(state.userRoles.some(r=>Array.isArray(r.pages) && r.pages.includes('rawmaterialstock'))){
     state.userRoles = state.userRoles.map(r=>
-      (r.name==='Admin' && Array.isArray(r.pages) && !r.pages.includes('rawmaterialstock'))
-        ? {...r, pages:[...r.pages, 'rawmaterialstock']}
+      Array.isArray(r.pages) && r.pages.includes('rawmaterialstock')
+        ? {...r, pages: r.pages.filter(p=>p!=='rawmaterialstock')}
         : r
     );
     saveQuietly('userRoles').catch(()=>{});
@@ -4534,15 +4524,6 @@ async function loadAll(){
       r.name==='Sub Admin' ? {...r, permissions:{...(r.permissions||{}), orders_drag:true}} : r
     );
     saveQuietly('userRoles').catch(()=>{});
-  }
-  // Inventory (raw material stock) — seeded once from the one real ingredient list already on
-  // file (Shower Gel's costing sheet), just as a convenience starting point; qty/minQty both start
-  // at 0 so nothing shows as low until someone actually enters real numbers and a threshold.
-  if(!Array.isArray(state.rawMaterialStock)) state.rawMaterialStock = [];
-  if(state.rawMaterialStock.length===0){
-    const RAWMAT_SEED = ['Water','Edta','SLES','Ben4','BHT','Allantoin','Glycerin','CAPB','Salicate MM','Citric Acid','Nacl','Fragrance'];
-    state.rawMaterialStock = RAWMAT_SEED.map(name => ({id: uid('RMAT'), name, unit:'kg', qty:0, minQty:0}));
-    saveQuietly('rawMaterialStock').catch(()=>{});
   }
   if(!Array.isArray(state.staff)) state.staff = [];
   {
@@ -7319,12 +7300,6 @@ function renderInner(){
   if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
   if(!pageAllowed(state.page)){ state.page = (pagesForRole(state.session.role)||['dashboard'])[0] || 'dashboard'; }
-  // Low-stock popup: once per login (state._justLoggedIn, read here before renderShell's own use
-  // of it clears it below), not on every background re-render — otherwise it would reopen itself
-  // every time something else updated the page while the user had already dismissed it.
-  if(state._justLoggedIn && !state.modal && pageAllowed('rawmaterialstock') && lowStockMaterials().length>0){
-    state.modal = 'lowstockalert';
-  }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.
   if(state.modal==='brandcrop' && document.getElementById('crop-frame')) return;
@@ -7801,7 +7776,6 @@ const NAV = [
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
     {id:'suppliers', label:'Suppliers', icon:'suppliers'},
-    {id:'rawmaterialstock', label:'Inventory', icon:'box'},
     {id:'ordersprocess', label:'Orders Process', icon:'list'},
   ]},
   {group:'GMP', items:[
@@ -8113,7 +8087,6 @@ const PAGE_META = {
   recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
   recipelibrary:{title:'Recipe library', sub:'Create and manage the recipes the blending team runs batches from.'},
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
-  rawmaterialstock:{title:'Inventory', sub:'On-hand quantities for the raw materials used in formulas, so a shortage never goes unnoticed.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
   stickerstock:{title:'Sticker stock', sub:'5L can sticker counts by fragrance, so Packing always knows what\'s left.'},
@@ -8295,7 +8268,6 @@ function renderPage(){
     case 'customers': return renderCustomersPage();
     case 'suppliers': return renderSuppliersPage();
     case 'stickerstock': return renderStickerStockPage();
-    case 'rawmaterialstock': return renderRawMaterialStockPage();
     case 'complaints': return renderComplaintsPage();
     case 'gmp': return renderGmpPage();
     case 'rnd': return renderRndPage();
@@ -13918,8 +13890,6 @@ function renderModal(){
   if(type==='rndattendance') return rndAttendanceModal(id);
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
-  if(type==='rawmaterial') return rawMaterialFormModal(id==='new'?null:id);
-  if(type==='lowstockalert') return lowStockAlertModal();
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
   if(type==='complaintcustomerview') return complaintCustomerViewModal(id);
   if(type==='complaintphotos') return complaintPhotosModal(id);
@@ -14149,114 +14119,6 @@ function stickerStockCategories(){
   });
   seen.sort((a,b)=> a==='Dallin 5L Stickers' ? -1 : b==='Dallin 5L Stickers' ? 1 : 0);
   return seen;
-}
-/* ===================== Raw material stock ===================== */
-// On-hand quantities for the materials used in formulas, with a minimum threshold per material —
-// the gap this was built for: Costing & recipe already has the BOM (material percentages, cost
-// per kg), but nothing anywhere tracked actual stock-on-hand or alerted when it ran low. Manual
-// entry (no API access to the separate ERP that holds real inventory), same shape as Sticker
-// stock: Admin/whoever has costing_edit keeps it updated, everyone with page access can view.
-function renderRawMaterialStockPage(){
-  const canManage = state.session && roleCan(state.session.role, 'costing_edit');
-  const q = (state.filters.rawMaterialSearch||'').toLowerCase();
-  const all = state.rawMaterialStock||[];
-  const rows = all.filter(m => !q || m.name.toLowerCase().includes(q));
-  const low = lowStockMaterials();
-  return `
-  <div class="stat-grid">
-    <div class="stat-card"><div class="label">Total materials</div><div class="value"><span class="stat-num" data-target="${all.length}">${all.length}</span></div></div>
-    <div class="stat-card"><div class="label">Low stock</div><div class="value ${low.length>0?'danger':''}">${low.length>0?'<span class="pulse-dot"></span>':''}<span class="stat-num" data-target="${low.length}">${low.length}</span></div></div>
-  </div>
-  <div class="toolbar">
-    <input class="search-input" id="rawmaterial-search" placeholder="Search by material name…" value="${esc(state.filters.rawMaterialSearch||'')}">
-    ${canManage ? `<button class="btn btn-primary" id="btn-new-rawmaterial">+ Add material</button>` : ''}
-  </div>
-  <div class="panel">
-    ${rows.length===0 ? `<div class="empty-state">${all.length===0 ? 'No raw materials tracked yet — add one to start getting low-stock alerts.' : 'No materials match your search.'}</div>` : `
-    <table class="data-table">
-      <thead><tr>
-        <th>Material</th><th>Unit</th><th>On hand</th><th>Minimum</th><th>Status</th>${canManage?'<th>Actions</th>':''}
-      </tr></thead>
-      <tbody>
-        ${rows.map(m=>{
-          const isLow = Number(m.minQty)>0 && Number(m.qty)<=Number(m.minQty);
-          return `
-          <tr>
-            <td>${esc(m.name)}</td>
-            <td>${esc(m.unit||'kg')}</td>
-            <td>${canManage ? `<input type="number" step="any" class="rawmaterial-qty-input" data-rawmaterial-qty="${m.id}" value="${m.qty}" style="width:90px;">` : esc(m.qty)}</td>
-            <td>${esc(m.minQty)}</td>
-            <td><span class="pill ${isLow?'pill-high':'pill-active'}">${isLow?'Low':'OK'}</span></td>
-            ${canManage?`<td class="row-actions">
-              <button class="btn btn-sm" data-edit-rawmaterial="${m.id}">Edit</button>
-              <button class="btn btn-sm btn-danger" data-delete-rawmaterial="${m.id}">Delete</button>
-            </td>`:''}
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`}
-  </div>
-  `;
-}
-function rawMaterialFormModal(id){
-  const m = id ? byId(state.rawMaterialStock, id) : null;
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal">
-      <h2>${m?'Edit material':'Add material'}</h2>
-      <form id="form-rawmaterial" data-id="${m?m.id:''}">
-        <div class="field"><label>Material name</label><input name="name" required value="${escAttr(m?m.name:'')}" autocomplete="off" autofocus></div>
-        <div class="field-row">
-          <div class="field"><label>Unit</label><input name="unit" value="${escAttr(m?m.unit:'kg')}" placeholder="kg, L, etc." autocomplete="off"></div>
-          <div class="field"><label>On hand</label><input type="number" step="any" name="qty" value="${m?m.qty:0}"></div>
-        </div>
-        <div class="field">
-          <label>Minimum (alert threshold)</label>
-          <input type="number" step="any" name="minQty" value="${m?m.minQty:0}">
-          <div class="hint">Alerts once on-hand drops to this amount or below. Leave at 0 to never alert on this material.</div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">${m?'Save':'Add material'}</button>
-        </div>
-      </form>
-    </div>
-  </div>`;
-}
-async function submitRawMaterialForm(e){
-  e.preventDefault();
-  const f = e.target;
-  const id = f.dataset.id;
-  const name = f.name.value.trim();
-  if(!name){ showToast('Enter the material name'); return; }
-  const fields = {name, unit: f.unit.value.trim()||'kg', qty: Number(f.qty.value)||0, minQty: Number(f.minQty.value)||0};
-  if(id){
-    const m = byId(state.rawMaterialStock, id); if(!m) return;
-    Object.assign(m, fields);
-  } else {
-    state.rawMaterialStock.push({id: uid('RMAT'), ...fields});
-  }
-  if(!(await save('rawMaterialStock'))) return;
-  closeModal();
-  showToast(id?'Material updated':'Material added');
-}
-function deleteRawMaterial(id){
-  const m = byId(state.rawMaterialStock, id); if(!m) return;
-  openConfirmModal({
-    title: 'Delete material', danger: true, confirmLabel: 'Delete',
-    message: `Remove "${m.name}" from raw material stock? This cannot be undone.`,
-    onConfirm: async ()=>{
-      state.rawMaterialStock = state.rawMaterialStock.filter(x=>x.id!==id);
-      if(!(await save('rawMaterialStock'))) return;
-      showToast('Material deleted');
-    },
-  });
-}
-async function updateRawMaterialQty(id, qty){
-  const m = byId(state.rawMaterialStock, id); if(!m) return;
-  m.qty = qty;
-  if(!(await save('rawMaterialStock'))) return;
-  render();
 }
 function renderStickerStockPage(){
   const allRows = state.stickerStock || [];
@@ -14721,31 +14583,6 @@ function alertInfoModal(){
       <p>${esc(c.message)}</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-primary" id="btn-alert-ok">OK</button>
-      </div>
-    </div>
-  </div>`;
-}
-// Shown once per login (see the check in renderInner()) when anything in Raw material stock has
-// dropped to or below its minimum — the actual "notification and popup" this feature exists for,
-// not just a page someone has to remember to go check.
-function lowStockAlertModal(){
-  const low = lowStockMaterials();
-  if(low.length===0) return '';
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:440px;">
-      <h2 style="display:flex;align-items:center;gap:8px;"><span class="pulse-dot"></span>Low on stock</h2>
-      <div class="sub">${low.length} material${low.length===1?' is':'s are'} at or below its minimum.</div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:40vh;overflow-y:auto;">
-        ${low.map(m=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:8px;background:var(--bg);">
-          <span style="font-weight:600;font-size:13.5px;">${esc(m.name)}</span>
-          <span class="hint">${esc(m.qty)} ${esc(m.unit||'kg')} left · min ${esc(m.minQty)}</span>
-        </div>`).join('')}
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-modal">Dismiss</button>
-        <button type="button" class="btn btn-primary" id="btn-goto-rawmaterialstock">Go to Inventory</button>
       </div>
     </div>
   </div>`;
@@ -16134,17 +15971,6 @@ function attachShellHandlers(){
       },
     });
   }));
-
-  // Inventory (raw material stock)
-  if(byIdEl('rawmaterial-search')) byIdEl('rawmaterial-search').addEventListener('input', e=>{ state.filters.rawMaterialSearch = e.target.value; render(); });
-  if(byIdEl('btn-new-rawmaterial')) byIdEl('btn-new-rawmaterial').onclick = ()=> openModal('rawmaterial:new');
-  document.querySelectorAll('[data-edit-rawmaterial]').forEach(b=>b.addEventListener('click', ()=> openModal('rawmaterial:'+b.dataset.editRawmaterial)));
-  document.querySelectorAll('[data-delete-rawmaterial]').forEach(b=>b.addEventListener('click', ()=> deleteRawMaterial(b.dataset.deleteRawmaterial)));
-  document.querySelectorAll('.rawmaterial-qty-input').forEach(inp=>inp.addEventListener('change', ()=>{
-    updateRawMaterialQty(inp.dataset.rawmaterialQty, Number(inp.value)||0);
-  }));
-  if(byIdEl('form-rawmaterial')) byIdEl('form-rawmaterial').addEventListener('submit', submitRawMaterialForm);
-  if(byIdEl('btn-goto-rawmaterialstock')) byIdEl('btn-goto-rawmaterialstock').onclick = ()=>{ closeModal(); state.page = 'rawmaterialstock'; render(); };
 
   // Manage categories (Staff)
   if(byIdEl('btn-manage-staff-categories')) byIdEl('btn-manage-staff-categories').onclick = ()=>{

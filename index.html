@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261027104346">
+<meta name="app-build" content="20261027185054">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -638,6 +638,29 @@ html{ visibility:hidden; }
   .empty-col{color:var(--muted);font-size:12.5px;text-align:center;padding:18px 6px;border:1px dashed var(--border);border-radius:8px;}
   .rnd-log-timeline{max-height:440px;overflow-y:auto;padding-right:6px;gap:14px;}
   .rnd-log-timeline .item{padding:14px 16px;font-size:13.5px;line-height:1.55;}
+  /* R&D Chemists tab on phone width: the chemist summary and attendance log are both real
+     <table>s on desktop, swapped for stacked cards here — same display:none/block toggle pattern
+     as .board/.board-mobile above, same 760px breakpoint. "Stacked Cards" design, chosen from a
+     10-sample gallery, 2026-10-27. */
+  .rnd-mobile-cards{display:none;}
+  @media (max-width:760px){
+    .rnd-desktop-table{display:none;}
+    .rnd-mobile-cards{display:flex;flex-direction:column;gap:9px;}
+  }
+  .rnd-chemist-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .rnd-chemist-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .rnd-chemist-card-name{font-weight:700;font-size:14px;}
+  .rnd-chemist-card-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .rnd-chemist-card-meta b{color:var(--ink);font-weight:600;}
+  .rnd-chemist-card-actions{display:flex;gap:8px;}
+  .rnd-chemist-card-actions .btn{flex:1;}
+  .rnd-att-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px;}
+  .rnd-att-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .rnd-att-card-date{font-weight:700;font-size:12.5px;}
+  .rnd-att-card-chemist{font-size:11px;color:var(--muted);margin-top:1px;}
+  .rnd-att-pill{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
+  .rnd-att-pill-in{background:var(--s-received-soft);color:var(--s-received);}
+  .rnd-att-pill-out{background:var(--s-blending-soft);color:var(--s-blending);}
   .rnd-outcome-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
   .rnd-outcome-group:last-child{margin-bottom:0;}
   .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);}
@@ -8946,8 +8969,10 @@ function renderRndChemistsTab(){
       ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist-2">+ Add the first chemist</button>` : ''}
     </div>`;
   }
+  const canDeleteAtt = !!state.session && roleCan(state.session.role, 'rnd_delete');
   return `
   <div class="panel" style="margin-bottom:16px;">
+    <div class="rnd-desktop-table">
     <table class="data-table">
       <thead><tr><th>Chemist</th><th>Today</th><th>Visits this month</th><th>Last visit</th><th></th></tr></thead>
       <tbody>
@@ -8970,16 +8995,61 @@ function renderRndChemistsTab(){
         }).join('')}
       </tbody>
     </table>
+    </div>
+    <div class="rnd-mobile-cards">
+      ${chemists.map(c=>{
+        const markedToday = !!rndAttLoginAt(rndAttRecFor(c.id, today));
+        const last = rndLastVisit(c.id);
+        return `
+        <div class="rnd-chemist-card">
+          <div class="rnd-chemist-card-top">
+            <span class="rnd-chemist-card-name">${esc(c.name)}</span>
+            ${markedToday ? `<span class="pill pill-active">✓ Present</span>` : ''}
+          </div>
+          <div class="rnd-chemist-card-meta">
+            <span>Visits: <b>${rndAttendanceCountThisMonth(c.id)}</b></span>
+            <span>Last: <b>${last?fmtDateTime(rndAttLoginAt(last)):'Never'}</b></span>
+          </div>
+          ${canManageRnd() ? `
+          <div class="rnd-chemist-card-actions">
+            <button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>
+            <button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
   </div>
   <div class="panel">
     <div class="panel-head"><h3>Recent attendance</h3></div>
     ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
+    <div class="rnd-desktop-table">
     <table class="data-table">
       <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th><th></th></tr></thead>
       <tbody>
-        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td><td style="text-align:right;">${state.session && roleCan(state.session.role, 'rnd_delete') ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`; }).join('')}
+        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td><td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`; }).join('')}
       </tbody>
-    </table>`}
+    </table>
+    </div>
+    <div class="rnd-mobile-cards">
+      ${state.rndAttendance.slice(0,30).map(a=>{
+        const inAt = rndAttLoginAt(a);
+        return `
+        <div class="rnd-att-card">
+          <div class="rnd-att-card-top">
+            <div>
+              <div class="rnd-att-card-date">${esc(a.date)}</div>
+              <div class="rnd-att-card-chemist">${esc(a.chemistName)}</div>
+            </div>
+            ${canDeleteAtt ? `<button type="button" class="btn-text" data-delete-rnd-attendance="${a.id}" style="color:#C15B4E;">🗑</button>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;">
+            <span class="rnd-att-pill rnd-att-pill-in">In ${inAt?fmtTimeOnly(inAt):'—'}</span>
+            <span class="rnd-att-pill rnd-att-pill-out">Out ${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    `}
   </div>
   `;
 }

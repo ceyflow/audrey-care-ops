@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261027083826">
+<meta name="app-build" content="20261027085308">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -272,6 +272,11 @@ html{ visibility:hidden; }
   table.data-table td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
   table.data-table tr:last-child td{border-bottom:none;}
   table.data-table tr.clickable:hover{background:var(--bg);cursor:pointer;}
+  /* Per-column search/filter row, directly under the header — one small input or dropdown per
+     filterable column, each narrowing the table independently (combined with AND). */
+  table.data-table tr.col-filter-row th{padding:5px 8px 9px;}
+  .col-filter-input, .col-filter-select{width:100%;box-sizing:border-box;padding:5px 7px;font-size:11.5px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-weight:400;}
+  .col-filter-input::placeholder{color:var(--muted);}
 
   /* "Modern Minimal Card" look for the batch sheet document — the on-screen modal, both print
      paths, and the Settings live preview all share these. Deliberately a fixed brand palette, not
@@ -4017,7 +4022,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', customerSalesman:'', supplierSearch:'', orderInquirySearch:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
+  filters: { complaintStatus: 'Open', customerSearch:'', customerPhoneFilter:'', customerSalesman:'', customerType:'', customerStatus:'', supplierSearch:'', supplierVendorIdFilter:'', supplierStatus:'', orderInquirySearch:'', orderInquiryOrderNoFilter:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -9016,14 +9021,24 @@ function renderOrdersProcessPage(){
 }
 
 function renderCustomersPage(){
-  const q = state.filters.customerSearch.toLowerCase();
+  const nameF = (state.filters.customerSearch||'').toLowerCase();
+  const phoneF = (state.filters.customerPhoneFilter||'').toLowerCase();
   const salesmanF = state.filters.customerSalesman||'';
+  const typeF = state.filters.customerType||'';
+  const statusF = state.filters.customerStatus||'';
   const allSalesmen = [...new Set(state.customers.map(c=>c.salesman).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const allTypes = [...new Set(state.customers.map(c=>c.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const anyFilter = !!(nameF||phoneF||salesmanF||typeF||statusF);
   const rows = state.customers.filter(c => {
+    if(nameF && !c.name.toLowerCase().includes(nameF)) return false;
+    if(phoneF && !(c.phone||'').toLowerCase().includes(phoneF)) return false;
     if(salesmanF && c.salesman!==salesmanF) return false;
-    return !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q);
+    if(typeF && c.type!==typeF) return false;
+    if(statusF && c.status!==statusF) return false;
+    return true;
   });
   const active = state.customers.filter(c=>c.status==='Active').length;
+  const canManage = state.session && roleCan(state.session.role, 'customers_manage');
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="label">Total customers</div><div class="value"><span class="stat-num" data-target="${state.customers.length}">${state.customers.length}</span></div></div>
@@ -9031,14 +9046,8 @@ function renderCustomersPage(){
     <div class="stat-card"><div class="label">Inactive</div><div class="value"><span class="stat-num" data-target="${state.customers.length-active}">${state.customers.length-active}</span></div></div>
   </div>
   <div class="toolbar">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input class="search-input" id="customer-search" placeholder="Search by name or phone…" value="${esc(state.filters.customerSearch)}">
-      <select id="customer-salesman-filter" class="btn btn-sm" style="${salesmanF?`background:${(state.salesPersonColors||{})[salesmanF]||'var(--accent-soft)'};border-color:${(state.salesPersonColors||{})[salesmanF]||'var(--accent)'};color:${readableTextOn((state.salesPersonColors||{})[salesmanF]||'#E5EEF5')};`:''}">
-        <option value="">Search by sales person</option>
-        ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
-      </select>
-    </div>
-    ${(state.session && roleCan(state.session.role, 'customers_manage')) ? `
+    <div></div>
+    ${canManage ? `
     <div style="display:flex;gap:8px;align-items:center;">
       ${state.selectedCustomers.size>0 ? `
       <span class="hint">${state.selectedCustomers.size} selected</span>
@@ -9053,16 +9062,37 @@ function renderCustomersPage(){
     </div>` : ''}
   </div>
   <div class="panel">
-    ${rows.length===0 ? `<div class="empty-state">No customers ${(q||salesmanF)?'match your search':'yet'}.</div>` : `
+    ${state.customers.length===0 ? `<div class="empty-state">No customers yet.</div>` : `
     <table class="data-table">
-      <thead><tr>
-        ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
-        <th>Name</th><th>Phone</th><th>Sales person</th><th>Type</th><th>Status</th><th>Added</th>${(state.session && roleCan(state.session.role, 'customers_manage'))?'<th>Actions</th>':''}
-      </tr></thead>
+      <thead>
+        <tr>
+          ${canManage?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
+          <th>Name</th><th>Phone</th><th>Sales person</th><th>Type</th><th>Status</th><th>Added</th>${canManage?'<th>Actions</th>':''}
+        </tr>
+        <tr class="col-filter-row">
+          ${canManage?'<th></th>':''}
+          <th><input class="col-filter-input" id="customer-filter-name" placeholder="Search…" value="${escAttr(state.filters.customerSearch||'')}"></th>
+          <th><input class="col-filter-input" id="customer-filter-phone" placeholder="Search…" value="${escAttr(state.filters.customerPhoneFilter||'')}"></th>
+          <th><select class="col-filter-select" id="customer-filter-salesman">
+            <option value="">All</option>
+            ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
+          </select></th>
+          <th><select class="col-filter-select" id="customer-filter-type">
+            <option value="">All</option>
+            ${allTypes.map(t=>`<option value="${escAttr(t)}" ${t===typeF?'selected':''}>${esc(t)}</option>`).join('')}
+          </select></th>
+          <th><select class="col-filter-select" id="customer-filter-status">
+            <option value="">All</option>
+            <option value="Active" ${statusF==='Active'?'selected':''}>Active</option>
+            <option value="Inactive" ${statusF==='Inactive'?'selected':''}>Inactive</option>
+          </select></th>
+          <th></th>${canManage?'<th></th>':''}
+        </tr>
+      </thead>
       <tbody>
-        ${rows.map(c=>`
-        <tr class="${(state.session && roleCan(state.session.role, 'customers_manage'))?'clickable':''}" ${(state.session && roleCan(state.session.role, 'customers_manage'))?`data-customer-row="${c.id}"`:''}>
-          ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
+        ${rows.length===0 ? `<tr><td colspan="${canManage?8:6}"><div class="empty-state">No customers match your filters.</div></td></tr>` : rows.map(c=>`
+        <tr class="${canManage?'clickable':''}" ${canManage?`data-customer-row="${c.id}"`:''}>
+          ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
           <td>${esc(c.name)}</td><td>${esc(c.phone)||'—'}</td>
           <td>${(()=>{ if(!c.salesman) return '<span class="hint">—</span>';
             const spColor = (state.salesPersonColors||{})[c.salesman];
@@ -9070,7 +9100,7 @@ function renderCustomersPage(){
           <td>${esc(c.type)}</td>
           <td><span class="pill ${c.status==='Active'?'pill-active':'pill-inactive'}">${c.status}</span></td>
           <td>${fmtDate(c.createdAt)}</td>
-          ${(state.session && roleCan(state.session.role, 'customers_manage'))?`<td class="row-actions" onclick="event.stopPropagation()">
+          ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
             <button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>
           </td>`:''}
@@ -9083,9 +9113,17 @@ function renderCustomersPage(){
 
 /* ===================== Suppliers page ===================== */
 function renderSuppliersPage(){
-  const q = state.filters.supplierSearch.toLowerCase();
-  const rows = state.suppliers.filter(s => !q || s.name.toLowerCase().includes(q) || (s.vendorId||'').toLowerCase().includes(q) || (s.phone||'').includes(q));
+  const nameF = (state.filters.supplierSearch||'').toLowerCase();
+  const vendorIdF = (state.filters.supplierVendorIdFilter||'').toLowerCase();
+  const statusF = state.filters.supplierStatus||'';
+  const rows = state.suppliers.filter(s => {
+    if(nameF && !s.name.toLowerCase().includes(nameF)) return false;
+    if(vendorIdF && !(s.vendorId||'').toLowerCase().includes(vendorIdF)) return false;
+    if(statusF && s.status!==statusF) return false;
+    return true;
+  });
   const active = state.suppliers.filter(s=>s.status==='Active').length;
+  const canManage = state.session && roleCan(state.session.role, 'suppliers_manage');
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="label">Total suppliers</div><div class="value"><span class="stat-num" data-target="${state.suppliers.length}">${state.suppliers.length}</span></div></div>
@@ -9093,8 +9131,8 @@ function renderSuppliersPage(){
     <div class="stat-card"><div class="label">Inactive</div><div class="value"><span class="stat-num" data-target="${state.suppliers.length-active}">${state.suppliers.length-active}</span></div></div>
   </div>
   <div class="toolbar">
-    <input class="search-input" id="supplier-search" placeholder="Search by name or vendor ID…" value="${esc(state.filters.supplierSearch)}">
-    ${(state.session && roleCan(state.session.role, 'suppliers_manage')) ? `
+    <div></div>
+    ${canManage ? `
     <div style="display:flex;gap:8px;align-items:center;">
       ${state.selectedSuppliers.size>0 ? `
       <span class="hint">${state.selectedSuppliers.size} selected</span>
@@ -9107,20 +9145,33 @@ function renderSuppliersPage(){
     </div>` : ''}
   </div>
   <div class="panel">
-    ${rows.length===0 ? `<div class="empty-state">No suppliers ${q?'match your search':'yet'}.</div>` : `
+    ${state.suppliers.length===0 ? `<div class="empty-state">No suppliers yet.</div>` : `
     <table class="data-table">
-      <thead><tr>
-        ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
-        <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${(state.session && roleCan(state.session.role, 'suppliers_manage'))?'<th>Actions</th>':''}
-      </tr></thead>
+      <thead>
+        <tr>
+          ${canManage?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
+          <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${canManage?'<th>Actions</th>':''}
+        </tr>
+        <tr class="col-filter-row">
+          ${canManage?'<th></th>':''}
+          <th><input class="col-filter-input" id="supplier-filter-name" placeholder="Search…" value="${escAttr(state.filters.supplierSearch||'')}"></th>
+          <th><input class="col-filter-input" id="supplier-filter-vendorid" placeholder="Search…" value="${escAttr(state.filters.supplierVendorIdFilter||'')}"></th>
+          <th><select class="col-filter-select" id="supplier-filter-status">
+            <option value="">All</option>
+            <option value="Active" ${statusF==='Active'?'selected':''}>Active</option>
+            <option value="Inactive" ${statusF==='Inactive'?'selected':''}>Inactive</option>
+          </select></th>
+          <th></th>${canManage?'<th></th>':''}
+        </tr>
+      </thead>
       <tbody>
-        ${rows.map(s=>`
-        <tr class="${(state.session && roleCan(state.session.role, 'suppliers_manage'))?'clickable':''}" ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`data-supplier-row="${s.id}"`:''}>
-          ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
+        ${rows.length===0 ? `<tr><td colspan="${canManage?6:4}"><div class="empty-state">No suppliers match your filters.</div></td></tr>` : rows.map(s=>`
+        <tr class="${canManage?'clickable':''}" ${canManage?`data-supplier-row="${s.id}"`:''}>
+          ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
           <td>${esc(s.name)}</td><td>${esc(s.vendorId)||'—'}</td>
           <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></td>
           <td>${fmtDate(s.createdAt)}</td>
-          ${(state.session && roleCan(state.session.role, 'suppliers_manage'))?`<td class="row-actions" onclick="event.stopPropagation()">
+          ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>
             <button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>
           </td>`:''}
@@ -16264,8 +16315,11 @@ function attachShellHandlers(){
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');
-  if(byIdEl('customer-search')) byIdEl('customer-search').addEventListener('input', e=>{ state.filters.customerSearch = e.target.value; render(); });
-  if(byIdEl('customer-salesman-filter')) byIdEl('customer-salesman-filter').addEventListener('change', e=>{ state.filters.customerSalesman = e.target.value; render(); });
+  if(byIdEl('customer-filter-name')) byIdEl('customer-filter-name').addEventListener('input', e=>{ state.filters.customerSearch = e.target.value; render(); });
+  if(byIdEl('customer-filter-phone')) byIdEl('customer-filter-phone').addEventListener('input', e=>{ state.filters.customerPhoneFilter = e.target.value; render(); });
+  if(byIdEl('customer-filter-salesman')) byIdEl('customer-filter-salesman').addEventListener('change', e=>{ state.filters.customerSalesman = e.target.value; render(); });
+  if(byIdEl('customer-filter-type')) byIdEl('customer-filter-type').addEventListener('change', e=>{ state.filters.customerType = e.target.value; render(); });
+  if(byIdEl('customer-filter-status')) byIdEl('customer-filter-status').addEventListener('change', e=>{ state.filters.customerStatus = e.target.value; render(); });
   if(byIdEl('order-inquiry-search')) byIdEl('order-inquiry-search').addEventListener('input', e=>{ state.filters.orderInquirySearch = e.target.value; render(); });
   if(byIdEl('order-inquiry-salesman-filter')) byIdEl('order-inquiry-salesman-filter').addEventListener('change', e=>{ state.filters.orderInquirySalesman = e.target.value; render(); });
   if(byIdEl('btn-order-inquiry-more')) byIdEl('btn-order-inquiry-more').onclick = ()=>{
@@ -16363,7 +16417,9 @@ function attachShellHandlers(){
   if(byIdEl('supplier-csv-input')) byIdEl('supplier-csv-input').addEventListener('change', e=>{
     const file = e.target.files[0]; if(file) importSuppliersCsv(file); e.target.value = '';
   });
-  if(byIdEl('supplier-search')) byIdEl('supplier-search').addEventListener('input', e=>{ state.filters.supplierSearch = e.target.value; render(); });
+  if(byIdEl('supplier-filter-name')) byIdEl('supplier-filter-name').addEventListener('input', e=>{ state.filters.supplierSearch = e.target.value; render(); });
+  if(byIdEl('supplier-filter-vendorid')) byIdEl('supplier-filter-vendorid').addEventListener('input', e=>{ state.filters.supplierVendorIdFilter = e.target.value; render(); });
+  if(byIdEl('supplier-filter-status')) byIdEl('supplier-filter-status').addEventListener('change', e=>{ state.filters.supplierStatus = e.target.value; render(); });
   document.querySelectorAll('[data-supplier-row]').forEach(r=>r.addEventListener('click', ()=>openModal('supplier:'+r.dataset.supplierRow)));
   document.querySelectorAll('[data-edit-supplier]').forEach(b=>b.addEventListener('click', ()=>openModal('supplier:'+b.dataset.editSupplier)));
   document.querySelectorAll('[data-delete-supplier]').forEach(b=>b.addEventListener('click', ()=>{

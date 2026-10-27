@@ -663,9 +663,25 @@ html{ visibility:hidden; }
   .rnd-att-pill-out{background:var(--s-blending-soft);color:var(--s-blending);}
   .rnd-outcome-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
   .rnd-outcome-group:last-child{margin-bottom:0;}
-  .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);}
+  .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);border:none;}
   .rnd-outcome-success{background:var(--accent-soft);color:var(--accent-dark);}
   .rnd-outcome-quarantined{background:var(--danger-soft);color:var(--danger);}
+  .rnd-toolbar-mobile{display:none;}
+  @media (max-width:760px){
+    .rnd-toolbar-desktop{display:none;}
+    .rnd-toolbar-mobile{display:block;}
+  }
+  .rnd-mobile-row1{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .rnd-mobile-fab-inline{width:32px;height:32px;flex:none;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:18px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .rnd-mobile-stats{display:flex;gap:8px;margin-bottom:12px;}
+  .rnd-stat-tile{flex:1;min-width:0;border:none;border-radius:11px;background:var(--bg);color:var(--muted);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .rnd-stat-tile-num{font-size:17px;font-weight:800;line-height:1;}
+  .rnd-stat-tile-label{font-size:10px;font-weight:700;white-space:nowrap;}
+  .rnd-stat-tile-success{background:var(--accent-soft);color:var(--accent-dark);}
+  .rnd-stat-tile-quarantined{background:var(--danger-soft);color:var(--danger);}
+  .rnd-pill-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .rnd-pill-tab{border:none;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;background:var(--bg);color:var(--muted);white-space:nowrap;}
+  .rnd-pill-tab.active{background:var(--accent-soft);color:var(--accent-dark);}
   .rnd-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px;}
   .rnd-cal-month{font-weight:600;font-size:14px;}
   .rnd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
@@ -8868,6 +8884,7 @@ function renderRndPage(){
   const quarantinedCount = completedProjects.filter(p=>p.outcome==='quarantined').length;
   const unsetCount = completedProjects.filter(p=>!p.outcome).length;
   return `
+  <div class="rnd-toolbar-desktop">
   <div class="toolbar" style="flex-wrap:wrap;">
     <div class="tabs">
       <button type="button" class="tab ${view==='board'||view==='outcome'?'active':''}" data-rnd-view-mode="board">Products</button>
@@ -8877,11 +8894,36 @@ function renderRndPage(){
       ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
       : `
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
-        <button type="button" class="rnd-outcome-label rnd-outcome-success" data-rnd-outcome-view="success" style="border:none;cursor:pointer;font-family:inherit;">✓ Success · ${successCount}</button>
-        <button type="button" class="rnd-outcome-label rnd-outcome-quarantined" data-rnd-outcome-view="quarantined" style="border:none;cursor:pointer;font-family:inherit;">⚠ Quarantined · ${quarantinedCount}</button>
-        ${unsetCount>0 ? `<button type="button" class="rnd-outcome-label" data-rnd-outcome-view="unset" style="border:none;cursor:pointer;font-family:inherit;">Not set · ${unsetCount}</button>` : ''}
+        <button type="button" class="rnd-outcome-label rnd-outcome-success" data-rnd-outcome-view="success">✓ Success · ${successCount}</button>
+        <button type="button" class="rnd-outcome-label rnd-outcome-quarantined" data-rnd-outcome-view="quarantined">⚠ Quarantined · ${quarantinedCount}</button>
+        ${unsetCount>0 ? `<button type="button" class="rnd-outcome-label" data-rnd-outcome-view="unset">Not set · ${unsetCount}</button>` : ''}
         ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd">+ Add product</button>` : ''}
       </div>`}
+  </div>
+  </div>
+  <div class="rnd-toolbar-mobile">
+    <div class="rnd-mobile-row1">
+      <div class="tabs">
+        <button type="button" class="tab ${view==='board'||view==='outcome'?'active':''}" data-rnd-view-mode="board">Products</button>
+        <button type="button" class="tab ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">🧪 Chemists</button>
+      </div>
+      ${view==='chemists'
+        ? (canManageRnd() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-chemist-m" aria-label="Add chemist">+</button>` : '')
+        : (canManageRnd() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-m" aria-label="Add product">+</button>` : '')}
+    </div>
+    ${view!=='chemists' ? `
+    <div class="rnd-mobile-stats">
+      <button type="button" class="rnd-stat-tile rnd-stat-tile-success" data-rnd-outcome-view="success">
+        <span class="rnd-stat-tile-num">${successCount}</span><span class="rnd-stat-tile-label">✓ Success</span>
+      </button>
+      <button type="button" class="rnd-stat-tile rnd-stat-tile-quarantined" data-rnd-outcome-view="quarantined">
+        <span class="rnd-stat-tile-num">${quarantinedCount}</span><span class="rnd-stat-tile-label">⚠ Quarantined</span>
+      </button>
+      ${unsetCount>0 ? `
+      <button type="button" class="rnd-stat-tile" data-rnd-outcome-view="unset">
+        <span class="rnd-stat-tile-num">${unsetCount}</span><span class="rnd-stat-tile-label">Not set</span>
+      </button>` : ''}
+    </div>` : ''}
   </div>
   ${view==='chemists' ? renderRndChemistsTab()
     : view==='outcome' ? renderRndOutcomeView(state.filters.rndOutcomeKind)
@@ -8920,12 +8962,12 @@ function renderRndBoardMobile(){
   const projects = state.rndProjects.filter(p=>p.stage===activeIdx).sort((a,b)=>rndOrderOf(a)-rndOrderOf(b));
   return `
   <div class="board-mobile">
-    <div class="board-stage-tabs">
+    <div class="rnd-pill-tabs">
       ${RND_STAGES.slice(0,-1).map((stageName,i)=>{
         const key = RND_STAGE_KEYS[i]; const style = RND_STAGE_STYLE[key];
         const count = state.rndProjects.filter(p=>p.stage===i).length;
         const on = i===activeIdx;
-        return `<button type="button" class="board-stage-tab ${on?'active':''}" data-rnd-mobile-tab-stage="${i}" style="${on?`color:${style.c};`:''}">${esc(stageName)} · ${count}</button>`;
+        return `<button type="button" class="rnd-pill-tab ${on?'active':''}" data-rnd-mobile-tab-stage="${i}" style="${on?`background:${style.bg};color:${style.c};`:''}">${esc(stageName)} · ${count}</button>`;
       }).join('')}
     </div>
     <div class="column-body" data-rnd-stage="${activeIdx}">
@@ -16360,6 +16402,7 @@ function attachShellHandlers(){
   // R&D board
   if(byIdEl('btn-new-rnd')) byIdEl('btn-new-rnd').onclick = ()=>openModal('rnd:new');
   if(byIdEl('btn-new-rnd-2')) byIdEl('btn-new-rnd-2').onclick = ()=>openModal('rnd:new');
+  if(byIdEl('btn-new-rnd-m')) byIdEl('btn-new-rnd-m').onclick = ()=>openModal('rnd:new');
   document.querySelectorAll('[data-rnd-view-mode]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = b.dataset.rndViewMode; render(); }));
   document.querySelectorAll('[data-rnd-outcome-view]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'outcome'; state.filters.rndOutcomeKind = b.dataset.rndOutcomeView; render(); }));
   document.querySelectorAll('[data-rnd-outcome-back]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'board'; render(); }));
@@ -16434,6 +16477,7 @@ function attachShellHandlers(){
   // R&D chemists & attendance
   if(byIdEl('btn-new-rnd-chemist')) byIdEl('btn-new-rnd-chemist').onclick = ()=>openModal('rndchemist:new');
   if(byIdEl('btn-new-rnd-chemist-2')) byIdEl('btn-new-rnd-chemist-2').onclick = ()=>openModal('rndchemist:new');
+  if(byIdEl('btn-new-rnd-chemist-m')) byIdEl('btn-new-rnd-chemist-m').onclick = ()=>openModal('rndchemist:new');
   document.querySelectorAll('[data-edit-rnd-chemist]').forEach(b=>b.addEventListener('click', ()=>openModal('rndchemist:'+b.dataset.editRndChemist)));
   document.querySelectorAll('[data-open-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>{
     state._rndAttCal = {chemistId: b.dataset.openRndAttendance, month: todayStr().slice(0,7), selectedDate: null};

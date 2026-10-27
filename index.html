@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261027080920">
+<meta name="app-build" content="20261027082546">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4509,6 +4509,18 @@ async function loadAll(){
     state.userRoles = state.userRoles.map(r=>
       (Array.isArray(r.pages) && r.pages.includes('customercare') && !r.pages.includes('ongoingorders'))
         ? {...r, pages:[...r.pages, 'ongoingorders']}
+        : r
+    );
+    saveQuietly('userRoles').catch(()=>{});
+  }
+  // Same deal for the new Inventory page: Admin's own saved `pages` snapshot (if Settings → User
+  // roles was ever opened and saved for Admin, which overrides the hardcoded ROLE_PAGES.Admin
+  // list — see pagesForRole) predates this page, so it would otherwise never show in the sidebar
+  // no matter what the hardcoded list says. Pure addition, safe to re-check every load.
+  if(state.userRoles.some(r=>r.name==='Admin' && Array.isArray(r.pages) && !r.pages.includes('rawmaterialstock'))){
+    state.userRoles = state.userRoles.map(r=>
+      (r.name==='Admin' && Array.isArray(r.pages) && !r.pages.includes('rawmaterialstock'))
+        ? {...r, pages:[...r.pages, 'rawmaterialstock']}
         : r
     );
     saveQuietly('userRoles').catch(()=>{});

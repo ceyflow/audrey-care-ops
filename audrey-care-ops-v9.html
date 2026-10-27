@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261026194439">
+<meta name="app-build" content="20261027064538">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -14586,6 +14586,7 @@ function renderOrderDrawer(id){
     ${ro ? `<div class="hint" style="margin-bottom:14px;">${o.archived ? 'View only — this order is archived and can\'t be edited.' : (canEditTrackingOnly ? 'View only — except the delivery tracking number below, which you can edit and save.' : (canAdv ? 'View only — you don\'t have edit rights for order details, but you can move this order forward below.' : 'View only — you don\'t have edit rights for orders.'))}</div>` : ''}
     <form id="form-order-edit" data-order-id="${o.id}">
       ${richTextField({name:'product', label:'Product / task', value:o.product, required:true, readOnly:ro})}
+      <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(o.notes))}</textarea></div>
       ${limited ? '' : `
       <div class="field-row-3">
         <div class="field"><label>Priority</label>
@@ -14615,7 +14616,6 @@ function renderOrderDrawer(id){
       </div>
       ${orderPhotoField('order-photo', o.photo, ro)}
       `}
-      <div class="field"><label>Notes</label><textarea name="notes" ${roAttr}>${escBody(unbr(o.notes))}</textarea></div>
 
       <div class="field-row" style="align-items:start;">
         <div class="field"><label>History</label>

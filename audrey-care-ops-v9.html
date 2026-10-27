@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261027085308">
+<meta name="app-build" content="20261027104346">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4022,7 +4022,7 @@ let state = {
   navLabels: {},
   selectedComplaints: new Set(),
   selectedRatings: new Set(),
-  filters: { complaintStatus: 'Open', customerSearch:'', customerPhoneFilter:'', customerSalesman:'', customerType:'', customerStatus:'', supplierSearch:'', supplierVendorIdFilter:'', supplierStatus:'', orderInquirySearch:'', orderInquiryOrderNoFilter:'', orderInquirySalesman:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogMonth:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
+  filters: { complaintStatus: 'Open', complaintCustomerFilter:'', complaintReasonFilter:'', complaintPriorityFilter:'', customerSearch:'', customerPhoneFilter:'', customerSalesman:'', customerType:'', customerStatus:'', supplierSearch:'', supplierVendorIdFilter:'', supplierStatus:'', orderInquirySearch:'', orderInquiryOrderNoFilter:'', orderInquirySalesman:'', orderInquiryDeliveryStatus:'', ratingsCustomerFilter:'', ratingsOrderNoFilter:'', ratingsStarFilter:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
   trackQuery: '', trackedOrderId: null, trackError: '',
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
@@ -8685,7 +8685,9 @@ function renderOngoingOrdersSection(sec, admin, code){
 const ORDER_INQUIRY_PAGE_SIZE = 60;
 function renderOrderInquiryPage(){
   const q = (state.filters.orderInquirySearch||'').toLowerCase();
+  const orderNoF = (state.filters.orderInquiryOrderNoFilter||'').toLowerCase();
   const salesmanF = state.filters.orderInquirySalesman||'';
+  const deliveryStatusF = state.filters.orderInquiryDeliveryStatus||'';
   // Orders link to a customer by name only (no customerId field), matching how the rest of the
   // app already looks up a customer's salesman — see the same name-normalized pattern in
   // customerFormModal. Indexed once per render rather than a per-row .find() over state.customers.
@@ -8693,56 +8695,78 @@ function renderOrderInquiryPage(){
   const salesmanByCustomerName = {};
   state.customers.forEach(c=>{ if(c.salesman) salesmanByCustomerName[c.name.trim().toLowerCase()] = c.salesman; });
   const allSalesmen = [...new Set(state.customers.map(c=>c.salesman).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const anyFilter = !!(q||orderNoF||salesmanF||deliveryStatusF);
   // With years of history, archivedOrders() can hold thousands of rows — rendering all of them
   // unconditionally made this page (and scrolling on it) very slow on weaker machines. A search
   // shows every match (search results are naturally small); otherwise show only the most recent
   // page, with a button to reveal more.
   const matches = archivedOrders().filter(o=>{
     if(salesmanF && salesmanByCustomerName[(o.customer||'').trim().toLowerCase()]!==salesmanF) return false;
-    if(!q) return true;
-    return (o.customer||'').toLowerCase().includes(q)
-      || (o.orderNumber||o.id||'').toLowerCase().includes(q)
-      || (o.phone||'').includes(q);
+    if(deliveryStatusF && (o.deliveryOutcome||'')!==deliveryStatusF) return false;
+    if(orderNoF && !(o.orderNumber||o.id||'').toLowerCase().includes(orderNoF)) return false;
+    if(q && !(o.customer||'').toLowerCase().includes(q) && !(o.phone||'').includes(q)) return false;
+    return true;
   });
-  const limit = (q||salesmanF) ? matches.length : (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE);
+  const limit = anyFilter ? matches.length : (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE);
   const rows = matches.slice(0, limit);
   const hiddenCount = matches.length - rows.length;
   return `
-  <div class="toolbar">
-    <input class="search-input" id="order-inquiry-search" placeholder="Search by customer name…" value="${esc(state.filters.orderInquirySearch||'')}">
-    <select id="order-inquiry-salesman-filter" class="btn btn-sm" style="${salesmanF?`background:${(state.salesPersonColors||{})[salesmanF]||'var(--accent-soft)'};border-color:${(state.salesPersonColors||{})[salesmanF]||'var(--accent)'};color:${readableTextOn((state.salesPersonColors||{})[salesmanF]||'#E5EEF5')};`:''}">
-      <option value="">Search by sales person</option>
-      ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
-    </select>
-  </div>
-  ${rows.length===0 ? `<div class="empty-state">${(q||salesmanF)?'No matching orders.':'Nothing here yet — orders show up 2 hours after being picked up by delivery.'}</div>` : `
-  <div class="panel">
-    ${rows.map(o=>{
-      const canResend = !!state.session && roleCan(state.session.role, 'orderinquiry_resend_review');
-      const fbSent = !!o.reviewSentFbAt, googleSent = !!o.reviewSentGoogleAt;
-      const fbLocked = fbSent && !canResend, googleLocked = googleSent && !canResend;
-      const onHold = o.deliveryOutcome==='On Hold';
-      const delivered = o.deliveryOutcome==='Delivered';
-      const deliveredLocked = delivered && !canResend;
-      const salesman = salesmanByCustomerName[(o.customer||'').trim().toLowerCase()];
-      return `
-      <div class="list-row oi-row" data-order-row="${o.id}" style="cursor:pointer;justify-content:space-between;">
-        <span style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-          <span class="lr-avatar empty" style="flex-shrink:0;">${initials(o.customer||'?')}</span>
-          <span class="lr-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;" title="${escAttr(o.customer||'')}">${esc(o.customer)}</span>
-        </span>
-        <span class="oi-row-actions" style="display:grid;grid-template-columns:140px 140px 132px 172px 172px;gap:8px;align-items:center;flex-shrink:0;">
-          ${(()=>{ const spColor = salesman ? (state.salesPersonColors||{})[salesman] : null;
-            return `<span class="btn btn-sm" style="width:100%;box-sizing:border-box;text-align:center;cursor:default;${spColor?`background:${spColor};border-color:${spColor};color:${readableTextOn(spColor)};`:''}" title="Sales person">${salesman ? esc(salesman) : '—'}</span>`; })()}
-          <button type="button" class="btn btn-sm" style="width:100%;" data-view-tracking="${o.id}" onclick="event.stopPropagation()">👁 View tracking</button>
-          ${o.deliveryOutcome
-            ? `<span class="pill ${delivered?'pill-active':(onHold?'pill-hold':'pill-high')}" style="width:100%;box-sizing:border-box;text-align:center;cursor:${deliveredLocked?'default':'pointer'};" ${deliveredLocked?'':`data-open-delivery-outcome="${o.id}"`} onclick="event.stopPropagation()" ${deliveredLocked?'title="Delivered — you don\'t have permission to change this."':'title="Click to change"'}>${esc(o.deliveryOutcome)}</span>`
-            : `<button type="button" class="btn btn-sm" style="width:100%;" data-open-delivery-outcome="${o.id}" onclick="event.stopPropagation()">Delivery status</button>`}
-          <button type="button" class="btn btn-sm" style="width:100%;" data-review-fb="${o.id}" ${fbLocked?'disabled title="Already sent — you don\'t have permission to send it again."':''} onclick="event.stopPropagation()">${fbSent?'FB review sent ✓':'Send FB review link'}</button>
-          <button type="button" class="btn btn-sm" style="width:100%;" data-review-google="${o.id}" ${googleLocked?'disabled title="Already sent — you don\'t have permission to send it again."':''} onclick="event.stopPropagation()">${googleSent?'Google review sent ✓':'Send Google review'}</button>
-        </span>
-      </div>`;
-    }).join('')}
+  ${rows.length===0 && !anyFilter ? `<div class="empty-state">Nothing here yet — orders show up 2 hours after being picked up by delivery.</div>` : `
+  <div class="panel" style="padding:0;overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th><th>Order number</th><th>Sales person</th><th>Delivery status</th><th>Actions</th>
+        </tr>
+        <tr class="col-filter-row">
+          <th><input class="col-filter-input" id="order-inquiry-filter-customer" placeholder="Search…" value="${escAttr(state.filters.orderInquirySearch||'')}"></th>
+          <th><input class="col-filter-input" id="order-inquiry-filter-orderno" placeholder="Search…" value="${escAttr(state.filters.orderInquiryOrderNoFilter||'')}"></th>
+          <th><select class="col-filter-select" id="order-inquiry-filter-salesman">
+            <option value="">All</option>
+            ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
+          </select></th>
+          <th><select class="col-filter-select" id="order-inquiry-filter-deliverystatus">
+            <option value="">All</option>
+            <option value="On Hold" ${deliveryStatusF==='On Hold'?'selected':''}>On Hold</option>
+            <option value="Delivered" ${deliveryStatusF==='Delivered'?'selected':''}>Delivered</option>
+          </select></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.length===0 ? `<tr><td colspan="5"><div class="empty-state">No matching orders.</div></td></tr>` : rows.map(o=>{
+          const canResend = !!state.session && roleCan(state.session.role, 'orderinquiry_resend_review');
+          const fbSent = !!o.reviewSentFbAt, googleSent = !!o.reviewSentGoogleAt;
+          const fbLocked = fbSent && !canResend, googleLocked = googleSent && !canResend;
+          const onHold = o.deliveryOutcome==='On Hold';
+          const delivered = o.deliveryOutcome==='Delivered';
+          const deliveredLocked = delivered && !canResend;
+          const salesman = salesmanByCustomerName[(o.customer||'').trim().toLowerCase()];
+          const spColor = salesman ? (state.salesPersonColors||{})[salesman] : null;
+          return `
+          <tr class="clickable" data-order-row="${o.id}">
+            <td>
+              <span style="display:flex;align-items:center;gap:9px;">
+                <span class="lr-avatar empty" style="flex-shrink:0;">${initials(o.customer||'?')}</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;" title="${escAttr(o.customer||'')}">${esc(o.customer)}</span>
+              </span>
+            </td>
+            <td>${esc(o.orderNumber||o.id)}</td>
+            <td>${salesman ? `<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(salesman)}</span>` : '<span class="hint">—</span>'}</td>
+            <td onclick="event.stopPropagation()">
+              ${o.deliveryOutcome
+                ? `<span class="pill ${delivered?'pill-active':(onHold?'pill-hold':'pill-high')}" style="cursor:${deliveredLocked?'default':'pointer'};" ${deliveredLocked?'':`data-open-delivery-outcome="${o.id}"`} ${deliveredLocked?'title="Delivered — you don\'t have permission to change this."':'title="Click to change"'}>${esc(o.deliveryOutcome)}</span>`
+                : `<button type="button" class="btn btn-sm" data-open-delivery-outcome="${o.id}">Delivery status</button>`}
+            </td>
+            <td class="row-actions" onclick="event.stopPropagation()">
+              <button type="button" class="btn btn-sm" data-view-tracking="${o.id}">👁 Tracking</button>
+              <button type="button" class="btn btn-sm" data-review-fb="${o.id}" ${fbLocked?'disabled title="Already sent — you don\'t have permission to send it again."':''}>${fbSent?'FB sent ✓':'Send FB review'}</button>
+              <button type="button" class="btn btn-sm" data-review-google="${o.id}" ${googleLocked?'disabled title="Already sent — you don\'t have permission to send it again."':''}>${googleSent?'Google sent ✓':'Send Google review'}</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
   </div>
   ${hiddenCount>0 ? `<div style="text-align:center;margin-top:14px;"><button type="button" class="btn" id="btn-order-inquiry-more">Show older orders (${hiddenCount} more)</button></div>` : ''}`}
   `;
@@ -9925,16 +9949,41 @@ function renderComplaintsTable(rows, opts){
   const canSelect = !!role && roleCan(role, opts && opts.adminOnly ? 'complaints_delete_archived' : 'complaints_bulk_delete');
   const canRestoreRow = (c) => !!role && roleCan(role, c.archived ? 'complaints_delete_archived' : 'complaints_restore');
   const canDeleteRow = (c) => !!role && roleCan(role, c.archived ? 'complaints_delete_archived' : 'complaints_delete_active');
+  const custF = (state.filters.complaintCustomerFilter||'').toLowerCase();
+  const reasonF = state.filters.complaintReasonFilter||'';
+  const priorityF = state.filters.complaintPriorityFilter||'';
+  const allReasons = [...new Set(rows.map(c=>c.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const filtered = rows.filter(c=>{
+    if(custF && !(c.customer||'').toLowerCase().includes(custF)) return false;
+    if(reasonF && c.category!==reasonF) return false;
+    if(priorityF && c.priority!==priorityF) return false;
+    return true;
+  });
   return `
   <div class="panel">
     ${rows.length===0 ? `<div class="empty-state">No complaints here.</div>` : `
     <table class="data-table">
-      <thead><tr>
-        ${canSelect?`<th style="width:36px;"><input type="checkbox" id="complaint-select-all"></th>`:''}
-        <th>Customer</th><th>Reason</th><th>Priority</th><th>Status</th><th>Actions</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          ${canSelect?`<th style="width:36px;"><input type="checkbox" id="complaint-select-all"></th>`:''}
+          <th>Customer</th><th>Reason</th><th>Priority</th><th>Status</th><th>Actions</th>
+        </tr>
+        <tr class="col-filter-row">
+          ${canSelect?'<th></th>':''}
+          <th><input class="col-filter-input" id="complaint-filter-customer" placeholder="Search…" value="${escAttr(state.filters.complaintCustomerFilter||'')}"></th>
+          <th><select class="col-filter-select" id="complaint-filter-reason">
+            <option value="">All</option>
+            ${allReasons.map(r=>`<option value="${escAttr(r)}" ${r===reasonF?'selected':''}>${esc(r)}</option>`).join('')}
+          </select></th>
+          <th><select class="col-filter-select" id="complaint-filter-priority">
+            <option value="">All</option>
+            ${(state.complaintPriorities.length?state.complaintPriorities:DEFAULT_COMPLAINT_PRIORITIES).map(p=>`<option value="${escAttr(p)}" ${p===priorityF?'selected':''}>${esc(p)}</option>`).join('')}
+          </select></th>
+          <th></th><th></th>
+        </tr>
+      </thead>
       <tbody>
-        ${rows.map(c=>`
+        ${filtered.length===0 ? `<tr><td colspan="${canSelect?6:5}"><div class="empty-state">No complaints match your filters.</div></td></tr>` : filtered.map(c=>`
         <tr class="clickable" data-complaint-row="${c.id}">
           ${canSelect?`<td onclick="event.stopPropagation()"><input type="checkbox" class="complaint-select-row" data-complaint-id="${c.id}" ${state.selectedComplaints.has(c.id)?'checked':''}></td>`:''}
           <td>${esc(c.customer)||'—'}</td><td>${esc(c.category)||'—'}</td>
@@ -10386,7 +10435,16 @@ function renderRatingsPage(){
   const admin = !!state.session && roleCan(state.session.role, 'ratings_bulk_delete');
   const rated = state.orders.filter(o=>o.customerRating).slice().sort((a,b)=>new Date(b.customerRatingAt||0)-new Date(a.customerRatingAt||0));
   const avg = rated.length ? (rated.reduce((sum,o)=>sum+o.customerRating,0)/rated.length) : 0;
-  const allSelected = rated.length>0 && rated.every(o=>state.selectedRatings.has(o.id));
+  const custF = (state.filters.ratingsCustomerFilter||'').toLowerCase();
+  const orderNoF = (state.filters.ratingsOrderNoFilter||'').toLowerCase();
+  const ratingF = state.filters.ratingsStarFilter||'';
+  const filtered = rated.filter(o=>{
+    if(custF && !(o.customer||'').toLowerCase().includes(custF)) return false;
+    if(orderNoF && !(o.orderNumber||o.id||'').toLowerCase().includes(orderNoF)) return false;
+    if(ratingF && String(o.customerRating)!==ratingF) return false;
+    return true;
+  });
+  const allSelected = filtered.length>0 && filtered.every(o=>state.selectedRatings.has(o.id));
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="label">Ratings received</div><div class="value"><span class="stat-num" data-target="${rated.length}">${rated.length}</span></div></div>
@@ -10400,12 +10458,25 @@ function renderRatingsPage(){
   <div class="panel">
     ${rated.length===0 ? `<div class="empty-state">No ratings yet — they'll show up here once customers rate their delivery on the track order page.</div>` : `
     <table class="data-table">
-      <thead><tr>
-        ${admin?`<th style="width:36px;"><input type="checkbox" id="rating-select-all" ${allSelected?'checked':''}></th>`:''}
-        <th>Customer name</th><th>Phone number</th><th>Order number</th><th>Rating</th><th>Feedback</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          ${admin?`<th style="width:36px;"><input type="checkbox" id="rating-select-all" ${allSelected?'checked':''}></th>`:''}
+          <th>Customer name</th><th>Phone number</th><th>Order number</th><th>Rating</th><th>Feedback</th>
+        </tr>
+        <tr class="col-filter-row">
+          ${admin?'<th></th>':''}
+          <th><input class="col-filter-input" id="ratings-filter-customer" placeholder="Search…" value="${escAttr(state.filters.ratingsCustomerFilter||'')}"></th>
+          <th></th>
+          <th><input class="col-filter-input" id="ratings-filter-orderno" placeholder="Search…" value="${escAttr(state.filters.ratingsOrderNoFilter||'')}"></th>
+          <th><select class="col-filter-select" id="ratings-filter-star">
+            <option value="">All</option>
+            ${[5,4,3,2,1].map(n=>`<option value="${n}" ${String(n)===ratingF?'selected':''}>${n} ★</option>`).join('')}
+          </select></th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
-        ${rated.map(o=>`
+        ${filtered.length===0 ? `<tr><td colspan="${admin?6:5}"><div class="empty-state">No ratings match your filters.</div></td></tr>` : filtered.map(o=>`
         <tr>
           ${admin?`<td><input type="checkbox" class="rating-select-row" data-rating-id="${o.id}" ${state.selectedRatings.has(o.id)?'checked':''}></td>`:''}
           <td>${esc(o.customer)}</td>
@@ -14012,15 +14083,12 @@ function fmtMonthLabel(ym){
 function activityLogModal(){
   const all = state.activityLog||[];
   const q = (state.filters.activityLogSearch||'').trim().toLowerCase();
-  const monthF = state.filters.activityLogMonth||'';
   const dateF = state.filters.activityLogDate||'';
   const userF = state.filters.activityLogUser||'';
   const users = [...new Set(all.map(l=>l.actor))].sort((a,b)=>a.localeCompare(b));
-  const months = [...new Set(all.map(l=>l.at.slice(0,7)))].sort().reverse();
-  const anyFilterActive = !!(q||monthF||dateF||userF);
+  const anyFilterActive = !!(q||dateF||userF);
   let filtered = all;
   if(q) filtered = filtered.filter(l=>l.actor.toLowerCase().includes(q) || l.message.toLowerCase().includes(q));
-  if(monthF) filtered = filtered.filter(l=>l.at.slice(0,7)===monthF);
   if(dateF) filtered = filtered.filter(l=>l.at.slice(0,10)===dateF);
   if(userF) filtered = filtered.filter(l=>l.actor===userF);
   const rows = filtered.slice(0, 500);
@@ -14029,27 +14097,24 @@ function activityLogModal(){
     <div class="modal" style="max-width:760px;max-height:85vh;display:flex;flex-direction:column;">
       <h2>Activity log</h2>
       <div class="sub">Who did what, and when. Admin only.</div>
-      <input class="search-input" id="activitylog-search" placeholder="Search by person or action…" value="${esc(state.filters.activityLogSearch||'')}" style="margin:10px 0 8px;">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
-        <select id="activitylog-month-filter" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;">
-          <option value="">All months</option>
-          ${months.map(m=>`<option value="${m}" ${m===monthF?'selected':''}>${esc(fmtMonthLabel(m))}</option>`).join('')}
-        </select>
-        <input type="date" id="activitylog-date-filter" value="${esc(dateF)}" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;">
-        <select id="activitylog-user-filter" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;">
-          <option value="">All people</option>
-          ${users.map(u=>`<option value="${escAttr(u)}" ${u===userF?'selected':''}>${esc(u)}</option>`).join('')}
-        </select>
-        ${anyFilterActive ? `<button type="button" class="btn-text" id="activitylog-clear-filters">Clear filters</button>` : ''}
-      </div>
-      <div style="overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:8px;min-height:120px;">
-        ${rows.length===0 ? `<div class="empty-state">No activity ${anyFilterActive?'matches these filters':'logged yet'}.</div>` : `
+      ${anyFilterActive ? `<div style="text-align:right;margin:8px 0 0;"><button type="button" class="btn-text" id="activitylog-clear-filters">Clear filters</button></div>` : ''}
+      <div style="overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:8px;min-height:120px;margin-top:8px;">
         <table class="data-table">
-          <thead><tr><th>When</th><th>Who</th><th>Action</th></tr></thead>
+          <thead>
+            <tr><th>When</th><th>Who</th><th>Action</th></tr>
+            <tr class="col-filter-row">
+              <th><input type="date" class="col-filter-input" id="activitylog-date-filter" value="${esc(dateF)}"></th>
+              <th><select class="col-filter-select" id="activitylog-user-filter">
+                <option value="">All</option>
+                ${users.map(u=>`<option value="${escAttr(u)}" ${u===userF?'selected':''}>${esc(u)}</option>`).join('')}
+              </select></th>
+              <th><input class="col-filter-input" id="activitylog-search" placeholder="Search action…" value="${esc(state.filters.activityLogSearch||'')}"></th>
+            </tr>
+          </thead>
           <tbody>
-            ${rows.map(l=>`<tr><td style="white-space:nowrap;">${fmtDateTime(l.at)}</td><td style="white-space:nowrap;">${esc(l.actor)}</td><td>${esc(l.message)}</td></tr>`).join('')}
+            ${rows.length===0 ? `<tr><td colspan="3"><div class="empty-state">No activity ${anyFilterActive?'matches these filters':'logged yet'}.</div></td></tr>` : rows.map(l=>`<tr><td style="white-space:nowrap;">${fmtDateTime(l.at)}</td><td style="white-space:nowrap;">${esc(l.actor)}</td><td>${esc(l.message)}</td></tr>`).join('')}
           </tbody>
-        </table>`}
+        </table>
       </div>
       ${filtered.length>500 ? `<div class="hint" style="margin-top:6px;">Showing the 500 most recent of ${filtered.length} matching entries.</div>` : ''}
       <div class="modal-actions">
@@ -15725,16 +15790,15 @@ function attachShellHandlers(){
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;
   if(byIdEl('btn-export-customers-csv')) byIdEl('btn-export-customers-csv').onclick = downloadCustomersCsv;
   if(byIdEl('activitylog-search')) byIdEl('activitylog-search').addEventListener('input', e=>{ state.filters.activityLogSearch = e.target.value; render(); });
-  if(byIdEl('activitylog-month-filter')) byIdEl('activitylog-month-filter').addEventListener('change', e=>{ state.filters.activityLogMonth = e.target.value; render(); });
   if(byIdEl('activitylog-date-filter')) byIdEl('activitylog-date-filter').addEventListener('change', e=>{ state.filters.activityLogDate = e.target.value; render(); });
   if(byIdEl('activitylog-user-filter')) byIdEl('activitylog-user-filter').addEventListener('change', e=>{ state.filters.activityLogUser = e.target.value; render(); });
   if(byIdEl('activitylog-clear-filters')) byIdEl('activitylog-clear-filters').onclick = ()=>{
-    state.filters.activityLogSearch = ''; state.filters.activityLogMonth = ''; state.filters.activityLogDate = ''; state.filters.activityLogUser = '';
+    state.filters.activityLogSearch = ''; state.filters.activityLogDate = ''; state.filters.activityLogUser = '';
     render();
     // render() re-applies each field's PRE-click DOM value onto the freshly-rendered modal (by
     // design, so in-progress typing elsewhere survives an unrelated re-render) — which would
     // silently undo this button's own reset. Force the fields blank again after it runs.
-    ['activitylog-search','activitylog-month-filter','activitylog-date-filter','activitylog-user-filter'].forEach(id=>{
+    ['activitylog-search','activitylog-date-filter','activitylog-user-filter'].forEach(id=>{
       const el = byIdEl(id); if(el) el.value = '';
     });
   };
@@ -16320,8 +16384,10 @@ function attachShellHandlers(){
   if(byIdEl('customer-filter-salesman')) byIdEl('customer-filter-salesman').addEventListener('change', e=>{ state.filters.customerSalesman = e.target.value; render(); });
   if(byIdEl('customer-filter-type')) byIdEl('customer-filter-type').addEventListener('change', e=>{ state.filters.customerType = e.target.value; render(); });
   if(byIdEl('customer-filter-status')) byIdEl('customer-filter-status').addEventListener('change', e=>{ state.filters.customerStatus = e.target.value; render(); });
-  if(byIdEl('order-inquiry-search')) byIdEl('order-inquiry-search').addEventListener('input', e=>{ state.filters.orderInquirySearch = e.target.value; render(); });
-  if(byIdEl('order-inquiry-salesman-filter')) byIdEl('order-inquiry-salesman-filter').addEventListener('change', e=>{ state.filters.orderInquirySalesman = e.target.value; render(); });
+  if(byIdEl('order-inquiry-filter-customer')) byIdEl('order-inquiry-filter-customer').addEventListener('input', e=>{ state.filters.orderInquirySearch = e.target.value; render(); });
+  if(byIdEl('order-inquiry-filter-orderno')) byIdEl('order-inquiry-filter-orderno').addEventListener('input', e=>{ state.filters.orderInquiryOrderNoFilter = e.target.value; render(); });
+  if(byIdEl('order-inquiry-filter-salesman')) byIdEl('order-inquiry-filter-salesman').addEventListener('change', e=>{ state.filters.orderInquirySalesman = e.target.value; render(); });
+  if(byIdEl('order-inquiry-filter-deliverystatus')) byIdEl('order-inquiry-filter-deliverystatus').addEventListener('change', e=>{ state.filters.orderInquiryDeliveryStatus = e.target.value; render(); });
   if(byIdEl('btn-order-inquiry-more')) byIdEl('btn-order-inquiry-more').onclick = ()=>{
     state.filters.orderInquiryLimit = (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE) + ORDER_INQUIRY_PAGE_SIZE;
     render();
@@ -16376,6 +16442,9 @@ function attachShellHandlers(){
   };
 
   // Customer ratings
+  if(byIdEl('ratings-filter-customer')) byIdEl('ratings-filter-customer').addEventListener('input', e=>{ state.filters.ratingsCustomerFilter = e.target.value; render(); });
+  if(byIdEl('ratings-filter-orderno')) byIdEl('ratings-filter-orderno').addEventListener('input', e=>{ state.filters.ratingsOrderNoFilter = e.target.value; render(); });
+  if(byIdEl('ratings-filter-star')) byIdEl('ratings-filter-star').addEventListener('change', e=>{ state.filters.ratingsStarFilter = e.target.value; render(); });
   document.querySelectorAll('.rating-select-row').forEach(cb=>cb.addEventListener('change', ()=>{
     if(cb.checked) state.selectedRatings.add(cb.dataset.ratingId); else state.selectedRatings.delete(cb.dataset.ratingId);
     render();
@@ -16472,6 +16541,9 @@ function attachShellHandlers(){
     catch(e){ showToast('Copy failed — link: '+link); }
   };
   document.querySelectorAll('[data-complaint-filter]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.complaintStatus = b.dataset.complaintFilter; render(); }));
+  if(byIdEl('complaint-filter-customer')) byIdEl('complaint-filter-customer').addEventListener('input', e=>{ state.filters.complaintCustomerFilter = e.target.value; render(); });
+  if(byIdEl('complaint-filter-reason')) byIdEl('complaint-filter-reason').addEventListener('change', e=>{ state.filters.complaintReasonFilter = e.target.value; render(); });
+  if(byIdEl('complaint-filter-priority')) byIdEl('complaint-filter-priority').addEventListener('change', e=>{ state.filters.complaintPriorityFilter = e.target.value; render(); });
   document.querySelectorAll('[data-complaint-row]').forEach(r=>r.addEventListener('click', ()=>openComplaint(r.dataset.complaintRow)));
   document.querySelectorAll('[data-edit-complaint]').forEach(b=>b.addEventListener('click', ()=>openComplaint(b.dataset.editComplaint)));
   document.querySelectorAll('[data-view-as-customer]').forEach(b=>b.addEventListener('click', ()=>openModal('complaintcustomerview:'+b.dataset.viewAsCustomer)));

@@ -437,7 +437,7 @@ html{ visibility:hidden; }
   .sections-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 6px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-family:inherit;cursor:pointer;}
   .sections-tile span:last-child{font-size:11px;font-weight:600;color:var(--ink);line-height:1.25;}
   .sections-tile-badge{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
-  .sections-tile-badge svg{width:21px;height:21px;}
+  .sections-tile-badge svg{width:23px;height:23px;}
   .sections-tile-blue{background:var(--s-received-soft);color:var(--s-received);}
   .sections-tile-orange{background:var(--s-blending-soft);color:var(--s-blending);}
   .sections-tile-purple{background:var(--s-idea-soft);color:var(--s-idea);}
@@ -7926,6 +7926,43 @@ const GRID_TILE_COLORS = {
   rnd:'accent', staff:'blue', chat:'maroon', bulksms:'purple', ratings:'orange', settings:'accent',
 };
 function gridTileColor(id){ return GRID_TILE_COLORS[id] || 'blue'; }
+// Icon paths for the Sections grid specifically (Tabler Icons, MIT-licensed, github.com/tabler/
+// tabler-icons) — a cleaner, more consistent open-source set than this app's own hand-drawn ICONS,
+// picked for the grid's badges only; every other icon() usage elsewhere (sidebar, topbar, buttons)
+// is untouched. ordersprocess reuses orders' icon (package) since both are order-related views and
+// never show side by side (no role gets both as separate grid tiles in practice).
+const GRID_ICONS = {
+  dashboard: '<path d="M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M14 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />',
+  orders: '<path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5" /><path d="M12 12l8 -4.5" /><path d="M12 12l0 9" /><path d="M12 12l-8 -4.5" /><path d="M16 5.25l-8 4.5" />',
+  blendingdept: '<path d="M6.1 15h11.8" /><path d="M14 3v7.342a6 6 0 0 1 1.318 10.658h-6.635a6 6 0 0 1 1.317 -10.66v-7.34h4z" /><path d="M9 3h6" />',
+  customercare: '<path d="M4 14v-3a8 8 0 1 1 16 0v3" /><path d="M18 19c0 1.657 -2.686 3 -6 3" /><path d="M4 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" /><path d="M15 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" />',
+  customers: '<path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />',
+  suppliers: '<path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5" />',
+  gmp: '<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M9 14l2 2l4 -4" />',
+  rnd: '<path d="M9 3l6 0" /><path d="M10 9l4 0" /><path d="M10 3v6l-4 11a.7 .7 0 0 0 .5 1h11a.7 .7 0 0 0 .5 -1l-4 -11v-6" />',
+  staff: '<path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1" /><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M17 10h2a2 2 0 0 1 2 2v1" /><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M3 13v-1a2 2 0 0 1 2 -2h2" />',
+  chat: '<path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />',
+  bulksms: '<path d="M10 14l11 -11" /><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" />',
+  ratings: '<path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z" />',
+  settings: '<path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />',
+};
+GRID_ICONS.ordersprocess = GRID_ICONS.orders;
+// Duotone: a low-opacity filled silhouette sitting behind the same shape drawn again as a bold
+// outline on top, both in the badge's own color (set via CSS currentColor) -- the look premium
+// icon packs (Phosphor duotone, etc.) use. Falls back to this app's own icon() for any page id
+// that isn't in GRID_ICONS (shouldn't happen for a real top-level NAV item, but cheap insurance).
+function gridDuotoneIcon(id, size){
+  const paths = GRID_ICONS[id];
+  if(!paths) return icon(id);
+  const sz = size || 22;
+  // A <span> wrapper here would collide with the ".sections-tile span:last-child" label-color
+  // rule elsewhere (this wrapper is trivially its own parent's only/"last" child too), overriding
+  // the badge's own accent color with plain ink -- <i> sidesteps that selector entirely.
+  return `<i style="position:relative;display:inline-block;width:${sz}px;height:${sz}px;flex:none;">
+    <svg style="position:absolute;inset:0;" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" stroke="none" opacity=".35">${paths}</svg>
+    <svg style="position:absolute;inset:0;" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>
+  </i>`;
+}
 // A role's custom pick of which pages show as tiles (state.userRoles[].mobileSections) wins when
 // set; an empty/missing one (every role until an Admin opens Settings -> User roles and changes
 // it) falls back to exactly the pages that role is already assigned, same as the sidebar shows --
@@ -7948,7 +7985,7 @@ function renderSectionsGridPage(){
     <div class="sections-grid">
       ${items.map(it=>`
       <button type="button" class="sections-tile" data-nav="${it.id}">
-        <span class="sections-tile-badge sections-tile-${gridTileColor(it.id)}">${icon(it.icon)}</span>
+        <span class="sections-tile-badge sections-tile-${gridTileColor(it.id)}">${gridDuotoneIcon(it.id, 23)}</span>
         <span>${esc(navLabel(it))}</span>
       </button>`).join('')}
     </div>`}

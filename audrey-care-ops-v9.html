@@ -324,71 +324,6 @@ html{ visibility:hidden; }
   .bsmc-chip-batch-input{display:inline-block;background:#fff;color:#20291F;border:1.5px dashed #9CA9A0;border-radius:999px;padding:5.5px 14px;font-size:12px;font-weight:700;width:140px;text-align:right;font-family:inherit;}
   .bsmc-chip-batch-input::placeholder{color:#9CA9A0;font-weight:500;}
   .bsmc-chip-batch-input:focus{outline:none;border-color:#3C9058;border-style:solid;box-shadow:0 0 0 3px #E4F8EA;}
-  /* Sticker stock keeps the same grid (every fragrance x product cell visible and directly
-     editable at once, by request) but with visibly separated, larger rows instead of a cramped
-     hairline grid — easier to scan across 7 columns and tap the right cell on a factory-floor
-     tablet. */
-  table.sticker-table{font-size:10px;}
-  table.sticker-table th{padding:8px 6px;font-size:9px;}
-  table.sticker-table td{padding:7px 6px;}
-  table.sticker-table tbody tr:nth-child(even){background:var(--bg);}
-  table.sticker-table tbody tr:hover{background:var(--accent-soft);}
-  table.sticker-table td:first-child{font-weight:700;font-size:10px;}
-  /* Three clearly different-looking pieces per cell, not two boxes that happen to sit side by
-     side: a reddish "subtract" field with its own − sign (type how many were issued, it comes
-     off the total), a plain bold number in the middle that's the real total and looks nothing
-     like an input (no border, nothing inviting a click), and a round green + button that's the
-     only way to add stock back (new rolls arriving) — not a hidden trick like a negative number.
-     Sized to fit all 7 product columns without horizontal scrolling on a normal screen — went
-     too big on the previous pass and ran the last columns off-screen. */
-  .sticker-cell{display:flex;gap:4px;align-items:center;}
-  .sticker-issue-wrap{
-    position:relative;width:27px;height:24px;border-radius:999px;
-    border:1.5px solid #F3D4D4;background:var(--danger-soft);
-    transition:width .12s ease;
-  }
-  /* Widen just this one pill while its input is actually focused — legible while typing (the
-     complaint: a 9px number squeezed next to the sign was hard to even see what you'd typed)
-     without permanently growing every column and risking the horizontal-scroll regression the
-     table was explicitly sized to avoid. */
-  .sticker-issue-wrap:focus-within{width:40px;z-index:1;}
-  .sticker-issue-sign{
-    position:absolute;left:5px;top:50%;transform:translateY(-50%);
-    color:var(--danger);font-weight:700;font-size:10px;pointer-events:none;
-  }
-  table.sticker-table .sticker-issue-input{
-    width:100%;height:100%;border:none;background:transparent;border-radius:999px;
-    padding-left:11px;font-size:10px;color:var(--danger);font-weight:700;text-align:left;
-  }
-  table.sticker-table .sticker-issue-input:focus{outline:2px solid var(--danger);outline-offset:1px;border-radius:999px;font-size:12px;}
-  table.sticker-table .sticker-total-box{
-    min-width:16px;text-align:center;font-size:11px;font-weight:800;color:var(--ink);
-    background:var(--bg);border-radius:999px;padding:1px 5px;
-  }
-  /* Color the total itself by stock health (the same red/amber/green reading the refined-table
-     mockup used) so a glance across the row shows what needs restocking, without needing a
-     separate legend or a wider cell. */
-  table.sticker-table .sticker-total-box.zero{background:var(--danger-soft);color:var(--danger);}
-  table.sticker-table .sticker-total-box.low{background:#FFF6E0;color:#8A6300;}
-  .sticker-add-btn{
-    width:18px;height:18px;border-radius:999px;border:none;background:var(--accent);color:#fff;
-    font-size:11px;font-weight:700;line-height:1;cursor:pointer;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;padding:0;
-    box-shadow:0 1px 3px rgba(20,25,20,.25);transition:background .15s,transform .15s,box-shadow .15s;
-  }
-  .sticker-add-btn:hover{background:var(--accent-dark);box-shadow:0 3px 7px rgba(20,25,20,.3);}
-  table.sticker-table button.btn-danger{width:22px;height:22px;padding:0;font-size:10px;}
-  .sticker-category-card{
-    display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--border);
-    border-radius:8px;padding:8px 13px;font-size:11px;font-weight:600;color:var(--ink);
-    cursor:pointer;transition:border-color .15s,background .15s;
-  }
-  .sticker-category-card:hover{border-color:var(--accent);}
-  .sticker-category-card.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark);}
-  .sticker-category-count{
-    background:var(--bg);border-radius:999px;padding:1px 6px;font-size:9px;font-weight:700;color:var(--muted);
-  }
-  .sticker-category-card.active .sticker-category-count{background:#fff;color:var(--accent-dark);}
   /* Costing sheets run wide (many batch-size columns) and tall (many raw materials) — a plain
      hairline between rows gets lost when your eye is tracking sideways across the table, so
      every row gets a light tint and a firmer divider instead of just the thin default border. */
@@ -1759,7 +1694,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','stickerStock','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -2865,17 +2800,17 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
   Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
-  Packing: ['orders','stickerstock','chat'],
+  Packing: ['orders','chat'],
   'Customer Care': ['customercare','complaints','orderinquiry','chat'],
   'Orders Process': ['ordersprocess'],
   'R&D': ['rnd','chat'],
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','stickerstock','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -3027,7 +2962,6 @@ const PAGE_DATA_KEYS = {
   blending: ['blendBatches'],
   recipes: ['recipes','activeBatch','mixingStepTemplates'],
   costing: ['costingProducts','suppliers','recipes'],
-  stickerstock: ['stickerStock','costingProducts'],
   customers: ['customers','staff','salesPersonColors'],
   suppliers: ['suppliers'],
   complaints: ['complaints','complaintCategories','complaintPriorities','staff','customers'],
@@ -4069,7 +4003,6 @@ let state = {
   complaintCategories: [],
   complaintPriorities: [],
   costingProducts: [],
-  stickerStock: [],
   activityLog: [],
   _costingOpenProductId: null,
   _costingOpenVersionId: null,
@@ -4437,117 +4370,6 @@ async function loadAll(){
     });
     if(migrated) saveQuietly('costingProducts').catch(()=>{});
   }
-  // Packing's 5L sticker stock — one row per fragrance, one count per existing costing product
-  // (so it always lines up with whatever products Costing actually has, instead of keeping its
-  // own separate product list). Seeded once from the real counts on the team's Notion board at
-  // the time this feature was added; after that it's just whatever Packing enters.
-  if(!Array.isArray(state.stickerStock)) state.stickerStock = [];
-  if(state.stickerStock.length===0){
-    const idFor = name => { const p = state.costingProducts.find(p=>p.name===name); return p ? p.id : null; };
-    const STICKER_SEED = [
-      ['Alovera',      {Shampoo:45, 'Shower Gel':119, 'Body Lotion':6,  Conditioner:53, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Cinnamon',     {Shampoo:97, 'Shower Gel':51,  'Body Lotion':0,  Conditioner:0,  'Hand Wash':21, 'Bubble Bath':0}],
-      ['Sandalwood',   {Shampoo:30, 'Shower Gel':29,  'Body Lotion':9,  Conditioner:24, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Aqua',         {Shampoo:66, 'Shower Gel':3,   'Body Lotion':51, Conditioner:36, 'Hand Wash':16, 'Bubble Bath':0}],
-      ['Coconut',      {Shampoo:35, 'Shower Gel':36,  'Body Lotion':17, Conditioner:30, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Araliya',      {Shampoo:19, 'Shower Gel':18,  'Body Lotion':19, Conditioner:25, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Rose',         {Shampoo:30, 'Shower Gel':18,  'Body Lotion':21, Conditioner:0,  'Hand Wash':29, 'Bubble Bath':0}],
-      ['Green Tea',    {Shampoo:14, 'Shower Gel':19,  'Body Lotion':20, Conditioner:23, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Lotus',        {Shampoo:23, 'Shower Gel':12,  'Body Lotion':77, Conditioner:36, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Citrus',       {Shampoo:23, 'Shower Gel':26,  'Body Lotion':43, Conditioner:12, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Jasmine',      {Shampoo:34, 'Shower Gel':33,  'Body Lotion':14, Conditioner:17, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Mango',        {Shampoo:0,  'Shower Gel':0,   'Body Lotion':50, Conditioner:0,  'Hand Wash':0,  'Bubble Bath':0}],
-      ['Lemon Grass',  {Shampoo:34, 'Shower Gel':32,  'Body Lotion':15, Conditioner:10, 'Hand Wash':0,  'Bubble Bath':0}],
-      ['Papaya',       {Shampoo:23, 'Shower Gel':32,  'Body Lotion':13, Conditioner:0,  'Hand Wash':0,  'Bubble Bath':0}],
-      ['Ceylon Tea',   {Shampoo:62, 'Shower Gel':25,  'Body Lotion':0,  Conditioner:0,  'Hand Wash':0,  'Bubble Bath':0}],
-    ];
-    state.stickerStock = STICKER_SEED.map(([name, counts]) => {
-      const byProductId = {};
-      Object.entries(counts).forEach(([productName, qty]) => {
-        const pid = idFor(productName);
-        if(pid) byProductId[pid] = qty;
-      });
-      return {id: uid('STICK'), name, counts: byProductId};
-    });
-    saveQuietly('stickerStock').catch(()=>{});
-  }
-  // The initial sticker-stock seed above left out Air Freshener (not a Costing product yet at
-  // the time) and three fragrance rows (Strawberry, Lavender, Apple) that weren't visible in the
-  // first pass of the team's Notion board. Add the product and backfill the real counts — this
-  // runs every load so it also fixes installs that already seeded the incomplete version above.
-  {
-    let airFreshener = state.costingProducts.find(p=>p.name==='Air Freshener');
-    if(!airFreshener){
-      airFreshener = {id: uid('CPROD'), name:'Air Freshener', versions:[]};
-      state.costingProducts = [...state.costingProducts, airFreshener];
-      saveQuietly('costingProducts').catch(()=>{});
-    }
-    let stickerBackfilled = false;
-    const cinnamonRow = state.stickerStock.find(r=>r.name==='Cinnamon');
-    if(cinnamonRow && cinnamonRow.counts[airFreshener.id]==null){
-      cinnamonRow.counts = {...cinnamonRow.counts, [airFreshener.id]: 24};
-      stickerBackfilled = true;
-    }
-    const MISSING_FRAGRANCE_SEED = [
-      ['Strawberry', {'Hand Wash':20}],
-      ['Lavender',   {Shampoo:21, 'Shower Gel':28, 'Body Lotion':17, Conditioner:28, 'Air Freshener':11}],
-      ['Apple',      {'Hand Wash':20, 'Air Freshener':12}],
-    ];
-    MISSING_FRAGRANCE_SEED.forEach(([name, counts])=>{
-      if(state.stickerStock.some(r=>r.name===name)) return;
-      const byProductId = {};
-      Object.entries(counts).forEach(([productName, qty])=>{
-        const p = state.costingProducts.find(p=>p.name===productName);
-        if(p) byProductId[p.id] = qty;
-      });
-      state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts: byProductId}];
-      stickerBackfilled = true;
-    });
-    if(stickerBackfilled) saveQuietly('stickerStock').catch(()=>{});
-  }
-  // A third pass over the team's Notion board turned up more rows below what the first two
-  // passes captured: two the team's own table never named differently (Ocean Breeze, Lemon),
-  // a second row genuinely named "Rose" with its own different counts (not a typo to merge —
-  // imported as-is), and several client-specific custom-sticker batches that live as ordinary
-  // rows in the same Fragrance column rather than a separate table. Gated on 'Ocean Breeze' —
-  // a name that can't collide with a future real entry the way re-checking "Rose" would — so
-  // this whole batch (duplicate Rose included) only gets added once.
-  if(!state.stickerStock.some(r=>r.name==='Ocean Breeze')){
-    const idFor = name => { const p = state.costingProducts.find(p=>p.name===name); return p ? p.id : null; };
-    const THIRD_PASS_SEED = [
-      ['Ocean Breeze', {'Air Freshener':20}],
-      ['Lemon',        {'Hand Wash':23}],
-      ['Rose',         {Shampoo:30, 'Shower Gel':17, 'Body Lotion':18, 'Hand Wash':27}],
-      ['Vas Ceylon 5L Stickers',         {Shampoo:41, 'Body Lotion':50, Conditioner:73}],
-      ['Fabric Care 5L Stckers',         {Shampoo:32, 'Shower Gel':5, Conditioner:18}],
-      ['Raawana 5L Stickers (Ceydora)',  {Shampoo:49, 'Shower Gel':29, 'Body Lotion':73, Conditioner:69, 'Hand Wash':15, 'Air Freshener':30, 'Bubble Bath':1}],
-      ['Ventina 5L Stickers',            {Shampoo:16, 'Shower Gel':12, 'Body Lotion':2, Conditioner:3}],
-      ['MDS 5L Stickers',                {Shampoo:28, 'Shower Gel':15, 'Body Lotion':44, Conditioner:44}],
-      ['Jaichem',                        {Shampoo:11, 'Shower Gel':17, 'Body Lotion':3, Conditioner:2}],
-      ['Icon',                           {Shampoo:4, 'Body Lotion':4}],
-      ['Comfort',                        {Conditioner:3}],
-    ];
-    THIRD_PASS_SEED.forEach(([name, counts])=>{
-      const byProductId = {};
-      Object.entries(counts).forEach(([productName, qty])=>{
-        const pid = idFor(productName);
-        if(pid) byProductId[pid] = qty;
-      });
-      state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts: byProductId}];
-    });
-    saveQuietly('stickerStock').catch(()=>{});
-  }
-  // Groups the sticker stock rows into cards (Dallin 5L Stickers, Vas Ceylon, Fabric Care, …) —
-  // the client-specific batches were only ever single rows, so each is its own one-row category;
-  // every fragrance-named row belongs to the main Dallin line.
-  if(state.stickerStock.some(r=>!r.category)){
-    const CLIENT_BATCH_NAMES = ['Vas Ceylon 5L Stickers','Fabric Care 5L Stckers','Raawana 5L Stickers (Ceydora)','Ventina 5L Stickers','MDS 5L Stickers','Jaichem','Icon','Comfort'];
-    state.stickerStock.forEach(r=>{
-      if(r.category) return;
-      r.category = CLIENT_BATCH_NAMES.includes(r.name) ? r.name : 'Dallin 5L Stickers';
-    });
-    saveQuietly('stickerStock').catch(()=>{});
-  }
   // Settings → User roles: replaces the old fixed role list with Admin-defined ones. Admin and
   // Sub Admin are seeded locked (their names are checked literally elsewhere — isAdmin()/
   // isSubAdmin() — so renaming or deleting them here would silently break those) with their
@@ -4559,7 +4381,7 @@ async function loadAll(){
       {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'])},
       {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints'], permissions:buildRolePermissions(['complaints_manage','complaints_edit_after_1hr'])},
       {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes','recipelibrary'], permissions:buildRolePermissions(['blending_manage'])},
-      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders and sticker stock for packing and dispatch.', status:'Active', pages:['orders','stickerstock'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'])},
+      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders for packing and dispatch.', status:'Active', pages:['orders'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'])},
     ];
     saveQuietly('userRoles').catch(()=>{});
   } else if(state.userRoles.some(r=>!r.permissions)){
@@ -4612,6 +4434,17 @@ async function loadAll(){
     state.userRoles = state.userRoles.map(r=>
       Array.isArray(r.pages) && r.pages.includes('rawmaterialstock')
         ? {...r, pages: r.pages.filter(p=>p!=='rawmaterialstock')}
+        : r
+    );
+    saveQuietly('userRoles').catch(()=>{});
+  }
+  // Sticker stock was removed entirely, by request — same cleanup as the Inventory removal above,
+  // for the same reason: strips the page id back out of any role's saved `pages` snapshot so it
+  // doesn't sit there as dead, inert state. Pure removal, safe to re-check every load.
+  if(state.userRoles.some(r=>Array.isArray(r.pages) && r.pages.includes('stickerstock'))){
+    state.userRoles = state.userRoles.map(r=>
+      Array.isArray(r.pages) && r.pages.includes('stickerstock')
+        ? {...r, pages: r.pages.filter(p=>p!=='stickerstock')}
         : r
     );
     saveQuietly('userRoles').catch(()=>{});
@@ -8413,7 +8246,6 @@ const PAGE_META = {
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
-  stickerstock:{title:'Sticker stock', sub:'5L can sticker counts by fragrance, so Packing always knows what\'s left.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
@@ -8593,7 +8425,6 @@ function renderPage(){
     case 'costing': return renderCostingPage();
     case 'customers': return renderCustomersPage();
     case 'suppliers': return renderSuppliersPage();
-    case 'stickerstock': return renderStickerStockPage();
     case 'complaints': return renderComplaintsPage();
     case 'gmp': return renderGmpPage();
     case 'rnd': return renderRndPage();
@@ -8782,7 +8613,6 @@ function renderOrdersPage(){
       ${canManageLists ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
-      ${pageAllowed('stickerstock') ? `<button type="button" class="btn-text" id="btn-sticker-stock-link" style="font-size:12px;color:var(--muted);">📦 Sticker stock</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
@@ -14632,89 +14462,6 @@ function manageDeliveryLinesModal(){
   </div>`;
 }
 
-// Matches the column order on the team's Notion board exactly, independent of whatever order
-// products happen to be stored in on the Costing page (new products not on this list — added
-// later, in Costing — just land at the end instead of being hidden).
-const STICKER_STOCK_COLUMN_ORDER = ['Shampoo','Shower Gel','Body Lotion','Conditioner','Hand Wash','Air Freshener','Bubble Bath'];
-function stickerStockDisplayProducts(){
-  const products = state.costingProducts || [];
-  return [...products].sort((a,b)=>{
-    const ia = STICKER_STOCK_COLUMN_ORDER.indexOf(a.name); const ib = STICKER_STOCK_COLUMN_ORDER.indexOf(b.name);
-    return (ia===-1 ? STICKER_STOCK_COLUMN_ORDER.length : ia) - (ib===-1 ? STICKER_STOCK_COLUMN_ORDER.length : ib);
-  });
-}
-// Dallin 5L Stickers first (the main fragrance line), then every client-batch category in
-// whatever order those rows were first seen — stable and predictable without hand-maintaining
-// a separate list every time a new client batch gets added.
-function stickerStockCategories(){
-  const seen = [];
-  (state.stickerStock||[]).forEach(r=>{
-    const c = r.category || 'Dallin 5L Stickers';
-    if(!seen.includes(c)) seen.push(c);
-  });
-  seen.sort((a,b)=> a==='Dallin 5L Stickers' ? -1 : b==='Dallin 5L Stickers' ? 1 : 0);
-  return seen;
-}
-function renderStickerStockPage(){
-  const allRows = state.stickerStock || [];
-  const categories = stickerStockCategories();
-  if(!state._stickerStockCategory || !categories.includes(state._stickerStockCategory)){
-    state._stickerStockCategory = categories[0] || 'Dallin 5L Stickers';
-  }
-  const activeCategory = state._stickerStockCategory;
-  const rows = allRows.filter(r=>(r.category||'Dallin 5L Stickers')===activeCategory);
-  const products = stickerStockDisplayProducts();
-  return `
-  <div class="toolbar">
-    <div class="tabs"></div>
-    <div style="display:flex;align-items:center;gap:14px;">
-      <button type="button" class="btn btn-primary" id="btn-add-sticker-fragrance">+ Add fragrance</button>
-    </div>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-    ${categories.map(c=>{
-      const count = allRows.filter(r=>(r.category||'Dallin 5L Stickers')===c).length;
-      const active = c===activeCategory;
-      return `<button type="button" class="sticker-category-card ${active?'active':''}" data-sticker-category="${escAttr(c)}">
-        <span>${esc(c)}</span><span class="sticker-category-count">${count}</span>
-      </button>`;
-    }).join('')}
-  </div>
-  ${rows.length===0 ? `<div class="empty-state">No fragrances yet — click "+ Add fragrance" to start.</div>` : `
-  <div class="panel" style="overflow-x:auto;">
-    <table class="data-table sticker-table" style="min-width:860px;">
-      <thead><tr>
-        <th>Fragrance</th>
-        ${products.map(p=>`<th>${esc(p.name)}</th>`).join('')}
-        <th></th>
-      </tr></thead>
-      <tbody>
-        ${rows.map(r=>`
-        <tr>
-          <td>${esc(r.name)}</td>
-          ${products.map(p=>{
-            const total = (r.counts && r.counts[p.id]!=null) ? r.counts[p.id] : 0;
-            const healthClass = total===0 ? 'zero' : (total<10 ? 'low' : '');
-            return `<td>
-              <div class="sticker-cell">
-                <div class="sticker-issue-wrap">
-                  <span class="sticker-issue-sign">−</span>
-                  <input type="number" class="sticker-issue-input" data-sticker-row="${r.id}" data-sticker-product="${p.id}" title="Issued today — subtracts from the total">
-                </div>
-                <div class="sticker-total-box ${healthClass}" title="Current total">${total}</div>
-                <button type="button" class="sticker-add-btn" data-sticker-row="${r.id}" data-sticker-product="${p.id}" data-sticker-name="${escAttr(r.name)}" data-sticker-product-name="${escAttr(p.name)}" title="Add stock (new rolls arrived)">+</button>
-              </div>
-            </td>`;
-          }).join('')}
-          <td><button type="button" class="btn btn-sm btn-danger" data-delete-sticker-row="${r.id}" title="Delete">🗑️</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>
-  `}
-  `;
-}
-
 
 function manageStaffCategoriesModal(){
   const cats = state._staffCategoriesDraft || state.staffCategories;
@@ -16480,76 +16227,6 @@ function attachShellHandlers(){
     closeModal();
     showToast('Lists updated');
   };
-
-  // Sticker stock (full page — Packing and Admin)
-  if(byIdEl('btn-sticker-stock-link')) byIdEl('btn-sticker-stock-link').onclick = ()=>{ state.page = 'stickerstock'; render(); };
-  document.querySelectorAll('[data-sticker-category]').forEach(b=>b.addEventListener('click', ()=>{
-    state._stickerStockCategory = b.dataset.stickerCategory;
-    render();
-  }));
-  if(byIdEl('btn-add-sticker-fragrance')) byIdEl('btn-add-sticker-fragrance').onclick = ()=>{
-    openPromptModal({
-      title: 'New fragrance', label: 'Fragrance name', confirmLabel: 'Add',
-      onSubmit: async (value)=>{
-        const name = (value||'').trim();
-        if(!name) return;
-        if(state.stickerStock.some(r=>r.name.toLowerCase()===name.toLowerCase())){
-          openAlertModal({title:"Can't add", message:'A fragrance with that name already exists.'});
-          return;
-        }
-        const category = state._stickerStockCategory || 'Dallin 5L Stickers';
-        state.stickerStock = [...state.stickerStock, {id: uid('STICK'), name, counts:{}, category}];
-        await save('stickerStock');
-      },
-    });
-  };
-  document.querySelectorAll('[data-delete-sticker-row]').forEach(b=>b.addEventListener('click', ()=>{
-    const id = b.dataset.deleteStickerRow;
-    const row = state.stickerStock.find(r=>r.id===id); if(!row) return;
-    openConfirmModal({
-      title: 'Delete fragrance', danger: true, confirmLabel: 'Delete',
-      message: `Delete "${row.name}" from sticker stock? This cannot be undone.`,
-      onConfirm: async ()=>{
-        state.stickerStock = state.stickerStock.filter(r=>r.id!==id);
-        await save('stickerStock');
-      },
-    });
-  }));
-  // The − field is "how many were issued today" — never a value on its own, just an amount
-  // that gets subtracted from the real total on commit, then clears itself so it's ready for
-  // the next entry. Only ever subtracts; adding stock back goes through the explicit + button
-  // below instead of a hidden negative-number trick.
-  document.querySelectorAll('.sticker-issue-input').forEach(input=>input.addEventListener('change', async ()=>{
-    const issued = Math.max(0, parseInt(input.value, 10) || 0);
-    if(issued===0){ input.value = ''; return; }
-    const rowId = input.dataset.stickerRow;
-    const productId = input.dataset.stickerProduct;
-    const row = state.stickerStock.find(r=>r.id===rowId); if(!row) return;
-    const current = (row.counts && row.counts[productId]!=null) ? row.counts[productId] : 0;
-    const newTotal = Math.max(0, current - issued);
-    row.counts = {...(row.counts||{}), [productId]: newTotal};
-    await save('stickerStock');
-    render();
-  }));
-  // The + button is the only way to add stock back (new rolls arriving) — asks how many, adds
-  // that to the current total. Kept as a small prompt rather than an always-open input since
-  // this happens far less often than issuing.
-  document.querySelectorAll('.sticker-add-btn').forEach(btn=>btn.addEventListener('click', ()=>{
-    const rowId = btn.dataset.stickerRow;
-    const productId = btn.dataset.stickerProduct;
-    openPromptModal({
-      title: 'Add stock', label: `${btn.dataset.stickerName} — ${btn.dataset.stickerProductName}`,
-      inputType: 'number', placeholder: 'How many arrived?', confirmLabel: 'Add',
-      onSubmit: async (value)=>{
-        const added = Math.max(0, parseInt(value, 10) || 0);
-        if(added===0) return;
-        const row = state.stickerStock.find(r=>r.id===rowId); if(!row) return;
-        const current = (row.counts && row.counts[productId]!=null) ? row.counts[productId] : 0;
-        row.counts = {...(row.counts||{}), [productId]: current + added};
-        await save('stickerStock');
-      },
-    });
-  }));
 
   // Manage categories (Staff)
   if(byIdEl('btn-manage-staff-categories')) byIdEl('btn-manage-staff-categories').onclick = ()=>{

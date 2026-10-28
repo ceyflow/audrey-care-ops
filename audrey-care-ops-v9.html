@@ -721,7 +721,6 @@ html{ visibility:hidden; }
   .rnd-checkin-radar::after{animation-delay:1.1s;}
   @keyframes rnd-radar-ping{0%{transform:scale(.4);opacity:.6;}100%{transform:scale(1.9);opacity:0;}}
   .rnd-checkin-gate-title{font-weight:700;font-size:13.5px;margin-bottom:4px;}
-  .rnd-checkin-gate-desc{font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.4;}
   .rnd-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px;}
   .rnd-cal-month{font-weight:600;font-size:14px;}
   .rnd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
@@ -6245,18 +6244,18 @@ function initRndCheckinMap(){
   const confirmBtn = document.getElementById('btn-rnd-checkin-confirm');
   const gateEl = document.getElementById('rnd-checkin-gate');
   const gateTitleEl = document.getElementById('rnd-checkin-gate-title');
-  const gateDescEl = document.getElementById('rnd-checkin-gate-desc');
   const retryBtn = document.getElementById('btn-rnd-checkin-retry');
   state._rndCheckinLoc = undefined;
   let map = null;
   if(typeof L !== 'undefined'){
     map = L.map(mapEl, {zoomControl:true}).setView([7.8731,80.7718], 7); // Sri Lanka-wide fallback view until a fix arrives
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+    // Esri's free World Street Map (no API key) reads much closer to Google Maps' own clean,
+    // pale style than plain OpenStreetMap tiles do.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'© Esri'}).addTo(map);
     setTimeout(()=>map.invalidateSize(), 0);
   }
   function showBlocked(){
     if(gateTitleEl) gateTitleEl.textContent = 'Location access blocked';
-    if(gateDescEl) gateDescEl.innerHTML = "Your browser blocked location for this site — turning phone Location back on doesn't undo that. Open this site's permissions (the 🔒 or ⓘ icon next to the address bar, or your browser's Site settings → Location) and allow it, then tap Try again.";
     if(retryBtn) retryBtn.style.display = 'block';
   }
   async function attempt(){
@@ -6264,12 +6263,10 @@ function initRndCheckinMap(){
     if(gateEl) gateEl.style.display = 'flex';
     if(retryBtn) retryBtn.style.display = 'none';
     if(gateTitleEl) gateTitleEl.textContent = 'Finding your location…';
-    if(gateDescEl) gateDescEl.textContent = "This can't be checked in without your location.";
     if(sheetEl) sheetEl.classList.remove('rnd-checkin-sheet-up');
     if(confirmBtn) confirmBtn.disabled = true;
     if(!navigator.geolocation){
       if(gateTitleEl) gateTitleEl.textContent = 'Location not supported';
-      if(gateDescEl) gateDescEl.textContent = "This device or browser can't provide a location — check-in isn't possible here.";
       return;
     }
     // Once denied, the browser won't show the native prompt again for this origin — asking anyway
@@ -6281,20 +6278,16 @@ function initRndCheckinMap(){
     state._rndCheckinLoc = loc;
     if(!loc){
       if(code===1){ showBlocked(); return; }
-      if(code===3){
-        if(gateTitleEl) gateTitleEl.textContent = 'Taking longer than expected';
-        if(gateDescEl) gateDescEl.textContent = 'Try again, or move somewhere with a clearer signal (near a window or outdoors).';
-      } else {
-        if(gateTitleEl) gateTitleEl.textContent = 'No GPS signal yet';
-        if(gateDescEl) gateDescEl.textContent = 'Move outdoors or near a window, then try again.';
-      }
+      if(gateTitleEl) gateTitleEl.textContent = code===3 ? 'Taking longer than expected' : 'No GPS signal yet';
       if(retryBtn) retryBtn.style.display = 'block';
       return;
     }
     if(map){
       map.setView([loc.lat, loc.lng], 17);
-      L.marker([loc.lat, loc.lng]).addTo(map);
-      L.circle([loc.lat, loc.lng], {radius: loc.accuracy||20, color:'#2F6FE4', fillColor:'#2F6FE4', fillOpacity:.15, weight:1}).addTo(map);
+      // A plain circle + ring reads as Google Maps' own "blue dot" at a glance, instead of
+      // Leaflet's default red teardrop pin icon.
+      L.circle([loc.lat, loc.lng], {radius: loc.accuracy||20, color:'#1A73E8', fillColor:'#1A73E8', fillOpacity:.12, weight:1}).addTo(map);
+      L.circleMarker([loc.lat, loc.lng], {radius:8, color:'#fff', weight:3, fillColor:'#1A73E8', fillOpacity:1}).addTo(map);
     }
     mapEl.classList.remove('rnd-checkin-map-blurred');
     if(gateEl) gateEl.style.display = 'none';
@@ -15503,8 +15496,7 @@ function rndCheckinModal(action, chemistId, date){
         <div class="rnd-checkin-gate" id="rnd-checkin-gate">
           <div class="rnd-checkin-gate-card">
             <div class="rnd-checkin-radar"><span class="rnd-checkin-radar-dot"></span></div>
-            <div class="rnd-checkin-gate-title" id="rnd-checkin-gate-title">Finding your location…</div>
-            <div class="rnd-checkin-gate-desc" id="rnd-checkin-gate-desc">This can't be checked in without your location.</div>
+            <div class="rnd-checkin-gate-title" id="rnd-checkin-gate-title" style="margin-bottom:12px;">Finding your location…</div>
             <button type="button" class="btn btn-primary" id="btn-rnd-checkin-retry" style="display:none;width:100%;">Try again</button>
           </div>
         </div>

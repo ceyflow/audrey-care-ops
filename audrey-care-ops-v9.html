@@ -496,6 +496,19 @@ html{ visibility:hidden; }
   .landing-card svg{width:15px;height:15px;flex-shrink:0;}
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
   #settings-jump-grid .landing-card{cursor:grab;}
+
+  /* ---------------- Mobile "Sections" home grid ---------------- */
+  .sections-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .sections-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 6px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-family:inherit;cursor:pointer;}
+  .sections-tile span:last-child{font-size:11px;font-weight:600;color:var(--ink);line-height:1.25;}
+  .sections-tile-badge{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
+  .sections-tile-badge svg{width:21px;height:21px;}
+  .sections-tile-blue{background:var(--s-received-soft);color:var(--s-received);}
+  .sections-tile-orange{background:var(--s-blending-soft);color:var(--s-blending);}
+  .sections-tile-purple{background:var(--s-idea-soft);color:var(--s-idea);}
+  .sections-tile-maroon{background:var(--s-rndreview-soft);color:var(--s-rndreview);}
+  .sections-tile-accent{background:var(--accent-soft);color:var(--accent-dark);}
+  .sections-home-btn{display:none;}
   #settings-jump-grid .landing-card.dragging{opacity:.4;cursor:grabbing;}
 
   /* The tab bar's "Settings" icon doubles as a launcher for everything else the six tabs don't
@@ -1430,12 +1443,10 @@ html{ visibility:hidden; }
     .topbar-icon-btn[data-nav="chat"]{display:flex !important;}
     .topbar-icon-btn svg{width:19px;height:19px;}
     .topbar-icon-btn-label{display:none;}
-    .mobile-tabbar{
-      display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;
-      background:var(--surface);border-top:1px solid var(--border);
-      padding:13px 4px calc(13px + env(safe-area-inset-bottom));
-      box-shadow:0 -4px 16px rgba(20,25,20,.07);
-    }
+    /* Replaced by the Sections grid as the mobile home/nav screen -- kept display:none rather
+       than deleted, so the markup and its data-nav wiring stay intact if this ever needs
+       reverting (see .sections-grid-page / .sections-home-btn instead). */
+    .mobile-tabbar{display:none;}
     .mobile-tab{
       flex:1;display:flex;align-items:center;justify-content:center;
       padding:8px 2px;border-radius:10px;color:var(--muted);text-decoration:none;
@@ -1443,6 +1454,9 @@ html{ visibility:hidden; }
     }
     .mobile-tab svg{width:25px;height:25px;flex-shrink:0;}
     .mobile-tab.active{color:var(--accent-dark);}
+    .sections-home-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:none;background:var(--bg);color:var(--ink);flex-shrink:0;margin-right:4px;}
+    .sections-home-btn svg{width:19px;height:19px;}
+    .sections-grid-page{padding-top:2px;}
 
     /* Team chat goes full-screen and WhatsApp-style on mobile: the normal tall gradient topbar,
        bottom tab bar and notes FAB all eat vertical space the chat badly needs, and (worse) the
@@ -3114,7 +3128,10 @@ async function syncAllRoleDataAccess(){
   try{ return await _roleDataAccessSyncInFlight; }
   finally{ _roleDataAccessSyncInFlight = null; }
 }
-function pageAllowed(page){ return !!state.session && pagesForRole(state.session.role).includes(page); }
+// 'sections' (the mobile Sections grid) is a virtual home screen, not a permission -- every
+// logged-in session can reach it regardless of role, same as every role already gets its own
+// (possibly empty) grid of whatever pages it's actually assigned.
+function pageAllowed(page){ return !!state.session && (page==='sections' || pagesForRole(state.session.role).includes(page)); }
 const NEXT_ACTION_LABEL = {0:'Start processing',1:'Move to invoicing & checking',2:'Mark picked up by delivery'};
 const DEFAULT_COMPLAINT_CATEGORIES = ['Product quality issue','Delivery delay','Billing issue','Delivery damage','Product Damage','Wrong product','Other'];
 const DEFAULT_COMPLAINT_PRIORITIES = ['Low','Medium','High'];
@@ -5357,7 +5374,7 @@ async function confirmLogin(){
     }
   }
   state.session = {name: sessionName, role, staffName: sessionName!==role ? sessionName : null};
-  state.page = (pagesForRole(role)||['dashboard'])[0] || 'dashboard';
+  state.page = initialPageForLogin(role);
   state._justLoggedIn = true;
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
@@ -5441,7 +5458,7 @@ async function confirmLoginV2(){
   // are "theirs" — acctEntry was already looked up above (for the deactivated check) from the
   // same secureAccounts roster this field lives on, by this same login name.
   state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null, employerCode: (acctEntry && acctEntry.fullName) || null};
-  state.page = (pagesForRole(sessionRole)||['dashboard'])[0] || 'dashboard';
+  state.page = initialPageForLogin(sessionRole);
   state._justLoggedIn = true;
   state.aiChat = [];
   clearInterval(state._loginClockTimer);
@@ -8061,6 +8078,57 @@ function orderedNavItems(group, items){
   return [...ordered, ...missing];
 }
 function navLabel(item){ return (state.navLabels && state.navLabels[item.id]) || item.label; }
+// Every top-level NAV entry's own id -- the set of pages that can legitimately be a tile on the
+// mobile Sections grid (renderSectionsGridPage) or a pick in Settings -> User roles' "Mobile view"
+// selector. Deliberately excludes a group's children (costing/recipelibrary/recipes live inside
+// blendingdept's own chooser screen; orderinquiry/complaints/ongoingorders inside customercare's) --
+// those aren't a standalone nav target the same way a real top-level item is.
+const GRID_TOP_LEVEL_PAGES = NAV.flatMap(g=>g.items).map(it=>it.id);
+// A small fixed accent-color rotation for the grid's icon badges, keyed by page id -- purely
+// cosmetic grouping (not tied to each department's own theme color elsewhere), picked so
+// neighboring tiles in the default order rarely repeat the same color back to back.
+const GRID_TILE_COLORS = {
+  dashboard:'blue', orders:'accent', blendingdept:'orange', customercare:'maroon',
+  customers:'blue', suppliers:'orange', ordersprocess:'blue', gmp:'purple',
+  rnd:'accent', staff:'blue', chat:'maroon', bulksms:'purple', ratings:'orange', settings:'accent',
+};
+function gridTileColor(id){ return GRID_TILE_COLORS[id] || 'blue'; }
+// A role's custom pick of which pages show as tiles (state.userRoles[].mobileSections) wins when
+// set; an empty/missing one (every role until an Admin opens Settings -> User roles and changes
+// it) falls back to exactly the pages that role is already assigned, same as the sidebar shows --
+// "already assigned sections appear" without needing anyone to configure anything first.
+function roleMobileSections(role){
+  const custom = (state.userRoles||[]).find(r=>r.name===role);
+  if(custom && Array.isArray(custom.mobileSections) && custom.mobileSections.length){
+    return custom.mobileSections;
+  }
+  return null;
+}
+function renderSectionsGridPage(){
+  const allowed = pagesForRole(state.session.role);
+  const picked = roleMobileSections(state.session.role);
+  const navGroups = navGroupsFor(allowed);
+  const items = navGroups.flatMap(g=>g.items).filter(it=>!picked || picked.includes(it.id));
+  return `
+  <div class="sections-grid-page">
+    ${items.length===0 ? `<div class="empty-state"><p>No sections to show here yet.</p><div class="hint">Ask your Admin to check this role's Mobile view in Settings → User roles.</div></div>` : `
+    <div class="sections-grid">
+      ${items.map(it=>`
+      <button type="button" class="sections-tile" data-nav="${it.id}">
+        <span class="sections-tile-badge sections-tile-${gridTileColor(it.id)}">${icon(it.icon)}</span>
+        <span>${esc(navLabel(it))}</span>
+      </button>`).join('')}
+    </div>`}
+  </div>`;
+}
+// On a narrow screen, log in straight onto the Sections grid instead of whatever page happens to
+// be first in that role's list -- it's the mobile home now that the bottom tab bar is gone.
+// Desktop keeps the old behavior (straight into the first page), since its sidebar is on screen
+// the whole time there and a separate "home" screen wouldn't add anything.
+function initialPageForLogin(role){
+  if(window.matchMedia && window.matchMedia('(max-width:760px)').matches) return 'sections';
+  return (pagesForRole(role)||['dashboard'])[0] || 'dashboard';
+}
 // Phone-width navigation: a fixed bottom tab bar with exactly these six icon-only stops.
 // Team chat isn't one of them — it moved to the topbar, right next to Dally. Everything else
 // (GMP, Staff, Suppliers, Customers, Bulk SMS, Customer ratings, Orders Process, plus the real
@@ -8355,6 +8423,7 @@ const PAGE_META = {
   bulksms:{title:'Bulk SMS', sub:'Send one message to a list of customers at once.'},
   ratings:{title:'Customer ratings', sub:'What customers said about their delivery experience.'},
   settings:{title:'Settings', sub:'Workspace access, and task templates.'},
+  sections:{title:'Sections', sub:'Everything you have access to.'},
 };
 
 // How many minutes of inactivity before a signed-in session signs itself off — set per role in
@@ -8402,6 +8471,7 @@ function renderShell(freshPage){
       <header class="topbar">
         <div style="display:flex;align-items:center;gap:12px;">
           <button class="menu-toggle" id="btn-menu-toggle">☰</button>
+          <button type="button" class="sections-home-btn" data-nav="sections" aria-label="Sections">${icon('dashboard')}</button>
           <div>
             <div class="page-title">${esc((state.navLabels && state.navLabels[state.page]) || meta.title)}</div>
             <div class="page-sub">${meta.sub}</div>
@@ -8532,6 +8602,7 @@ function renderPage(){
     case 'bulksms': return renderBulkSmsPage();
     case 'ratings': return renderRatingsPage();
     case 'settings': return renderSettingsPage();
+    case 'sections': return renderSectionsGridPage();
     default: return '';
   }
 }
@@ -11859,6 +11930,16 @@ function renderRoleEditForm(f){
           ${ASSIGNABLE_ROLE_PAGES.map(id=>`
           <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
             <input type="checkbox" class="toggle-input" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
+          </label>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>Mobile view</label>
+        <div class="hint" style="margin-bottom:8px;">Which of the pages above show as a tile on the phone home grid. Leave all unchecked to show every page this role is assigned (the default).</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${NAV.flatMap(g=>g.items).filter(it=>f.pages.includes(it.id) || (it.children && it.children.some(c=>f.pages.includes(c.id)))).map(it=>`
+          <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
+            <input type="checkbox" class="toggle-input" data-role-mobile-section="${it.id}" ${(f.mobileSections||[]).includes(it.id)?'checked':''}><span class="toggle-track"></span> ${esc(it.label)}
           </label>`).join('')}
         </div>
       </div>
@@ -15996,7 +16077,7 @@ function mountDallyOrbs(){
 // role" to actually create the record first.
 async function autoSaveRoleToggle(){
   const f = state._roleEditForm; if(!f || f.isNew) return;
-  state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, pages:[...f.pages], permissions:{...f.permissions}} : r);
+  state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, pages:[...f.pages], mobileSections:[...(f.mobileSections||[])], permissions:{...f.permissions}} : r);
   if(!(await save('userRoles'))) return;
   syncAllRoleDataAccess();
 }
@@ -17858,12 +17939,12 @@ function attachShellHandlers(){
 
   // User roles
   if(byIdEl('btn-new-role')) byIdEl('btn-new-role').onclick = ()=>{
-    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], permissions:{}, inactivityTimeoutMinutes:0, locked:false, isNew:true};
+    state._roleEditForm = {id:null, name:'', description:'', status:'Active', pages:[], mobileSections:[], permissions:{}, inactivityTimeoutMinutes:0, locked:false, isNew:true};
     render();
   };
   document.querySelectorAll('[data-edit-role]').forEach(b=>b.addEventListener('click', ()=>{
     const r = state.userRoles.find(x=>x.id===b.dataset.editRole); if(!r) return;
-    state._roleEditForm = {...r, pages:[...(r.pages||[])], permissions:{...(r.permissions||{})}, inactivityTimeoutMinutes:Number(r.inactivityTimeoutMinutes)||0, isNew:false};
+    state._roleEditForm = {...r, pages:[...(r.pages||[])], mobileSections:[...(r.mobileSections||[])], permissions:{...(r.permissions||{})}, inactivityTimeoutMinutes:Number(r.inactivityTimeoutMinutes)||0, isNew:false};
     render();
   }));
   document.querySelectorAll('[data-delete-role]').forEach(b=>b.addEventListener('click', ()=>{
@@ -17886,6 +17967,14 @@ function attachShellHandlers(){
     else{ state._roleEditForm.pages = state._roleEditForm.pages.filter(p=>p!==id); }
     autoSaveRoleToggle();
   }));
+  document.querySelectorAll('[data-role-mobile-section]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!state._roleEditForm) return;
+    const id = cb.dataset.roleMobileSection;
+    if(!state._roleEditForm.mobileSections) state._roleEditForm.mobileSections = [];
+    if(cb.checked){ if(!state._roleEditForm.mobileSections.includes(id)) state._roleEditForm.mobileSections.push(id); }
+    else{ state._roleEditForm.mobileSections = state._roleEditForm.mobileSections.filter(p=>p!==id); }
+    autoSaveRoleToggle();
+  }));
   document.querySelectorAll('[data-role-permission]').forEach(cb=>cb.addEventListener('change', ()=>{
     if(!state._roleEditForm) return;
     state._roleEditForm.permissions[cb.dataset.rolePermission] = cb.checked;
@@ -17904,9 +17993,9 @@ function attachShellHandlers(){
     if(dup){ showToast('A role with that name already exists'); return; }
     const inactivityTimeoutMinutes = Number(f.inactivityTimeoutMinutes)||0;
     if(f.isNew){
-      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, inactivityTimeoutMinutes, locked:false}];
+      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], mobileSections:[...(f.mobileSections||[])], permissions:{...f.permissions}, inactivityTimeoutMinutes, locked:false}];
     } else {
-      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], permissions:{...f.permissions}, inactivityTimeoutMinutes} : r);
+      state.userRoles = state.userRoles.map(r=>r.id===f.id ? {...r, name: r.locked?r.name:name, description:(f.description||'').trim(), status:f.status, pages:[...f.pages], mobileSections:[...(f.mobileSections||[])], permissions:{...f.permissions}, inactivityTimeoutMinutes} : r);
     }
     // save('userRoles') already shows its own "Could not save userRoles" toast and retries twice
     // on failure — the code below used to run regardless, closing the edit form and (once

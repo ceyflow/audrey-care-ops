@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261028134349">
+<meta name="app-build" content="20261028135240">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -424,12 +424,21 @@ html{ visibility:hidden; }
   /* ---------------- Section landing cards (e.g. Customer Care) ---------------- */
   .landing-section{margin-bottom:26px;}
   .landing-section-title{font-size:14.5px;font-weight:700;color:var(--ink);padding-bottom:9px;border-bottom:1px solid var(--border);margin-bottom:14px;}
-  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
-  .landing-card{position:relative;display:flex;align-items:center;gap:8px;background:var(--accent-grad);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
-  .landing-card:hover{box-shadow:0 10px 24px rgba(var(--accent-rgb),.28);}
-  .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(var(--accent-rgb),.28);}
-  .landing-card svg{width:15px;height:15px;flex-shrink:0;}
-  .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
+  /* Grid tiles, matching the mobile Sections home grid's own look (icon badge on top, label
+     below) -- picked over the old solid-gradient horizontal bar for consistency across every
+     "jump to" card: Customer Care, Blending Department, GMP and Settings all share this. */
+  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;}
+  .landing-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:16px 6px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;text-align:center;transition:transform .15s ease,box-shadow .15s ease;}
+  .landing-card:hover{box-shadow:0 8px 20px rgba(20,25,20,.08);}
+  .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(20,25,20,.12);}
+  .landing-card-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;}
+  .landing-card-icon svg{width:21px;height:21px;}
+  .landing-card-icon-blue{background:var(--s-received-soft);color:var(--s-received);}
+  .landing-card-icon-orange{background:var(--s-blending-soft);color:var(--s-blending);}
+  .landing-card-icon-purple{background:var(--s-idea-soft);color:var(--s-idea);}
+  .landing-card-icon-maroon{background:var(--s-rndreview-soft);color:var(--s-rndreview);}
+  .landing-card-icon-accent{background:var(--accent-soft);color:var(--accent-dark);}
+  .landing-card .landing-card-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px var(--surface);}
   #settings-jump-grid .landing-card{cursor:grab;}
 
   /* ---------------- Mobile "Sections" home grid ---------------- */
@@ -7963,6 +7972,23 @@ function gridDuotoneIcon(id, size){
     <svg style="position:absolute;inset:0;" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>
   </i>`;
 }
+// Same duotone technique as gridDuotoneIcon, but sourced from this app's own existing ICONS object
+// instead of the Sections grid's separate Tabler set -- used by the "jump to" cards (Customer
+// Care, Blending Department, GMP, Settings), which between them already reference every icon id
+// they need from ICONS, so there's no need to hunt down a matching Tabler icon for each one.
+function cardDuotoneIcon(name, size){
+  const paths = ICONS[name];
+  if(!paths) return icon(name);
+  const sz = size || 21;
+  return `<i style="position:relative;display:inline-block;width:${sz}px;height:${sz}px;flex:none;">
+    <svg style="position:absolute;inset:0;" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" stroke="none" opacity=".35">${paths}</svg>
+    <svg style="position:absolute;inset:0;" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>
+  </i>`;
+}
+// Purely cosmetic rotation (not tied to any per-card meaning) so a row of "jump to" cards doesn't
+// read as one flat block of same-colored tiles -- same five-color family the Sections grid uses.
+const LANDING_CARD_COLOR_ROTATION = ['blue','orange','purple','maroon','accent'];
+function landingCardColor(i){ return LANDING_CARD_COLOR_ROTATION[i % LANDING_CARD_COLOR_ROTATION.length]; }
 // A role's custom pick of which pages show as tiles (state.userRoles[].mobileSections) wins when
 // set; an empty/missing one (every role until an Admin opens Settings -> User roles and changes
 // it) falls back to exactly the pages that role is already assigned, same as the sidebar shows --
@@ -8800,10 +8826,11 @@ function renderCustomerCarePage(){
     <div class="landing-section-title">Customer Support</div>
     ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : `
     <div class="landing-grid">
-      ${cards.map(c=>`
+      ${cards.map((c,i)=>`
       <button type="button" class="landing-card" data-nav="${c.id}">
         ${c.badge ? `<span class="landing-card-badge">${c.badge}</span>` : ''}
-        ${icon(c.icon)}<span>${esc(c.label)}</span>
+        <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
+        <span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>`}
   </div>
@@ -8974,10 +9001,11 @@ function renderBlendingDeptPage(){
     <div class="landing-section-title">Production</div>
     ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : `
     <div class="landing-grid">
-      ${cards.map(c=>`
+      ${cards.map((c,i)=>`
       <button type="button" class="landing-card" data-nav="${c.id}">
         ${c.badge ? `<span class="landing-card-badge">${c.badge}</span>` : ''}
-        ${icon(c.icon)}<span>${esc(c.label)}</span>
+        <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
+        <span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>`}
   </div>
@@ -9505,9 +9533,10 @@ function renderGmpHub(){
   <div class="landing-section">
     <div class="landing-section-title">GMP &amp; Quality</div>
     <div class="landing-grid">
-      ${cards.map(c=>`
+      ${cards.map((c,i)=>`
       <button type="button" class="landing-card" data-gmp-section="${c.id}">
-        ${icon(c.icon)}<span>${esc(c.label)}</span>
+        <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
+        <span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>
   </div>`;
@@ -11353,9 +11382,10 @@ function renderSettingsPage(){
   <div class="landing-section">
     <div class="landing-section-title">Jump to <span class="hint" style="font-weight:400;">— drag a card to reorder</span></div>
     <div class="landing-grid" id="settings-jump-grid">
-      ${jumpCards.map(c=>`
+      ${jumpCards.map((c,i)=>`
       <button type="button" class="landing-card" draggable="true" data-settings-jump="${c.id}">
-        ${icon(c.icon)}<span>${esc(c.label)}</span>
+        <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
+        <span>${esc(c.label)}</span>
       </button>`).join('')}
     </div>
   </div>

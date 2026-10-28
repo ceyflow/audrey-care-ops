@@ -5948,6 +5948,37 @@ function getGeoLocationOnce(timeoutMs){
     setTimeout(()=>finish(null), ms+500);
   });
 }
+// Same browser API, but resolves the GeolocationPositionError code (1 = permission denied,
+// 2 = position unavailable, 3 = our own timeout, 0 = geolocation unsupported) alongside the loc,
+// so the check-in gate (initRndCheckinMap) can tell "the user said no" apart from "no GPS fix yet"
+// instead of showing one generic failure message for both.
+function getGeoLocationWithStatus(timeoutMs){
+  const ms = timeoutMs || 10000;
+  return new Promise(resolve=>{
+    if(!navigator.geolocation){ resolve({loc:null, code:0}); return; }
+    let done = false;
+    const finish = v=>{ if(done) return; done = true; resolve(v); };
+    navigator.geolocation.getCurrentPosition(
+      pos=>finish({loc:{lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy||0)}, code:0}),
+      err=>finish({loc:null, code:(err && err.code) || 2}),
+      {enableHighAccuracy:true, timeout: ms, maximumAge:0}
+    );
+    setTimeout(()=>finish({loc:null, code:3}), ms+500);
+  });
+}
+// Once a site's geolocation permission is denied, Chrome/Safari never show the native prompt again
+// for that origin — a plain retry just silently re-fails, which is exactly what was reported:
+// turning phone-level Location Services back on doesn't touch this per-site browser permission, so
+// "Try again" looked like it was doing nothing. Checking the Permissions API first lets the gate
+// skip straight to "go change it in your browser" instead of re-asking a question the browser has
+// already decided not to ask again. Resolves 'granted'|'denied'|'prompt'|'unknown' (the last when
+// the Permissions API itself isn't available — Safari didn't support the 'geolocation' name for a
+// long time — in which case the caller just has to try the real request and see).
+async function geoPermissionState(){
+  if(!navigator.permissions || !navigator.permissions.query) return 'unknown';
+  try{ const status = await navigator.permissions.query({name:'geolocation'}); return status.state; }
+  catch(e){ return 'unknown'; }
+}
 function rndMapsLink(lat,lng){ return `https://www.google.com/maps?q=${lat},${lng}`; }
 // preLoc lets the check-in map modal (rndCheckinModal) pass a location it already fetched while the
 // user was looking at the map, instead of fetching a second one here — undefined (the plain-button
@@ -6195,7 +6226,12 @@ function initRndCheckinMap(){
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
     setTimeout(()=>map.invalidateSize(), 0);
   }
-  function attempt(){
+  function showBlocked(){
+    if(gateTitleEl) gateTitleEl.textContent = 'Location access blocked';
+    if(gateDescEl) gateDescEl.innerHTML = "Your browser blocked location for this site — turning phone Location back on doesn't undo that. Open this site's permissions (the 🔒 or ⓘ icon next to the address bar, or your browser's Site settings → Location) and allow it, then tap Try again.";
+    if(retryBtn) retryBtn.style.display = 'block';
+  }
+  async function attempt(){
     mapEl.classList.add('rnd-checkin-map-blurred');
     if(gateEl) gateEl.style.display = 'flex';
     if(retryBtn) retryBtn.style.display = 'none';
@@ -6208,24 +6244,34 @@ function initRndCheckinMap(){
       if(gateDescEl) gateDescEl.textContent = "This device or browser can't provide a location — check-in isn't possible here.";
       return;
     }
-    getGeoLocationOnce(10000).then(loc=>{
-      state._rndCheckinLoc = loc;
-      if(!loc){
-        if(gateTitleEl) gateTitleEl.textContent = 'Location is off';
-        if(gateDescEl) gateDescEl.textContent = 'Turn on location access for this site, then try again — this can’t be skipped.';
-        if(retryBtn) retryBtn.style.display = 'block';
-        return;
+    // Once denied, the browser won't show the native prompt again for this origin — asking anyway
+    // just silently re-fails and makes Try again look broken, so check the standing permission
+    // first and skip straight to the "go change it yourself" message when it's already denied.
+    const permState = await geoPermissionState();
+    if(permState === 'denied'){ showBlocked(); return; }
+    const {loc, code} = await getGeoLocationWithStatus(10000);
+    state._rndCheckinLoc = loc;
+    if(!loc){
+      if(code===1){ showBlocked(); return; }
+      if(code===3){
+        if(gateTitleEl) gateTitleEl.textContent = 'Taking longer than expected';
+        if(gateDescEl) gateDescEl.textContent = 'Try again, or move somewhere with a clearer signal (near a window or outdoors).';
+      } else {
+        if(gateTitleEl) gateTitleEl.textContent = 'No GPS signal yet';
+        if(gateDescEl) gateDescEl.textContent = 'Move outdoors or near a window, then try again.';
       }
-      if(map){
-        map.setView([loc.lat, loc.lng], 17);
-        L.marker([loc.lat, loc.lng]).addTo(map);
-        L.circle([loc.lat, loc.lng], {radius: loc.accuracy||20, color:'#2F6FE4', fillColor:'#2F6FE4', fillOpacity:.15, weight:1}).addTo(map);
-      }
-      mapEl.classList.remove('rnd-checkin-map-blurred');
-      if(gateEl) gateEl.style.display = 'none';
-      if(statusEl){ statusEl.style.display = 'flex'; statusEl.innerHTML = `📍 Location found (±${loc.accuracy}m)`; }
-      if(confirmBtn) confirmBtn.disabled = false;
-    });
+      if(retryBtn) retryBtn.style.display = 'block';
+      return;
+    }
+    if(map){
+      map.setView([loc.lat, loc.lng], 17);
+      L.marker([loc.lat, loc.lng]).addTo(map);
+      L.circle([loc.lat, loc.lng], {radius: loc.accuracy||20, color:'#2F6FE4', fillColor:'#2F6FE4', fillOpacity:.15, weight:1}).addTo(map);
+    }
+    mapEl.classList.remove('rnd-checkin-map-blurred');
+    if(gateEl) gateEl.style.display = 'none';
+    if(statusEl){ statusEl.style.display = 'flex'; statusEl.innerHTML = `📍 Location found (±${loc.accuracy}m)`; }
+    if(confirmBtn) confirmBtn.disabled = false;
   }
   if(retryBtn) retryBtn.onclick = attempt;
   attempt();

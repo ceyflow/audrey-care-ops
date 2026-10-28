@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261028022442">
+<meta name="app-build" content="20261028032040">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -27,6 +27,8 @@ html{ visibility:hidden; }
 <link rel="apple-touch-icon" href="data:image/png;base64,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">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
   :root{
     --ink:#20291F;
@@ -682,6 +684,34 @@ html{ visibility:hidden; }
   .rnd-pill-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
   .rnd-pill-tab{border:none;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;background:var(--bg);color:var(--muted);white-space:nowrap;}
   .rnd-pill-tab.active{background:var(--accent-soft);color:var(--accent-dark);}
+  .rnd-loc-link{font-size:11px;font-weight:600;color:#2F6FE4;text-decoration:none;white-space:nowrap;}
+  .rnd-loc-link:hover{text-decoration:underline;}
+  .rnd-cal-detail-locations{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .rnd-checkin-modal{max-width:420px;padding:0;overflow:hidden;}
+  .rnd-checkin-header{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;padding:16px 18px;}
+  .rnd-checkin-time{font-size:22px;font-weight:800;line-height:1;}
+  .rnd-checkin-chemist{font-size:12.5px;opacity:.9;margin-top:4px;}
+  .rnd-checkin-map-wrap{position:relative;width:100%;height:240px;background:var(--bg);}
+  .rnd-checkin-map{position:absolute;inset:0;transition:filter .2s ease;}
+  .rnd-checkin-map.rnd-checkin-map-blurred{filter:blur(3px) brightness(.85);}
+  .rnd-checkin-status{padding:10px 18px;font-size:12px;color:var(--muted);align-items:center;gap:8px;}
+  .rnd-checkin-actions{display:flex;gap:10px;padding:4px 18px 18px;}
+  .rnd-checkin-actions .btn{flex:1;}
+  .rnd-checkin-actions .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .rnd-checkin-spinner{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:rnd-spin .8s linear infinite;flex:none;}
+  @keyframes rnd-spin{to{transform:rotate(360deg);}}
+  /* The gate overlay sits on top of the (blurred) live map whenever a location fix isn't in hand
+     yet -- Confirm stays disabled the whole time, so this is the only thing on screen that's
+     actually interactive until a fix succeeds (or the whole thing is cancelled). */
+  .rnd-checkin-gate{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,20,15,.42);}
+  .rnd-checkin-gate-card{background:var(--surface);border-radius:14px;padding:18px 20px;text-align:center;width:220px;box-shadow:0 10px 28px rgba(0,0,0,.28);}
+  .rnd-checkin-radar{width:62px;height:62px;border-radius:50%;margin:0 auto 10px;position:relative;display:flex;align-items:center;justify-content:center;}
+  .rnd-checkin-radar-dot{width:13px;height:13px;border-radius:50%;background:#E0453A;box-shadow:0 0 0 3px rgba(224,69,58,.25);z-index:1;}
+  .rnd-checkin-radar::before,.rnd-checkin-radar::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid #E0453A;opacity:.55;animation:rnd-radar-ping 2.2s ease-out infinite;}
+  .rnd-checkin-radar::after{animation-delay:1.1s;}
+  @keyframes rnd-radar-ping{0%{transform:scale(.4);opacity:.6;}100%{transform:scale(1.9);opacity:0;}}
+  .rnd-checkin-gate-title{font-weight:700;font-size:13.5px;margin-bottom:4px;}
+  .rnd-checkin-gate-desc{font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.4;}
   .rnd-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px;}
   .rnd-cal-month{font-weight:600;font-size:14px;}
   .rnd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
@@ -5900,32 +5930,67 @@ function rndAttRecFor(chemistId, date){
   return state.rndAttendance.find(a=>a.chemistId===chemistId && a.date===date) || null;
 }
 function rndAttLoginAt(rec){ return rec ? (rec.loginAt || rec.at || null) : null; }
-async function rndMarkLogin(chemistId, date){
+// Wraps the browser's own geolocation API (no key, no billing — just a device permission prompt)
+// in a promise that always resolves, never rejects: permission denied, no GPS fix, an insecure
+// (non-HTTPS) context, or a slow fix past the timeout all just resolve null, so a login/logout
+// action is never blocked waiting on a location that isn't coming.
+function getGeoLocationOnce(timeoutMs){
+  const ms = timeoutMs || 8000;
+  return new Promise(resolve=>{
+    if(!navigator.geolocation){ resolve(null); return; }
+    let done = false;
+    const finish = v=>{ if(done) return; done = true; resolve(v); };
+    navigator.geolocation.getCurrentPosition(
+      pos=>finish({lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy||0)}),
+      ()=>finish(null),
+      {enableHighAccuracy:true, timeout: ms, maximumAge:0}
+    );
+    setTimeout(()=>finish(null), ms+500);
+  });
+}
+function rndMapsLink(lat,lng){ return `https://www.google.com/maps?q=${lat},${lng}`; }
+// preLoc lets the check-in map modal (rndCheckinModal) pass a location it already fetched while the
+// user was looking at the map, instead of fetching a second one here — undefined (the plain-button
+// call site, kept for safety/back-compat) still fetches fresh; null means the modal's own fetch
+// failed, which this still records as a locationless attendance mark rather than fetching again.
+async function rndMarkLogin(chemistId, date, preLoc){
   if(!canManageRnd()) return;
   const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
   let rec = rndAttRecFor(chemistId, date);
   if(rndAttLoginAt(rec)){ showToast(chemist.name+' is already logged in for that day'); return; }
+  if(state._rndAttBusy) return;
+  state._rndAttBusy = true;
+  let loc = preLoc;
+  if(loc===undefined){ showToast('Getting your location…'); loc = await getGeoLocationOnce(); }
+  state._rndAttBusy = false;
   if(rec){ rec.loginAt = new Date().toISOString(); rec.by = state.session.name; }
   else{
     rec = {id: uid('ATT'), chemistId, chemistName: chemist.name, date, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
     state.rndAttendance.unshift(rec);
   }
+  if(loc){ rec.loginLat = loc.lat; rec.loginLng = loc.lng; rec.loginAccuracy = loc.accuracy; }
   // save() already toasts its own failure — showing "logged in" regardless used to mean a write
   // the database actually rejected still looked successful right up until the next refresh wiped
   // the local-only state it had been resting on.
   const ok = await save('rndAttendance');
-  if(ok) showToast(chemist.name+' logged in');
+  if(ok) showToast(chemist.name+' logged in'+(loc?'':' (location unavailable)'));
 }
-async function rndMarkLogout(chemistId, date){
+async function rndMarkLogout(chemistId, date, preLoc){
   if(!canManageRnd()) return;
   const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
   const rec = rndAttRecFor(chemistId, date);
   if(!rndAttLoginAt(rec)){ showToast('Log in first before marking logout'); return; }
   if(rec.logoutAt){ showToast(chemist.name+' is already logged out for that day'); return; }
+  if(state._rndAttBusy) return;
+  state._rndAttBusy = true;
+  let loc = preLoc;
+  if(loc===undefined){ showToast('Getting your location…'); loc = await getGeoLocationOnce(); }
+  state._rndAttBusy = false;
   rec.logoutAt = new Date().toISOString();
   rec.by = state.session.name;
+  if(loc){ rec.logoutLat = loc.lat; rec.logoutLng = loc.lng; rec.logoutAccuracy = loc.accuracy; }
   const ok = await save('rndAttendance');
-  if(ok) showToast(chemist.name+' logged out');
+  if(ok) showToast(chemist.name+' logged out'+(loc?'':' (location unavailable)'));
 }
 function deleteRndAttendance(id){
   if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
@@ -6102,6 +6167,77 @@ function initChecklistSignCanvas(){
   canvas.addEventListener('touchstart', start, {passive:false});
   canvas.addEventListener('touchmove', move, {passive:false});
   canvas.addEventListener('touchend', end);
+}
+// Builds the live Leaflet map inside the check-in modal (rndCheckinModal) the first time its
+// container shows up in the DOM — guarded by a dataset flag the same way initCropModal is, since
+// renderInner() skips rebuilding the shell entirely while this modal is open (see the matching
+// guard there), so this really only runs once per modal-open, not on every render() tick.
+// Leaflet + OpenStreetMap tiles need no API key or billing, unlike an embedded Google Maps view.
+// A hard gate, by request: Confirm has no path to enabling itself without a real GPS fix — no
+// "confirm anyway" fallback. The map underneath stays blurred and the radar-dot card stays up
+// until getGeoLocationOnce actually resolves a location; a failure (denied, no fix, no geolocation
+// support at all) just offers Try again, which re-runs the same attempt.
+function initRndCheckinMap(){
+  if(!state.modal || !state.modal.startsWith('rndcheckin:')) return;
+  const mapEl = document.getElementById('rnd-checkin-map');
+  if(!mapEl || mapEl.dataset.mapInit) return;
+  mapEl.dataset.mapInit = '1';
+  const statusEl = document.getElementById('rnd-checkin-status');
+  const confirmBtn = document.getElementById('btn-rnd-checkin-confirm');
+  const gateEl = document.getElementById('rnd-checkin-gate');
+  const gateTitleEl = document.getElementById('rnd-checkin-gate-title');
+  const gateDescEl = document.getElementById('rnd-checkin-gate-desc');
+  const retryBtn = document.getElementById('btn-rnd-checkin-retry');
+  state._rndCheckinLoc = undefined;
+  let map = null;
+  if(typeof L !== 'undefined'){
+    map = L.map(mapEl, {zoomControl:true}).setView([7.8731,80.7718], 7); // Sri Lanka-wide fallback view until a fix arrives
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+    setTimeout(()=>map.invalidateSize(), 0);
+  }
+  function attempt(){
+    mapEl.classList.add('rnd-checkin-map-blurred');
+    if(gateEl) gateEl.style.display = 'flex';
+    if(retryBtn) retryBtn.style.display = 'none';
+    if(gateTitleEl) gateTitleEl.textContent = 'Finding your location…';
+    if(gateDescEl) gateDescEl.textContent = "This can't be checked in without your location.";
+    if(statusEl) statusEl.style.display = 'none';
+    if(confirmBtn) confirmBtn.disabled = true;
+    if(!navigator.geolocation){
+      if(gateTitleEl) gateTitleEl.textContent = 'Location not supported';
+      if(gateDescEl) gateDescEl.textContent = "This device or browser can't provide a location — check-in isn't possible here.";
+      return;
+    }
+    getGeoLocationOnce(10000).then(loc=>{
+      state._rndCheckinLoc = loc;
+      if(!loc){
+        if(gateTitleEl) gateTitleEl.textContent = 'Location is off';
+        if(gateDescEl) gateDescEl.textContent = 'Turn on location access for this site, then try again — this can’t be skipped.';
+        if(retryBtn) retryBtn.style.display = 'block';
+        return;
+      }
+      if(map){
+        map.setView([loc.lat, loc.lng], 17);
+        L.marker([loc.lat, loc.lng]).addTo(map);
+        L.circle([loc.lat, loc.lng], {radius: loc.accuracy||20, color:'#2F6FE4', fillColor:'#2F6FE4', fillOpacity:.15, weight:1}).addTo(map);
+      }
+      mapEl.classList.remove('rnd-checkin-map-blurred');
+      if(gateEl) gateEl.style.display = 'none';
+      if(statusEl){ statusEl.style.display = 'flex'; statusEl.innerHTML = `📍 Location found (±${loc.accuracy}m)`; }
+      if(confirmBtn) confirmBtn.disabled = false;
+    });
+  }
+  if(retryBtn) retryBtn.onclick = attempt;
+  attempt();
+}
+async function confirmRndCheckin(){
+  if(!state.modal || !state.modal.startsWith('rndcheckin:')) return;
+  const [, action, chemistId, date] = state.modal.split(':');
+  const loc = state._rndCheckinLoc;
+  state._rndCheckinLoc = undefined;
+  closeModal();
+  if(action==='login') await rndMarkLogin(chemistId, date, loc);
+  else await rndMarkLogout(chemistId, date, loc);
 }
 function initCropModal(){
   const frame = document.getElementById('crop-frame');
@@ -7347,6 +7483,7 @@ function renderInner(){
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.
   if(state.modal==='brandcrop' && document.getElementById('crop-frame')) return;
+  if(state.modal && state.modal.startsWith('rndcheckin:') && document.getElementById('rnd-checkin-map')) return;
   const freshPage = state.page !== _lastEnterPage;
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
@@ -9066,9 +9203,17 @@ function renderRndChemistsTab(){
     ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
     <div class="rnd-desktop-table">
     <table class="data-table">
-      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th><th></th></tr></thead>
+      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th>${isAdminOrSubAdmin() ? '<th>Location</th>' : ''}<th></th></tr></thead>
       <tbody>
-        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td><td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`; }).join('')}
+        ${state.rndAttendance.slice(0,30).map(a=>{
+          const inAt = rndAttLoginAt(a);
+          const locCell = isAdminOrSubAdmin() ? `<td>
+            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 In</a>` : ''}
+            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Out</a>` : ''}
+            ${!a.loginLat && !a.logoutLat ? '<span class="hint">—</span>' : ''}
+          </td>` : '';
+          return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td>${locCell}<td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`;
+        }).join('')}
       </tbody>
     </table>
     </div>
@@ -9088,6 +9233,11 @@ function renderRndChemistsTab(){
             <span class="rnd-att-pill rnd-att-pill-in">In ${inAt?fmtTimeOnly(inAt):'—'}</span>
             <span class="rnd-att-pill rnd-att-pill-out">Out ${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</span>
           </div>
+          ${isAdminOrSubAdmin() && (a.loginLat || a.logoutLat) ? `
+          <div style="display:flex;gap:10px;margin-top:6px;">
+            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Login location</a>` : ''}
+            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Logout location</a>` : ''}
+          </div>` : ''}
         </div>`;
       }).join('')}
     </div>
@@ -14122,6 +14272,7 @@ function renderModal(){
   }
   if(type==='rndchemist') return rndChemistFormModal(id==='new'?null:id);
   if(type==='rndattendance') return rndAttendanceModal(id);
+  if(type==='rndcheckin') return rndCheckinModal(parts[1], parts[2], parts[3]);
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
@@ -15237,9 +15388,51 @@ function rndAttendanceModal(chemistId){
           <button type="button" class="btn ${canLogout?'btn-primary':''}" id="btn-rnd-logout" ${canLogout?'':'disabled'}>${selRec && selRec.logoutAt ? '✓ Logged out '+fmtTimeOnly(selRec.logoutAt) : 'Logout'}</button>
         </div>
         ${!selInAt ? `<div class="hint" style="margin-top:8px;">Log in first — logout unlocks once that day has a login.</div>` : ''}
+        ${selRec && (selRec.loginLat || selRec.logoutLat) ? `
+        <div class="rnd-cal-detail-locations">
+          ${selRec.loginLat ? `<a href="${rndMapsLink(selRec.loginLat,selRec.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Login location${selRec.loginAccuracy?` (±${selRec.loginAccuracy}m)`:''}</a>` : ''}
+          ${selRec.logoutLat ? `<a href="${rndMapsLink(selRec.logoutLat,selRec.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Logout location${selRec.logoutAccuracy?` (±${selRec.logoutAccuracy}m)`:''}</a>` : ''}
+        </div>` : ''}
       </div>` : ''}
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+      </div>
+    </div>
+  </div>`;
+}
+// Shown when Login/Logout is pressed, instead of marking attendance immediately — gives the
+// chemist a live map with their own location on it (the GPS fix this modal fetches is what
+// actually gets saved, via confirmRndCheckin below) before they confirm, rather than silently
+// grabbing a fix in the background. The map itself is built by initRndCheckinMap, wired up once
+// the modal's DOM is actually in place (see attachShellHandlers).
+function rndCheckinModal(action, chemistId, date){
+  const c = byId(state.rndChemists, chemistId); if(!c) return '';
+  const isLogin = action==='login';
+  const now = new Date();
+  const timeLabel = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const dateLabel = now.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal rnd-checkin-modal">
+      <div class="rnd-checkin-header">
+        <div class="rnd-checkin-time">${timeLabel}</div>
+        <div class="rnd-checkin-chemist">${esc(c.name)} · ${dateLabel} · ${isLogin?'Login':'Logout'}</div>
+      </div>
+      <div class="rnd-checkin-map-wrap">
+        <div class="rnd-checkin-map" id="rnd-checkin-map"></div>
+        <div class="rnd-checkin-gate" id="rnd-checkin-gate">
+          <div class="rnd-checkin-gate-card">
+            <div class="rnd-checkin-radar"><span class="rnd-checkin-radar-dot"></span></div>
+            <div class="rnd-checkin-gate-title" id="rnd-checkin-gate-title">Finding your location…</div>
+            <div class="rnd-checkin-gate-desc" id="rnd-checkin-gate-desc">This can't be checked in without your location.</div>
+            <button type="button" class="btn btn-primary" id="btn-rnd-checkin-retry" style="display:none;width:100%;">Try again</button>
+          </div>
+        </div>
+      </div>
+      <div class="rnd-checkin-status" id="rnd-checkin-status" style="display:none;"></div>
+      <div class="rnd-checkin-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-rnd-checkin-confirm" disabled>Confirm ${isLogin?'Login':'Logout'}</button>
       </div>
     </div>
   </div>`;
@@ -16488,8 +16681,9 @@ function attachShellHandlers(){
   if(byIdEl('btn-rnd-cal-prev')) byIdEl('btn-rnd-cal-prev').onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, -1); render(); };
   if(byIdEl('btn-rnd-cal-next')) byIdEl('btn-rnd-cal-next').onclick = ()=>{ state._rndAttCal.month = rndShiftMonth(state._rndAttCal.month, 1); render(); };
   document.querySelectorAll('[data-rnd-cal-date]').forEach(cell=>cell.addEventListener('click', ()=>{ state._rndAttCal.selectedDate = cell.dataset.rndCalDate; render(); }));
-  if(byIdEl('btn-rnd-login')) byIdEl('btn-rnd-login').onclick = ()=>{ rndMarkLogin(state._rndAttCal.chemistId, state._rndAttCal.selectedDate); };
-  if(byIdEl('btn-rnd-logout')) byIdEl('btn-rnd-logout').onclick = ()=>{ rndMarkLogout(state._rndAttCal.chemistId, state._rndAttCal.selectedDate); };
+  if(byIdEl('btn-rnd-login')) byIdEl('btn-rnd-login').onclick = ()=>{ openModal('rndcheckin:login:'+state._rndAttCal.chemistId+':'+state._rndAttCal.selectedDate); };
+  if(byIdEl('btn-rnd-logout')) byIdEl('btn-rnd-logout').onclick = ()=>{ openModal('rndcheckin:logout:'+state._rndAttCal.chemistId+':'+state._rndAttCal.selectedDate); };
+  if(byIdEl('btn-rnd-checkin-confirm')) byIdEl('btn-rnd-checkin-confirm').onclick = confirmRndCheckin;
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');
@@ -17721,6 +17915,7 @@ function attachShellHandlers(){
   attachBatchSheetLogoDragHandlers();
   initCropModal();
   initChecklistSignCanvas();
+  initRndCheckinMap();
 }
 
 document.addEventListener('keydown', e=>{

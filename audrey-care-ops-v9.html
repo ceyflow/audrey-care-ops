@@ -698,6 +698,7 @@ html{ visibility:hidden; }
      inside the map. */
   .rnd-checkin-map{position:absolute;inset:0;z-index:1;transition:filter .2s ease;}
   .rnd-checkin-map.rnd-checkin-map-blurred{filter:blur(3px) brightness(.85);}
+  .rnd-checkin-tiles-pale{filter:sepia(.18) saturate(.5) brightness(1.1) hue-rotate(-4deg) contrast(.95);}
   /* Replaces the old separate status row — slides up over the bottom of the map itself once a fix
      is in hand, instead of pushing the map up to make room for a line of text underneath it. */
   .rnd-checkin-sheet{position:absolute;left:0;right:0;bottom:0;z-index:2;background:var(--surface);border-radius:16px 16px 0 0;padding:10px 18px 14px;box-shadow:0 -6px 16px rgba(0,0,0,.14);transform:translateY(100%);transition:transform .25s ease;}
@@ -6250,8 +6251,9 @@ function initRndCheckinMap(){
   if(typeof L !== 'undefined'){
     map = L.map(mapEl, {zoomControl:true}).setView([7.8731,80.7718], 7); // Sri Lanka-wide fallback view until a fix arrives
     // Esri's free World Street Map (no API key) reads much closer to Google Maps' own clean,
-    // pale style than plain OpenStreetMap tiles do.
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'© Esri'}).addTo(map);
+    // pale style than plain OpenStreetMap tiles do — the className filter (see CSS) pushes its
+    // colors further toward Google's muted cream palette.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'© Esri', className:'rnd-checkin-tiles-pale'}).addTo(map);
     setTimeout(()=>map.invalidateSize(), 0);
   }
   function showBlocked(){

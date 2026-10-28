@@ -682,6 +682,9 @@ html{ visibility:hidden; }
   .rnd-pill-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
   .rnd-pill-tab{border:none;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;background:var(--bg);color:var(--muted);white-space:nowrap;}
   .rnd-pill-tab.active{background:var(--accent-soft);color:var(--accent-dark);}
+  .rnd-loc-link{font-size:11px;font-weight:600;color:#2F6FE4;text-decoration:none;white-space:nowrap;}
+  .rnd-loc-link:hover{text-decoration:underline;}
+  .rnd-cal-detail-locations{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
   .rnd-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px;}
   .rnd-cal-month{font-weight:600;font-size:14px;}
   .rnd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
@@ -5900,21 +5903,46 @@ function rndAttRecFor(chemistId, date){
   return state.rndAttendance.find(a=>a.chemistId===chemistId && a.date===date) || null;
 }
 function rndAttLoginAt(rec){ return rec ? (rec.loginAt || rec.at || null) : null; }
+// Wraps the browser's own geolocation API (no key, no billing — just a device permission prompt)
+// in a promise that always resolves, never rejects: permission denied, no GPS fix, an insecure
+// (non-HTTPS) context, or a slow fix past the timeout all just resolve null, so a login/logout
+// action is never blocked waiting on a location that isn't coming.
+function getGeoLocationOnce(timeoutMs){
+  const ms = timeoutMs || 8000;
+  return new Promise(resolve=>{
+    if(!navigator.geolocation){ resolve(null); return; }
+    let done = false;
+    const finish = v=>{ if(done) return; done = true; resolve(v); };
+    navigator.geolocation.getCurrentPosition(
+      pos=>finish({lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy||0)}),
+      ()=>finish(null),
+      {enableHighAccuracy:true, timeout: ms, maximumAge:0}
+    );
+    setTimeout(()=>finish(null), ms+500);
+  });
+}
+function rndMapsLink(lat,lng){ return `https://www.google.com/maps?q=${lat},${lng}`; }
 async function rndMarkLogin(chemistId, date){
   if(!canManageRnd()) return;
   const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
   let rec = rndAttRecFor(chemistId, date);
   if(rndAttLoginAt(rec)){ showToast(chemist.name+' is already logged in for that day'); return; }
+  if(state._rndAttBusy) return;
+  state._rndAttBusy = true;
+  showToast('Getting your location…');
+  const loc = await getGeoLocationOnce();
+  state._rndAttBusy = false;
   if(rec){ rec.loginAt = new Date().toISOString(); rec.by = state.session.name; }
   else{
     rec = {id: uid('ATT'), chemistId, chemistName: chemist.name, date, loginAt: new Date().toISOString(), logoutAt: '', by: state.session.name};
     state.rndAttendance.unshift(rec);
   }
+  if(loc){ rec.loginLat = loc.lat; rec.loginLng = loc.lng; rec.loginAccuracy = loc.accuracy; }
   // save() already toasts its own failure — showing "logged in" regardless used to mean a write
   // the database actually rejected still looked successful right up until the next refresh wiped
   // the local-only state it had been resting on.
   const ok = await save('rndAttendance');
-  if(ok) showToast(chemist.name+' logged in');
+  if(ok) showToast(chemist.name+' logged in'+(loc?'':' (location unavailable)'));
 }
 async function rndMarkLogout(chemistId, date){
   if(!canManageRnd()) return;
@@ -5922,10 +5950,16 @@ async function rndMarkLogout(chemistId, date){
   const rec = rndAttRecFor(chemistId, date);
   if(!rndAttLoginAt(rec)){ showToast('Log in first before marking logout'); return; }
   if(rec.logoutAt){ showToast(chemist.name+' is already logged out for that day'); return; }
+  if(state._rndAttBusy) return;
+  state._rndAttBusy = true;
+  showToast('Getting your location…');
+  const loc = await getGeoLocationOnce();
+  state._rndAttBusy = false;
   rec.logoutAt = new Date().toISOString();
   rec.by = state.session.name;
+  if(loc){ rec.logoutLat = loc.lat; rec.logoutLng = loc.lng; rec.logoutAccuracy = loc.accuracy; }
   const ok = await save('rndAttendance');
-  if(ok) showToast(chemist.name+' logged out');
+  if(ok) showToast(chemist.name+' logged out'+(loc?'':' (location unavailable)'));
 }
 function deleteRndAttendance(id){
   if(!state.session || !roleCan(state.session.role, 'rnd_delete')) return;
@@ -9066,9 +9100,17 @@ function renderRndChemistsTab(){
     ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
     <div class="rnd-desktop-table">
     <table class="data-table">
-      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th><th></th></tr></thead>
+      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th>${isAdminOrSubAdmin() ? '<th>Location</th>' : ''}<th></th></tr></thead>
       <tbody>
-        ${state.rndAttendance.slice(0,30).map(a=>{ const inAt = rndAttLoginAt(a); return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td><td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`; }).join('')}
+        ${state.rndAttendance.slice(0,30).map(a=>{
+          const inAt = rndAttLoginAt(a);
+          const locCell = isAdminOrSubAdmin() ? `<td>
+            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 In</a>` : ''}
+            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Out</a>` : ''}
+            ${!a.loginLat && !a.logoutLat ? '<span class="hint">—</span>' : ''}
+          </td>` : '';
+          return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td>${locCell}<td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`;
+        }).join('')}
       </tbody>
     </table>
     </div>
@@ -9088,6 +9130,11 @@ function renderRndChemistsTab(){
             <span class="rnd-att-pill rnd-att-pill-in">In ${inAt?fmtTimeOnly(inAt):'—'}</span>
             <span class="rnd-att-pill rnd-att-pill-out">Out ${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</span>
           </div>
+          ${isAdminOrSubAdmin() && (a.loginLat || a.logoutLat) ? `
+          <div style="display:flex;gap:10px;margin-top:6px;">
+            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Login location</a>` : ''}
+            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Logout location</a>` : ''}
+          </div>` : ''}
         </div>`;
       }).join('')}
     </div>
@@ -15237,6 +15284,11 @@ function rndAttendanceModal(chemistId){
           <button type="button" class="btn ${canLogout?'btn-primary':''}" id="btn-rnd-logout" ${canLogout?'':'disabled'}>${selRec && selRec.logoutAt ? '✓ Logged out '+fmtTimeOnly(selRec.logoutAt) : 'Logout'}</button>
         </div>
         ${!selInAt ? `<div class="hint" style="margin-top:8px;">Log in first — logout unlocks once that day has a login.</div>` : ''}
+        ${selRec && (selRec.loginLat || selRec.logoutLat) ? `
+        <div class="rnd-cal-detail-locations">
+          ${selRec.loginLat ? `<a href="${rndMapsLink(selRec.loginLat,selRec.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Login location${selRec.loginAccuracy?` (±${selRec.loginAccuracy}m)`:''}</a>` : ''}
+          ${selRec.logoutLat ? `<a href="${rndMapsLink(selRec.logoutLat,selRec.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Logout location${selRec.logoutAccuracy?` (±${selRec.logoutAccuracy}m)`:''}</a>` : ''}
+        </div>` : ''}
       </div>` : ''}
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>

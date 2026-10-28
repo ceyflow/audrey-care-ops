@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261028020253">
+<meta name="app-build" content="20261028022442">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9030,7 +9030,7 @@ function renderRndChemistsTab(){
             <td style="white-space:nowrap;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
                 ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
-                ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
+                ${isAdminOrSubAdmin() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
               </div>
             </td>
           </tr>`;
@@ -9052,10 +9052,10 @@ function renderRndChemistsTab(){
             <span>Visits: <b>${rndAttendanceCountThisMonth(c.id)}</b></span>
             <span>Last: <b>${last?fmtDateTime(rndAttLoginAt(last)):'Never'}</b></span>
           </div>
-          ${canManageRnd() ? `
+          ${canManageRnd() || isAdminOrSubAdmin() ? `
           <div class="rnd-chemist-card-actions">
-            <button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>
-            <button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>
+            ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
+            ${isAdminOrSubAdmin() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
           </div>` : ''}
         </div>`;
       }).join('')}

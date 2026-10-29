@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029093245">
+<meta name="app-build" content="20261029104030">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8153,7 +8153,10 @@ function renderAttendanceStaffReport(staffName){
   const dayLabel = d => new Date(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 View</a>` : `<span class="hint">—</span>`;
   return `
-  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-att-records-back-staff">‹ Staff</button></div>
+  <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <button type="button" class="btn btn-sm" data-att-records-back-staff">‹ Staff</button>
+    <button type="button" class="btn btn-sm" data-att-print-staff="${escAttr(staffName)}">🖨 Print attendance sheet</button>
+  </div>
   <div class="panel">
     <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
       <h3>${esc(staffName)}</h3>
@@ -8211,6 +8214,89 @@ function renderAttendanceStaffReport(staffName){
     </div>
     `}
   </div>`;
+}
+// Overtime is whatever portion of a Check Out falls after 6pm local time -- a Check Out at or
+// before 18:00 carries no OT at all, never a negative number.
+function attendanceOtMinutes(outEntry){
+  if(!outEntry) return 0;
+  const d = new Date(outEntry.at);
+  const mins = d.getHours()*60 + d.getMinutes();
+  const sixPm = 18*60;
+  return mins > sixPm ? mins - sixPm : 0;
+}
+function fmtOtMinutes(mins){
+  if(!mins) return '';
+  const h = Math.floor(mins/60), m = mins%60;
+  return (h>0 ? h+'h ' : '') + String(m).padStart(2,'0')+'m';
+}
+// "Classic Ledger, Refined" -- picked from the 10-sample design gallery. Same header shape as the
+// company's original paper form (name/employee#/month), then one row per calendar day with In
+// Time, Out Time and OT Hours (worked past 6pm) -- no Signature columns, auto-filled with this
+// staff member's real check-in/check-out times for whichever month the on-screen report is
+// currently showing, so printing always reflects exactly what's on screen.
+// Reuses #print-area (see its own CSS comment) the same way printBatchSheet does.
+function printAttendanceSheet(staffName){
+  const ym = state._attRecordsMonth || todayStr().slice(0,7);
+  const [y, m] = ym.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const byDay = {};
+  (state.tempAttendance||[]).forEach(a=>{
+    if(a.staffName!==staffName || (a.date||'').slice(0,7)!==ym) return;
+    const day = Number(a.date.slice(8,10));
+    (byDay[day] = byDay[day] || {})[a.type] = a;
+  });
+  const monthName = new Date(y, m-1, 1).toLocaleDateString(undefined, {month:'long'});
+  const area = document.getElementById('print-area');
+  if(!area) return;
+  let rows = '', presentCount = 0, totalOtMinutes = 0;
+  for(let d=1; d<=daysInMonth; d++){
+    const inE = byDay[d] && byDay[d].in, outE = byDay[d] && byDay[d].out;
+    if(inE || outE) presentCount++;
+    const otMins = attendanceOtMinutes(outE);
+    totalOtMinutes += otMins;
+    rows += `
+    <tr style="border-bottom:1px solid #E7E9E4;${d%2===0?'background:#FAFAF8;':''}">
+      <td style="padding:6px 6px;color:#6B7570;">${d}</td>
+      <td style="padding:6px 6px;font-weight:600;">${inE?esc(fmtTimeOnly(inE.at)):''}</td>
+      <td style="padding:6px 6px;font-weight:600;">${outE?esc(fmtTimeOnly(outE.at)):''}</td>
+      <td style="padding:6px 6px;${otMins?'font-weight:600;color:#9A5A4E;':'color:#C3C9C1;'}">${otMins?esc(fmtOtMinutes(otMins)):'—'}</td>
+    </tr>`;
+  }
+  area.innerHTML = `
+  <div style="max-width:720px;margin:0 auto;padding:24px;font-family:'Fraunces',Georgia,serif;color:#1C2320;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:21px;font-weight:600;">Audrey Care (Pvt) Ltd.</div>
+      <div style="font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:3px;">Attendance Sheet — ${y}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;font-family:'Inter',system-ui,sans-serif;">
+      <tr>
+        <td style="padding:5px 0;width:70px;color:#6B7570;">Name</td>
+        <td style="padding:5px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(staffName)}</td>
+        <td style="padding:5px 24px;width:90px;color:#6B7570;">Employee #</td>
+        <td style="padding:5px 0;border-bottom:1px solid #D8DCD4;width:120px;"></td>
+      </tr>
+      <tr>
+        <td style="padding:5px 0;color:#6B7570;">Month</td>
+        <td colspan="3" style="padding:5px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(monthName)}</td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;font-family:'Inter',system-ui,sans-serif;">
+      <thead>
+        <tr style="border-bottom:2px solid #1C2320;">
+          <th style="text-align:left;padding:7px 6px;width:30px;">#</th>
+          <th style="text-align:left;padding:7px 6px;">In Time</th>
+          <th style="text-align:left;padding:7px 6px;">Out Time</th>
+          <th style="text-align:left;padding:7px 6px;">OT Hours <span style="font-weight:400;color:#6B7570;">(after 6pm)</span></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="display:flex;justify-content:flex-end;gap:28px;margin-top:14px;font-size:12.5px;color:#6B7570;font-family:'Inter',system-ui,sans-serif;">
+      <div>Days present <b style="color:#1C2320;">${presentCount}</b></div>
+      <div>Total OT <b style="color:#1C2320;">${totalOtMinutes?fmtOtMinutes(totalOtMinutes):'0m'}</b></div>
+    </div>
+  </div>`;
+  waitForPrintAreaImages(area).then(()=>window.print());
 }
 // The landing view itself stays lightweight (time + one button) -- tapping the button is what
 // pops up the map/location/fingerprint panel (attendanceCheckinModal below), matching the
@@ -16976,6 +17062,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-att-records-back]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = false; render(); }));
   document.querySelectorAll('[data-att-staff-row]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = b.dataset.attStaffRow; state._attRecordsMonth = null; render(); }));
   document.querySelectorAll('[data-att-records-back-staff]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = null; render(); }));
+  document.querySelectorAll('[data-att-print-staff]').forEach(b=>b.addEventListener('click', ()=>printAttendanceSheet(b.dataset.attPrintStaff)));
   document.querySelectorAll('[data-att-month-prev]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), -1); render(); }));
   document.querySelectorAll('[data-att-month-next]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), 1); render(); }));
 

@@ -5455,6 +5455,7 @@ function performGoTo(page){
   state._attRecordsStaff = null;
   state._attRecordsMonth = null;
   state._myAttMonth = null;
+  state._myAttExpandedDay = null;
   state._settingsOpenPanel = null;
   state._moreFabOpen = false;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
@@ -8258,66 +8259,87 @@ function renderAttendanceStaffReport(staffName){
 // Admin's renderAttendanceStaffReport above, scoped to state.session.name instead of an
 // Admin-picked staffName, with no delete buttons (self-service never gets to erase its own
 // record -- deleting an attendance entry stays an Admin-only action in the Records view).
+// Small arrow+bracket glyphs standing in for the reference timesheet's own login/logout icons --
+// an arrow running INTO a bracket for Check In, running OUT of one for Check Out -- so the two
+// read as opposites at a glance the same way the reference does, without depending on an exact
+// third-party icon match.
+function myAttInIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h11"/><path d="M11 8l4 4-4 4"/><path d="M18 5v14"/></svg>'; }
+function myAttOutIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14"/><path d="M9 12h11"/><path d="M17 8l4 4-4 4"/></svg>'; }
+// icon('settings') has no width/height of its own (sized by whatever CSS class wraps it
+// elsewhere) -- this card's gear button has no such class, so it's sized explicitly here instead.
+function myAttGearIcon(){ return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS.settings}</svg>`; }
+// Last day-of-month as YYYY-MM-DD in local time, matching todayStr()'s own no-UTC-shift approach
+// (new Date(y,m,0).toISOString() would be off by a day in timezones behind UTC).
+function monthLastDay(y, m){
+  const d = new Date(y, m, 0);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+const MY_ATT_MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// "Timesheet" -- matches the reference screenshot's own layout almost element-for-element (date-
+// range bar, Year row, Month row, one card per day with a day-number badge and colored In/Out
+// times) rather than this app's usual table/card attendance views, per explicit request to match
+// it exactly. Location (a feature the reference doesn't have, but this app already tracks for
+// every check-in/out elsewhere) rides along behind each card's gear button instead of being
+// dropped, so nothing already built is lost to the redesign.
 function renderMyAttendancePage(){
   const myName = state.session && state.session.name;
   const ym = state._myAttMonth || todayStr().slice(0,7);
+  const [y, m] = ym.split('-').map(Number);
   const entries = (state.tempAttendance||[]).filter(a=>a.staffName===myName && (a.date||'').slice(0,7)===ym);
   const byDate = {};
   entries.forEach(a=>{ (byDate[a.date] = byDate[a.date]||[]).push(a); });
   const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
-  const dayLabel = d => new Date(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-  const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">—</span>`;
+  const dayAbbr = d => new Date(d).toLocaleDateString(undefined,{weekday:'short'});
+  const dayNum = d => Number(d.slice(8,10));
+  const expandedDay = state._myAttExpandedDay;
+  const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">No location recorded</span>`;
+  const thisYear = new Date().getFullYear();
+  const years = [thisYear-2, thisYear-1, thisYear];
   return `
-  <div class="panel">
-    <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-      <h3>My Attendance</h3>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <button type="button" class="btn-text" data-my-att-month-prev aria-label="Previous month">‹</button>
-        <span style="font-weight:600;font-size:13px;">${fmtMonthLabel(ym)}</span>
-        <button type="button" class="btn-text" data-my-att-month-next aria-label="Next month">›</button>
+  <div style="max-width:480px;margin:0 auto;">
+    <div style="background:#F2994A;color:#fff;text-align:center;font-weight:700;font-size:13px;padding:10px;border-radius:10px;margin-bottom:14px;">
+      ${esc(fmtDateShort(ym+'-01'))} - ${esc(fmtDateShort(monthLastDay(y,m)))}
+    </div>
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="color:var(--s-received);font-weight:700;font-size:12px;margin-bottom:6px;">Year</div>
+      <div style="display:flex;justify-content:center;gap:18px;">
+        ${years.map(yr=>`
+        <button type="button" data-my-att-year="${yr}" style="border:none;background:none;cursor:pointer;font-weight:700;font-size:14px;padding:4px 10px;border-radius:999px;${yr===y?'color:#F2994A;background:#FDEEE1;':'color:var(--ink);'}">${yr}</button>`).join('')}
       </div>
     </div>
-    ${dates.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded for ${fmtMonthLabel(ym)}.</div>` : `
-    <div class="rnd-desktop-table">
-    <table class="data-table">
-      <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Login location</th><th>Logout location</th></tr></thead>
-      <tbody>
-        ${dates.map(d=>{
-          const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
-          return `
-          <tr>
-            <td>${esc(dayLabel(d))}</td>
-            <td>${inE?fmtTimeOnly(inE.at):'<span class="hint">—</span>'}</td>
-            <td>${outE?fmtTimeOnly(outE.at):'<span class="hint">—</span>'}</td>
-            <td>${locLink(inE)}</td>
-            <td>${locLink(outE)}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="color:var(--s-received);font-weight:700;font-size:12px;margin-bottom:6px;">Month</div>
+      <div style="display:flex;justify-content:flex-start;gap:14px;overflow-x:auto;padding:2px 4px 6px;">
+        ${MY_ATT_MONTH_ABBR.map((label,i)=>`
+        <button type="button" data-my-att-month="${i+1}" style="flex:none;border:none;background:none;cursor:pointer;font-weight:700;font-size:13px;padding:4px 2px;white-space:nowrap;${i+1===m?'color:#F2994A;':'color:var(--ink);'}">${label}</button>`).join('')}
+      </div>
     </div>
-    <div class="rnd-mobile-cards">
-      ${dates.map(d=>{
-        const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
-        return `
-        <div class="rnd-att-card">
-          <div class="rnd-att-card-top"><div class="rnd-att-card-date">${esc(dayLabel(d))}</div></div>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span class="rnd-att-pill rnd-att-pill-in">Check In</span>
-              <span class="hint">${inE?fmtTimeOnly(inE.at):'—'}</span>
-              ${inE ? locLink(inE) : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span class="rnd-att-pill rnd-att-pill-out">Check Out</span>
-              <span class="hint">${outE?fmtTimeOnly(outE.at):'—'}</span>
-              ${outE ? locLink(outE) : ''}
-            </div>
+    ${dates.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded for ${fmtMonthLabel(ym)}.</div>` : dates.map(d=>{
+      const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
+      return `
+      <div style="border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:none;width:52px;background:var(--accent-soft);border-radius:10px;padding:6px 0;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;">${esc(dayAbbr(d))}</div>
+          <div style="font-size:19px;font-weight:700;color:var(--accent-dark);line-height:1.1;">${dayNum(d)}</div>
+          <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;">
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--accent-dark);"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--muted);opacity:.4;"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--muted);opacity:.4;"></span>
           </div>
-        </div>`;
-      }).join('')}
-    </div>
-    `}
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;color:var(--s-received);font-weight:700;font-size:13px;">${myAttInIcon()}${inE?fmtTimeOnly(inE.at):'<span class="hint" style="font-weight:400;">—</span>'}</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--s-blending);font-weight:700;font-size:13px;">${myAttOutIcon()}${outE?fmtTimeOnly(outE.at):'<span class="hint" style="font-weight:400;">—</span>'}</div>
+        </div>
+        <div style="flex:none;align-self:stretch;width:1px;background:var(--border);"></div>
+        <button type="button" data-my-att-toggle-day="${escAttr(d)}" aria-label="Location" style="flex:none;border:none;background:none;color:var(--muted);cursor:pointer;padding:4px;display:flex;">${myAttGearIcon()}</button>
+      </div>
+      ${expandedDay===d ? `
+      <div style="background:var(--bg);border-radius:10px;padding:8px 12px;margin:-4px 0 10px;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;">
+        <div><span class="hint">Check-in location:</span> ${locLink(inE)}</div>
+        <div><span class="hint">Check-out location:</span> ${locLink(outE)}</div>
+      </div>` : ''}`;
+    }).join('')}
   </div>`;
 }
 // Overtime is whatever portion of a Check Out falls after 6pm local time -- a Check Out at or
@@ -17297,8 +17319,23 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-att-print-staff]').forEach(b=>b.addEventListener('click', ()=>printAttendanceSheet(b.dataset.attPrintStaff)));
   document.querySelectorAll('[data-att-month-prev]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), -1); render(); }));
   document.querySelectorAll('[data-att-month-next]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), 1); render(); }));
-  document.querySelectorAll('[data-my-att-month-prev]').forEach(b=>b.addEventListener('click', ()=>{ state._myAttMonth = rndShiftMonth(state._myAttMonth||todayStr().slice(0,7), -1); render(); }));
-  document.querySelectorAll('[data-my-att-month-next]').forEach(b=>b.addEventListener('click', ()=>{ state._myAttMonth = rndShiftMonth(state._myAttMonth||todayStr().slice(0,7), 1); render(); }));
+  document.querySelectorAll('[data-my-att-year]').forEach(b=>b.addEventListener('click', ()=>{
+    const ym = state._myAttMonth || todayStr().slice(0,7);
+    state._myAttMonth = b.dataset.myAttYear + ym.slice(4);
+    state._myAttExpandedDay = null;
+    render();
+  }));
+  document.querySelectorAll('[data-my-att-month]').forEach(b=>b.addEventListener('click', ()=>{
+    const ym = state._myAttMonth || todayStr().slice(0,7);
+    state._myAttMonth = ym.slice(0,4) + '-' + String(b.dataset.myAttMonth).padStart(2,'0');
+    state._myAttExpandedDay = null;
+    render();
+  }));
+  document.querySelectorAll('[data-my-att-toggle-day]').forEach(b=>b.addEventListener('click', ()=>{
+    const d = b.dataset.myAttToggleDay;
+    state._myAttExpandedDay = state._myAttExpandedDay===d ? null : d;
+    render();
+  }));
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029202450">
+<meta name="app-build" content="20261029205524">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4267,6 +4267,19 @@ async function ensureDeferredKeysLoaded(keys){
     state.gmpCalibrationInstruments = GMP_DEFAULT_CALIBRATION_INSTRUMENTS.map(x=>({id:uid('CALINST'), serialNo:'', idCode:'', lastCalibrated:'', nextCalibration:'', nextSubmission:'', ...x}));
     save('gmpCalibrationInstruments').catch(()=>{});
   }
+  // Every other never-saved key gets its empty default persisted right away rather than left to
+  // sit only in memory. Without this, the row for that key doesn't exist in app_data at all yet —
+  // so the FIRST real write anyone makes to it (the moment its local array goes from empty to
+  // non-empty) hits mergeBeforeSave's merge-safety check, which re-fetches the server copy to
+  // diff against, gets back `null` (no row), can't tell that apart from "RLS silently blocked the
+  // read", and refuses to save rather than risk clobbering a shared list it can't see — a
+  // permanent "Could not save X" for literally everyone until some write (any role) seeds the row.
+  // Confirmed concretely: boxCounts and attendanceEditRequests both had zero rows in the database
+  // despite their role_data_access grants being correct, which is exactly this gap, not a
+  // permissions problem. Seeding on the very first load here (by whoever opens the page first,
+  // any role) closes it before a real user ever hits it.
+  const giveStarterData = new Set(['gmpPestPoints','gmpCalibrationInstruments']);
+  neverSaved.forEach(k=>{ if(!giveStarterData.has(k)) save(k).catch(()=>{}); });
   return true;
 }
 async function loadAll(){
@@ -4993,7 +5006,11 @@ function normPhone(s){
   else if(d.length===10 && d.startsWith('0')) d = d.slice(1);
   return d;
 }
-function fmtTimeOnly(iso){ return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
+// hour12 forced explicitly -- toLocaleTimeString(undefined, {hour:'numeric'}) otherwise follows
+// the device's own region setting, which silently switched this to 24-hour ("20:01" instead of
+// "8:01 PM") on at least one real phone, inconsistent with every other AM/PM time shown elsewhere
+// in this app.
+function fmtTimeOnly(iso){ return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit',hour12:true}); }
 function isToday(iso){
   if(!iso) return false;
   const d = new Date(iso), now = new Date();

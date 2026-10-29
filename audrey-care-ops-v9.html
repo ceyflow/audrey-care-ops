@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029121332">
+<meta name="app-build" content="20261029163923">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -658,8 +658,11 @@ html{ visibility:hidden; }
   .rnd-pill-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
   .rnd-pill-tab{border:none;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;background:var(--bg);color:var(--muted);white-space:nowrap;}
   .rnd-pill-tab.active{background:var(--accent-soft);color:var(--accent-dark);}
-  .rnd-loc-link{font-size:11px;font-weight:600;color:#2F6FE4;text-decoration:none;white-space:nowrap;}
+  .rnd-loc-link{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:#2F6FE4;text-decoration:none;white-space:nowrap;}
   .rnd-loc-link:hover{text-decoration:underline;}
+  .rnd-loc-link .loc-dot-wrap{position:relative;width:16px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;}
+  .rnd-loc-link .loc-dot-ring{position:absolute;inset:0;border-radius:50%;background:#2F6FE4;opacity:.15;}
+  .rnd-loc-link .loc-dot-core{width:7px;height:7px;border-radius:50%;background:#2F6FE4;border:2px solid #fff;box-shadow:0 0 0 1px #2F6FE4;}
   .rnd-cal-detail-locations{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
   .rnd-checkin-modal{max-width:420px;padding:0;overflow:hidden;}
   .rnd-checkin-header{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;padding:16px 18px;}
@@ -1736,7 +1739,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -2601,10 +2604,13 @@ function subscribeRealtime(){
         snapshotBaseline(k);
         if(k==='theme') applyTheme();
         if(k==='branding') applyFavicon();
+        // An Admin's unacknowledged-box-count check has to run before the render call just below
+        // so that render reflects it immediately, the same reason chat/complaints skip the defer.
+        if(k==='boxCounts') checkBoxCountAlert();
         // 'chat' and 'complaints' have follow-up effects right below that depend on the DOM
         // already reflecting this update (scroll-to-bottom, notice popups) — those always render
         // immediately. Everything else can be deferred while the user is mid-keystroke elsewhere.
-        if(k==='chat' || k==='complaints') render(); else renderOrDefer();
+        if(k==='chat' || k==='complaints' || k==='boxCounts') render(); else renderOrDefer();
         if(k==='chat'){
           if(state.page==='chat') scrollChatToBottom();
           if(prevChatLen!==null && state.chat.length>prevChatLen){
@@ -2990,13 +2996,13 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 11;
+const PAGE_DATA_KEYS_VERSION = 12;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
 const PAGE_DATA_KEYS = {
   dashboard: ['orders','complaints','customers'],
-  orders: ['orders','deliveryLines','customers'],
+  orders: ['orders','deliveryLines','customers','boxCounts'],
   customercare: ['complaints'],
   orderinquiry: ['orders','customers','salesPersonColors'],
   ongoingorders: ['orders','customers'],
@@ -4045,6 +4051,8 @@ let state = {
   settingsCardOrder: [],
   userRoles: [],
   deliveryLines: [],
+  boxCounts: [],
+  _boxCountAlert: null,
   staffCategories: [],
   complaintCategories: [],
   complaintPriorities: [],
@@ -4712,6 +4720,7 @@ async function loadAll(){
   // away too, for a reminder that was already overdue before this refresh/login happened.
   checkDueNotes();
   setInterval(checkDueNotes, 20000);
+  checkBoxCountAlert();
   // Photo cleanup doesn't need to be prompt like the order/complaint archive sweep above — once
   // every 30 minutes is plenty for deleting old attachments.
   setInterval(async ()=>{
@@ -5300,6 +5309,7 @@ async function confirmLogin(){
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();
+  checkBoxCountAlert();
   await autoAddRndOfficerAsChemist();
   render();
 }
@@ -5388,6 +5398,7 @@ async function confirmLoginV2(){
   // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
   // check for anything already overdue now that they're actually signed in.
   checkDueNotes();
+  checkBoxCountAlert();
   await autoAddRndOfficerAsChemist();
   render();
 }
@@ -5922,6 +5933,10 @@ async function geoPermissionState(){
   catch(e){ return 'unknown'; }
 }
 function rndMapsLink(lat,lng){ return `https://www.google.com/maps?q=${lat},${lng}`; }
+// "Pin + Accuracy Ring" -- picked from the 10-sample location-link design gallery. Echoes the
+// live check-in map's own blue-dot-with-accuracy-circle marker (see initAttendanceMap /
+// initRndCheckinMap) instead of a generic pin glyph.
+function locPinIcon(){ return '<span class="loc-dot-wrap"><span class="loc-dot-ring"></span><span class="loc-dot-core"></span></span>'; }
 // preLoc lets the check-in map modal (rndCheckinModal) pass a location it already fetched while the
 // user was looking at the map, instead of fetching a second one here — undefined (the plain-button
 // call site, kept for safety/back-compat) still fetches fresh; null means the modal's own fetch
@@ -8155,7 +8170,7 @@ function renderAttendanceStaffReport(staffName){
   entries.forEach(a=>{ (byDate[a.date] = byDate[a.date]||[]).push(a); });
   const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
   const dayLabel = d => new Date(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-  const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 View</a>` : `<span class="hint">—</span>`;
+  const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">—</span>`;
   return `
   <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
     <button type="button" class="btn btn-sm" data-att-records-back-staff>‹ Staff</button>
@@ -8889,6 +8904,7 @@ function renderShell(freshPage){
   ${(state.batchFocusMode && isBatchDisplayActive()) ? renderBatchFocusOverlay() : ''}
   ${state.adminBroadcast ? `<div class="${freshBroadcast?'':'reopen-noanim'}">${renderAdminBroadcastPanel()}</div>` : ''}
   ${state._dueNoteAlert ? renderDueNoteAlert() : ''}
+  ${state._boxCountAlert ? renderBoxCountAlert() : ''}
   `;
 }
 function renderChatNotice(){
@@ -9144,6 +9160,7 @@ function renderOrdersPage(){
       ${canManageLists ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
+      <button type="button" class="btn-text" id="btn-box-count" style="font-size:12px;color:var(--muted);">📦 Box Count</button>
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
@@ -9152,6 +9169,94 @@ function renderOrdersPage(){
   ${state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryBoardSection(line, active)).join('')}
   ${renderUnassignedBoardSection(active)}
   `;
+}
+/* ===================== Box Count (daily packing log) ===================== */
+// A simple daily log, not tied to a specific order -- packing notes down what left the floor
+// (customer, box size, how many) once a day. Saving pushes a record onto the shared boxCounts
+// list and leaves it unacknowledged; checkBoxCountAlert() is how an Admin session notices that
+// and shows renderBoxCountAlert() -- a persistent panel (same shape as the personal-notes due
+// reminder) that only goes away when an Admin explicitly closes it, not on a timer.
+// One window, one row per customer -- add as many rows as needed, then Save all at once.
+// Rows are added/removed via direct DOM manipulation (cloning .box-count-row), not a render()
+// cycle, so typing in one row never loses focus or gets interrupted by a re-render of the others.
+// "Compact Rows" -- picked from the 10-sample design gallery: borderless inline fields, a hairline
+// between rows instead of a bordered table, built for entering many rows fast with minimal chrome.
+function boxCountRowHtml(){
+  return `
+  <div class="box-count-row" style="display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+    <input name="customerName" required autocomplete="off" placeholder="Customer" style="flex:1;min-width:0;border:none;background:none;padding:3px 2px;font-size:12.5px;">
+    <select name="boxType" required style="width:85px;flex:none;border:none;background:var(--bg);font-size:11.5px;border-radius:6px;padding:4px 2px;">
+      <option value="">Select</option>
+      <option value="Large">Large</option>
+      <option value="Medium">Medium</option>
+      <option value="Small">Small</option>
+    </select>
+    <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:56px;flex:none;border:none;background:var(--bg);font-size:11.5px;text-align:center;border-radius:6px;padding:4px 2px;">
+    <button type="button" class="box-count-remove-row" style="border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;flex:none;padding:2px 4px;" aria-label="Remove row">✕</button>
+  </div>`;
+}
+function boxCountModal(){
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:420px;">
+      <h2>Box Count</h2>
+      <div class="sub">Today, ${fmtDate(new Date().toISOString())}</div>
+      <form id="form-box-count">
+        <div id="box-count-tbody" style="max-height:360px;overflow-y:auto;margin-top:8px;">${boxCountRowHtml()}</div>
+        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;">+ Add row</button>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save all</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+async function submitBoxCount(e){
+  e.preventDefault();
+  const rows = [...document.querySelectorAll('#box-count-tbody .box-count-row')];
+  const recs = [];
+  for(const row of rows){
+    const customerName = row.querySelector('[name="customerName"]').value.trim();
+    const boxType = row.querySelector('[name="boxType"]').value;
+    const boxCount = parseInt(row.querySelector('[name="boxCount"]').value, 10);
+    if(!customerName && !boxType && !boxCount) continue; // skip a row left completely blank
+    if(!customerName || !boxType || !boxCount || boxCount<1) return; // a partially-filled row blocks save, same as a normal required-field form
+    recs.push({id: uid('BOX'), date: todayStr(), customerName, boxType, boxCount, enteredBy: (state.session.staffName||state.session.name), at: new Date().toISOString(), ackedByAdmin: false});
+  }
+  if(!recs.length) return;
+  state.boxCounts = [...recs, ...(state.boxCounts||[])];
+  closeModal();
+  const ok = await save('boxCounts');
+  if(ok) showToast(recs.length>1 ? `${recs.length} box counts saved` : 'Box count saved');
+}
+// Admin-only: looks for any box count entry nobody's acknowledged yet. Snapshots them into
+// state._boxCountAlert rather than re-deriving live, so the panel's contents don't shift under
+// the Admin's eyes if another entry arrives while it's still open -- that one shows up as a
+// second alert right after this one closes, instead of silently appending to an open panel.
+function checkBoxCountAlert(){
+  if(!state.session || !isAdminOrSubAdmin() || state._boxCountAlert) return;
+  const pending = (state.boxCounts||[]).filter(b=>!b.ackedByAdmin);
+  if(pending.length) state._boxCountAlert = pending;
+}
+function renderBoxCountAlert(){
+  const entries = state._boxCountAlert;
+  if(!entries || !entries.length) return '';
+  return `
+  <div class="notes-due-overlay" id="box-count-alert-overlay">
+    <div class="notes-due-card" style="max-width:380px;">
+      <div class="notes-due-dot" style="background:var(--accent);">${icon('box')}</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:10px;">New box count${entries.length>1?'s':''} logged</div>
+      <div style="text-align:left;display:flex;flex-direction:column;gap:10px;margin-bottom:20px;max-height:280px;overflow-y:auto;">
+        ${entries.map(b=>`
+        <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <div style="font-weight:600;font-size:13.5px;">${esc(b.customerName)}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">${esc(b.boxType)} × ${b.boxCount} — by ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div>
+        </div>`).join('')}
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-dismiss-box-count-alert" style="width:100%;">Close</button>
+    </div>
+  </div>`;
 }
 function renderUnassignedBoardSection(active){
   const lineOrders = ordersOutsideLines(active);
@@ -9717,8 +9822,8 @@ function renderRndChemistsTab(){
         ${state.rndAttendance.slice(0,30).map(a=>{
           const inAt = rndAttLoginAt(a);
           const locCell = isAdminOrSubAdmin() ? `<td>
-            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 In</a>` : ''}
-            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Out</a>` : ''}
+            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}In</a>` : ''}
+            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Out</a>` : ''}
             ${!a.loginLat && !a.logoutLat ? '<span class="hint">—</span>' : ''}
           </td>` : '';
           return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td>${locCell}<td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`;
@@ -9744,8 +9849,8 @@ function renderRndChemistsTab(){
           </div>
           ${isAdminOrSubAdmin() && (a.loginLat || a.logoutLat) ? `
           <div style="display:flex;gap:10px;margin-top:6px;">
-            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Login location</a>` : ''}
-            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Logout location</a>` : ''}
+            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Login location</a>` : ''}
+            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Logout location</a>` : ''}
           </div>` : ''}
         </div>`;
       }).join('')}
@@ -14795,6 +14900,7 @@ function renderModal(){
   if(type==='rndattendance') return rndAttendanceModal(id);
   if(type==='rndcheckin') return rndCheckinModal(parts[1], parts[2], parts[3]);
   if(type==='attendancecheckin') return attendanceCheckinModal();
+  if(type==='boxcount') return boxCountModal();
   if(type==='attendancecapture') return attendanceCaptureModal();
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
@@ -15830,8 +15936,8 @@ function rndAttendanceModal(chemistId){
         ${!selInAt ? `<div class="hint" style="margin-top:8px;">Log in first — logout unlocks once that day has a login.</div>` : ''}
         ${selRec && (selRec.loginLat || selRec.logoutLat) ? `
         <div class="rnd-cal-detail-locations">
-          ${selRec.loginLat ? `<a href="${rndMapsLink(selRec.loginLat,selRec.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Login location${selRec.loginAccuracy?` (±${selRec.loginAccuracy}m)`:''}</a>` : ''}
-          ${selRec.logoutLat ? `<a href="${rndMapsLink(selRec.logoutLat,selRec.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Logout location${selRec.logoutAccuracy?` (±${selRec.logoutAccuracy}m)`:''}</a>` : ''}
+          ${selRec.loginLat ? `<a href="${rndMapsLink(selRec.loginLat,selRec.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Login location${selRec.loginAccuracy?` (±${selRec.loginAccuracy}m)`:''}</a>` : ''}
+          ${selRec.logoutLat ? `<a href="${rndMapsLink(selRec.logoutLat,selRec.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Logout location${selRec.logoutAccuracy?` (±${selRec.logoutAccuracy}m)`:''}</a>` : ''}
         </div>` : ''}
       </div>` : ''}
       <div class="modal-actions">
@@ -16712,6 +16818,33 @@ function attachShellHandlers(){
     showToast('Sidebar order saved');
   };
   document.querySelectorAll('[data-rename-nav-item]').forEach(b=>b.addEventListener('click', ()=>renameNavItem(b.dataset.renameNavItem)));
+
+  // Box Count (daily packing log)
+  if(byIdEl('btn-box-count')) byIdEl('btn-box-count').onclick = ()=>openModal('boxcount');
+  if(byIdEl('form-box-count')) byIdEl('form-box-count').addEventListener('submit', submitBoxCount);
+  if(byIdEl('btn-box-count-add-row')) byIdEl('btn-box-count-add-row').onclick = ()=>{
+    const tbody = byIdEl('box-count-tbody'); if(!tbody) return;
+    const tpl = document.createElement('div');
+    tpl.innerHTML = boxCountRowHtml();
+    const row = tpl.firstElementChild;
+    tbody.appendChild(row);
+    const first = row.querySelector('[name="customerName"]'); if(first) first.focus();
+  };
+  // Delegated on the row container (not bound per-row) so a row added later by "+ Add row"
+  // already has a working remove button with no extra wiring step.
+  if(byIdEl('box-count-tbody')) byIdEl('box-count-tbody').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.box-count-remove-row'); if(!btn) return;
+    const tbody = byIdEl('box-count-tbody');
+    if(tbody.querySelectorAll('.box-count-row').length<=1) return; // always leave at least one row
+    btn.closest('.box-count-row').remove();
+  });
+  if(byIdEl('btn-dismiss-box-count-alert')) byIdEl('btn-dismiss-box-count-alert').onclick = async ()=>{
+    const ids = new Set((state._boxCountAlert||[]).map(b=>b.id));
+    state.boxCounts = (state.boxCounts||[]).map(b=>ids.has(b.id) ? {...b, ackedByAdmin:true} : b);
+    state._boxCountAlert = null;
+    render();
+    await save('boxCounts');
+  };
 
   // Manage Lists (Orders board delivery lines)
   if(byIdEl('btn-manage-lines')) byIdEl('btn-manage-lines').onclick = ()=>{

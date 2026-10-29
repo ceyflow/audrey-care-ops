@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029163923">
+<meta name="app-build" content="20261029190635">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1748,7 +1748,7 @@ const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat
 // was: a "Loading…" flash on every single visit to the page, instead of being there instantly like
 // the rest of the app.)
 const DEFERRED_KEYS = ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','tempAttendance'];
-const DEFERRED_KEY_PAGES = { gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'], attendance: ['tempAttendance'] };
+const DEFERRED_KEY_PAGES = { gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'], attendance: ['tempAttendance'], myattendance: ['tempAttendance'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -3114,7 +3114,16 @@ async function syncAllRoleDataAccess(){
 // 'sections' (the mobile Sections grid) is a virtual home screen, not a permission -- every
 // logged-in session can reach it regardless of role, same as every role already gets its own
 // (possibly empty) grid of whatever pages it's actually assigned.
-function pageAllowed(page){ return !!state.session && (page==='sections' || pagesForRole(state.session.role).includes(page)); }
+// 'myattendance' (a staff member's own read-only history, surfaced as a Sections grid tile next
+// to 'Attendance') isn't a real assignable page in any role's pages list -- it rides along with
+// whatever role already has 'attendance' (the check-in page), so no Admin needs to go update
+// every role in Settings just to turn this on.
+function pageAllowed(page){
+  if(!state.session) return false;
+  if(page==='sections') return true;
+  if(page==='myattendance') return pagesForRole(state.session.role).includes('attendance');
+  return pagesForRole(state.session.role).includes(page);
+}
 const NEXT_ACTION_LABEL = {0:'Start processing',1:'Move to invoicing & checking',2:'Mark picked up by delivery'};
 const DEFAULT_COMPLAINT_CATEGORIES = ['Product quality issue','Delivery delay','Billing issue','Delivery damage','Product Damage','Wrong product','Other'];
 const DEFAULT_COMPLAINT_PRIORITIES = ['Low','Medium','High'];
@@ -5445,6 +5454,7 @@ function performGoTo(page){
   state._attRecordsOpen = false;
   state._attRecordsStaff = null;
   state._attRecordsMonth = null;
+  state._myAttMonth = null;
   state._settingsOpenPanel = null;
   state._moreFabOpen = false;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
@@ -8025,7 +8035,7 @@ const GRID_TILE_COLORS = {
   dashboard:'blue', orders:'accent', blendingdept:'orange', customercare:'maroon',
   customers:'blue', suppliers:'orange', ordersprocess:'blue', gmp:'purple',
   rnd:'accent', staff:'blue', chat:'maroon', bulksms:'purple', ratings:'orange', settings:'accent',
-  attendance:'maroon',
+  attendance:'maroon', myattendance:'purple',
 };
 function gridTileColor(id){ return GRID_TILE_COLORS[id] || 'blue'; }
 // Icon paths for the Sections grid specifically (Tabler Icons, MIT-licensed, github.com/tabler/
@@ -8050,6 +8060,9 @@ const GRID_ICONS = {
 };
 GRID_ICONS.ordersprocess = GRID_ICONS.orders;
 GRID_ICONS.attendance = '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 7v5l3 3" />';
+// Calendar (not the clock 'attendance' uses) -- distinguishes "check in/out now" from "look back
+// at my own history" at a glance, same way a phone's Clock and Calendar apps use different icons.
+GRID_ICONS.myattendance = '<path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M11 15h1" /><path d="M12 15v3" />';
 // Duotone: a low-opacity filled silhouette sitting behind the same shape drawn again as a bold
 // outline on top, both in the badge's own color (set via CSS currentColor) -- the look premium
 // icon packs (Phosphor duotone, etc.) use. Falls back to this app's own icon() for any page id
@@ -8099,6 +8112,12 @@ function renderSectionsGridPage(){
   const picked = roleMobileSections(state.session.role);
   const navGroups = navGroupsFor(allowed);
   const items = navGroups.flatMap(g=>g.items).filter(it=>!picked || picked.includes(it.id));
+  // 'myattendance' isn't a real NAV item (see pageAllowed's comment) so it never comes out of
+  // navGroupsFor above -- added here as its own tile, right next to Attendance, for anyone who
+  // already has that one.
+  if(items.some(it=>it.id==='attendance')){
+    items.push({id:'myattendance', label:'My Attendance'});
+  }
   return `
   <div class="sections-grid-page">
     ${items.length===0 ? `<div class="empty-state"><p>No sections to show here yet.</p><div class="hint">Ask your Admin to check this role's Mobile view in Settings → User roles.</div></div>` : `
@@ -8232,6 +8251,80 @@ function renderAttendanceStaffReport(staffName){
       }).join('')}
     </div>
     `}
+  </div>`;
+}
+// Self-service read-only view of a staff member's own attendance, reached via the "My Attendance"
+// Sections grid tile (see pageAllowed/renderSectionsGridPage) -- same table/card layout as the
+// Admin's renderAttendanceStaffReport above, scoped to state.session.name instead of an
+// Admin-picked staffName, with no delete buttons (self-service never gets to erase its own
+// record -- deleting an attendance entry stays an Admin-only action in the Records view).
+// Small arrow+bracket glyphs standing in for the reference timesheet's own login/logout icons --
+// an arrow running INTO a bracket for Check In, running OUT of one for Check Out -- so the two
+// read as opposites at a glance the same way the reference does, without depending on an exact
+// third-party icon match.
+function myAttInIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h11"/><path d="M11 8l4 4-4 4"/><path d="M18 5v14"/></svg>'; }
+function myAttOutIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14"/><path d="M9 12h11"/><path d="M17 8l4 4-4 4"/></svg>'; }
+// Last day-of-month as YYYY-MM-DD in local time, matching todayStr()'s own no-UTC-shift approach
+// (new Date(y,m,0).toISOString() would be off by a day in timezones behind UTC).
+function monthLastDay(y, m){
+  const d = new Date(y, m, 0);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+const MY_ATT_MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// "Timesheet" -- matches the reference screenshot's own layout element-for-element (date-range
+// bar, Year row, Month row, one card per day with a day-number badge and colored In/Out times)
+// rather than this app's usual table/card attendance views, per explicit request to match it
+// exactly, including dropping the per-row gear/location affordance the reference doesn't have.
+function renderMyAttendancePage(){
+  const myName = state.session && state.session.name;
+  const ym = state._myAttMonth || todayStr().slice(0,7);
+  const [y, m] = ym.split('-').map(Number);
+  const entries = (state.tempAttendance||[]).filter(a=>a.staffName===myName && (a.date||'').slice(0,7)===ym);
+  const byDate = {};
+  entries.forEach(a=>{ (byDate[a.date] = byDate[a.date]||[]).push(a); });
+  const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
+  const dayAbbr = d => new Date(d).toLocaleDateString(undefined,{weekday:'short'});
+  const dayNum = d => Number(d.slice(8,10));
+  const thisYear = new Date().getFullYear();
+  const years = [thisYear-2, thisYear-1, thisYear];
+  return `
+  <div style="max-width:480px;margin:0 auto;">
+    <div style="background:#F2994A;color:#fff;text-align:center;font-weight:700;font-size:13px;padding:10px;border-radius:10px;margin-bottom:14px;">
+      ${esc(fmtDateShort(ym+'-01'))} - ${esc(fmtDateShort(monthLastDay(y,m)))}
+    </div>
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="color:var(--s-received);font-weight:700;font-size:12px;margin-bottom:6px;">Year</div>
+      <div style="display:flex;justify-content:center;gap:18px;">
+        ${years.map(yr=>`
+        <button type="button" data-my-att-year="${yr}" style="border:none;background:none;cursor:pointer;font-weight:700;font-size:14px;padding:4px 10px;border-radius:999px;${yr===y?'color:#F2994A;background:#FDEEE1;':'color:var(--ink);'}">${yr}</button>`).join('')}
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="color:var(--s-received);font-weight:700;font-size:12px;margin-bottom:6px;">Month</div>
+      <div style="display:flex;justify-content:flex-start;gap:14px;overflow-x:auto;padding:2px 4px 6px;">
+        ${MY_ATT_MONTH_ABBR.map((label,i)=>`
+        <button type="button" data-my-att-month="${i+1}" style="flex:none;border:none;background:none;cursor:pointer;font-weight:700;font-size:13px;padding:4px 2px;white-space:nowrap;${i+1===m?'color:#F2994A;':'color:var(--ink);'}">${label}</button>`).join('')}
+      </div>
+    </div>
+    ${dates.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded for ${fmtMonthLabel(ym)}.</div>` : dates.map(d=>{
+      const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
+      return `
+      <div style="border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:none;width:52px;background:var(--accent-soft);border-radius:10px;padding:6px 0;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;">${esc(dayAbbr(d))}</div>
+          <div style="font-size:19px;font-weight:700;color:var(--accent-dark);line-height:1.1;">${dayNum(d)}</div>
+          <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;">
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--accent-dark);"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--muted);opacity:.4;"></span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--muted);opacity:.4;"></span>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;color:var(--s-received);font-weight:700;font-size:13px;">${myAttInIcon()}${inE?fmtTimeOnly(inE.at):'<span class="hint" style="font-weight:400;">—</span>'}</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--s-blending);font-weight:700;font-size:13px;">${myAttOutIcon()}${outE?fmtTimeOnly(outE.at):'<span class="hint" style="font-weight:400;">—</span>'}</div>
+        </div>
+      </div>`;
+    }).join('')}
   </div>`;
 }
 // Overtime is whatever portion of a Check Out falls after 6pm local time -- a Check Out at or
@@ -8799,6 +8892,7 @@ const PAGE_META = {
   bulksms:{title:'Bulk SMS', sub:'Send one message to a list of customers at once.'},
   ratings:{title:'Customer ratings', sub:'What customers said about their delivery experience.'},
   attendance:{title:'Attendance', sub:'Mark your check-in and check-out, with your location.'},
+  myattendance:{title:'My Attendance', sub:'Your own check-in and check-out history.'},
   settings:{title:'Settings', sub:'Workspace access, and task templates.'},
   sections:{title:'Sections', sub:'Everything you have access to.'},
 };
@@ -8979,6 +9073,7 @@ function renderPage(){
     case 'bulksms': return renderBulkSmsPage();
     case 'ratings': return renderRatingsPage();
     case 'attendance': return renderAttendancePage();
+    case 'myattendance': return renderMyAttendancePage();
     case 'settings': return renderSettingsPage();
     case 'sections': return renderSectionsGridPage();
     default: return '';
@@ -17209,6 +17304,16 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-att-print-staff]').forEach(b=>b.addEventListener('click', ()=>printAttendanceSheet(b.dataset.attPrintStaff)));
   document.querySelectorAll('[data-att-month-prev]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), -1); render(); }));
   document.querySelectorAll('[data-att-month-next]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), 1); render(); }));
+  document.querySelectorAll('[data-my-att-year]').forEach(b=>b.addEventListener('click', ()=>{
+    const ym = state._myAttMonth || todayStr().slice(0,7);
+    state._myAttMonth = b.dataset.myAttYear + ym.slice(4);
+    render();
+  }));
+  document.querySelectorAll('[data-my-att-month]').forEach(b=>b.addEventListener('click', ()=>{
+    const ym = state._myAttMonth || todayStr().slice(0,7);
+    state._myAttMonth = ym.slice(0,4) + '-' + String(b.dataset.myAttMonth).padStart(2,'0');
+    render();
+  }));
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');

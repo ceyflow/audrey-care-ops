@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029071716">
+<meta name="app-build" content="20261029080558">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8139,14 +8139,15 @@ function renderAttendanceAdminView(){
 function renderAttendanceCheckinView(){
   const now = new Date();
   const todayEntries = (state.tempAttendance||[]).filter(a=>a.staffName===state.session.name && a.date===todayStr()).sort((a,b)=>new Date(a.at)-new Date(b.at));
+  const next = attendanceTodayState();
   return `
   <div class="att-time-card">
     <div class="att-time">${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
     <div class="att-date">${now.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'})}</div>
   </div>
   <div class="att-fingerprint-wrap">
-    <button type="button" class="att-fingerprint-btn" id="btn-att-open" aria-label="Check in or out">${icon('fingerprint')}</button>
-    <div class="hint" style="margin-top:8px;">Tap to check in or out</div>
+    <button type="button" class="att-fingerprint-btn" id="btn-att-open" aria-label="Check in or out" ${next?'':'disabled'}>${icon('fingerprint')}</button>
+    <div class="hint" style="margin-top:8px;">${next ? 'Tap to check in or out' : "You're done for today"}</div>
   </div>
   ${todayEntries.length>0 ? `
   <div class="panel" style="margin-top:18px;">
@@ -8264,18 +8265,30 @@ function initAttendanceMap(){
   if(retryBtn) retryBtn.onclick = attempt;
   attempt();
 }
+// One check-in and one check-out per day, in order -- 'in' until today already has one, then
+// 'out' until today has that too, then null (nothing left to capture today). Driving both which
+// button opens pre-selected and which of the two is even selectable, so there's no way to log two
+// check-ins, or a check-out before a check-in, on the same day.
+function attendanceTodayState(){
+  const today = (state.tempAttendance||[]).filter(a=>a.staffName===state.session.name && a.date===todayStr());
+  if(!today.some(a=>a.type==='in')) return 'in';
+  if(!today.some(a=>a.type==='out')) return 'out';
+  return null;
+}
 function attendanceCaptureModal(){
+  const next = attendanceTodayState();
   const t = state._attCaptureType || null;
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:380px;">
       <h2 style="text-align:center;">What's the capture type</h2>
       <div style="display:flex;gap:10px;margin:16px 0;">
-        <button type="button" class="btn ${t==='in'?'btn-primary':''}" style="flex:1;" data-att-capture-type="in">Check In</button>
-        <button type="button" class="btn ${t==='out'?'btn-primary':''}" style="flex:1;" data-att-capture-type="out">Check Out</button>
+        <button type="button" class="btn ${t==='in'?'btn-primary':''}" style="flex:1;${next==='in'?'':'opacity:.4;cursor:not-allowed;'}" data-att-capture-type="in" ${next==='in'?'':'disabled'}>Check In</button>
+        <button type="button" class="btn ${t==='out'?'btn-primary':''}" style="flex:1;${next==='out'?'':'opacity:.4;cursor:not-allowed;'}" data-att-capture-type="out" ${next==='out'?'':'disabled'}>Check Out</button>
       </div>
+      ${!next ? `<div class="hint" style="text-align:center;margin:-6px 0 16px;">Already checked in and out today.</div>` : ''}
       <div class="modal-actions" style="flex-direction:column;gap:8px;">
-        <button type="button" class="btn btn-primary" id="btn-att-log-time" ${t?'':'disabled'} style="width:100%;">✓ Log Time</button>
+        <button type="button" class="btn btn-primary" id="btn-att-log-time" ${t && t===next?'':'disabled'} style="width:100%;">✓ Log Time</button>
         <button type="button" class="btn btn-danger" id="btn-cancel-modal" style="width:100%;">⊘ Cancel</button>
       </div>
     </div>
@@ -8283,6 +8296,9 @@ function attendanceCaptureModal(){
 }
 async function submitAttendanceCapture(){
   const type = state._attCaptureType; if(!type) return;
+  // Re-checked at submit time, not just at the button's disabled state -- guards the same two-
+  // devices-at-once race the disabled attribute can't catch on its own.
+  if(type !== attendanceTodayState()){ closeModal(); showToast('Already recorded — refresh to see today’s log'); return; }
   const loc = state._attLoc;
   const rec = {id: uid('ATT'), staffName: state.session.name, type, date: todayStr(), at: new Date().toISOString(), lat: loc?loc.lat:null, lng: loc?loc.lng:null, accuracy: loc?loc.accuracy:null};
   state.tempAttendance = [rec, ...(state.tempAttendance||[])];
@@ -16872,7 +16888,7 @@ function attachShellHandlers(){
 
   // Attendance (temporary staff)
   if(byIdEl('btn-att-open')) byIdEl('btn-att-open').onclick = ()=>openModal('attendancecheckin');
-  if(byIdEl('btn-att-fingerprint')) byIdEl('btn-att-fingerprint').onclick = ()=>{ state._attCaptureType = null; openModal('attendancecapture'); };
+  if(byIdEl('btn-att-fingerprint')) byIdEl('btn-att-fingerprint').onclick = ()=>{ state._attCaptureType = attendanceTodayState(); openModal('attendancecapture'); };
   document.querySelectorAll('[data-att-capture-type]').forEach(b=>b.addEventListener('click', ()=>{ state._attCaptureType = b.dataset.attCaptureType; render(); }));
   if(byIdEl('btn-att-log-time')) byIdEl('btn-att-log-time').onclick = submitAttendanceCapture;
   document.querySelectorAll('[data-delete-att]').forEach(b=>b.addEventListener('click', ()=>deleteAttendanceEntry(b.dataset.deleteAtt)));

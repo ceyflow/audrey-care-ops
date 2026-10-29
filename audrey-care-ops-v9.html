@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029080558">
+<meta name="app-build" content="20261029082239">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5413,6 +5413,9 @@ function performGoTo(page){
   state._costingDirty = false;
   state._costingVersionsView = 'active';
   state.filters.gmpSection = null;
+  state._attRecordsOpen = false;
+  state._attRecordsStaff = null;
+  state._attRecordsMonth = null;
   state._settingsOpenPanel = null;
   state._moreFabOpen = false;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
@@ -8093,42 +8096,104 @@ function initialPageForLogin(role){
 function renderAttendancePage(){
   return isAdminOrSubAdmin() ? renderAttendanceAdminView() : renderAttendanceCheckinView();
 }
+// Hub -> staff list -> one staff's monthly report, same drill-down shape as GMP's hub/section
+// pattern -- kept as plain in-memory state (no hash routing) since this is a small, self-contained
+// Admin-only sub-flow, not a department with its own sidebar entry.
 function renderAttendanceAdminView(){
-  const entries = [...(state.tempAttendance||[])].sort((a,b)=>new Date(b.at)-new Date(a.at));
+  if(state._attRecordsStaff) return renderAttendanceStaffReport(state._attRecordsStaff);
+  if(state._attRecordsOpen) return renderAttendanceStaffList();
   return `
+  <div class="landing-section">
+    <div class="landing-grid">
+      <button type="button" class="landing-card" data-att-records-open>
+        <span class="landing-card-icon landing-card-icon-blue">${cardDuotoneIcon('staff')}</span>
+        <span>Records</span>
+      </button>
+    </div>
+  </div>`;
+}
+function renderAttendanceStaffList(){
+  const names = [...new Set((state.tempAttendance||[]).map(a=>a.staffName))].sort((a,b)=>a.localeCompare(b));
+  return `
+  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-att-records-back>‹ Attendance</button></div>
   <div class="panel">
-    <div class="panel-head"><h3>Staff attendance</h3></div>
-    ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
+    <div class="panel-head"><h3>Records — Staff</h3></div>
+    ${names.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : names.map(n=>{
+      const entries = (state.tempAttendance||[]).filter(a=>a.staffName===n);
+      const last = [...entries].sort((a,b)=>new Date(b.at)-new Date(a.at))[0];
+      return `
+      <div class="list-row" data-att-staff-row="${escAttr(n)}">
+        <span class="lr-avatar empty">${initials(n)}</span>
+        <span class="lr-name">${esc(n)}</span>
+        <span class="hint">Last: ${last?fmtDateTime(last.at):'—'}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+function renderAttendanceStaffReport(staffName){
+  const ym = state._attRecordsMonth || todayStr().slice(0,7);
+  const entries = (state.tempAttendance||[]).filter(a=>a.staffName===staffName && (a.date||'').slice(0,7)===ym);
+  const byDate = {};
+  entries.forEach(a=>{ (byDate[a.date] = byDate[a.date]||[]).push(a); });
+  const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
+  const dayLabel = d => new Date(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+  const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 View</a>` : `<span class="hint">—</span>`;
+  return `
+  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-att-records-back-staff">‹ Staff</button></div>
+  <div class="panel">
+    <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <h3>${esc(staffName)}</h3>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button type="button" class="btn-text" data-att-month-prev aria-label="Previous month">‹</button>
+        <span style="font-weight:600;font-size:13px;">${fmtMonthLabel(ym)}</span>
+        <button type="button" class="btn-text" data-att-month-next aria-label="Next month">›</button>
+      </div>
+    </div>
+    ${dates.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded for ${fmtMonthLabel(ym)}.</div>` : `
     <div class="rnd-desktop-table">
     <table class="data-table">
-      <thead><tr><th>Staff</th><th>Type</th><th>Time</th><th>Location</th><th></th></tr></thead>
+      <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Login location</th><th>Logout location</th><th></th></tr></thead>
       <tbody>
-        ${entries.map(a=>`
-        <tr>
-          <td>${esc(a.staffName)}</td>
-          <td><span class="pill ${a.type==='in'?'pill-active':'pill-hold'}">${a.type==='in'?'Check In':'Check Out'}</span></td>
-          <td>${fmtDateTime(a.at)}</td>
-          <td>${a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 View${a.accuracy?` (±${a.accuracy}m)`:''}</a>` : `<span class="hint">—</span>`}</td>
-          <td style="text-align:right;"><button type="button" class="btn btn-sm btn-danger" data-delete-att="${a.id}">Delete</button></td>
-        </tr>`).join('')}
+        ${dates.map(d=>{
+          const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
+          return `
+          <tr>
+            <td>${esc(dayLabel(d))}</td>
+            <td>${inE?fmtTimeOnly(inE.at):'<span class="hint">—</span>'}</td>
+            <td>${outE?fmtTimeOnly(outE.at):'<span class="hint">—</span>'}</td>
+            <td>${locLink(inE)}</td>
+            <td>${locLink(outE)}</td>
+            <td style="text-align:right;white-space:nowrap;">
+              ${inE?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;">🗑</button>`:''}
+              ${outE?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;">🗑</button>`:''}
+            </td>
+          </tr>`;
+        }).join('')}
       </tbody>
     </table>
     </div>
     <div class="rnd-mobile-cards">
-      ${entries.map(a=>`
-      <div class="rnd-att-card">
-        <div class="rnd-att-card-top">
-          <div>
-            <div class="rnd-att-card-date">${esc(a.staffName)}</div>
-            <div class="rnd-att-card-chemist">${fmtDateTime(a.at)}</div>
+      ${dates.map(d=>{
+        const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
+        return `
+        <div class="rnd-att-card">
+          <div class="rnd-att-card-top"><div class="rnd-att-card-date">${esc(dayLabel(d))}</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span class="rnd-att-pill rnd-att-pill-in">Check In</span>
+              <span class="hint">${inE?fmtTimeOnly(inE.at):'—'}</span>
+              ${inE ? locLink(inE) : ''}
+              ${inE?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;">🗑</button>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span class="rnd-att-pill rnd-att-pill-out">Check Out</span>
+              <span class="hint">${outE?fmtTimeOnly(outE.at):'—'}</span>
+              ${outE ? locLink(outE) : ''}
+              ${outE?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;">🗑</button>`:''}
+            </div>
           </div>
-          <button type="button" class="btn-text" data-delete-att="${a.id}" style="color:#C15B4E;">🗑</button>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-          <span class="rnd-att-pill ${a.type==='in'?'rnd-att-pill-in':'rnd-att-pill-out'}">${a.type==='in'?'Check In':'Check Out'}</span>
-          ${a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 Location</a>` : ''}
-        </div>
-      </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>
     `}
   </div>`;
@@ -16892,6 +16957,13 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-att-capture-type]').forEach(b=>b.addEventListener('click', ()=>{ state._attCaptureType = b.dataset.attCaptureType; render(); }));
   if(byIdEl('btn-att-log-time')) byIdEl('btn-att-log-time').onclick = submitAttendanceCapture;
   document.querySelectorAll('[data-delete-att]').forEach(b=>b.addEventListener('click', ()=>deleteAttendanceEntry(b.dataset.deleteAtt)));
+  // Attendance admin: Records hub -> staff list -> one staff's monthly report
+  document.querySelectorAll('[data-att-records-open]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = true; render(); }));
+  document.querySelectorAll('[data-att-records-back]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = false; render(); }));
+  document.querySelectorAll('[data-att-staff-row]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = b.dataset.attStaffRow; state._attRecordsMonth = null; render(); }));
+  document.querySelectorAll('[data-att-records-back-staff]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = null; render(); }));
+  document.querySelectorAll('[data-att-month-prev]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), -1); render(); }));
+  document.querySelectorAll('[data-att-month-next]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), 1); render(); }));
 
   // Customers
   if(byIdEl('btn-new-customer')) byIdEl('btn-new-customer').onclick = ()=>openModal('customer:new');

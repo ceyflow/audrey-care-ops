@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029091517">
+<meta name="app-build" content="20261029093245">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4677,6 +4677,14 @@ async function loadAll(){
   // something re-snapshots its own key on success via saveQuietly(); nothing here needs a second,
   // blanket re-snapshot.)
   render();
+  // A refresh landing directly on a page (hash restore, above) bypasses performGoTo and the
+  // popstate handler — the only two places that otherwise trigger a deferred page's own data
+  // fetch (R&D, Bulk SMS, Attendance) — so without this, refreshing while already on one of
+  // those pages left it stuck on empty/"Loading…" until some other navigation happened to
+  // trigger the fetch. Confirmed: a refresh on Attendance showed "No attendance recorded yet"
+  // even with real data saved, until this ran.
+  const bootDeferredKeys = DEFERRED_KEY_PAGES[state.page];
+  if(bootDeferredKeys) ensureDeferredKeysLoaded(bootDeferredKeys).then(fetched => { if(fetched) render(); }).catch(e => { console.error('deferred load for '+state.page+' failed', e); render(); });
   // A refresh landing directly on the Production Guide page (hash restore, above) bypasses
   // performGoTo and the popstate handler — the only two places that otherwise start this —
   // so without this, a running batch's countdown rendered once correctly and then sat frozen

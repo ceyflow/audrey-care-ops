@@ -1377,7 +1377,10 @@ html{ visibility:hidden; }
        the card's own -14px pulls it back up — without it the card overlapped the title's own
        line-height and clipped it (the card's margin-top assumed a gap that wasn't actually there). */
     .topbar > div:first-child{margin-bottom:20px;}
-    .header-right{background:var(--surface);border-radius:14px;box-shadow:0 6px 18px rgba(20,25,20,.16);margin-top:-14px;padding:13px 14px;}
+    /* Glassmorphism (sample 3): frosted, translucent over the gradient header instead of a solid
+       white card -- background-blend here is vendor-prefixed for Safari/iOS too, since this is
+       the one most likely to actually be viewed on an iPhone. */
+    .header-right{background:rgba(255,255,255,.6);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.65);border-radius:14px;box-shadow:0 8px 22px rgba(20,25,20,.14);margin-top:-14px;padding:13px 14px;}
     .header-right-top, .header-right-links{display:flex;align-items:center;flex-wrap:wrap;width:100%;}
     .header-right-top{gap:10px;}
     .header-right-links{gap:16px;margin-top:11px;}

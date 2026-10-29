@@ -5455,7 +5455,6 @@ function performGoTo(page){
   state._attRecordsStaff = null;
   state._attRecordsMonth = null;
   state._myAttMonth = null;
-  state._myAttExpandedDay = null;
   state._settingsOpenPanel = null;
   state._moreFabOpen = false;
   if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
@@ -8265,9 +8264,6 @@ function renderAttendanceStaffReport(staffName){
 // third-party icon match.
 function myAttInIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h11"/><path d="M11 8l4 4-4 4"/><path d="M18 5v14"/></svg>'; }
 function myAttOutIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14"/><path d="M9 12h11"/><path d="M17 8l4 4-4 4"/></svg>'; }
-// icon('settings') has no width/height of its own (sized by whatever CSS class wraps it
-// elsewhere) -- this card's gear button has no such class, so it's sized explicitly here instead.
-function myAttGearIcon(){ return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS.settings}</svg>`; }
 // Last day-of-month as YYYY-MM-DD in local time, matching todayStr()'s own no-UTC-shift approach
 // (new Date(y,m,0).toISOString() would be off by a day in timezones behind UTC).
 function monthLastDay(y, m){
@@ -8275,12 +8271,10 @@ function monthLastDay(y, m){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 const MY_ATT_MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-// "Timesheet" -- matches the reference screenshot's own layout almost element-for-element (date-
-// range bar, Year row, Month row, one card per day with a day-number badge and colored In/Out
-// times) rather than this app's usual table/card attendance views, per explicit request to match
-// it exactly. Location (a feature the reference doesn't have, but this app already tracks for
-// every check-in/out elsewhere) rides along behind each card's gear button instead of being
-// dropped, so nothing already built is lost to the redesign.
+// "Timesheet" -- matches the reference screenshot's own layout element-for-element (date-range
+// bar, Year row, Month row, one card per day with a day-number badge and colored In/Out times)
+// rather than this app's usual table/card attendance views, per explicit request to match it
+// exactly, including dropping the per-row gear/location affordance the reference doesn't have.
 function renderMyAttendancePage(){
   const myName = state.session && state.session.name;
   const ym = state._myAttMonth || todayStr().slice(0,7);
@@ -8291,8 +8285,6 @@ function renderMyAttendancePage(){
   const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
   const dayAbbr = d => new Date(d).toLocaleDateString(undefined,{weekday:'short'});
   const dayNum = d => Number(d.slice(8,10));
-  const expandedDay = state._myAttExpandedDay;
-  const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">No location recorded</span>`;
   const thisYear = new Date().getFullYear();
   const years = [thisYear-2, thisYear-1, thisYear];
   return `
@@ -8331,14 +8323,7 @@ function renderMyAttendancePage(){
           <div style="display:flex;align-items:center;gap:6px;color:var(--s-received);font-weight:700;font-size:13px;">${myAttInIcon()}${inE?fmtTimeOnly(inE.at):'<span class="hint" style="font-weight:400;">—</span>'}</div>
           <div style="display:flex;align-items:center;gap:6px;color:var(--s-blending);font-weight:700;font-size:13px;">${myAttOutIcon()}${outE?fmtTimeOnly(outE.at):'<span class="hint" style="font-weight:400;">—</span>'}</div>
         </div>
-        <div style="flex:none;align-self:stretch;width:1px;background:var(--border);"></div>
-        <button type="button" data-my-att-toggle-day="${escAttr(d)}" aria-label="Location" style="flex:none;border:none;background:none;color:var(--muted);cursor:pointer;padding:4px;display:flex;">${myAttGearIcon()}</button>
-      </div>
-      ${expandedDay===d ? `
-      <div style="background:var(--bg);border-radius:10px;padding:8px 12px;margin:-4px 0 10px;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;">
-        <div><span class="hint">Check-in location:</span> ${locLink(inE)}</div>
-        <div><span class="hint">Check-out location:</span> ${locLink(outE)}</div>
-      </div>` : ''}`;
+      </div>`;
     }).join('')}
   </div>`;
 }
@@ -17322,18 +17307,11 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-my-att-year]').forEach(b=>b.addEventListener('click', ()=>{
     const ym = state._myAttMonth || todayStr().slice(0,7);
     state._myAttMonth = b.dataset.myAttYear + ym.slice(4);
-    state._myAttExpandedDay = null;
     render();
   }));
   document.querySelectorAll('[data-my-att-month]').forEach(b=>b.addEventListener('click', ()=>{
     const ym = state._myAttMonth || todayStr().slice(0,7);
     state._myAttMonth = ym.slice(0,4) + '-' + String(b.dataset.myAttMonth).padStart(2,'0');
-    state._myAttExpandedDay = null;
-    render();
-  }));
-  document.querySelectorAll('[data-my-att-toggle-day]').forEach(b=>b.addEventListener('click', ()=>{
-    const d = b.dataset.myAttToggleDay;
-    state._myAttExpandedDay = state._myAttExpandedDay===d ? null : d;
     render();
   }));
 

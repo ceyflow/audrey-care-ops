@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029104030">
+<meta name="app-build" content="20261029104407">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8476,8 +8476,8 @@ function deleteAttendanceEntry(id){
   if(!isAdminOrSubAdmin()) return;
   const a = (state.tempAttendance||[]).find(x=>x.id===id);
   openConfirmModal({
-    title: 'Delete attendance record', danger: true, confirmLabel: 'Delete',
-    message: `Delete the ${a&&a.type==='in'?'check-in':'check-out'} record for ${a?a.staffName:'this staff member'}?`,
+    title: 'Delete attendance record', danger: true, confirmLabel: 'Delete', requirePassword: true,
+    message: `Delete the ${a&&a.type==='in'?'check-in':'check-out'} record for ${a?a.staffName:'this staff member'}? This cannot be undone.`,
     onConfirm: async ()=>{
       state.tempAttendance = state.tempAttendance.filter(x=>x.id!==id);
       await save('tempAttendance');

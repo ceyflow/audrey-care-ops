@@ -658,9 +658,11 @@ html{ visibility:hidden; }
   .rnd-pill-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
   .rnd-pill-tab{border:none;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;background:var(--bg);color:var(--muted);white-space:nowrap;}
   .rnd-pill-tab.active{background:var(--accent-soft);color:var(--accent-dark);}
-  .rnd-loc-link{display:inline-flex;align-items:center;gap:5px;background:#2F6FE4;color:#fff;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;padding:4px 10px 4px 7px;border-radius:999px;transition:background .15s ease;}
-  .rnd-loc-link:hover{background:#2660C9;text-decoration:none;}
-  .rnd-loc-link svg{flex:none;}
+  .rnd-loc-link{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:#2F6FE4;text-decoration:none;white-space:nowrap;}
+  .rnd-loc-link:hover{text-decoration:underline;}
+  .rnd-loc-link .loc-dot-wrap{position:relative;width:16px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;}
+  .rnd-loc-link .loc-dot-ring{position:absolute;inset:0;border-radius:50%;background:#2F6FE4;opacity:.15;}
+  .rnd-loc-link .loc-dot-core{width:7px;height:7px;border-radius:50%;background:#2F6FE4;border:2px solid #fff;box-shadow:0 0 0 1px #2F6FE4;}
   .rnd-cal-detail-locations{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
   .rnd-checkin-modal{max-width:420px;padding:0;overflow:hidden;}
   .rnd-checkin-header{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;padding:16px 18px;}
@@ -5931,10 +5933,10 @@ async function geoPermissionState(){
   catch(e){ return 'unknown'; }
 }
 function rndMapsLink(lat,lng){ return `https://www.google.com/maps?q=${lat},${lng}`; }
-// "Filled Pin Chip" -- picked from the 10-sample location-link design gallery. stroke="currentColor"
-// so it always matches .rnd-loc-link's own text color (white on the filled pill) with no separate
-// color to keep in sync.
-function locPinIcon(){ return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-7.5 7-12.5A7 7 0 0 0 5 9.5C5 14.5 12 22 12 22z"/><circle cx="12" cy="9.5" r="2.3"/></svg>'; }
+// "Pin + Accuracy Ring" -- picked from the 10-sample location-link design gallery. Echoes the
+// live check-in map's own blue-dot-with-accuracy-circle marker (see initAttendanceMap /
+// initRndCheckinMap) instead of a generic pin glyph.
+function locPinIcon(){ return '<span class="loc-dot-wrap"><span class="loc-dot-ring"></span><span class="loc-dot-core"></span></span>'; }
 // preLoc lets the check-in map modal (rndCheckinModal) pass a location it already fetched while the
 // user was looking at the map, instead of fetching a second one here — undefined (the plain-button
 // call site, kept for safety/back-compat) still fetches fresh; null means the modal's own fetch
@@ -9177,41 +9179,31 @@ function renderOrdersPage(){
 // One window, one row per customer -- add as many rows as needed, then Save all at once.
 // Rows are added/removed via direct DOM manipulation (cloning .box-count-row), not a render()
 // cycle, so typing in one row never loses focus or gets interrupted by a re-render of the others.
+// "Compact Rows" -- picked from the 10-sample design gallery: borderless inline fields, a hairline
+// between rows instead of a bordered table, built for entering many rows fast with minimal chrome.
 function boxCountRowHtml(){
   return `
-  <tr class="box-count-row">
-    <td style="padding:4px;"><input name="customerName" required autocomplete="off" style="width:100%;"></td>
-    <td style="padding:4px;width:120px;">
-      <select name="boxType" required style="width:100%;">
-        <option value="">Select</option>
-        <option value="Large">Large</option>
-        <option value="Medium">Medium</option>
-        <option value="Small">Small</option>
-      </select>
-    </td>
-    <td style="padding:4px;width:80px;"><input name="boxCount" type="number" min="1" step="1" required autocomplete="off" style="width:100%;"></td>
-    <td style="padding:4px;width:30px;"><button type="button" class="btn-text box-count-remove-row" style="color:#C15B4E;" aria-label="Remove row">✕</button></td>
-  </tr>`;
+  <div class="box-count-row" style="display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+    <input name="customerName" required autocomplete="off" placeholder="Customer" style="flex:1;min-width:0;border:none;background:none;padding:3px 2px;font-size:12.5px;">
+    <select name="boxType" required style="width:85px;flex:none;border:none;background:var(--bg);font-size:11.5px;border-radius:6px;padding:4px 2px;">
+      <option value="">Select</option>
+      <option value="Large">Large</option>
+      <option value="Medium">Medium</option>
+      <option value="Small">Small</option>
+    </select>
+    <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:56px;flex:none;border:none;background:var(--bg);font-size:11.5px;text-align:center;border-radius:6px;padding:4px 2px;">
+    <button type="button" class="box-count-remove-row" style="border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;flex:none;padding:2px 4px;" aria-label="Remove row">✕</button>
+  </div>`;
 }
 function boxCountModal(){
   return `
   <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:620px;">
+    <div class="modal" style="max-width:420px;">
       <h2>Box Count</h2>
-      <div class="sub">Today, ${fmtDate(new Date().toISOString())} — add a row per customer, then save them all together.</div>
+      <div class="sub">Today, ${fmtDate(new Date().toISOString())}</div>
       <form id="form-box-count">
-        <div style="max-height:360px;overflow-y:auto;margin-top:10px;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead><tr>
-              <th style="text-align:left;padding:4px;">Customer</th>
-              <th style="text-align:left;padding:4px;width:120px;">Box type</th>
-              <th style="text-align:left;padding:4px;width:80px;">Count</th>
-              <th style="width:30px;"></th>
-            </tr></thead>
-            <tbody id="box-count-tbody">${boxCountRowHtml()}</tbody>
-          </table>
-        </div>
-        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;">+ Add another customer</button>
+        <div id="box-count-tbody" style="max-height:360px;overflow-y:auto;margin-top:8px;">${boxCountRowHtml()}</div>
+        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;">+ Add row</button>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save all</button>
@@ -16832,14 +16824,14 @@ function attachShellHandlers(){
   if(byIdEl('form-box-count')) byIdEl('form-box-count').addEventListener('submit', submitBoxCount);
   if(byIdEl('btn-box-count-add-row')) byIdEl('btn-box-count-add-row').onclick = ()=>{
     const tbody = byIdEl('box-count-tbody'); if(!tbody) return;
-    const tpl = document.createElement('tbody');
+    const tpl = document.createElement('div');
     tpl.innerHTML = boxCountRowHtml();
     const row = tpl.firstElementChild;
     tbody.appendChild(row);
     const first = row.querySelector('[name="customerName"]'); if(first) first.focus();
   };
-  // Delegated on the table body (not bound per-row) so a row added later by "+ Add another
-  // customer" already has a working remove button with no extra wiring step.
+  // Delegated on the row container (not bound per-row) so a row added later by "+ Add row"
+  // already has a working remove button with no extra wiring step.
   if(byIdEl('box-count-tbody')) byIdEl('box-count-tbody').addEventListener('click', (e)=>{
     const btn = e.target.closest('.box-count-remove-row'); if(!btn) return;
     const tbody = byIdEl('box-count-tbody');

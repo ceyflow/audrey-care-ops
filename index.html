@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029111559">
+<meta name="app-build" content="20261029121332">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -16744,7 +16744,11 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-delete-delivery-line]').forEach(b=>b.addEventListener('click', ()=>{
     const key = b.dataset.deleteDeliveryLine;
     const line = state._deliveryLinesDraft.find(l=>l.key===key); if(!line) return;
-    const inUse = state.orders.filter(o=>(o.courierService||'')===key).length;
+    // Archived/completed orders keep whatever courierService they were placed under forever —
+    // counting those too made this guard impossible to ever clear once a list had been used even
+    // once, since a completed order can't be "moved" anywhere. Only active orders actually block
+    // deletion; an archived order's history isn't affected by its courier list disappearing.
+    const inUse = activeOrders().filter(o=>(o.courierService||'')===key).length;
     if(inUse>0){ openAlertModal(`Can't delete "${line.label}" — ${inUse} order(s) still use it. Move or complete them first.`); return; }
     openConfirmModal({
       title: 'Delete list', danger: true, confirmLabel: 'Delete', keepParentModal: true,

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029105806">
+<meta name="app-build" content="20261029111559">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8158,7 +8158,7 @@ function renderAttendanceStaffReport(staffName){
   const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">📍 View</a>` : `<span class="hint">—</span>`;
   return `
   <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-    <button type="button" class="btn btn-sm" data-att-records-back-staff">‹ Staff</button>
+    <button type="button" class="btn btn-sm" data-att-records-back-staff>‹ Staff</button>
     <button type="button" class="btn btn-sm" data-att-print-staff="${escAttr(staffName)}">🖨 Print attendance sheet</button>
   </div>
   <div class="panel">

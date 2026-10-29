@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029082239">
+<meta name="app-build" content="20261029091517">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4246,6 +4246,14 @@ async function ensureDeferredKeysLoaded(keys){
 }
 async function loadAll(){
   if(!BACKEND_CONFIGURED){ state.loaded = true; state.backendMissing = true; render(); return; }
+  // Restored here, synchronously and first, rather than after the data fetch below (where this
+  // used to live) -- _applySyncedKeysFetch needs state.session.role already in place to narrow its
+  // "did this login's data actually come back" sentinel check to keys this role can really see (a
+  // role scoped to pages with none of orders/customers/staff, e.g. a staff-attendance-only role,
+  // would otherwise permanently false-alarm "couldn't load your data" on every plain page refresh,
+  // even though only the FIRST login's own call site had session set in time for that check).
+  try{ const s = localStorage.getItem('audrey_session'); state.session = s ? JSON.parse(s) : null; }
+  catch(e){ state.session = null; }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
   // it's created — that restore isn't finished yet the instant the page loads. Without waiting
   // for it here, the very first kvGet() calls below can race ahead of it and go out with no
@@ -4550,8 +4558,6 @@ async function loadAll(){
       saveQuietly('staff').catch(()=>{});
     }
   }
-  try{ const s = localStorage.getItem('audrey_session'); state.session = s ? JSON.parse(s) : null; }
-  catch(e){ state.session = null; }
   let _rolePagesCleared = false;
   try{
     const a = await authFetchPromise;

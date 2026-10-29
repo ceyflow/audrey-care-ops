@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029041153">
+<meta name="app-build" content="20261029071716">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -700,7 +700,6 @@ html{ visibility:hidden; }
   .att-time-card{text-align:center;padding:4px 0 16px;}
   .att-time{font-size:34px;font-weight:800;line-height:1;color:var(--ink);}
   .att-date{font-size:12.5px;color:var(--muted);margin-top:4px;}
-  .att-map-wrap{height:300px;border-radius:16px;overflow:hidden;border:1px solid var(--border);}
   .att-fingerprint-wrap{display:flex;flex-direction:column;align-items:center;margin-top:20px;}
   .att-fingerprint-btn{width:72px;height:72px;border-radius:50%;border:none;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -4px rgba(var(--accent-rgb),.55);transition:opacity .15s ease,transform .1s ease;}
   .att-fingerprint-btn svg{width:30px;height:30px;}
@@ -2987,7 +2986,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 10;
+const PAGE_DATA_KEYS_VERSION = 11;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -3007,6 +3006,7 @@ const PAGE_DATA_KEYS = {
   ordersprocess: ['orders','branding'],
   gmp: ['gmpChecklistEntries','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','staff'],
   rnd: ['rndProjects','rndChemists','rndAttendance'],
+  attendance: ['tempAttendance'],
   staff: ['staff','staffCategories'],
   chat: ['chat','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'],
@@ -4168,8 +4168,27 @@ async function _fetchSyncedKeys(){
 // over again just to reach this part.
 async function _applySyncedKeysFetch(loadedValues, knownAuthenticated){
   if(knownAuthenticated){
-    const sentinelKeys = ['orders','customers','staff'];
-    const looksEmpty = () => sentinelKeys.every(k=>{ const v = loadedValues[SYNCED_KEYS.indexOf(k)]; return !v || (Array.isArray(v) && v.length===0); });
+    // Make sure pagesForRole()/dataKeysForRole() below see THIS fetch's own userRoles result,
+    // not a stale previous one -- needed to correctly size down the sentinel check right below
+    // for a role whose pages genuinely don't include any of orders/customers/staff (harmless
+    // early assignment either way: the real state-assignment loop a few lines down re-sets this
+    // to the exact same value).
+    const userRolesIdx = SYNCED_KEYS.indexOf('userRoles');
+    if(loadedValues[userRolesIdx] != null) state.userRoles = loadedValues[userRolesIdx];
+    // A role scoped to pages that touch none of these three (e.g. a staff-attendance-only role)
+    // will always, correctly, get RLS-filtered empty results for them -- checking the full fixed
+    // list would permanently show the "couldn't load your data" warning on every single login for
+    // that role even though nothing is actually broken (confirmed: a brand-new Attendance-only
+    // role tripped this on its very first login). Narrow the check to whichever of these three
+    // this role can actually see; if the role can't see any of them, there's nothing meaningful
+    // left to sanity-check, so skip the retry dance rather than false-alarm forever. Falls back to
+    // the full list when the role isn't known yet (the page-bootstrap loadAll() call, before
+    // state.session is restored from localStorage) — unchanged from before this fix.
+    const candidateSentinels = ['orders','customers','staff'];
+    const role = state.session && state.session.role;
+    const allowedKeys = role ? new Set(dataKeysForRole(role)) : null;
+    const sentinelKeys = allowedKeys ? candidateSentinels.filter(k=>allowedKeys.has(k)) : candidateSentinels;
+    const looksEmpty = () => sentinelKeys.length>0 && sentinelKeys.every(k=>{ const v = loadedValues[SYNCED_KEYS.indexOf(k)]; return !v || (Array.isArray(v) && v.length===0); });
     const delays = [900, 2500, 5000];
     for(let attempt=0; attempt<delays.length && looksEmpty(); attempt++){
       console.warn(`refreshAppData: core data came back empty for a signed-in session — retry ${attempt+1}/${delays.length}`);
@@ -7451,7 +7470,7 @@ function renderInner(){
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.
   if(state.modal==='brandcrop' && document.getElementById('crop-frame')) return;
   if(state.modal && state.modal.startsWith('rndcheckin:') && document.getElementById('rnd-checkin-map')) return;
-  if(state.page==='attendance' && document.getElementById('att-map')) return;
+  if(state.modal==='attendancecheckin' && document.getElementById('att-map')) return;
   const freshPage = state.page !== _lastEnterPage;
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
@@ -8114,6 +8133,9 @@ function renderAttendanceAdminView(){
     `}
   </div>`;
 }
+// The landing view itself stays lightweight (time + one button) -- tapping the button is what
+// pops up the map/location/fingerprint panel (attendanceCheckinModal below), matching the
+// reference flow: tap Attendance, a popup appears with the map and a fingerprint button.
 function renderAttendanceCheckinView(){
   const now = new Date();
   const todayEntries = (state.tempAttendance||[]).filter(a=>a.staffName===state.session.name && a.date===todayStr()).sort((a,b)=>new Date(a.at)-new Date(b.at));
@@ -8122,23 +8144,8 @@ function renderAttendanceCheckinView(){
     <div class="att-time">${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
     <div class="att-date">${now.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'})}</div>
   </div>
-  <div class="rnd-checkin-map-wrap att-map-wrap">
-    <div class="rnd-checkin-map" id="att-map"></div>
-    <div class="rnd-checkin-gate" id="att-gate">
-      <div class="rnd-checkin-gate-card">
-        <div class="rnd-checkin-radar"><span class="rnd-checkin-radar-dot"></span></div>
-        <div class="rnd-checkin-gate-title" id="att-gate-title" style="margin-bottom:12px;">Finding your location…</div>
-        <button type="button" class="btn btn-primary" id="btn-att-retry" style="display:none;width:100%;">Try again</button>
-      </div>
-    </div>
-    <div class="rnd-checkin-sheet" id="att-sheet">
-      <div class="rnd-checkin-sheet-handle"></div>
-      <div class="rnd-checkin-sheet-addr" id="att-sheet-addr">Locating…</div>
-      <div class="rnd-checkin-sheet-meta" id="att-sheet-meta"></div>
-    </div>
-  </div>
   <div class="att-fingerprint-wrap">
-    <button type="button" class="att-fingerprint-btn" id="btn-att-fingerprint" disabled aria-label="Check in or out">${icon('fingerprint')}</button>
+    <button type="button" class="att-fingerprint-btn" id="btn-att-open" aria-label="Check in or out">${icon('fingerprint')}</button>
     <div class="hint" style="margin-top:8px;">Tap to check in or out</div>
   </div>
   ${todayEntries.length>0 ? `
@@ -8154,11 +8161,48 @@ function renderAttendanceCheckinView(){
   </div>` : ''}
   `;
 }
+// Popup shown on tapping the page's "Check in or out" button -- the map/location gate + a second
+// fingerprint button live here instead of inline on the page, same popup pattern as R&D's own
+// check-in (rndCheckinModal/initRndCheckinMap): tap to open, map finds you, tap the fingerprint
+// inside to move on to the capture-type popup (attendanceCaptureModal).
+function attendanceCheckinModal(){
+  const now = new Date();
+  const timeLabel = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const dateLabel = now.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal rnd-checkin-modal">
+      <div class="rnd-checkin-header">
+        <div class="rnd-checkin-time">${timeLabel}</div>
+        <div class="rnd-checkin-chemist">${dateLabel} · Attendance</div>
+      </div>
+      <div class="rnd-checkin-map-wrap">
+        <div class="rnd-checkin-map" id="att-map"></div>
+        <div class="rnd-checkin-gate" id="att-gate">
+          <div class="rnd-checkin-gate-card">
+            <div class="rnd-checkin-radar"><span class="rnd-checkin-radar-dot"></span></div>
+            <div class="rnd-checkin-gate-title" id="att-gate-title" style="margin-bottom:12px;">Finding your location…</div>
+            <button type="button" class="btn btn-primary" id="btn-att-retry" style="display:none;width:100%;">Try again</button>
+          </div>
+        </div>
+        <div class="rnd-checkin-sheet" id="att-sheet">
+          <div class="rnd-checkin-sheet-handle"></div>
+          <div class="rnd-checkin-sheet-addr" id="att-sheet-addr">Locating…</div>
+          <div class="rnd-checkin-sheet-meta" id="att-sheet-meta"></div>
+        </div>
+      </div>
+      <div class="rnd-checkin-actions" style="flex-direction:column;gap:10px;">
+        <button type="button" class="att-fingerprint-btn" id="btn-att-fingerprint" disabled aria-label="Check in or out" style="align-self:center;">${icon('fingerprint')}</button>
+        <button type="button" class="btn" id="btn-cancel-modal" style="width:100%;">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
 // Same hard location gate as the R&D check-in screen (initRndCheckinMap) -- Confirm has no path to
 // enabling itself without a real GPS fix, kept as a separate function (rather than sharing one)
-// since this is a page, not a modal, and the two features aren't otherwise related.
+// since R&D's own check-in carries a chemist/date pair this doesn't need.
 function initAttendanceMap(){
-  if(state.page!=='attendance' || isAdminOrSubAdmin()) return;
+  if(state.modal!=='attendancecheckin') return;
   const mapEl = document.getElementById('att-map');
   if(!mapEl || mapEl.dataset.mapInit) return;
   mapEl.dataset.mapInit = '1';
@@ -14562,6 +14606,7 @@ function renderModal(){
   if(type==='rndchemist') return rndChemistFormModal(id==='new'?null:id);
   if(type==='rndattendance') return rndAttendanceModal(id);
   if(type==='rndcheckin') return rndCheckinModal(parts[1], parts[2], parts[3]);
+  if(type==='attendancecheckin') return attendanceCheckinModal();
   if(type==='attendancecapture') return attendanceCaptureModal();
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
@@ -16826,6 +16871,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-rnd-checkin-confirm')) byIdEl('btn-rnd-checkin-confirm').onclick = confirmRndCheckin;
 
   // Attendance (temporary staff)
+  if(byIdEl('btn-att-open')) byIdEl('btn-att-open').onclick = ()=>openModal('attendancecheckin');
   if(byIdEl('btn-att-fingerprint')) byIdEl('btn-att-fingerprint').onclick = ()=>{ state._attCaptureType = null; openModal('attendancecapture'); };
   document.querySelectorAll('[data-att-capture-type]').forEach(b=>b.addEventListener('click', ()=>{ state._attCaptureType = b.dataset.attCaptureType; render(); }));
   if(byIdEl('btn-att-log-time')) byIdEl('btn-att-log-time').onclick = submitAttendanceCapture;

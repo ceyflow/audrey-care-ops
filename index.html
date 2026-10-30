@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030070518">
+<meta name="app-build" content="20261030105819">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1310,7 +1310,7 @@ html{ visibility:hidden; }
     animation:drawer-in .26s cubic-bezier(.2,.8,.3,1);
   }
   .drawer .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-  @media (max-width:760px){ .drawer{width:100vw;padding:22px;} .drawer .field-row-3{grid-template-columns:1fr;} }
+  @media (max-width:760px){ .drawer{left:0;width:auto;padding:22px;} .drawer .field-row-3{grid-template-columns:1fr;} }
   .drawer-hero{
     background:var(--accent-grad);color:#fff;
     margin:-28px -34px 20px;padding:20px 34px 22px;
@@ -9666,6 +9666,8 @@ function boxCountRowHtml(){
   </div>`;
 }
 function boxCountModal(){
+  const today = todayStr();
+  const todays = (state.boxCounts||[]).filter(b=>b.date===today).sort((a,b)=>new Date(b.at)-new Date(a.at));
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:420px;">
@@ -9679,6 +9681,16 @@ function boxCountModal(){
           <button type="submit" class="btn btn-primary">Save all</button>
         </div>
       </form>
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:8px;">Saved today ${todays.length?`(${todays.length})`:''}</div>
+        ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">Nothing logged yet today.</div>` : `
+        <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+          ${todays.map(b=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);">
+            <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;">${esc(b.boxType)} × ${b.boxCount} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+          </div>`).join('')}
+        </div>`}
+      </div>
     </div>
   </div>`;
 }

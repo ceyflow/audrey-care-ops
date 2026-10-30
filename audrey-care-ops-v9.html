@@ -9688,6 +9688,7 @@ function boxCountModal(){
           ${todays.map(b=>`
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);">
             <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;">${esc(b.boxType)} × ${b.boxCount} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+            ${isAdminOrSubAdmin() ? `<button type="button" class="btn-text" data-delete-box-count="${b.id}" style="color:#C15B4E;flex:none;">🗑</button>` : ''}
           </div>`).join('')}
         </div>`}
       </div>
@@ -9711,6 +9712,18 @@ async function submitBoxCount(e){
   closeModal();
   const ok = await save('boxCounts');
   if(ok) showToast(recs.length>1 ? `${recs.length} box counts saved` : 'Box count saved');
+}
+function deleteBoxCountEntry(id){
+  if(!isAdminOrSubAdmin()) return;
+  const b = (state.boxCounts||[]).find(x=>x.id===id);
+  openConfirmModal({
+    title: 'Delete box count', danger: true, confirmLabel: 'Delete', requirePassword: true,
+    message: `Delete the ${b?b.boxType:'box'} × ${b?b.boxCount:''} entry for ${b?b.customerName:'this customer'}? This cannot be undone.`,
+    onConfirm: async ()=>{
+      state.boxCounts = state.boxCounts.filter(x=>x.id!==id);
+      await save('boxCounts');
+    },
+  });
 }
 // Admin-only: looks for any box count entry nobody's acknowledged yet. Snapshots them into
 // state._boxCountAlert rather than re-deriving live, so the panel's contents don't shift under
@@ -17330,6 +17343,7 @@ function attachShellHandlers(){
     if(tbody.querySelectorAll('.box-count-row').length<=1) return; // always leave at least one row
     btn.closest('.box-count-row').remove();
   });
+  document.querySelectorAll('[data-delete-box-count]').forEach(b=>b.addEventListener('click', ()=>deleteBoxCountEntry(b.dataset.deleteBoxCount)));
   if(byIdEl('btn-dismiss-box-count-alert')) byIdEl('btn-dismiss-box-count-alert').onclick = async ()=>{
     const ids = new Set((state._boxCountAlert||[]).map(b=>b.id));
     state.boxCounts = (state.boxCounts||[]).map(b=>ids.has(b.id) ? {...b, ackedByAdmin:true} : b);

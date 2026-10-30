@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030113734">
+<meta name="app-build" content="20261030114216">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7616,6 +7616,16 @@ let _lastEnterPage = null;
 let _lastOpenModal = null;
 let _lastAdminBroadcastId = null;
 function render(){
+  // Any re-render while Team Chat is open rebuilds #chat-messages from scratch, which resets its
+  // scroll to the top -- not just from chat's own actions (renderKeepChatScroll already covered
+  // those) but from anything else that happens to call render() while chat is the open page: the
+  // Dally toggle, a notes panel, the notification bell, a realtime update on an unrelated page's
+  // data. Capturing and restoring scroll position here, unconditionally, covers all of those at
+  // once instead of chasing every call site that might trigger one. Null on a fresh arrival at
+  // the chat page (the element doesn't exist yet) -- renderInner()'s own freshPage check handles
+  // that first-arrival scroll-to-bottom instead.
+  const chatEl = state.page==='chat' ? document.getElementById('chat-messages') : null;
+  const chatScroll = chatEl ? chatEl.scrollTop : null;
   const openForm = document.querySelector('.modal, .drawer');
   if(openForm){
     const formSnapshot = captureOpenFormFields(openForm);
@@ -7625,6 +7635,10 @@ function render(){
     const focusSnapshot = captureFocusedInput();
     renderInner();
     restoreFocusedInput(focusSnapshot);
+  }
+  if(chatScroll!==null){
+    const newChatEl = document.getElementById('chat-messages');
+    if(newChatEl) newChatEl.scrollTop = chatScroll;
   }
 }
 // Renders normally, unless the user currently has a text field focused inside an open modal or

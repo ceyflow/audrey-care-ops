@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030055138">
+<meta name="app-build" content="20261030060219">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1590,28 +1590,50 @@ try{
 <script>
 /* Boot sound: "Rising Sweep" -- picked from the 10-sample sound gallery. Synthesized with Web
    Audio (no audio file), mobile-only since a desktop login is rarely a cold first visit the same
-   way, and attempted immediately -- browsers that block autoplay-without-a-gesture just leave it
-   silent, which is fine; there's no fallback UI, this is a nice-to-have not a notification. */
+   way. Tried immediately on load first (works on its own once a browser trusts the site enough
+   from repeat visits); if that's blocked -- the normal case for a fresh PWA launch from the home
+   screen, since the OS-level tap on the icon never reaches the page as a gesture -- it fires on
+   the very first touch/click anywhere on screen instead, so it still plays right away rather than
+   never at all. */
 try{
   if(window.matchMedia && window.matchMedia('(max-width:760px)').matches){
     var AC = window.AudioContext || window.webkitAudioContext;
     if(AC){
       var bootCtx = new AC();
-      try{
-        if(bootCtx.state === 'suspended') bootCtx.resume().catch(function(){});
-        var bt = bootCtx.currentTime + 0.02;
-        var bootOsc = bootCtx.createOscillator();
-        bootOsc.type = 'sine';
-        bootOsc.frequency.setValueAtTime(300, bt);
-        bootOsc.frequency.exponentialRampToValueAtTime(900, bt + 0.5);
-        var bootGain = bootCtx.createGain();
-        bootGain.gain.setValueAtTime(0, bt);
-        bootGain.gain.linearRampToValueAtTime(0.1, bt + 0.1);
-        bootGain.gain.linearRampToValueAtTime(0.07, bt + 0.3);
-        bootGain.gain.exponentialRampToValueAtTime(0.0001, bt + 0.5);
-        bootOsc.connect(bootGain); bootGain.connect(bootCtx.destination);
-        bootOsc.start(bt); bootOsc.stop(bt + 0.55);
-      }catch(e){}
+      var bootPlayed = false;
+      var playBootSound = function(){
+        if(bootPlayed) return;
+        bootPlayed = true;
+        try{
+          var bt = bootCtx.currentTime + 0.02;
+          var bootOsc = bootCtx.createOscillator();
+          bootOsc.type = 'sine';
+          bootOsc.frequency.setValueAtTime(300, bt);
+          bootOsc.frequency.exponentialRampToValueAtTime(900, bt + 0.5);
+          var bootGain = bootCtx.createGain();
+          bootGain.gain.setValueAtTime(0, bt);
+          bootGain.gain.linearRampToValueAtTime(0.1, bt + 0.1);
+          bootGain.gain.linearRampToValueAtTime(0.07, bt + 0.3);
+          bootGain.gain.exponentialRampToValueAtTime(0.0001, bt + 0.5);
+          bootOsc.connect(bootGain); bootGain.connect(bootCtx.destination);
+          bootOsc.start(bt); bootOsc.stop(bt + 0.55);
+        }catch(e){}
+      };
+      if(bootCtx.state === 'suspended'){
+        bootCtx.resume().then(playBootSound).catch(function(){});
+      }else{
+        playBootSound();
+      }
+      var unlockBootSound = function(){
+        document.removeEventListener('touchstart', unlockBootSound, true);
+        document.removeEventListener('pointerdown', unlockBootSound, true);
+        document.removeEventListener('click', unlockBootSound, true);
+        if(bootPlayed) return;
+        bootCtx.resume().then(playBootSound).catch(function(){});
+      };
+      document.addEventListener('touchstart', unlockBootSound, true);
+      document.addEventListener('pointerdown', unlockBootSound, true);
+      document.addEventListener('click', unlockBootSound, true);
     }
   }
 }catch(e){}

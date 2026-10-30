@@ -63,7 +63,15 @@ html{ visibility:hidden; }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:#fff;
+    /* Glassmorphism shell: a soft layered gradient (tinted by whatever accent color this
+       workspace's palette picked, via --accent-rgb) for the sidebar/topbar/panels to blur
+       against -- a flat background defeats the point of a frosted-glass surface. */
+    background:
+      radial-gradient(1200px 620px at 6% -10%, rgba(var(--accent-rgb),.38), transparent 62%),
+      radial-gradient(1000px 600px at 102% 6%, rgba(var(--accent-rgb),.22), transparent 58%),
+      radial-gradient(900px 500px at 40% 110%, rgba(var(--accent-rgb),.16), transparent 60%),
+      linear-gradient(180deg, #FFFFFF 0%, var(--bg) 100%);
+    background-attachment:fixed;
     color:var(--ink);
     font-family:'Inter',system-ui,sans-serif;
     font-size:14px;
@@ -80,15 +88,17 @@ html{ visibility:hidden; }
   @keyframes shell-enter{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   .sidebar{
     width:var(--sidebar-w);flex-shrink:0;
-    background:var(--sidebar-bg);
-    border-right:1px solid var(--border);
+    background:rgba(255,255,255,.38);
+    backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%);
+    border-right:1px solid rgba(255,255,255,.5);
+    box-shadow:4px 0 28px rgba(20,40,30,.06);
     display:flex;flex-direction:column;
     position:fixed;top:0;bottom:0;left:0;
     overflow-y:auto;
     z-index:40;transition:transform .2s ease;
   }
   .sidebar-backdrop{display:none;}
-  .sidebar .brand{padding:22px 20px 16px;border-bottom:1px solid var(--border);}
+  .sidebar .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.5);}
   .sidebar .brand .wordmark{font-size:21px;color:var(--accent-dark);}
   .sidebar .brand .brand-logo{display:block;height:44px;width:auto;object-fit:contain;}
   .sidebar .brand .tagline{display:block;font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.01em;}
@@ -163,11 +173,14 @@ html{ visibility:hidden; }
 
   .btn svg{width:14px;height:14px;transition:transform .2s ease;vertical-align:-2px;margin-right:4px;}
   .btn:hover svg{animation:icon-pop .38s ease;}
-  .sidebar-foot{margin-top:auto;padding:16px 20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);}
+  .sidebar-foot{margin-top:auto;padding:16px 20px;font-size:11px;color:var(--muted);border-top:1px solid rgba(255,255,255,.5);}
 
   .main{flex:1;display:flex;flex-direction:column;min-width:0;margin-left:var(--sidebar-w);}
   .topbar{
-    background:var(--accent-soft);border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.35);
+    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    border-bottom:1px solid rgba(255,255,255,.5);
+    box-shadow:0 8px 24px rgba(20,40,30,.05);
     padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
     gap:12px;position:sticky;top:0;z-index:20;flex-wrap:wrap;
   }
@@ -179,7 +192,7 @@ html{ visibility:hidden; }
   /* display:contents on desktop/tablet: these two groupings are invisible to layout there (same
      flat row of items as always) and only turn into real two-row blocks at phone width, below. */
   .header-right-top, .header-right-links{display:contents;}
-  .session-chip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
+  .session-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
   .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
   .topbar-icon-btn{position:relative;}
   /* Team chat has its own full sidebar entry on desktop/tablet — this shortcut is only there
@@ -239,15 +252,27 @@ html{ visibility:hidden; }
 
   /* ---------------- Stat cards ---------------- */
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:0 1px 2px rgba(20,25,20,.04), 0 8px 20px rgba(20,25,20,.05);transition:transform .18s ease,box-shadow .18s ease;}
-  .stat-card:hover{box-shadow:0 10px 22px rgba(20,25,20,.08);}
+  .stat-card{
+    background:rgba(255,255,255,.4);
+    backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%);
+    border:1px solid rgba(255,255,255,.65);border-radius:var(--radius);padding:16px 18px;
+    box-shadow:0 1px 1px rgba(255,255,255,.8) inset, 0 10px 28px rgba(20,40,30,.08);
+    transition:transform .18s ease,box-shadow .18s ease;
+  }
+  .stat-card:hover{box-shadow:0 1px 1px rgba(255,255,255,.7) inset, 0 14px 32px rgba(20,40,30,.1);}
   .stat-card .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
   .stat-card .value{font-size:24px;font-weight:600;}
   .stat-card .value.accent{color:var(--accent-dark);}
   .stat-card .value.danger{color:var(--danger);}
 
-  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;overflow-y:hidden;margin-bottom:20px;-webkit-overflow-scrolling:touch;}
-  .panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .panel{
+    background:rgba(255,255,255,.4);
+    backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%);
+    border:1px solid rgba(255,255,255,.65);border-radius:var(--radius);
+    box-shadow:0 10px 32px rgba(20,40,30,.07);
+    overflow-x:auto;overflow-y:hidden;margin-bottom:20px;-webkit-overflow-scrolling:touch;
+  }
+  .panel-head{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
   .panel-head h3{margin:0;font-size:14.5px;font-weight:600;}
   .panel-body{padding:16px 18px;}
 
@@ -444,8 +469,15 @@ html{ visibility:hidden; }
      on phones; desktop keeps the pill-style card above. */
   @media (max-width:760px){
     .landing-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
-    .landing-card{flex-direction:column;align-items:center;gap:8px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:16px 6px;font-size:11px;text-align:center;}
-    .landing-card:hover{box-shadow:0 8px 20px rgba(20,25,20,.08);}
+    .landing-card{
+      flex-direction:column;align-items:center;gap:8px;
+      background:rgba(255,255,255,.6);
+      backdrop-filter:blur(14px) saturate(150%); -webkit-backdrop-filter:blur(14px) saturate(150%);
+      color:var(--ink);border:1px solid rgba(255,255,255,.65);border-radius:14px;padding:16px 6px;
+      font-size:11px;text-align:center;
+      box-shadow:0 1px 1px rgba(255,255,255,.7) inset, 0 8px 22px rgba(20,40,30,.08);
+    }
+    .landing-card:hover{box-shadow:0 1px 1px rgba(255,255,255,.7) inset, 0 12px 26px rgba(20,40,30,.1);}
     .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(20,25,20,.12);}
     .landing-card-icon{width:40px;height:40px;border-radius:12px;}
     .landing-card-icon i{width:21px !important;height:21px !important;}

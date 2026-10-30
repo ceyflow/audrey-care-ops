@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030113104">
+<meta name="app-build" content="20261030113734">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7661,7 +7661,14 @@ function renderInner(){
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
-  if(freshPage){ animateStatCards(); animatePipelineDonut(); }
+  if(freshPage){
+    animateStatCards(); animatePipelineDonut();
+    // A fresh render (page refresh, or navigating in) leaves #chat-messages at its default
+    // scroll position (top, oldest message) -- jump straight to the latest message instead,
+    // same as every other chat app. renderKeepChatScroll handles in-page actions (like/edit/
+    // quote) already; this covers the one case it doesn't: arriving at the page in the first place.
+    if(state.page==='chat') scrollChatToBottom();
+  }
 }
 
 /* ===================== Customer order tracker ===================== */

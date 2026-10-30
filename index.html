@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030165234">
+<meta name="app-build" content="20261030175322">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2106,6 +2106,15 @@ async function kvGetAuthWithRetry(attempts=3){
 // see the "recentlySavedByUs" guard where this is read.
 let _recentSaveAt = {};
 async function kvSet(key, value){
+  // state[key] can be undefined for a key that was never loaded (e.g. a DEFERRED_KEY whose page
+  // was never opened this session). mergeBeforeSave's fallback returns state[key] as-is whenever
+  // it isn't a mergeable record array, undefined included — and an undefined value here used to
+  // reach supabase-js's upsert() as a JS object with value:undefined, which JSON.stringify drops
+  // from the request body entirely; PostgREST then fills the missing column with SQL NULL,
+  // tripping app_data.value's NOT NULL constraint (confirmed via postgres_logs: sql_state_code
+  // 23502, two rejected writes from a real admin session). Caught here instead of risking a
+  // provider/column that DOES allow null silently wiping the row's real value.
+  if(value===undefined){ console.error('kvSet '+key+': refusing to save undefined'); return false; }
   _recentSaveAt[key] = Date.now();
   // Snapshot synchronously, before the first await. A few callers fire this off without
   // awaiting it (e.g. loadAll()'s one-time seed saves) and keep mutating the SAME array/object
@@ -12858,6 +12867,7 @@ async function runAddSecureAccount(){
       // actually landed is exactly how an account change looks "saved" but silently isn't.
       if(!(await saveAuth())) return;
       state._addAcctForm = null;
+      logActivity(`Added account "${f.name.trim()}" (role: ${f.role}, reused existing login)`);
       showToast(`${f.name.trim()} already had a login — reused it, reset the password to what you typed, and added them back to the list`);
       render();
       return;
@@ -12869,6 +12879,7 @@ async function runAddSecureAccount(){
   }]};
   if(!(await saveAuth())) return;
   state._addAcctForm = null;
+  logActivity(`Added account "${f.name.trim()}" (role: ${f.role})`);
   showToast(f.name.trim()+' can now sign in');
   render();
 }
@@ -12953,6 +12964,7 @@ function removeSecureAccount(name){
     onConfirm: async ()=>{
       state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).filter(r=>r.name!==name)};
       if(!(await saveAuth())) return;
+      logActivity(`Removed account "${name}"`);
       showToast(name+' removed');
     },
   });
@@ -12997,6 +13009,7 @@ async function submitEditSecureAccount(e){
   const role = f.role.value;
   const fullName = f.fullName.value.trim();
   const extraPages = [...f.querySelectorAll('[data-extra-page]')].filter(cb=>cb.checked).map(cb=>cb.dataset.extraPage);
+  const before = (state.auth.secureAccounts||[]).find(r=>r.name===name);
   state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role, fullName, extraPages}:r)};
   // saveAuth() already shows its own "Could not save account changes" toast and retries twice —
   // closing the modal and claiming "Access level updated" regardless of whether it actually
@@ -13009,6 +13022,10 @@ async function submitEditSecureAccount(e){
   const syncRes = await syncUserDataAccess(name);
   state._editSecureAccountName = null;
   closeModal();
+  const changes = [];
+  if(before && before.role!==role) changes.push(`role ${before.role} → ${role}`);
+  if(before && (before.fullName||'')!==fullName) changes.push(`Employer code "${before.fullName||''}" → "${fullName}"`);
+  logActivity(`Edited account "${name}"${changes.length ? ' (' + changes.join('; ') + ')' : ''}`);
   if(syncRes && syncRes.ok) showToast('Access level updated');
   else showToast('Account saved, but pushing extra access failed (' + (syncRes && syncRes.error || 'unknown error') + ') — try Save again');
 }
@@ -13168,11 +13185,33 @@ async function runSecureAccountsMigration(){
   render();
   showToast(results.every(r=>r.ok) ? 'All accounts created — review, then Activate new login.' : 'Some accounts failed — fix and try again.');
 }
+// Was a blind replace: state.auth.secureAccounts = roster, built fresh from
+// buildMigrationRoster()'s hardcoded 5-row generic template (one row per legacy role, name=role)
+// -- correct the very first time this runs, when secureAccounts is empty, but destructive on any
+// later run: every real account's Employer code (fullName) and extraPages were stripped, and any
+// account added since the form was last opened was missing entirely, since the template has no
+// way to know about them. This screen is only meant to render once (renderSecureAccountsPanel
+// shows the real accounts table instead once migratedToSupabaseAuth is true) -- but "Turn off
+// (revert to the old login)" flips that flag back off, which brings this screen right back, so a
+// second run was always reachable, not just theoretical. Now merges into whatever's already
+// there by name instead: an existing account keeps every field it already had (Employer code,
+// extraPages, active status included), the generic template only fills in a row for a genuinely
+// new name.
 async function activateSecureAccounts(){
-  const roster = state._secureAcctForm.map(r=>({role:r.role, name:r.name}));
+  const existingByName = new Map((state.auth.secureAccounts||[]).map(a=>[a.name.toLowerCase(), a]));
+  const roster = state._secureAcctForm.map(r=>{
+    const existing = existingByName.get(r.name.toLowerCase());
+    return existing ? existing : {role:r.role, name:r.name};
+  });
+  // Anything already on the real roster but not in this form (e.g. added after the form was
+  // opened) stays — this only ever adds or preserves, never drops.
+  (state.auth.secureAccounts||[]).forEach(a=>{
+    if(!roster.some(r=>r.name.toLowerCase()===a.name.toLowerCase())) roster.push(a);
+  });
   state.auth = {...state.auth, migratedToSupabaseAuth:true, secureAccounts: roster};
   if(!(await saveAuth())) return;
   state._secureAcctForm = null; state._secureAcctResults = null;
+  logActivity(`Activated real logins (${roster.length} account(s) on the roster)`);
   showToast('New login is now active.');
   render();
 }
@@ -13183,6 +13222,7 @@ function rollbackSecureAccounts(){
     onConfirm: async ()=>{
       state.auth = {...state.auth, migratedToSupabaseAuth:false};
       if(!(await saveAuth())) return;
+      logActivity('Turned off real logins (reverted to the old role-password login)');
       showToast('Reverted to the old login.');
     },
   });

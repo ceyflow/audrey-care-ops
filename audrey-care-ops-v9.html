@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030112540">
+<meta name="app-build" content="20261030113104">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1803,7 +1803,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','chatTheme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -3062,7 +3062,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 13;
+const PAGE_DATA_KEYS_VERSION = 14;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -3084,7 +3084,7 @@ const PAGE_DATA_KEYS = {
   rnd: ['rndProjects','rndChemists','rndAttendance'],
   attendance: ['tempAttendance','attendanceEditRequests'],
   staff: ['staff','staffCategories'],
-  chat: ['chat','staff'],
+  chat: ['chat','chatTheme','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'],
   ratings: ['orders'],
   settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
@@ -4210,7 +4210,7 @@ let state = {
   chatMenuOpenId: null,
   chatQuoteId: null,
   chatEditId: null,
-  chatTheme: (()=>{ try{ return localStorage.getItem('audreyChatTheme') || 'rounded'; }catch(e){ return 'rounded'; } })(),
+  chatTheme: 'rounded',
   chatThemeMenuOpen: false,
   sidebarOpen: false,
   ordersView: 'kanban',
@@ -7106,12 +7106,15 @@ function renderKeepModalScroll(){
 function toggleChatMenu(id){ state.chatMenuOpenId = state.chatMenuOpenId===id ? null : id; renderKeepChatScroll(); }
 function closeChatMenu(){ if(state.chatMenuOpenId){ state.chatMenuOpenId = null; renderKeepChatScroll(); } }
 function toggleChatThemeMenu(){ state.chatThemeMenuOpen = !state.chatThemeMenuOpen; renderKeepChatScroll(); }
-function pickChatTheme(key){
-  if(!CHAT_THEMES[key]) return;
+// Admin-only, and shared: the picked theme saves to the same synced key everyone's chat page
+// reads from, so one Admin's pick changes what the whole team sees, not just this device.
+async function pickChatTheme(key){
+  if(!CHAT_THEMES[key] || !isAdmin()) return;
   state.chatTheme = key;
   state.chatThemeMenuOpen = false;
-  try{ localStorage.setItem('audreyChatTheme', key); }catch(e){}
   renderKeepChatScroll();
+  if(!(await save('chatTheme'))) return;
+  showToast('Chat theme updated for everyone');
 }
 async function toggleChatLike(id){
   const m = state.chat.find(x=>x.id===id); if(!m) return;

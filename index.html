@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030163331">
+<meta name="app-build" content="20261030165234">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4359,7 +4359,10 @@ let state = {
   selectedRatings: new Set(),
   filters: { complaintStatus: 'Open', complaintCustomerFilter:'', complaintReasonFilter:'', complaintPriorityFilter:'', customerSearch:'', customerPhoneFilter:'', customerSalesman:'', customerType:'', customerStatus:'', supplierSearch:'', supplierVendorIdFilter:'', supplierStatus:'', orderInquirySearch:'', orderInquiryOrderNoFilter:'', orderInquirySalesman:'', orderInquiryDeliveryStatus:'', ratingsCustomerFilter:'', ratingsOrderNoFilter:'', ratingsStarFilter:'', bulkSmsCustomerSearch:'', activityLogSearch:'', activityLogDate:'', activityLogUser:'', gmpChecklistId: null, gmpChecklistPeriod: null, gmpChecklistView: 'grid', rndView: 'board', rndOutcomeKind: null },
   trackMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='track',
-  trackQuery: '', trackedOrderId: null, trackError: '',
+  // _publicOrder (not state.orders -- an anonymous customer can never read that key; see
+  // track_order()/submit_order_rating() below) holds the one order object the public track
+  // page is allowed to see, fetched via a SECURITY DEFINER RPC that looks it up server-side.
+  trackQuery: '', trackedOrderId: null, trackError: '', _publicOrder: null,
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
   complaintMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='complaint',
   publicComplaintId: null, publicComplaintError: '',
@@ -4912,10 +4915,15 @@ async function loadAll(){
     }).catch(e=>console.error('expired photo sweep failed', e));
   }
   if(state.trackMode && _trackRequestedId){
-    const found = byId(state.orders, _trackRequestedId) ||
-      state.orders.find(o=>(o.orderNumber||'').toLowerCase()===_trackRequestedId.toLowerCase());
-    if(found){ state.trackedOrderId = found.id; }
-    else { state.trackError = "We couldn't find an order with that link — check with the shop."; }
+    try{
+      const { data, error } = await supabaseClient.rpc('track_order', {p_query: _trackRequestedId});
+      if(error) throw error;
+      if(data){ state._publicOrder = data; state.trackedOrderId = data.id; }
+      else { state.trackError = "We couldn't find an order with that link — check with the shop."; }
+    }catch(e){
+      console.error('track_order RPC failed', e);
+      state.trackError = "We couldn't find an order with that link — check with the shop.";
+    }
   }
   if(state.complaintMode && _complaintRequestedId){
     const found = byId(state.complaints, _complaintRequestedId);
@@ -4999,7 +5007,7 @@ async function loadAll(){
   }, 30*60*1000);
 }
 function pollCitypakTrackingIfActive(){
-  const o = state.trackedOrderId ? byId(state.orders, state.trackedOrderId) : null;
+  const o = state._publicOrder;
   if(!o || o.courierService!=='CityPak' || !o.courierNumber || o.stage<3 || !CITYPAK_CONFIGURED) return;
   const cached = state._citypakTracking && state._citypakTracking[o.courierNumber];
   if(cached && cached.ok && cached.data && cached.data.is_delivered) return;
@@ -7816,24 +7824,27 @@ function renderInner(){
 
 /* ===================== Customer order tracker ===================== */
 function enterTrackMode(e){ if(e) e.preventDefault(); history.replaceState(null,'','#track'); state.trackMode = true; render(); }
-function submitTrack(e){
+async function submitTrack(e){
   e.preventDefault();
   const raw = (e.target.trackQuery.value||'').trim();
   state.trackQuery = raw;
-  if(!raw){ state.trackError = 'Enter your order number or phone number.'; state.trackedOrderId = null; render(); return; }
-  const norm = raw.toLowerCase().replace(/\s+/g,'');
-  const digits = raw.replace(/\D/g,'');
-  const match = state.orders.find(o=>{
-    const idMatch = (o.id||'').toLowerCase()===norm || (o.orderNumber||'').toLowerCase()===norm;
-    const phoneMatch = digits.length>=6 && (o.phone||'').replace(/\D/g,'').endsWith(digits);
-    return idMatch || phoneMatch;
-  });
-  if(match){ state.trackedOrderId = match.id; state.trackError=''; }
-  else { state.trackedOrderId = null; state.trackError = "We couldn't find an order with that — double check and try again."; }
+  if(!raw){ state.trackError = 'Enter your order number or phone number.'; state.trackedOrderId = null; state._publicOrder = null; render(); return; }
+  // Same RPC the direct-link path in loadAll() uses — an anonymous visitor can't search
+  // state.orders client-side, since RLS never lets them read that key at all.
+  try{
+    const { data, error } = await supabaseClient.rpc('track_order', {p_query: raw});
+    if(error) throw error;
+    if(data){ state._publicOrder = data; state.trackedOrderId = data.id; state.trackError=''; }
+    else { state.trackedOrderId = null; state._publicOrder = null; state.trackError = "We couldn't find an order with that — double check and try again."; }
+  }catch(err){
+    console.error('track_order RPC failed', err);
+    state.trackedOrderId = null; state._publicOrder = null;
+    state.trackError = "Something went wrong — please try again.";
+  }
   render();
 }
 function renderTrackPage(){
-  const o = state.trackedOrderId ? byId(state.orders, state.trackedOrderId) : null;
+  const o = state._publicOrder;
   const logo = trackPageLogo();
   return `
   <div class="track-page">
@@ -7915,18 +7926,25 @@ function renderRatingBlock(o){
   </div>`;
 }
 async function submitCustomerRating(orderId, value, feedback){
-  const o = byId(state.orders, orderId);
-  if(!o || o.customerRating) return;
-  o.customerRating = value;
-  o.customerRatingAt = new Date().toISOString();
-  if(feedback) o.customerRatingFeedback = feedback;
-  await save('orders');
+  const o = state._publicOrder;
+  if(!o || o.id!==orderId || o.customerRating) return;
+  // Scoped RPC, same reason as track_order() above: an anonymous customer can't read or write
+  // state.orders directly, and even if they could, a plain save('orders') would require the
+  // whole array round-tripping through a browser that was never allowed to see the rest of it.
+  try{
+    const { data: ok, error } = await supabaseClient.rpc('submit_order_rating', {p_order_id: orderId, p_value: value, p_feedback: feedback||null});
+    if(error) throw error;
+    if(!ok){ render(); return; }
+    o.customerRating = value;
+    o.customerRatingAt = new Date().toISOString();
+    if(feedback) o.customerRatingFeedback = feedback;
+  }catch(e){ console.error('submit_order_rating RPC failed', e); }
   render();
 }
 function attachTrackHandlers(){
   const el = id=>document.getElementById(id);
   if(el('form-track')) el('form-track').addEventListener('submit', submitTrack);
-  const o = state.trackedOrderId ? byId(state.orders, state.trackedOrderId) : null;
+  const o = state._publicOrder;
   if(o && o.courierService==='CityPak' && o.courierNumber && o.stage>=3 && CITYPAK_CONFIGURED){
     ensureCitypakTracking(o.courierNumber);
   }

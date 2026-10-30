@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030162809">
+<meta name="app-build" content="20261030163331">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9750,7 +9750,7 @@ function renderDashboard(){
     <div class="panel-head"><h3>Recent orders</h3>${pageAllowed('orders') ? `<button class="btn btn-sm" id="dash-view-orders">View board</button>` : ''}</div>
     <div class="panel-body">
       ${total===0 ? `<div class="empty-state">Nothing to show yet.</div>` : `
-      ${state.orders.slice(0,5).map((o,i,arr)=>{
+      ${[...state.orders].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5).map((o,i,arr)=>{
         const style = STAGE_STYLE[STAGE_KEYS[o.stage]];
         return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;${i<arr.length-1?'border-bottom:1px solid var(--border);':''}">
           <div>

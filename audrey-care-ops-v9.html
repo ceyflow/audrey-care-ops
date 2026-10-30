@@ -10103,7 +10103,6 @@ function renderRndPage(){
   const completedProjects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1);
   const successCount = completedProjects.filter(p=>p.outcome==='success').length;
   const quarantinedCount = completedProjects.filter(p=>p.outcome==='quarantined').length;
-  const unsetCount = completedProjects.filter(p=>!p.outcome).length;
   return `
   <div class="rnd-toolbar-desktop">
   <div class="toolbar" style="flex-wrap:wrap;">
@@ -10117,7 +10116,6 @@ function renderRndPage(){
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
         <button type="button" class="rnd-outcome-label rnd-outcome-success" data-rnd-outcome-view="success">✓ Success · ${successCount}</button>
         <button type="button" class="rnd-outcome-label rnd-outcome-quarantined" data-rnd-outcome-view="quarantined">⚠ Quarantined · ${quarantinedCount}</button>
-        ${unsetCount>0 ? `<button type="button" class="rnd-outcome-label" data-rnd-outcome-view="unset">Not set · ${unsetCount}</button>` : ''}
         ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd">+ Add product</button>` : ''}
       </div>`}
   </div>
@@ -10140,10 +10138,6 @@ function renderRndPage(){
       <button type="button" class="rnd-stat-tile rnd-stat-tile-quarantined" data-rnd-outcome-view="quarantined">
         <span class="rnd-stat-tile-num">${quarantinedCount}</span><span class="rnd-stat-tile-label">⚠ Quarantined</span>
       </button>
-      ${unsetCount>0 ? `
-      <button type="button" class="rnd-stat-tile" data-rnd-outcome-view="unset">
-        <span class="rnd-stat-tile-num">${unsetCount}</span><span class="rnd-stat-tile-label">Not set</span>
-      </button>` : ''}
     </div>` : ''}
   </div>
   ${view==='chemists' ? renderRndChemistsTab()

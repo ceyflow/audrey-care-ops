@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261029205524">
+<meta name="app-build" content="20261030050112">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3113,6 +3113,37 @@ async function syncAllRoleDataAccess(){
   try{ return await _roleDataAccessSyncInFlight; }
   finally{ _roleDataAccessSyncInFlight = null; }
 }
+// Mirrors syncRoleDataAccess, but for one ACCOUNT's individually-granted extra pages
+// (secureAccounts[].extraPages, set from editSecureAccountModal's "Extra access" checklist)
+// rather than a whole role. The database can only ever check a logged-in session against its
+// real profiles.id (see user_data_access's RLS policy) -- never a display name -- so this has to
+// resolve that id first. Admin sessions can read every profiles row (not just their own) per the
+// "admin read all profiles" policy added alongside user_data_access, specifically so this lookup
+// works. Grants to every profiles row under that staff_name, not just one: an account that's
+// changed role/re-signed-up in the past can leave more than one profiles row sharing the same
+// display name, and there's no reliable way from here to tell which one is this person's current
+// login -- granting all of them is harmless (an orphaned old row with nobody able to sign into it
+// grants nothing to anyone) and guarantees whichever one IS still in use gets it.
+async function syncUserDataAccess(name){
+  if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
+  const acct = (state.auth.secureAccounts||[]).find(a=>a.name===name);
+  const extraPages = (acct && acct.extraPages) || [];
+  const { data: profRows, error: profErr } = await supabaseClient.from('profiles').select('id').eq('staff_name', name);
+  if(profErr) return {ok:false, error: profErr.message};
+  if(!profRows || !profRows.length) return {ok:true}; // never signed in yet — nothing to grant until a profiles row exists; re-synced the next time this account is saved
+  const keys = new Set();
+  extraPages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
+  const keyList = [...keys];
+  for(const row of profRows){
+    const del = await supabaseClient.from('user_data_access').delete().eq('user_id', row.id);
+    if(del.error) return {ok:false, error: del.error.message};
+    if(keyList.length){
+      const ins = await supabaseClient.from('user_data_access').insert(keyList.map(k=>({user_id: row.id, data_key:k})));
+      if(ins.error) return {ok:false, error: ins.error.message};
+    }
+  }
+  return {ok:true};
+}
 // 'sections' (the mobile Sections grid) is a virtual home screen, not a permission -- every
 // logged-in session can reach it regardless of role, same as every role already gets its own
 // (possibly empty) grid of whatever pages it's actually assigned.
@@ -3120,11 +3151,26 @@ async function syncAllRoleDataAccess(){
 // to 'Attendance') isn't a real assignable page in any role's pages list -- it rides along with
 // whatever role already has 'attendance' (the check-in page), so no Admin needs to go update
 // every role in Settings just to turn this on.
+// The current session's own effective page list: its role's pages, plus any individual extra
+// pages an Admin granted just this ONE account (Settings -> User account setup's "Extra access"
+// checklist, see editSecureAccountModal) on top of whatever role it shares with others. Reads
+// secureAccounts fresh each call rather than caching onto state.session at login, so a grant an
+// Admin adds while this person is already signed in elsewhere takes effect on their next render,
+// not just their next login. pagesForRole(role) alone stays purely role-based everywhere else
+// (Settings -> User roles, the Mobile view picker's default, etc.) -- only call sites asking
+// "what can THIS browser's own signed-in session reach" should use this instead.
+function mySessionPages(){
+  if(!state.session) return [];
+  const rolePages = pagesForRole(state.session.role);
+  const acct = (state.auth.secureAccounts||[]).find(a=>a.name===state.session.name);
+  const extra = (acct && Array.isArray(acct.extraPages)) ? acct.extraPages : [];
+  return extra.length ? [...new Set([...rolePages, ...extra])] : rolePages;
+}
 function pageAllowed(page){
   if(!state.session) return false;
   if(page==='sections') return true;
-  if(page==='myattendance') return pagesForRole(state.session.role).includes('attendance');
-  return pagesForRole(state.session.role).includes(page);
+  if(page==='myattendance') return mySessionPages().includes('attendance');
+  return mySessionPages().includes(page);
 }
 const NEXT_ACTION_LABEL = {0:'Start processing',1:'Move to invoicing & checking',2:'Mark picked up by delivery'};
 const DEFAULT_COMPLAINT_CATEGORIES = ['Product quality issue','Delivery delay','Billing issue','Delivery damage','Product Damage','Wrong product','Other'];
@@ -7538,7 +7584,7 @@ function renderInner(){
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
   if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
-  if(!pageAllowed(state.page)){ state.page = (pagesForRole(state.session.role)||['dashboard'])[0] || 'dashboard'; }
+  if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.
   if(state.modal==='brandcrop' && document.getElementById('crop-frame')) return;
@@ -8135,7 +8181,7 @@ function roleMobileSections(role){
   return null;
 }
 function renderSectionsGridPage(){
-  const allowed = pagesForRole(state.session.role);
+  const allowed = mySessionPages();
   const picked = roleMobileSections(state.session.role);
   const navGroups = navGroupsFor(allowed);
   const items = navGroups.flatMap(g=>g.items).filter(it=>!picked || picked.includes(it.id));
@@ -9174,7 +9220,7 @@ function roleSignOffMinutes(roleName){
 
 function renderShell(freshPage){
   const meta = PAGE_META[state.page];
-  const allowed = pagesForRole(state.session.role);
+  const allowed = mySessionPages();
   const navGroups = navGroupsFor(allowed);
   const mobileTabs = mobileTabItemsFor(navGroups);
   const justLoggedIn = !!state._justLoggedIn;
@@ -12672,6 +12718,15 @@ function editSecureAccountModal(){
         <div class="field"><label>Access level</label>
           <select name="role">${[...new Set([current.role, ...secureAccountRoleNames()])].map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>
+        <div class="field">
+          <label>Extra access <span class="hint">(beyond what their Access level already grants — only this one account, nobody else sharing that role)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+            ${ASSIGNABLE_ROLE_PAGES.map(id=>`
+            <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
+              <input type="checkbox" class="toggle-input" data-extra-page="${id}" ${(current.extraPages||[]).includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
+            </label>`).join('')}
+          </div>
+        </div>
         <div class="hint" style="margin:4px 0 10px;">Password isn't shown or changeable here — each person changes their own from "Change password" next to Log out.</div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
@@ -12687,15 +12742,21 @@ async function submitEditSecureAccount(e){
   const f = e.target;
   const role = f.role.value;
   const fullName = f.fullName.value.trim();
-  state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role, fullName}:r)};
+  const extraPages = [...f.querySelectorAll('[data-extra-page]')].filter(cb=>cb.checked).map(cb=>cb.dataset.extraPage);
+  state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role, fullName, extraPages}:r)};
   // saveAuth() already shows its own "Could not save account changes" toast and retries twice —
   // closing the modal and claiming "Access level updated" regardless of whether it actually
   // landed is exactly how an Employer code / Access level edit looks saved but silently isn't,
   // with the edit form itself then gone so there's nothing left open to just retry.
   if(!(await saveAuth())) return;
+  // Same reasoning as the role-save flow's own syncAllRoleDataAccess await below: a silent
+  // database-side failure here would leave the checklist looking saved while user_data_access
+  // never actually got the new grant, so Extra access would look checked but just not work.
+  const syncRes = await syncUserDataAccess(name);
   state._editSecureAccountName = null;
   closeModal();
-  showToast('Access level updated');
+  if(syncRes && syncRes.ok) showToast('Access level updated');
+  else showToast('Account saved, but pushing extra access failed (' + (syncRes && syncRes.error || 'unknown error') + ') — try Save again');
 }
 // Settings → User roles: Admin-defined access levels (name, description, active/inactive, and
 // exactly which pages each one can open) — replaces the old fixed role list. These names also
@@ -15151,7 +15212,7 @@ function renderChatPage(){
   // hardcoded '#dashboard' would strand anyone whose role doesn't have the Dashboard tab (most
   // non-Admin roles don't). This is the same "first allowed page" fallback used everywhere else
   // a role's own page list needs a safe default.
-  const chatBackTarget = (pagesForRole(state.session.role)||[])[0] || 'dashboard';
+  const chatBackTarget = (mySessionPages()||[])[0] || 'dashboard';
   return `
   <div class="panel chat-panel-mobile" style="display:flex;flex-direction:column;height:calc(100vh - 190px);margin-bottom:0;">
     <div class="chat-mobile-toolbar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 18px 0;position:relative;">

@@ -275,6 +275,33 @@ html{ visibility:hidden; }
   .panel-head{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
   .panel-head h3{margin:0;font-size:14.5px;font-weight:600;}
   .panel-body{padding:16px 18px;}
+  /* Liquid Glass, mobile: every page's actual content is built from .panel/.stat-card (tables,
+     KPI tiles) and .card (kanban board cards on Orders/Packing/Blending/R&D) -- boosting these
+     three on mobile is what makes the redesign reach every section, not just Dashboard, without
+     touching each page individually. .panel skips the diagonal ::before sheen the other glass
+     surfaces use: it scrolls horizontally for wide tables, and a sheen layer would scroll along
+     with that content instead of staying fixed to the panel's own edge -- the saturated blur and
+     bright top inset edge alone still read as glass without that extra layer. */
+  @media (max-width:760px){
+    .panel{
+      background:linear-gradient(170deg, rgba(255,255,255,.5), rgba(255,255,255,.24));
+      backdrop-filter:blur(20px) saturate(220%); -webkit-backdrop-filter:blur(20px) saturate(220%);
+      border:1px solid rgba(255,255,255,.6);border-radius:20px;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9), 0 12px 30px rgba(31,55,90,.1);
+    }
+    .stat-card{
+      background:linear-gradient(160deg, rgba(255,255,255,.55), rgba(255,255,255,.24));
+      backdrop-filter:blur(20px) saturate(220%); -webkit-backdrop-filter:blur(20px) saturate(220%);
+      border:1px solid rgba(255,255,255,.62);border-radius:18px;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 26px rgba(31,55,90,.1);
+      position:relative;
+    }
+    .stat-card::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.5) 0%, transparent 35%, transparent 70%, rgba(255,255,255,.14) 100%);
+    }
+    .stat-card > *{position:relative;z-index:1;}
+  }
 
   .stage-breakdown{display:flex;flex-direction:column;gap:10px;}
   .sb-row{display:flex;align-items:center;gap:10px;font-size:13px;}
@@ -471,13 +498,21 @@ html{ visibility:hidden; }
     .landing-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
     .landing-card{
       flex-direction:column;align-items:center;gap:8px;
-      background:rgba(255,255,255,.6);
-      backdrop-filter:blur(14px) saturate(150%); -webkit-backdrop-filter:blur(14px) saturate(150%);
-      color:var(--ink);border:1px solid rgba(255,255,255,.65);border-radius:14px;padding:16px 6px;
+      background:linear-gradient(160deg, rgba(255,255,255,.62), rgba(255,255,255,.26));
+      backdrop-filter:blur(18px) saturate(220%); -webkit-backdrop-filter:blur(18px) saturate(220%);
+      color:var(--ink);border:1px solid rgba(255,255,255,.6);border-radius:20px;padding:16px 6px;
       font-size:11px;text-align:center;
-      box-shadow:0 1px 1px rgba(255,255,255,.7) inset, 0 8px 22px rgba(20,40,30,.08);
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 24px rgba(31,55,90,.1);
     }
-    .landing-card:hover{box-shadow:0 1px 1px rgba(255,255,255,.7) inset, 0 12px 26px rgba(20,40,30,.1);}
+    .landing-card::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.55) 0%, transparent 35%, transparent 70%, rgba(255,255,255,.15) 100%);
+    }
+    /* ::before is itself a positioned (z-index:auto) layer, which paints AFTER plain in-flow
+       content per stacking order -- without this, the sheen would sit on top of the icon/label
+       instead of behind them. Applies to every liquid-glass surface with the ::before trick. */
+    .landing-card > *{position:relative;z-index:1;}
+    .landing-card:hover{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 14px 30px rgba(31,55,90,.14);}
     .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(20,25,20,.12);}
     .landing-card-icon{width:40px;height:40px;border-radius:12px;}
     .landing-card-icon i{width:21px !important;height:21px !important;}
@@ -762,6 +797,22 @@ html{ visibility:hidden; }
   .card[data-order]{cursor:pointer;}
   .card:hover{border-color:var(--accent);box-shadow:0 10px 22px rgba(20,25,20,.1);}
   .card.dragging{opacity:.45;}
+  /* Liquid Glass, mobile: the kanban cards on Orders/Packing/Blending/R&D's mobile board view. */
+  @media (max-width:760px){
+    .card{
+      background:linear-gradient(160deg, rgba(255,255,255,.6), rgba(255,255,255,.3));
+      backdrop-filter:blur(16px) saturate(220%); -webkit-backdrop-filter:blur(16px) saturate(220%);
+      border:1px solid rgba(255,255,255,.65);border-radius:16px;padding:10px 12px;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 6px 18px rgba(31,55,90,.08);
+      position:relative;
+    }
+    .card::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.5) 0%, transparent 35%, transparent 70%, rgba(255,255,255,.14) 100%);
+    }
+    .card > *{position:relative;z-index:1;}
+    .card:hover{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 22px rgba(31,55,90,.12);}
+  }
   .column-body.drag-over{background:var(--accent-soft);border-radius:8px;}
   .nav-order-list{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
   .nav-order-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13.5px;font-weight:500;cursor:grab;transition:opacity .15s,border-color .15s;}
@@ -804,6 +855,18 @@ html{ visibility:hidden; }
   .dally-typing-dot:nth-child(3){animation-delay:.3s;}
   @keyframes dally-typing{0%,60%,100%{opacity:.3;transform:translateY(0);}30%{opacity:1;transform:translateY(-3px);}}
   .modal{background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.8);border-radius:16px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:24px;margin:auto;box-shadow:0 20px 60px rgba(20,40,25,.18),inset 0 1px 0 rgba(255,255,255,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:modal-pop .22s cubic-bezier(.16,.84,.44,1);}
+  /* Liquid Glass, mobile: a lighter touch than the nav/stat surfaces -- forms are dense with
+     text and inputs that need real contrast, so this stays mostly opaque, just enough
+     translucency + saturation to read as glass rather than flat white. No ::before sheen here
+     either, same overflow-scroll reason as .panel. */
+  @media (max-width:760px){
+    .modal{
+      background:linear-gradient(170deg, rgba(255,255,255,.92), rgba(255,255,255,.8));
+      backdrop-filter:blur(24px) saturate(200%); -webkit-backdrop-filter:blur(24px) saturate(200%);
+      border:1px solid rgba(255,255,255,.7);
+      box-shadow:0 20px 60px rgba(31,55,90,.16), inset 0 1.5px 0 rgba(255,255,255,.9);
+    }
+  }
   .admin-broadcast-overlay{position:fixed;inset:0;background:rgba(15,30,20,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:600;padding:20px;animation:toast-in .2s ease;}
   .admin-broadcast-panel{background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.8);border-radius:18px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:30px;box-shadow:0 30px 70px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:modal-pop .28s cubic-bezier(.16,.84,.44,1);}
   .admin-broadcast-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
@@ -1437,22 +1500,56 @@ html{ visibility:hidden; }
        drawer was reopened for, so it goes back to hidden here — one overflow menu, not two. */
     .menu-toggle{display:none !important;}
     main.page{padding-bottom:calc(86px + env(safe-area-inset-bottom)) !important;}
-    /* Picked from 10 header mockups: a gradient band behind the page title (no subtitle line —
-       "professional, better planned, no sub texts" was the ask), with the session row and the
-       account links as one elevated white card overlapping up into it. The card's own opaque
-       background is what makes the gradient look confined to a band above it — .topbar itself
-       is one gradient-filled box the whole time, the card just sits on top of the lower part. */
-    .topbar{flex-direction:column;align-items:stretch;gap:0;background:linear-gradient(120deg,var(--accent),#5B8EF0 55%,#7FA8F5);padding:20px 18px 26px;}
-    .topbar .page-title{color:#fff;font-size:20px;}
+    /* Liquid Glass needs real color behind it to refract -- the desktop body gradient (further
+       up) is deliberately subtle since its panels are mostly full-bleed; mobile's panels float
+       inset with visible gradient all around them, so it can afford (and needs) to be bolder. */
+    body{
+      background:
+        radial-gradient(640px 420px at 10% -6%, rgba(var(--accent-rgb),.55), transparent 60%),
+        radial-gradient(560px 420px at 100% 12%, rgba(167,133,230,.4), transparent 58%),
+        radial-gradient(620px 520px at 30% 100%, rgba(255,186,140,.35), transparent 60%),
+        linear-gradient(165deg, #EAF1FB 0%, #ECE9F6 45%, #FBEEE6 100%);
+      background-attachment:fixed;
+    }
+    /* Liquid Glass (picked sample): the page now sits on a vivid, saturated gradient (see body,
+       below) instead of a flat page color -- .topbar and .header-right float on top of it as two
+       translucent, blurred panels instead of one solid gradient-filled band. Both get the same
+       "sheen" treatment (a diagonal highlight via ::before) and a bright inset top edge to read
+       as curved glass catching light, not just a tinted rectangle. Dark text now that the band
+       itself is no longer a solid dark fill. */
+    .topbar{
+      flex-direction:column;align-items:stretch;gap:0;
+      background:linear-gradient(160deg, rgba(255,255,255,.55), rgba(255,255,255,.2));
+      -webkit-backdrop-filter:blur(22px) saturate(220%); backdrop-filter:blur(22px) saturate(220%);
+      border:1px solid rgba(255,255,255,.55);
+      border-radius:24px; margin:12px 12px 0;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9), 0 14px 32px rgba(31,55,90,.14);
+      padding:18px 18px 22px;
+      position:relative;
+    }
+    .topbar::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.5) 0%, transparent 32%, transparent 68%, rgba(255,255,255,.15) 100%);
+    }
+    .topbar .page-title{color:#1C2430;font-size:20px;position:relative;}
     .topbar .page-sub{display:none;}
     /* Flex-item margins never collapse, so this reserves real clearance below the title before
        the card's own -14px pulls it back up — without it the card overlapped the title's own
        line-height and clipped it (the card's margin-top assumed a gap that wasn't actually there). */
-    .topbar > div:first-child{margin-bottom:20px;}
-    /* Glassmorphism (sample 3): frosted, translucent over the gradient header instead of a solid
-       white card -- background-blend here is vendor-prefixed for Safari/iOS too, since this is
-       the one most likely to actually be viewed on an iPhone. */
-    .header-right{background:rgba(255,255,255,.6);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.65);border-radius:14px;box-shadow:0 8px 22px rgba(20,25,20,.14);margin-top:-14px;padding:13px 14px;}
+    .topbar > div:first-child{margin-bottom:20px;position:relative;}
+    .header-right{
+      background:linear-gradient(160deg, rgba(255,255,255,.62), rgba(255,255,255,.28));
+      -webkit-backdrop-filter:blur(20px) saturate(220%); backdrop-filter:blur(20px) saturate(220%);
+      border:1px solid rgba(255,255,255,.6);border-radius:18px;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 26px rgba(31,55,90,.14);
+      margin-top:-14px;padding:13px 14px;
+      position:relative;
+    }
+    .header-right::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.55) 0%, transparent 35%, transparent 70%, rgba(255,255,255,.15) 100%);
+    }
+    .header-right-top, .header-right-links{position:relative;}
     .header-right-top, .header-right-links{display:flex;align-items:center;flex-wrap:wrap;width:100%;}
     .header-right-top{gap:10px;}
     .header-right-links{gap:16px;margin-top:11px;}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031203855">
+<meta name="app-build" content="20261031211803">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2625,9 +2625,16 @@ async function importOutstandingCsv(file){
   const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
   if(!Array.isArray(state.outstandingRecipients)) state.outstandingRecipients = [];
   let updated = 0, added = 0, skipped = 0;
+  // A negative amount in the source file (a credit/overpayment) silently becomes positive once
+  // non-numeric characters — including the minus sign — are stripped below, since this list only
+  // ever tracks money owed. Flagging every row that had one rather than letting that flip happen
+  // quietly, so whoever imported the file notices and can double-check the source.
+  const overpaidRows = [];
   dataRows.forEach(r=>{
     const name = cell(r, nameIdx), phone = cell(r, phoneIdx);
-    const amount = Number(cell(r, amountIdx).replace(/[^0-9.]/g,'')) || 0;
+    const rawAmount = cell(r, amountIdx);
+    const amount = Number(rawAmount.replace(/[^0-9.]/g,'')) || 0;
+    if(/^-/.test(rawAmount.trim())) overpaidRows.push({name: name || phone || '(unnamed row)', amount});
     const dueDate = dateIdx>-1 ? parseFlexibleDate(cell(r, dateIdx)) : null;
     if(!name && !phone){ skipped++; return; }
     const nPhone = normPhone(phone), nName = normName(name);
@@ -2656,6 +2663,13 @@ async function importOutstandingCsv(file){
   if(added) notes.push(`${added} added for sending`);
   if(skipped) notes.push(`skipped ${skipped} with no name or phone`);
   showToast(notes.length ? `Imported — ${notes.join(', ')}` : 'Nothing to import', 8000);
+  if(overpaidRows.length){
+    const list = overpaidRows.map(o=>`${o.name} — imported as Rs. ${o.amount.toFixed(2)}`).join('\n');
+    openAlertModal({
+      title: 'Negative amount in this file',
+      message: `${overpaidRows.length} row${overpaidRows.length===1?'':'s'} had a negative amount (looks like an overpayment/credit) — this list only tracks money owed, so the minus sign was dropped and it was imported as a positive amount instead:\n\n${list}\n\nCheck your source file if that's not right.`,
+    });
+  }
 }
 function openBulkSmsTemplatesManager(){ state._bulkSmsTemplateForm = null; openModal('bulksmstemplates'); }
 function startNewBulkSmsTemplate(){ state._bulkSmsTemplateForm = {id:null, name:'', message:''}; render(); }
@@ -16936,7 +16950,7 @@ function alertInfoModal(){
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:380px;">
       <h2>${esc(c.title||'Notice')}</h2>
-      <p>${esc(c.message)}</p>
+      <p style="white-space:pre-wrap;">${esc(c.message)}</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-primary" id="btn-alert-ok">OK</button>
       </div>

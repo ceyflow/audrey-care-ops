@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031152250">
+<meta name="app-build" content="20261031160747">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3363,6 +3363,27 @@ async function syncAllRoleDataAccess(){
 // display name, and there's no reliable way from here to tell which one is this person's current
 // login -- granting all of them is harmless (an orphaned old row with nobody able to sign into it
 // grants nothing to anyone) and guarantees whichever one IS still in use gets it.
+// Corrects the role RLS actually enforces (profiles.role) the moment an Admin changes someone's
+// Access level in Settings, instead of leaving them on their old role's data access until their
+// next full sign-in (the self-heal-on-login path confirmLoginV2 already does — this is the same
+// fix, just immediate). secureAccounts.role is the app's OWN bookkeeping, shown in the UI; it was
+// never the thing the database checks. Root-caused from Dushan's role being changed to "Customer
+// care representative" in Settings but his Complaints access silently staying blocked -- his
+// profiles.role was still "Team", frozen from whenever that login was first created, because
+// nothing had ever written to it since (confirmed: the same staleness existed for three other
+// accounts at once, not just his). Same multi-row-safe approach as syncUserDataAccess above:
+// updates every profiles row under this staff_name, not just one.
+async function syncProfileRole(name, role){
+  if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
+  const { data: profRows, error: profErr } = await supabaseClient.from('profiles').select('id').eq('staff_name', name);
+  if(profErr) return {ok:false, error: profErr.message};
+  if(!profRows || !profRows.length) return {ok:true}; // never signed in yet — nothing to correct until a profiles row exists
+  for(const row of profRows){
+    const upd = await supabaseClient.from('profiles').update({role}).eq('id', row.id);
+    if(upd.error) return {ok:false, error: upd.error.message};
+  }
+  return {ok:true};
+}
 async function syncUserDataAccess(name){
   if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
   const acct = (state.auth.secureAccounts||[]).find(a=>a.name===name);
@@ -13110,13 +13131,18 @@ async function submitEditSecureAccount(e){
   // database-side failure here would leave the checklist looking saved while user_data_access
   // never actually got the new grant, so Extra access would look checked but just not work.
   const syncRes = await syncUserDataAccess(name);
+  // A role change needs its own correction on top of that: role_data_access is keyed by
+  // profiles.role, not by this account's name, so changing role here does nothing to what the
+  // database actually lets this login read until profiles.role catches up too.
+  const roleSyncRes = (before && before.role!==role) ? await syncProfileRole(name, role) : {ok:true};
   state._editSecureAccountName = null;
   closeModal();
   const changes = [];
   if(before && before.role!==role) changes.push(`role ${before.role} → ${role}`);
   if(before && (before.fullName||'')!==fullName) changes.push(`Employer code "${before.fullName||''}" → "${fullName}"`);
   logActivity(`Edited account "${name}"${changes.length ? ' (' + changes.join('; ') + ')' : ''}`);
-  if(syncRes && syncRes.ok) showToast('Access level updated');
+  if(syncRes && syncRes.ok && roleSyncRes && roleSyncRes.ok) showToast('Access level updated');
+  else if(!(roleSyncRes && roleSyncRes.ok)) showToast('Account saved, but correcting their real database access failed (' + (roleSyncRes && roleSyncRes.error || 'unknown error') + ') — try Save again');
   else showToast('Account saved, but pushing extra access failed (' + (syncRes && syncRes.error || 'unknown error') + ') — try Save again');
 }
 // Settings → User roles: Admin-defined access levels (name, description, active/inactive, and

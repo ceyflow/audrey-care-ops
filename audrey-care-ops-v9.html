@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031150515">
+<meta name="app-build" content="20261031151235">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4770,7 +4770,20 @@ async function loadAll(){
   // isSubAdmin() — so renaming or deleting them here would silently break those) with their
   // existing page lists carried over unchanged; the other three are the real, freely-editable
   // custom roles.
-  if(state.userRoles.length===0){
+  // Gated to isAdmin() -- confirmed root cause of a real duplicate-roles incident: state.userRoles
+  // defaults to [] (see its declaration above) and _applySyncedKeysFetch only overwrites that
+  // default when the batched fetch actually returned a 'userRoles' row; if THIS session's role
+  // can't read that row yet (role_data_access hadn't synced for it -- the exact same RLS-vs-
+  // genuinely-empty ambiguity mergeBeforeSave's own comment already documents, PostgREST returns
+  // no row for both, never an error), state.userRoles silently stayed at its [] default and this
+  // block read that as "nobody's seeded roles yet," creating a second full set of default roles
+  // with fresh ids alongside the real ones (confirmed in production: Admin/Sub Admin/Production
+  // Executive/Dispatch officer each had two rows, the newer one always winning in practice since
+  // every real lookup elsewhere does state.userRoles.find(r=>r.name===...), first match wins --
+  // but still confusing clutter in Settings, and a real risk if that ever changed). Admin's RLS
+  // grant is unconditional (see the app_data policies), so restricting this seed to an Admin
+  // session closes that race instead of just tolerating it.
+  if(isAdmin() && state.userRoles.length===0){
     state.userRoles = [
       {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS.Admin)},
       {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'])},

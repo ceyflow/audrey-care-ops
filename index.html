@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031191123">
+<meta name="app-build" content="20261031191718">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2975,10 +2975,40 @@ function faviconLogo(){
   const found = addons.find(a=>a.id==='favicon');
   return (found && found.image) || null;
 }
-// Updates the browser tab icon to the admin-set favicon, falling back to the built-in default.
+// Updates every icon mobile actually uses from an admin-set favicon — not just the browser tab
+// icon. Without this, uploading a new favicon only changed link[rel="icon"]; the iOS "Add to
+// Home Screen" icon (apple-touch-icon) and the Android/PWA install icon (the manifest's own
+// icons array, baked in as a static data: URI at build time) stayed on the old/default logo
+// forever, since nothing ever touched them after page load. Rebuilding the manifest's icons
+// list from the same image and re-pointing link[rel="manifest"] at a fresh data: URI keeps all
+// three in sync with whatever's actually set, falling back to the built-in default everywhere.
 function applyFavicon(){
-  const link = document.querySelector('link[rel="icon"]');
-  if(link) link.href = faviconLogo() || LOGO_DATA_URI;
+  const img = faviconLogo() || LOGO_DATA_URI;
+  const iconLink = document.querySelector('link[rel="icon"]');
+  if(iconLink) iconLink.href = img;
+  const appleLink = document.querySelector('link[rel="apple-touch-icon"]');
+  if(appleLink) appleLink.href = img;
+  rebuildManifestIcons(img);
+}
+function rebuildManifestIcons(img){
+  const manifestLink = document.querySelector('link[rel="manifest"]');
+  if(!manifestLink) return;
+  const manifest = {
+    name: 'Audrey Care Operations', short_name: 'Audrey Care',
+    description: 'Audrey Care factory operations — orders, blending, GMP records and more.',
+    start_url: '.', scope: '.', display: 'standalone', orientation: 'any',
+    background_color: '#FBFCF9', theme_color: '#4CAF6D',
+    icons: [
+      {src: img, sizes: '192x192', type: 'image/png', purpose: 'any'},
+      {src: img, sizes: '512x512', type: 'image/png', purpose: 'any'},
+      {src: img, sizes: '512x512', type: 'image/png', purpose: 'maskable'},
+    ],
+  };
+  try{
+    const json = JSON.stringify(manifest);
+    const b64 = btoa(unescape(encodeURIComponent(json)));
+    manifestLink.href = 'data:application/manifest+json;base64,' + b64;
+  }catch(e){ /* best-effort — leave the manifest as-is if encoding fails */ }
 }
 const STAGES = ['Order Received','Processing','Invoicing & Checking','Picked Up by Delivery'];
 // Short forms for the phone-width stage tab bar (STAGES itself stays full — column heads and

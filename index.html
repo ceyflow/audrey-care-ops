@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031164625">
+<meta name="app-build" content="20261031182225">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1954,7 +1954,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','chatTheme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','chatTheme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -3089,7 +3089,7 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
   Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
   Packing: ['orders','chat'],
@@ -3099,7 +3099,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -3164,6 +3164,7 @@ const PERMISSION_REGISTRY = [
   {dept:'customers', deptLabel:'Customers', id:'customers_manage', label:'Import, add, edit and delete customers'},
   // Suppliers
   {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_manage', label:'Import, add, edit and delete suppliers'},
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_manage', label:'Import, add, edit and delete items'},
   // Customer ratings
   {dept:'ratings', deptLabel:'Customer ratings', id:'ratings_bulk_delete', label:'Bulk-select and delete ratings'},
   // Branding
@@ -3212,6 +3213,10 @@ function roleCan(role, permId){
   // doesn't currently hold (a Settings save that hasn't landed, a role record that hasn't
   // finished syncing, a stale read on one particular account — none of it can block this).
   if(role === 'Sub Admin' && permId === 'orders_drag') return true;
+  // Item List is brand new — Admin's existing saved userRoles record has no way to already hold
+  // a permission id that didn't exist when it was last saved, same reasoning as the two guarantees
+  // above. Guaranteed here rather than relying on a one-time backfill reaching every Admin account.
+  if(role === 'Admin' && permId === 'itemlist_manage') return true;
   const custom = (state.userRoles||[]).find(r=>r.name===role);
   if(custom){
     if(custom.status!=='Active') return false;
@@ -3237,7 +3242,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 14;
+const PAGE_DATA_KEYS_VERSION = 15;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -3253,6 +3258,7 @@ const PAGE_DATA_KEYS = {
   costing: ['costingProducts','suppliers','recipes'],
   customers: ['customers','staff','salesPersonColors'],
   suppliers: ['suppliers'],
+  itemlist: ['inventoryItems'],
   complaints: ['complaints','complaintCategories','complaintPriorities','staff','customers'],
   ordersprocess: ['orders','branding'],
   gmp: ['gmpChecklistEntries','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','staff'],
@@ -4352,7 +4358,7 @@ function personIcon(){
 
 let state = {
   session: null,
-  orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [],
+  orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [], inventoryItems: [],
   recipes: [], activeBatch: null, batchFocusMode: false,
   gmpChecklistEntries: [],
   gmpLogEntries: [], gmpCalibrationInstruments: [], gmpPestPoints: [], gmpPestEntries: [],
@@ -4412,6 +4418,7 @@ let state = {
   ordersView: 'kanban',
   selectedCustomers: new Set(),
   selectedSuppliers: new Set(),
+  selectedItems: new Set(),
   selectedOrders: new Set(),
   bulkSmsCustomers: new Set(),
   bulkSmsProgress: null,
@@ -4851,6 +4858,18 @@ async function loadAll(){
     state.userRoles = state.userRoles.map(r=>
       (Array.isArray(r.pages) && r.pages.includes('customercare') && !r.pages.includes('ongoingorders'))
         ? {...r, pages:[...r.pages, 'ongoingorders']}
+        : r
+    );
+    saveQuietly('userRoles').catch(()=>{});
+  }
+  // Same deal for the new Item List page: any role that can already reach Blending Department
+  // (and so already deals with raw materials) should get it automatically, not require someone to
+  // go re-check a new box in Settings -> User roles before it works. Pure addition, safe to
+  // re-check every load.
+  if(state.userRoles.some(r=>Array.isArray(r.pages) && r.pages.includes('blendingdept') && !r.pages.includes('itemlist'))){
+    state.userRoles = state.userRoles.map(r=>
+      (Array.isArray(r.pages) && r.pages.includes('blendingdept') && !r.pages.includes('itemlist'))
+        ? {...r, pages:[...r.pages, 'itemlist']}
         : r
     );
     saveQuietly('userRoles').catch(()=>{});
@@ -7165,6 +7184,330 @@ function customerImportReviewModal(){
   </div>`;
 }
 
+/* ===================== Item List (raw material inventory) ===================== */
+// Column order matches the official inventory valuation report exactly (see itemCsvFormatModal)
+// -- same reasoning as CUSTOMER_CSV_HEADERS: Export straight back into Import round-trips with no
+// column remapping.
+const ITEM_CSV_HEADERS = ['Category','Raw Material','RM Short Code','Quantity','UOM','Current Standard Cost'];
+function downloadItemsCsv(){
+  const rows = state.inventoryItems.map(i => [
+    i.category||'', i.name||'', i.shortCode||'', i.quantity||0, i.uom||'', i.standardCost||0,
+  ]);
+  const stamp = new Date().toISOString().slice(0,10);
+  downloadFile(`audrey-care-ops-items-${stamp}.csv`, rowsToCsv(ITEM_CSV_HEADERS, rows), 'text/csv');
+  logActivity('Exported items to CSV');
+  showToast('Items CSV downloaded');
+}
+function itemCsvFormatModal(){
+  const sampleRows = [
+    ['20015', 'SLES', '', '127', 'Kg', '1,000'],
+    ['20080', 'Travel Kit Shower Cap', '', '3,088', 'pcs', '12'],
+  ];
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:640px;">
+      <h2>CSV format</h2>
+      <div class="sub">This is the official format — column order doesn't matter, only the header names. Export CSV above always writes this exact format back out.</div>
+      <div style="overflow-x:auto;margin:12px 0;">
+      <table class="data-table">
+        <thead><tr>${ITEM_CSV_HEADERS.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${sampleRows.map(r=>`<tr>${r.map(c=>`<td style="white-space:nowrap;">${esc(c)}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+      <div class="hint" style="line-height:1.7;">
+        <strong>Category</strong> — the item's own code (e.g. "20015"). Also accepts "Code" or "Item Code". A row needs this or a Raw Material name to import.<br>
+        <strong>Raw Material</strong> — the item's name. Also accepts "Name" or "Item".<br>
+        <strong>RM Short Code</strong> — optional.<br>
+        <strong>Quantity</strong> — optional, defaults to 0. Commas (3,088) are fine.<br>
+        <strong>UOM</strong> — unit of measure (e.g. "Kg", "pcs"). Also accepts "Unit".<br>
+        <strong>Current Standard Cost</strong> — optional, defaults to 0. Commas are fine. Also accepts "Cost" or "Standard Cost".<br><br>
+        A row matching an existing item by Category code (or by name, if Category is blank) <strong>updates</strong> that item with whatever this file has, instead of creating a second one. After importing, anything that needs a closer look shows up in a review list so you can fix it in your source file and re-upload — re-uploading is always safe, matched rows just update again.
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-item-csv-format">Got it</button>
+      </div>
+    </div>
+  </div>`;
+}
+// Strips thousands-separator commas before parsing — the real report writes costs/quantities as
+// "1,000" not "1000". Returns 0 for anything that still isn't a real number rather than NaN, so a
+// blank or garbled cell never corrupts a stock value silently.
+function parseItemNumber(v){
+  const n = Number(String(v||'').replace(/,/g,'').trim());
+  return Number.isFinite(n) ? n : 0;
+}
+async function importItemsCsv(file){
+  const text = await readCsvFileSmart(file);
+  const rows = parseCsvText(text).filter(r=>r.some(cell=>cell.trim()!==''));
+  if(rows.length===0){ showToast('That file has no rows to import'); return; }
+  const header = rows[0].map(h=>h.trim().toLowerCase());
+  const findCol = names => header.findIndex(h=>names.includes(h));
+  const categoryIdx = findCol(['category','code','item code']);
+  const nameIdx = findCol(['raw material','name','item']);
+  const shortCodeIdx = findCol(['rm short code','short code']);
+  const quantityIdx = findCol(['quantity','qty']);
+  const uomIdx = findCol(['uom','unit']);
+  const costIdx = findCol(['current standard cost','standard cost','cost']);
+  if(categoryIdx===-1 && nameIdx===-1){ showToast('Could not find a Category or Raw Material column in that file'); return; }
+  const dataRows = rows.slice(1);
+  const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
+  const normCat = s => String(s||'').trim().toLowerCase();
+  const byCategory = new Map(state.inventoryItems.map(i=>[normCat(i.category), i]).filter(([k])=>k));
+  const byName = new Map(state.inventoryItems.map(i=>[normCat(i.name), i]).filter(([k])=>k));
+  let added = 0, updated = 0;
+  const errorRows = [];
+  dataRows.forEach((r, idx)=>{
+    const lineNum = idx+2;
+    const raw = r.slice(0,3).filter(Boolean).join(' | ');
+    const category = cell(r, categoryIdx);
+    const name = cell(r, nameIdx);
+    if(!category && !name){ errorRows.push({line:lineNum, raw: raw || '(blank row)', reason:'No Category code or Raw Material name in this row'}); return; }
+    const fields = {
+      category, name, shortCode: cell(r, shortCodeIdx),
+      quantity: quantityIdx>-1 ? parseItemNumber(r[quantityIdx]) : undefined,
+      uom: cell(r, uomIdx),
+      standardCost: costIdx>-1 ? parseItemNumber(r[costIdx]) : undefined,
+    };
+    if([category, name, fields.shortCode, fields.uom].some(v=>typeof v==='string' && v.includes('�'))){
+      errorRows.push({line:lineNum, raw: raw || name || category, reason:'Contains characters that didn’t decode cleanly — check this row’s encoding in the source file'});
+    }
+    const existing = (category && byCategory.get(normCat(category))) || (name && byName.get(normCat(name)));
+    if(existing){
+      Object.keys(fields).forEach(k=>{ if(fields[k]!==undefined && fields[k]!=='') existing[k] = fields[k]; });
+      if(name) existing.name = name;
+      if(category) existing.category = category;
+      updated++;
+    } else {
+      const it = {
+        id: uid('ITM'), category, name: name || category, shortCode:'', quantity:0, uom:'', standardCost:0,
+        ...Object.fromEntries(Object.entries(fields).filter(([,v])=>v!==undefined && v!=='')),
+        createdAt: new Date().toISOString(),
+      };
+      state.inventoryItems.unshift(it);
+      if(category) byCategory.set(normCat(category), it);
+      if(name) byName.set(normCat(name), it);
+      added++;
+    }
+  });
+  const saved = (added>0 || updated>0) ? await save('inventoryItems') : true;
+  render();
+  if(!saved) return;
+  state._itemImportReview = {added, updated, errorRows, fileName: file.name};
+  const notes = [];
+  if(updated) notes.push(`updated ${updated} existing`);
+  if(errorRows.length) notes.push(`${errorRows.length} need a look`);
+  showToast(`Imported ${added} new item${added===1?'':'s'}${notes.length?`, ${notes.join(', ')}`:''}`);
+  if(errorRows.length) openModal('itemimportreview');
+}
+function itemImportReviewModal(){
+  const r = state._itemImportReview;
+  if(!r) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:600px;">
+      <h2>Import review — ${esc(r.fileName)}</h2>
+      <div class="sub">${r.added} added, ${r.updated} updated. ${r.errorRows.length} row${r.errorRows.length===1?'':'s'} below need a look before they're fully in — fix these in your source file and re-upload; everything else above already imported fine.</div>
+      <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin:12px 0;">
+        ${r.errorRows.map(e=>`
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);">
+          <div style="font-weight:600;font-size:13px;">Row ${e.line}${e.raw?`: ${esc(e.raw)}`:''}</div>
+          <div class="hint" style="margin-top:2px;">${esc(e.reason)}</div>
+        </div>`).join('')}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-item-import-review">Got it</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function submitItem(e){
+  e.preventDefault();
+  const f = e.target; const editId = f.dataset.editId;
+  const data = {
+    category: f.category.value.trim(), name: f.name.value.trim(), shortCode: f.shortCode.value.trim(),
+    quantity: parseItemNumber(f.quantity.value), uom: f.uom.value.trim(), standardCost: parseItemNumber(f.standardCost.value),
+  };
+  if(!data.name) return;
+  if(editId){
+    const i = byId(state.inventoryItems, editId); Object.assign(i, data);
+  } else {
+    state.inventoryItems.unshift({id:uid('ITM'), ...data, createdAt:new Date().toISOString()});
+  }
+  if(!(await save('inventoryItems'))) return;
+  closeModal();
+  logActivity(`${editId?'Edited':'Created'} item ${data.name}`);
+  showToast(editId ? 'Item updated' : 'Item added');
+}
+function deleteItem(id){
+  const i = byId(state.inventoryItems, id);
+  openConfirmModal({
+    title: 'Delete item', danger: true, confirmLabel: 'Delete',
+    message: 'Delete this item?',
+    onConfirm: async ()=>{
+      state.inventoryItems = state.inventoryItems.filter(x=>x.id!==id);
+      if(!(await save('inventoryItems'))) return;
+      logActivity(`Deleted item ${i?i.name:id}`);
+    },
+  });
+}
+function deleteSelectedItems(){
+  const ids = [...state.selectedItems];
+  if(!ids.length) return;
+  openConfirmModal({
+    title: 'Delete selected items', danger: true, confirmLabel: 'Delete',
+    message: `Delete ${ids.length} item${ids.length===1?'':'s'}? This can't be undone.`,
+    onConfirm: async ()=>{
+      state.inventoryItems = state.inventoryItems.filter(i=>!ids.includes(i.id));
+      state.selectedItems.clear();
+      if(!(await save('inventoryItems'))) return;
+      logActivity(`Deleted ${ids.length} item${ids.length===1?'':'s'}`);
+    },
+  });
+}
+function itemFormModal(id){
+  const i = id ? byId(state.inventoryItems,id) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>${i?'Edit item':'Add item'}</h2>
+      <div class="sub">${i?'Update this item’s details.':'Adds a new item record.'}</div>
+      <form id="form-item" data-edit-id="${i?i.id:''}">
+        <div class="field"><label>Raw Material</label><input name="name" required autocomplete="off" value="${i?escAttr(i.name):''}"></div>
+        <div class="field-row">
+          <div class="field"><label>Category <span class="hint">(item code)</span></label><input name="category" autocomplete="off" value="${i?escAttr(i.category||''):''}"></div>
+          <div class="field"><label>RM Short Code</label><input name="shortCode" autocomplete="off" value="${i?escAttr(i.shortCode||''):''}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Quantity</label><input name="quantity" type="number" min="0" step="0.01" autocomplete="off" value="${i&&i.quantity?i.quantity:''}" placeholder="0"></div>
+          <div class="field"><label>UOM</label><input name="uom" autocomplete="off" placeholder="e.g. Kg, pcs" value="${i?escAttr(i.uom||''):''}"></div>
+        </div>
+        <div class="field"><label>Current Standard Cost</label><input name="standardCost" type="number" min="0" step="0.01" autocomplete="off" value="${i&&i.standardCost?i.standardCost:''}" placeholder="0.00"></div>
+        <div class="modal-actions" style="justify-content:space-between;">
+          <div>${i?`<button type="button" class="btn btn-danger" id="btn-delete-item">Delete</button>`:''}</div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">${i?'Save changes':'Add item'}</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+const ITEM_COLUMN_DEFS = [
+  {key:'category', label:'Category', cell:i=>esc(i.category)||'<span class="hint">—</span>'},
+  {key:'shortCode', label:'RM Short Code', cell:i=>esc(i.shortCode)||'<span class="hint">—</span>'},
+  {key:'quantity', label:'Quantity', cell:i=>esc(String(i.quantity||0))},
+  {key:'uom', label:'UOM', cell:i=>esc(i.uom)||'<span class="hint">—</span>'},
+  {key:'standardCost', label:'Current Standard Cost', cell:i=>'Rs. '+Number(i.standardCost||0).toFixed(2)},
+  {key:'createdAt', label:'Added', cell:i=>fmtDate(i.createdAt)},
+];
+function loadItemColumnPrefs(){
+  try{ const saved = JSON.parse(localStorage.getItem('audreyItemColumns')||'null'); if(saved && typeof saved==='object') return saved; }catch(e){}
+  return {};
+}
+function itemColVisible(key){
+  if(!state._itemColumnPrefs) state._itemColumnPrefs = loadItemColumnPrefs();
+  return state._itemColumnPrefs[key]!==false;
+}
+function itemColumnsModal(){
+  if(!state._itemColumnPrefs) state._itemColumnPrefs = loadItemColumnPrefs();
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>Columns</h2>
+      <div class="sub">Choose which columns show in the Item List table. Raw Material always shows.</div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin:12px 0;">
+        ${ITEM_COLUMN_DEFS.map(d=>`
+        <label class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--border);">
+          <span>${esc(d.label)}</span>
+          <input type="checkbox" class="item-column-toggle" data-col="${d.key}" ${itemColVisible(d.key)?'checked':''}>
+        </label>`).join('')}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-item-columns">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
+function saveItemColumnPrefs(){
+  const prefs = {};
+  document.querySelectorAll('.item-column-toggle').forEach(cb=>{ prefs[cb.dataset.col] = cb.checked; });
+  state._itemColumnPrefs = prefs;
+  try{ localStorage.setItem('audreyItemColumns', JSON.stringify(prefs)); }catch(e){}
+  closeModal();
+  render();
+}
+function renderItemListPage(){
+  const nameF = (state.filters.itemSearch||'').toLowerCase();
+  const categoryF = (state.filters.itemCategoryFilter||'').toLowerCase();
+  const rows = state.inventoryItems.filter(i => {
+    if(nameF && !i.name.toLowerCase().includes(nameF)) return false;
+    if(categoryF && !(i.category||'').toLowerCase().includes(categoryF)) return false;
+    return true;
+  });
+  const totalValue = state.inventoryItems.reduce((s,i)=>s+(Number(i.quantity)||0)*(Number(i.standardCost)||0), 0);
+  const outOfStock = state.inventoryItems.filter(i=>!(Number(i.quantity)>0)).length;
+  const canManage = state.session && roleCan(state.session.role, 'itemlist_manage');
+  const visibleCols = ITEM_COLUMN_DEFS.filter(d=>itemColVisible(d.key));
+  const colCount = (canManage?1:0) + 1 + visibleCols.length + (canManage?1:0);
+  return `
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Total items</div><div class="value"><span class="stat-num" data-target="${state.inventoryItems.length}">${state.inventoryItems.length}</span></div></div>
+    <div class="stat-card"><div class="label">Total stock value</div><div class="value accent">Rs. ${totalValue.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="label">Out of stock</div><div class="value">${outOfStock}</div></div>
+  </div>
+  <div class="toolbar">
+    <div></div>
+    ${canManage ? `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      ${state.selectedItems.size>0 ? `
+      <span class="hint">${state.selectedItems.size} selected</span>
+      <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-items">Delete selected</button>
+      ` : ''}
+      <button class="btn" id="btn-item-columns">▤ Columns</button>
+      <button class="btn" id="btn-item-csv-format">CSV Format</button>
+      <label class="btn" style="cursor:pointer;">⬆ Import CSV
+        <input type="file" id="item-import-input" accept=".csv,text/csv" style="display:none;">
+      </label>
+      <button class="btn" id="btn-export-items-csv">⬇ Export CSV</button>
+      <button class="btn btn-primary" id="btn-new-item">+ Add item</button>
+    </div>` : ''}
+  </div>
+  <div class="panel">
+    ${state.inventoryItems.length===0 ? `<div class="empty-state">No items yet.</div>` : `
+    <table class="data-table">
+      <thead>
+        <tr>
+          ${canManage?`<th style="width:36px;"><input type="checkbox" id="item-select-all"></th>`:''}
+          <th>Raw Material</th>${visibleCols.map(d=>`<th>${esc(d.label)}</th>`).join('')}${canManage?'<th>Actions</th>':''}
+        </tr>
+        <tr class="col-filter-row">
+          ${canManage?'<th></th>':''}
+          <th><input class="col-filter-input" id="item-filter-name" placeholder="Search…" value="${escAttr(state.filters.itemSearch||'')}"></th>
+          ${visibleCols.map(d=>`<th>${d.key==='category'?`<input class="col-filter-input" id="item-filter-category" placeholder="Search…" value="${escAttr(state.filters.itemCategoryFilter||'')}">`:''}</th>`).join('')}
+          ${canManage?'<th></th>':''}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.length===0 ? `<tr><td colspan="${colCount}"><div class="empty-state">No items match your filters.</div></td></tr>` : rows.map(i=>`
+        <tr class="${canManage?'clickable':''}" ${canManage?`data-item-row="${i.id}"`:''}>
+          ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="item-select-row" data-item-id="${i.id}" ${state.selectedItems.has(i.id)?'checked':''}></td>`:''}
+          <td>${esc(i.name)}</td>
+          ${visibleCols.map(d=>`<td>${d.cell(i)}</td>`).join('')}
+          ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-sm" data-edit-item="${i.id}">Edit</button>
+            <button class="btn btn-sm btn-danger" data-delete-item="${i.id}">Delete</button>
+          </td>`:''}
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+  </div>
+  `;
+}
+
 /* ===================== Suppliers ===================== */
 async function submitSupplier(e){
   e.preventDefault();
@@ -8473,6 +8816,7 @@ const NAV = [
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
     {id:'suppliers', label:'Suppliers', icon:'suppliers'},
+    {id:'itemlist', label:'Item List', icon:'box'},
     {id:'ordersprocess', label:'Orders Process', icon:'list'},
   ]},
   {group:'GMP', items:[
@@ -8516,7 +8860,7 @@ const GRID_TOP_LEVEL_PAGES = NAV.flatMap(g=>g.items).map(it=>it.id);
 // neighboring tiles in the default order rarely repeat the same color back to back.
 const GRID_TILE_COLORS = {
   dashboard:'blue', orders:'accent', blendingdept:'orange', customercare:'maroon',
-  customers:'blue', suppliers:'orange', ordersprocess:'blue', gmp:'purple',
+  customers:'blue', suppliers:'orange', itemlist:'purple', ordersprocess:'blue', gmp:'purple',
   rnd:'accent', staff:'blue', chat:'maroon', bulksms:'purple', ratings:'orange', settings:'accent',
   attendance:'maroon', myattendance:'purple',
 };
@@ -9603,6 +9947,7 @@ const PAGE_META = {
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
+  itemlist:{title:'Item List', sub:'Raw materials and stock on hand.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
@@ -9785,6 +10130,7 @@ function renderPage(){
     case 'recipelibrary': return renderRecipeLibraryPage();
     case 'costing': return renderCostingPage();
     case 'customers': return renderCustomersPage();
+    case 'itemlist': return renderItemListPage();
     case 'suppliers': return renderSuppliersPage();
     case 'complaints': return renderComplaintsPage();
     case 'gmp': return renderGmpPage();
@@ -15875,6 +16221,10 @@ function renderModal(){
   if(type==='editattendance') return editAttendanceModal(id);
   if(type==='attendancecapture') return attendanceCaptureModal();
   if(type==='customer') return customerFormModal(id==='new'?null:id);
+  if(type==='item') return itemFormModal(id==='new'?null:id);
+  if(type==='itemcsvformat') return itemCsvFormatModal();
+  if(type==='itemimportreview') return itemImportReviewModal();
+  if(type==='itemcolumns') return itemColumnsModal();
   if(type==='supplier') return supplierFormModal(id==='new'?null:id);
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
   if(type==='complaintcustomerview') return complaintCustomerViewModal(id);
@@ -18307,6 +18657,46 @@ function attachShellHandlers(){
       },
     });
   };
+
+  // Item List
+  if(byIdEl('btn-new-item')) byIdEl('btn-new-item').onclick = ()=>openModal('item:new');
+  if(byIdEl('item-filter-name')) byIdEl('item-filter-name').addEventListener('input', e=>{ state.filters.itemSearch = e.target.value; render(); });
+  if(byIdEl('item-filter-category')) byIdEl('item-filter-category').addEventListener('input', e=>{ state.filters.itemCategoryFilter = e.target.value; render(); });
+  if(byIdEl('item-import-input')) byIdEl('item-import-input').addEventListener('change', async e=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    await importItemsCsv(file);
+    e.target.value = '';
+  });
+  if(byIdEl('btn-export-items-csv')) byIdEl('btn-export-items-csv').onclick = downloadItemsCsv;
+  if(byIdEl('btn-item-csv-format')) byIdEl('btn-item-csv-format').onclick = ()=>openModal('itemcsvformat');
+  if(byIdEl('btn-close-item-csv-format')) byIdEl('btn-close-item-csv-format').onclick = closeModal;
+  if(byIdEl('btn-close-item-import-review')) byIdEl('btn-close-item-import-review').onclick = closeModal;
+  if(byIdEl('btn-item-columns')) byIdEl('btn-item-columns').onclick = ()=>openModal('itemcolumns');
+  if(byIdEl('btn-save-item-columns')) byIdEl('btn-save-item-columns').onclick = saveItemColumnPrefs;
+  document.querySelectorAll('[data-item-row]').forEach(r=>r.addEventListener('click', ()=>openModal('item:'+r.dataset.itemRow)));
+  document.querySelectorAll('[data-edit-item]').forEach(b=>b.addEventListener('click', ()=>openModal('item:'+b.dataset.editItem)));
+  document.querySelectorAll('[data-delete-item]').forEach(b=>b.addEventListener('click', ()=>deleteItem(b.dataset.deleteItem)));
+  document.querySelectorAll('.item-select-row').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(cb.checked) state.selectedItems.add(cb.dataset.itemId); else state.selectedItems.delete(cb.dataset.itemId);
+    render();
+  }));
+  if(byIdEl('item-select-all')){
+    const rowBoxes = [...document.querySelectorAll('.item-select-row')];
+    const selectAllBox = byIdEl('item-select-all');
+    selectAllBox.checked = rowBoxes.length>0 && rowBoxes.every(cb=>cb.checked);
+    selectAllBox.indeterminate = rowBoxes.some(cb=>cb.checked) && !selectAllBox.checked;
+    selectAllBox.addEventListener('change', ()=>{
+      rowBoxes.forEach(cb=>{
+        if(selectAllBox.checked) state.selectedItems.add(cb.dataset.itemId);
+        else state.selectedItems.delete(cb.dataset.itemId);
+      });
+      render();
+    });
+  }
+  if(byIdEl('btn-delete-selected-items')) byIdEl('btn-delete-selected-items').onclick = deleteSelectedItems;
+  if(byIdEl('form-item')) byIdEl('form-item').addEventListener('submit', submitItem);
+  if(byIdEl('btn-delete-item')) byIdEl('btn-delete-item').onclick = ()=>{ const id=byIdEl('form-item').dataset.editId; deleteItem(id); };
 
   // Customer ratings
   if(byIdEl('ratings-filter-customer')) byIdEl('ratings-filter-customer').addEventListener('input', e=>{ state.filters.ratingsCustomerFilter = e.target.value; render(); });

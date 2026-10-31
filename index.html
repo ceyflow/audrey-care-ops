@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031151235">
+<meta name="app-build" content="20261031152250">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -12830,7 +12830,7 @@ function renderSecureAccountsPanel(){
               <td class="row-actions">
                 <button type="button" class="btn btn-sm" data-reset-secure-account-password="${escAttr(r.name)}" title="Set a new password for them">🔑</button>
                 <button type="button" class="btn btn-sm" data-edit-secure-account="${escAttr(r.name)}" title="Edit">✏️</button>
-                <button type="button" class="btn btn-sm btn-danger" data-remove-secure-account="${escAttr(r.name)}" title="Remove">🗑️</button>
+                <button type="button" class="btn btn-sm btn-danger" data-remove-secure-account="${escAttr(r.name)}" title="Delete permanently">🗑️</button>
               </td>
             </tr>`;
           }).join('')}
@@ -12897,12 +12897,12 @@ async function runAddSecureAccount(){
   if(!f.password || f.password.length<6){ showToast('Password must be at least 6 characters'); return; }
   const res = await supabaseSignUpForMigration(f.role, f.name.trim(), f.password);
   if(!res.ok){
-    // "Already registered" means a real login with this name already exists — almost always
-    // because they were removed from the list earlier without actually deleting the underlying
-    // account (removing only clears the list; see removeSecureAccount()), so simply retrying
-    // signup can never work for this exact name again. Recover instead of just failing: reset
-    // that existing login to the password just typed (via the Edge Function — the public key
-    // this app holds can't do that on its own) and add them back to the visible list.
+    // "Already registered" means a real login with this name already exists -- still reachable
+    // even now that removeSecureAccount() truly deletes the login (an account removed BEFORE that
+    // fix shipped, a migration-era leftover, or any other account the service-role lookup finds
+    // that this app's own roster doesn't know about). Recover instead of just failing: reset that
+    // existing login to the password just typed (via the Edge Function — the public key this app
+    // holds can't do that on its own) and add them back to the visible list.
     if(/already registered/i.test(res.error||'')){
       try{
         await adminResetSecureAccountPassword(f.name.trim(), f.password);
@@ -12961,6 +12961,30 @@ async function adminResetSecureAccountPassword(loginName, newPassword){
   if(!res.ok) throw new Error(result.error || `Reset failed (${res.status}) — the admin-reset-password Edge Function may not be deployed yet.`);
   return result;
 }
+// Calls the admin-delete-account Edge Function (same pattern/reasoning as
+// adminResetSecureAccountPassword above: deleting another user's Supabase Auth login needs the
+// service-role secret, which can only live on a server). Deletes the real login AND its profiles
+// row -- not just the entry in state.auth.secureAccounts -- per the explicit "delete should
+// actually delete, not leave something behind forever" ask that followed the old Remove button's
+// confusing "already registered" behavior (see the comment above runAddSecureAccount's recovery
+// path for that history).
+async function adminDeleteSecureAccount(loginName){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(!session) throw new Error('Your own session has expired — log out and back in, then try again.');
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-delete-account`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ loginName }),
+  });
+  let result = {};
+  try{ result = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error(result.error || `Delete failed (${res.status}) — the admin-delete-account Edge Function may not be deployed yet.`);
+  return result;
+}
 function openResetSecureAccountPasswordPrompt(name){
   openPromptModal({
     title: `Set a new password for ${name}`,
@@ -13006,17 +13030,32 @@ function toggleSecureAccountActive(name){
   });
 }
 function removeSecureAccount(name){
+  if(state.session && state.session.name===name){
+    showToast("You can't delete the account you're signed in as — sign in as another Admin first");
+    return;
+  }
   openConfirmModal({
-    title: 'Remove account', danger: true, confirmLabel: 'Remove',
-    // This only removes them from the list below — it does NOT delete their underlying login, so
-    // re-adding the same name later will fail with "already registered" rather than actually
-    // creating a fresh account. If they just need a new password, use 🔑 instead of removing them.
-    message: `${name} will no longer be able to sign in. This doesn't free up their login name to re-add later — if they just need a new password, use 🔑 Reset password instead.`,
+    title: 'Delete account', danger: true, confirmLabel: 'Delete', requirePassword: true,
+    // Genuinely permanent now (was: only cleared the entry below, leaving the real login behind
+    // forever — see adminDeleteSecureAccount's comment). If they just need a new password or to
+    // pause them, 🔑/Active do that without the account being gone for good.
+    message: `This permanently deletes ${name}'s login — not just their entry in this list. They won't be able to sign in again, and this can't be undone. If they just need a new password or to be paused, use 🔑 Reset password or the Active toggle instead.`,
     onConfirm: async ()=>{
+      try{
+        await adminDeleteSecureAccount(name);
+      }catch(e){
+        const msg = e.message || String(e);
+        // Already gone on the backend (e.g. retrying after state.auth failed to save last time) —
+        // still worth cleaning up the roster entry below rather than leaving it stuck.
+        if(!/^No account found/.test(msg)){
+          openAlertModal({ title: "Couldn't delete the account", message: msg });
+          return;
+        }
+      }
       state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).filter(r=>r.name!==name)};
       if(!(await saveAuth())) return;
-      logActivity(`Removed account "${name}"`);
-      showToast(name+' removed');
+      logActivity(`Deleted account "${name}"`);
+      showToast(name+' deleted');
     },
   });
 }

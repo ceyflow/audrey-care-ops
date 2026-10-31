@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031191846">
+<meta name="app-build" content="20261031203855">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3119,7 +3119,7 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','settings'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'],
   'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
   Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
   Packing: ['orders','chat'],
@@ -3243,13 +3243,17 @@ function roleCan(role, permId){
   // doesn't currently hold (a Settings save that hasn't landed, a role record that hasn't
   // finished syncing, a stale read on one particular account — none of it can block this).
   if(role === 'Sub Admin' && permId === 'orders_drag') return true;
-  // Item List is brand new — Admin's existing saved userRoles record has no way to already hold
-  // a permission id that didn't exist when it was last saved, same reasoning as the two guarantees
-  // above. Guaranteed here rather than relying on a one-time backfill reaching every Admin account.
-  if(role === 'Admin' && permId === 'itemlist_manage') return true;
   const custom = (state.userRoles||[]).find(r=>r.name===role);
   if(custom){
     if(custom.status!=='Active') return false;
+    // General Admin floor, replacing what used to be a one-off guarantee per newly-added
+    // permission (itemlist_manage got one, by the same reasoning as the two above it — but that
+    // meant every future permission needed its own hardcoded line or it would reopen this exact
+    // gap). A saved userRoles record is a frozen snapshot: a permission id added to
+    // PERMISSION_REGISTRY after Admin's record was last saved in Settings can never be present in
+    // custom.permissions, so an absent key means "didn't exist yet," not "explicitly denied" —
+    // only a key that's actually present and false means someone deliberately unchecked it.
+    if(role === 'Admin' && !(custom.permissions && permId in custom.permissions)) return true;
     return !!(custom.permissions && custom.permissions[permId]);
   }
   return (LEGACY_ROLE_PERMISSIONS[role]||[]).includes(permId);
@@ -3272,7 +3276,7 @@ function permissionsByDepartment(){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 15;
+const PAGE_DATA_KEYS_VERSION = 16;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -3289,6 +3293,7 @@ const PAGE_DATA_KEYS = {
   customers: ['customers','staff','salesPersonColors'],
   suppliers: ['suppliers'],
   itemlist: ['inventoryItems'],
+  recipelibrary: ['recipes'],
   complaints: ['complaints','complaintCategories','complaintPriorities','staff','customers'],
   ordersprocess: ['orders','branding'],
   gmp: ['gmpChecklistEntries','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','staff'],
@@ -4727,13 +4732,18 @@ async function loadAll(){
   state.dallySettings = {...DEFAULT_DALLY_SETTINGS, ...(state.dallySettings||{})};
   state.batchSheetTemplate = {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})};
   state.loginCustomization = {...DEFAULT_LOGIN_CUSTOMIZATION, ...(state.loginCustomization||{})};
-  if(!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0){
+  // Gated to isAdmin() for the same reason the userRoles reseed below is — a non-Admin session's
+  // RLS-scoped read of this key can come back empty just from a sync race, not because the data
+  // genuinely doesn't exist yet; only Admin's unconditional RLS grant can tell the difference
+  // safely. Reseeding on a false-empty read here would silently duplicate these defaults into the
+  // real shared data the next time a confirmed read succeeds, same failure shape userRoles had.
+  if(isAdmin() && (!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0)){
     state.deliveryLines = JSON.parse(JSON.stringify(DEFAULT_DELIVERY_LINES));
     saveQuietly('deliveryLines').catch(()=>{});
-  } else if(!state.deliveryLines.some(l=>l.key==='CustomerPickup')){
+  } else if(Array.isArray(state.deliveryLines) && !state.deliveryLines.some(l=>l.key==='CustomerPickup')){
     state.deliveryLines = [...state.deliveryLines, {key:'CustomerPickup', label:'Customer Pickup', hidden:true}];
     saveQuietly('deliveryLines').catch(()=>{});
-  } else {
+  } else if(Array.isArray(state.deliveryLines)){
     // Customer Pickup was added as a visible board section before it was decided to keep it
     // out of the board by default — hide it for anyone who already has it from that rollout.
     const existing = state.deliveryLines.find(l=>l.key==='CustomerPickup');
@@ -4742,15 +4752,18 @@ async function loadAll(){
       saveQuietly('deliveryLines').catch(()=>{});
     }
   }
-  if(!Array.isArray(state.staffCategories) || state.staffCategories.length===0){
+  // Same isAdmin() gating reasoning as deliveryLines above — applies to every one of these
+  // reseed-defaults-if-empty blocks, since none of them can otherwise tell "genuinely empty" from
+  // "this session's RLS-scoped read raced and came back empty."
+  if(isAdmin() && (!Array.isArray(state.staffCategories) || state.staffCategories.length===0)){
     state.staffCategories = JSON.parse(JSON.stringify(DEFAULT_STAFF_CATEGORIES));
     saveQuietly('staffCategories').catch(()=>{});
   }
-  if(!Array.isArray(state.complaintCategories) || state.complaintCategories.length===0){
+  if(isAdmin() && (!Array.isArray(state.complaintCategories) || state.complaintCategories.length===0)){
     state.complaintCategories = [...DEFAULT_COMPLAINT_CATEGORIES];
     saveQuietly('complaintCategories').catch(()=>{});
   }
-  if(!Array.isArray(state.complaintPriorities) || state.complaintPriorities.length===0){
+  if(isAdmin() && (!Array.isArray(state.complaintPriorities) || state.complaintPriorities.length===0)){
     state.complaintPriorities = [...DEFAULT_COMPLAINT_PRIORITIES];
     saveQuietly('complaintPriorities').catch(()=>{});
   }
@@ -4785,7 +4798,11 @@ async function loadAll(){
     saveQuietly('mixingStepTemplates').catch(()=>{});
   }
   if(!Array.isArray(state.costingProducts)) state.costingProducts = [];
-  if(state.costingProducts.length===0){
+  // Same isAdmin() gating as above — unguarded, this duplicated six named default products into
+  // the real shared Costing list for any session that hit the RLS-read race, same failure shape
+  // as the userRoles duplication incident (and visibly worse here: these are named products a
+  // user would see and have to notice/clean up themselves).
+  if(isAdmin() && state.costingProducts.length===0){
     const DEFAULT_COSTING_PRODUCTS = ['Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Hand Wash', 'Bubble Bath'];
     state.costingProducts = DEFAULT_COSTING_PRODUCTS.map(name => ({id:uid('CPROD'), name, versions:[]}));
     saveQuietly('costingProducts').catch(()=>{});
@@ -5344,6 +5361,17 @@ function fmtDateTime(iso){
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
 }
 function fmtDate(iso){ return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+// Local-timezone YYYY-MM-DD for an ISO timestamp — matches what <input type="date"> produces and
+// what fmtDateTime()/fmtDate() actually display (both use toLocaleDateString, i.e. local time).
+// Needed anywhere a date is compared against a date-picker value: iso.slice(0,10) is the UTC
+// calendar day, which silently disagrees with the local day for roughly 5.5 hours every night in
+// Sri Lanka (UTC+5:30) — e.g. an entry timestamped 19:17 UTC displays as "tomorrow" locally but
+// iso.slice(0,10) still reads as "today", so filtering for the displayed day misses it.
+function localDateKey(iso){
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 // DD/MM/YYYY (not fmtDate's "Oct 22, 2026") to match how dates are already written in payment
 // reminder messages here.
 function fmtDateShort(iso){
@@ -15061,9 +15089,13 @@ function costingPerCanCost(draft, sz){ const cans = sz/KG_PER_CAN; return cans>0
 // whitespace-insensitive) — read-only lookup, purely for displaying the Current Standard Cost
 // as a reference preview under the name. Never writes back to Item List or to the row itself.
 function findInventoryItemByName(name){
-  const n = String(name||'').trim().toLowerCase();
+  // Same normalization as every other name-matching helper in the app (Customer matching etc.)
+  // — collapsing internal whitespace too, not just trimming the ends, so a stray double space
+  // doesn't silently break a match between two names that look identical.
+  const norm = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const n = norm(name);
   if(!n) return null;
-  return state.inventoryItems.find(i=>String(i.name||'').trim().toLowerCase()===n) || null;
+  return state.inventoryItems.find(i=>norm(i.name)===n) || null;
 }
 // "Update to standard costing" bulk-fills every raw material row's Unit Price from its matched
 // Item List entry's Current Standard Cost, overwriting whatever was typed in Unit Price — so it
@@ -15140,7 +15172,7 @@ function renderCostingProductSheet(product, version){
   ` : ''}
   <div style="margin:2px 0 16px;">
     ${admin
-      ? `<textarea class="cst-sheet-field" data-sheetfield="notes" placeholder="Notes about this version…" style="width:100%;min-height:44px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.notes||'')}</textarea>`
+      ? `<textarea id="cst-sheetfield-notes" class="cst-sheet-field" data-sheetfield="notes" placeholder="Notes about this version…" style="width:100%;min-height:44px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.notes||'')}</textarea>`
       : (draft.notes ? `<div class="hint" style="white-space:pre-wrap;">${esc(draft.notes)}</div>` : '')}
   </div>
   <div class="panel" style="overflow-x:auto;">
@@ -15161,14 +15193,14 @@ function renderCostingProductSheet(product, version){
           return `
         <tr data-mat-row="${m.id}">
           <td>${i+1}</td>
-          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${escAttr(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}
+          <td>${admin?`<input id="cst-f-name-${m.id}" class="cst-field" data-field="name" data-mat="${m.id}" value="${escAttr(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}
             <div class="hint" id="cst-stdcost-${m.id}" style="font-size:10.5px;margin-top:2px;white-space:nowrap;">${stdItem?`Std cost: Rs. ${Number(stdItem.standardCost||0).toFixed(2)}`:''}</div>
           </td>
-          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
-          <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
+          <td>${admin?`<input id="cst-f-percent-${m.id}" class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
+          <td>${admin?`<input id="cst-f-costPerKg-${m.id}" class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
           <td>${admin?`<div class="cst-supplier-box" style="width:158px;border:1px solid var(--border);border-radius:5px;padding:1px 3px;flex-wrap:nowrap;">
             ${costingSupplierTagsHtml(m)}
-            ${(m.suppliers||[]).length<2 ? `<input class="cst-supplier-input" autocomplete="off" data-field="supplierInput" data-mat="${m.id}" placeholder="${(m.suppliers||[]).length?'':'Supplier'}">` : ''}
+            ${(m.suppliers||[]).length<2 ? `<input id="cst-f-supplierInput-${m.id}" class="cst-supplier-input" autocomplete="off" data-field="supplierInput" data-mat="${m.id}" placeholder="${(m.suppliers||[]).length?'':'Supplier'}">` : ''}
           </div>`:((m.suppliers||[]).join(', ')||'—')}</td>
           ${sizes.map(sz=>{
             const amt = costingLineAmount(m.percent, sz);
@@ -15197,16 +15229,16 @@ function renderCostingProductSheet(product, version){
         ${fixedCosts.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No fixed costs yet. ${admin?'Add one (e.g. Electricity, Can cost).':''}</td></tr>` : fixedCosts.map((item,i)=>`
         <tr data-fixedcost-row="${item.id}">
           <td>${i+1}</td>
-          <td>${admin?`<input class="cst-fc-field" data-fcfield="name" data-fc="${item.id}" value="${escAttr(item.name)}" placeholder="e.g. Electricity" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(item.name)}</td>
+          <td>${admin?`<input id="cst-fc-name-${item.id}" class="cst-fc-field" data-fcfield="name" data-fc="${item.id}" value="${escAttr(item.name)}" placeholder="e.g. Electricity" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(item.name)}</td>
           <td></td>
-          <td>${admin?`<input class="cst-fc-field" type="number" min="0" step="0.01" data-fcfield="unitCost" data-fc="${item.id}" value="${item.unitCost}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(item.unitCost)||0).toFixed(2))}</td>
+          <td>${admin?`<input id="cst-fc-unitCost-${item.id}" class="cst-fc-field" type="number" min="0" step="0.01" data-fcfield="unitCost" data-fc="${item.id}" value="${item.unitCost}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(item.unitCost)||0).toFixed(2))}</td>
           <td></td>
           ${sizes.map(sz=>{
             const qty = (item.qty||{})[sz];
             const cost = fixedCostLineCost(item, sz);
             const col = batchColors[sz] || null;
             const cellStyle = col ? ` style="background:${col}33;"` : '';
-            return `<td class="cst-group-start"${cellStyle}>${admin?`<input class="cst-fc-field" type="number" min="0" step="0.001" data-fcfield="qty" data-fc="${item.id}" data-size="${sz}" value="${qty==null?'':qty}" style="width:64px;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font:inherit;">`:(qty==null?'—':qty)}</td><td class="cst-fc-cost" data-fc="${item.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
+            return `<td class="cst-group-start"${cellStyle}>${admin?`<input id="cst-fc-qty-${item.id}-${sz}" class="cst-fc-field" type="number" min="0" step="0.001" data-fcfield="qty" data-fc="${item.id}" data-size="${sz}" value="${qty==null?'':qty}" style="width:64px;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font:inherit;">`:(qty==null?'—':qty)}</td><td class="cst-fc-cost" data-fc="${item.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
           }).join('')}
           ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-fixedcost="${item.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
         </tr>`).join('')}
@@ -15245,7 +15277,7 @@ function renderCostingProductSheet(product, version){
     <div style="width:100%;max-width:640px;">
       <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">Production method</label>
       ${admin
-        ? `<textarea class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:160px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.productionMethod||'')}</textarea>`
+        ? `<textarea id="cst-sheetfield-productionmethod" class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:160px;resize:vertical;border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.productionMethod||'')}</textarea>`
         : (draft.productionMethod ? `<div class="hint" style="white-space:pre-wrap;text-align:left;">${esc(draft.productionMethod)}</div>` : '<div class="hint">—</div>')}
     </div>
   </div>
@@ -16376,7 +16408,7 @@ function activityLogModal(){
   const anyFilterActive = !!(q||dateF||userF);
   let filtered = all;
   if(q) filtered = filtered.filter(l=>l.actor.toLowerCase().includes(q) || l.message.toLowerCase().includes(q));
-  if(dateF) filtered = filtered.filter(l=>l.at.slice(0,10)===dateF);
+  if(dateF) filtered = filtered.filter(l=>localDateKey(l.at)===dateF);
   if(userF) filtered = filtered.filter(l=>l.actor===userF);
   // Newest first — logActivity() unshifts new entries, but entries synced in from other
   // sessions or migrated in bulk aren't guaranteed to already be in that order, so sort

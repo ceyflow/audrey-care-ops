@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031183818">
+<meta name="app-build" content="20261031185831">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -15021,6 +15021,37 @@ function costingFixedCostsSubTotal(fixedCosts, sz){ return (fixedCosts||[]).redu
 function costingIngredientCostSum(materials, sz){ return (materials||[]).reduce((s,m)=>s+costingLineAmount(m.percent, sz)*(Number(m.costPerKg)||0), 0); }
 function costingGrandTotal(draft, sz){ return costingIngredientCostSum(draft.materials, sz) + costingFixedCostsSubTotal(draft.fixedCosts, sz); }
 function costingPerCanCost(draft, sz){ const cans = sz/KG_PER_CAN; return cans>0 ? costingGrandTotal(draft, sz)/cans : 0; }
+// Links a costing row's raw material name to its Item List entry by exact name match (case/
+// whitespace-insensitive) — read-only lookup, purely for displaying the Current Standard Cost
+// as a reference preview under the name. Never writes back to Item List or to the row itself.
+function findInventoryItemByName(name){
+  const n = String(name||'').trim().toLowerCase();
+  if(!n) return null;
+  return state.inventoryItems.find(i=>String(i.name||'').trim().toLowerCase()===n) || null;
+}
+// "Update to standard costing" bulk-fills every raw material row's Unit Price from its matched
+// Item List entry's Current Standard Cost, overwriting whatever was typed in Unit Price — so it
+// always asks for confirmation first rather than silently clobbering manually-set prices.
+function costingUpdateToStandardCosting(){
+  const draft = state._costingDraft;
+  if(!draft || !(draft.materials||[]).length) return;
+  openConfirmModal({
+    title: 'Update to standard costing',
+    confirmLabel: 'Update',
+    message: "Update every raw material's Unit Price on this sheet to match its Current Standard Cost from Item List? Rows with no matching Item List entry are left unchanged.",
+    onConfirm: ()=>{
+      let count = 0;
+      (draft.materials||[]).forEach(m=>{
+        const item = findInventoryItemByName(m.name);
+        if(!item) return;
+        m.costPerKg = Number(item.standardCost)||0;
+        count++;
+      });
+      if(count>0) state._costingDirty = true;
+      showToast(count ? `Updated ${count} raw material${count===1?'':'s'} to standard costing` : 'No matching Item List entries found for these raw materials');
+    },
+  });
+}
 // A raw material can be sourced from up to two suppliers, shown as removable name tags
 // rather than a plain text field — colored per supplier (by name, so the same supplier
 // always gets the same color) so multiple tags stay easy to tell apart at a glance.
@@ -15064,6 +15095,7 @@ function renderCostingProductSheet(product, version){
       <button type="button" class="btn btn-sm" id="btn-add-costing-material">+ Add raw material</button>
       <button type="button" class="btn btn-sm" id="btn-add-costing-fixedcost">+ Add fixed cost</button>
       <button type="button" class="btn btn-sm" id="btn-add-costing-batchsize">+ Add batch size</button>
+      <button type="button" class="btn btn-sm" id="btn-costing-update-standard">↻ Update to standard costing</button>
       <button type="button" class="btn btn-primary btn-sm" id="btn-costing-save">💾 Save</button>
     </div>` : ''}
   </div>
@@ -15088,10 +15120,14 @@ function renderCostingProductSheet(product, version){
         ${admin?'<th>Actions</th>':''}
       </tr></thead>
       <tbody>
-        ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>`
+        ${materials.length===0 ? `<tr><td colspan="${colCount}" class="empty-state">No raw materials yet. ${admin?'Add one to start this sheet.':''}</td></tr>` : materials.map((m,i)=>{
+          const stdItem = findInventoryItemByName(m.name);
+          return `
         <tr data-mat-row="${m.id}">
           <td>${i+1}</td>
-          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${escAttr(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}</td>
+          <td>${admin?`<input class="cst-field" data-field="name" data-mat="${m.id}" value="${escAttr(m.name)}" placeholder="e.g. DI water" style="width:150px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:esc(m.name)}
+            <div class="hint" id="cst-stdcost-${m.id}" style="font-size:10.5px;margin-top:2px;white-space:nowrap;">${stdItem?`Std cost: Rs. ${Number(stdItem.standardCost||0).toFixed(2)}`:''}</div>
+          </td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.001" data-field="percent" data-mat="${m.id}" value="${m.percent}" style="width:72px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:((Number(m.percent)||0)+'%')}</td>
           <td>${admin?`<input class="cst-field" type="number" min="0" step="0.01" data-field="costPerKg" data-mat="${m.id}" value="${m.costPerKg}" style="width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font:inherit;">`:('Rs. '+(Number(m.costPerKg)||0).toFixed(2))}</td>
           <td>${admin?`<div class="cst-supplier-box" style="width:158px;border:1px solid var(--border);border-radius:5px;padding:1px 3px;flex-wrap:nowrap;">
@@ -15106,7 +15142,8 @@ function renderCostingProductSheet(product, version){
             return `<td class="cst-amt cst-group-start" data-mat="${m.id}" data-size="${sz}"${cellStyle}>${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
           }).join('')}
           ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
-        </tr>`).join('')}
+        </tr>`;
+        }).join('')}
       </tbody>
       ${materials.length>0 ? `<tbody><tr class="cst-foot-row">
         <td></td><td>Total</td><td id="cst-total-percent">${totalPct.toFixed(2)}%</td><td id="cst-total-unitprice">Rs. ${totalUnitPrice.toFixed(2)}</td><td></td>
@@ -15205,12 +15242,19 @@ function costingOnFieldInput(el){
     costingRecomputeTotals(draft);
   } else {
     m[field] = el.value;
-    if(field==='name' && costingAutoBalanceWater(draft, m.id)){
-      const water = draft.materials.find(isWaterMaterial);
-      costingRecomputeRow(draft, water);
-      const waterInput = document.querySelector(`.cst-field[data-field="percent"][data-mat="${water.id}"]`);
-      if(waterInput) waterInput.value = water.percent;
-      costingRecomputeTotals(draft);
+    if(field==='name'){
+      const stdEl = document.getElementById('cst-stdcost-'+m.id);
+      if(stdEl){
+        const stdItem = findInventoryItemByName(m.name);
+        stdEl.textContent = stdItem ? `Std cost: Rs. ${Number(stdItem.standardCost||0).toFixed(2)}` : '';
+      }
+      if(costingAutoBalanceWater(draft, m.id)){
+        const water = draft.materials.find(isWaterMaterial);
+        costingRecomputeRow(draft, water);
+        const waterInput = document.querySelector(`.cst-field[data-field="percent"][data-mat="${water.id}"]`);
+        if(waterInput) waterInput.value = water.percent;
+        costingRecomputeTotals(draft);
+      }
     }
   }
   state._costingDirty = true;
@@ -19315,6 +19359,7 @@ function attachShellHandlers(){
     });
   }));
   if(byIdEl('btn-add-costing-batchsize')) byIdEl('btn-add-costing-batchsize').onclick = ()=>openModal('costingbatchsize');
+  if(byIdEl('btn-costing-update-standard')) byIdEl('btn-costing-update-standard').onclick = costingUpdateToStandardCosting;
   if(byIdEl('form-costing-batchsize')) byIdEl('form-costing-batchsize').addEventListener('submit', (e)=>{
     e.preventDefault();
     const draft = state._costingDraft;

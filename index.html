@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031190558">
+<meta name="app-build" content="20261031191123">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -16342,6 +16342,10 @@ function activityLogModal(){
   if(q) filtered = filtered.filter(l=>l.actor.toLowerCase().includes(q) || l.message.toLowerCase().includes(q));
   if(dateF) filtered = filtered.filter(l=>l.at.slice(0,10)===dateF);
   if(userF) filtered = filtered.filter(l=>l.actor===userF);
+  // Newest first — logActivity() unshifts new entries, but entries synced in from other
+  // sessions or migrated in bulk aren't guaranteed to already be in that order, so sort
+  // explicitly here rather than trusting array order.
+  filtered = filtered.slice().sort((a,b)=> new Date(b.at) - new Date(a.at));
   const rows = filtered.slice(0, 500);
   return `
   <div class="overlay" id="overlay">

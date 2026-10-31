@@ -10755,6 +10755,64 @@ function renderOrdersProcessPage(){
   `;
 }
 
+// Every column after Name is optional — toggled from the "Columns" button (customerColumnsModal)
+// and remembered per-browser in localStorage, not synced: this is a personal "what do I want to
+// look at" display preference, not shared business data, so it never needs save()/merge or risks
+// clobbering anyone else's view. Header, filter-row and body cell are defined together per column
+// so the three rows can never drift out of alignment with each other (hand-aligning three parallel
+// ${...?...:''} chains by column position was exactly how earlier colspan bugs crept in).
+const CUSTOMER_COLUMN_DEFS = [
+  {key:'shortName', label:'Short Name', cell:c=>esc(c.shortName)||'<span class="hint">—</span>'},
+  {key:'branchName', label:'Branch Name', cell:c=>esc(c.branchName)||'<span class="hint">—</span>'},
+  {key:'cityArea', label:'City/Area', cell:c=>esc(c.cityArea)||'<span class="hint">—</span>'},
+  {key:'phone', label:'Phone', filter:(f)=>`<input class="col-filter-input" id="customer-filter-phone" placeholder="Search…" value="${escAttr(f.phoneF)}">`, cell:c=>esc(c.phone)||'—'},
+  {key:'type', label:'Sales Type', filter:(f)=>`<select class="col-filter-select" id="customer-filter-type"><option value="">All</option>${f.allTypes.map(t=>`<option value="${escAttr(t)}" ${t===f.typeF?'selected':''}>${esc(t)}</option>`).join('')}</select>`, cell:c=>esc(c.type)||'<span class="hint">—</span>'},
+  {key:'paymentTerms', label:'Payment Terms', cell:c=>esc(c.paymentTerms)||'<span class="hint">—</span>'},
+  {key:'address', label:'Address', cell:c=>`<span style="display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escAttr(c.address||'')}">${esc(c.address)||'<span class="hint">—</span>'}</span>`},
+  {key:'salesman', label:'Sales person', filter:(f)=>`<select class="col-filter-select" id="customer-filter-salesman"><option value="">All</option>${f.allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===f.salesmanF?'selected':''}>${esc(s)}</option>`).join('')}</select>`, cell:c=>{ if(!c.salesman) return '<span class="hint">—</span>';
+    const spColor = (state.salesPersonColors||{})[c.salesman];
+    return `<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(c.salesman)}</span>`; }},
+  {key:'status', label:'Status', filter:(f)=>`<select class="col-filter-select" id="customer-filter-status"><option value="">All</option><option value="Active" ${f.statusF==='Active'?'selected':''}>Active</option><option value="Inactive" ${f.statusF==='Inactive'?'selected':''}>Inactive</option></select>`, cell:c=>`<span class="pill ${c.status==='Active'?'pill-active':'pill-inactive'}">${c.status}</span>`},
+  {key:'salesGroup', label:'Sales Group', cell:c=>esc(c.salesGroup)||'<span class="hint">—</span>'},
+  {key:'createdAt', label:'Added', cell:c=>fmtDate(c.createdAt)},
+];
+function loadCustomerColumnPrefs(){
+  try{ const saved = JSON.parse(localStorage.getItem('audreyCustomerColumns')||'null'); if(saved && typeof saved==='object') return saved; }catch(e){}
+  return {}; // nothing customized yet — every column defaults to shown (see customerColVisible)
+}
+function customerColVisible(key){
+  if(!state._customerColumnPrefs) state._customerColumnPrefs = loadCustomerColumnPrefs();
+  return state._customerColumnPrefs[key]!==false;
+}
+function customerColumnsModal(){
+  if(!state._customerColumnPrefs) state._customerColumnPrefs = loadCustomerColumnPrefs();
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:380px;">
+      <h2>Columns</h2>
+      <div class="sub">Choose which columns show in the Customers table. Name always shows.</div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin:12px 0;">
+        ${CUSTOMER_COLUMN_DEFS.map(d=>`
+        <label class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--border);">
+          <span>${esc(d.label)}</span>
+          <input type="checkbox" class="customer-column-toggle" data-col="${d.key}" ${customerColVisible(d.key)?'checked':''}>
+        </label>`).join('')}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-customer-columns">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
+function saveCustomerColumnPrefs(){
+  const prefs = {};
+  document.querySelectorAll('.customer-column-toggle').forEach(cb=>{ prefs[cb.dataset.col] = cb.checked; });
+  state._customerColumnPrefs = prefs;
+  try{ localStorage.setItem('audreyCustomerColumns', JSON.stringify(prefs)); }catch(e){}
+  closeModal();
+  render();
+}
 function renderCustomersPage(){
   const nameF = (state.filters.customerSearch||'').toLowerCase();
   const phoneF = (state.filters.customerPhoneFilter||'').toLowerCase();
@@ -10774,6 +10832,9 @@ function renderCustomersPage(){
   });
   const active = state.customers.filter(c=>c.status==='Active').length;
   const canManage = state.session && roleCan(state.session.role, 'customers_manage');
+  const visibleCols = CUSTOMER_COLUMN_DEFS.filter(d=>customerColVisible(d.key));
+  const filterCtx = {phoneF, typeF, allTypes, salesmanF, allSalesmen, statusF};
+  const colCount = (canManage?1:0) + 1 + visibleCols.length + (canManage?1:0);
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="label">Total customers</div><div class="value"><span class="stat-num" data-target="${state.customers.length}">${state.customers.length}</span></div></div>
@@ -10788,6 +10849,7 @@ function renderCustomersPage(){
       <span class="hint">${state.selectedCustomers.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-customers">Delete selected</button>
       ` : ''}
+      <button class="btn" id="btn-customer-columns">▤ Columns</button>
       <button class="btn" id="btn-customer-csv-format">CSV Format</button>
       <label class="btn" style="cursor:pointer;">⬆ Import CSV
         <input type="file" id="customer-import-input" accept=".csv,text/csv" style="display:none;">
@@ -10803,48 +10865,21 @@ function renderCustomersPage(){
       <thead>
         <tr>
           ${canManage?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
-          <th>Name</th><th>Short Name</th><th>Branch Name</th><th>City/Area</th><th>Phone</th><th>Sales Type</th><th>Payment Terms</th><th>Address</th><th>Sales person</th><th>Status</th><th>Sales Group</th><th>Added</th>${canManage?'<th>Actions</th>':''}
+          <th>Name</th>${visibleCols.map(d=>`<th>${esc(d.label)}</th>`).join('')}${canManage?'<th>Actions</th>':''}
         </tr>
         <tr class="col-filter-row">
           ${canManage?'<th></th>':''}
           <th><input class="col-filter-input" id="customer-filter-name" placeholder="Search…" value="${escAttr(state.filters.customerSearch||'')}"></th>
-          <th></th><th></th><th></th>
-          <th><input class="col-filter-input" id="customer-filter-phone" placeholder="Search…" value="${escAttr(state.filters.customerPhoneFilter||'')}"></th>
-          <th><select class="col-filter-select" id="customer-filter-type">
-            <option value="">All</option>
-            ${allTypes.map(t=>`<option value="${escAttr(t)}" ${t===typeF?'selected':''}>${esc(t)}</option>`).join('')}
-          </select></th>
-          <th></th><th></th>
-          <th><select class="col-filter-select" id="customer-filter-salesman">
-            <option value="">All</option>
-            ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
-          </select></th>
-          <th><select class="col-filter-select" id="customer-filter-status">
-            <option value="">All</option>
-            <option value="Active" ${statusF==='Active'?'selected':''}>Active</option>
-            <option value="Inactive" ${statusF==='Inactive'?'selected':''}>Inactive</option>
-          </select></th>
-          <th></th><th></th>${canManage?'<th></th>':''}
+          ${visibleCols.map(d=>`<th>${d.filter?d.filter(filterCtx):''}</th>`).join('')}
+          ${canManage?'<th></th>':''}
         </tr>
       </thead>
       <tbody>
-        ${rows.length===0 ? `<tr><td colspan="${canManage?14:12}"><div class="empty-state">No customers match your filters.</div></td></tr>` : rows.map(c=>`
+        ${rows.length===0 ? `<tr><td colspan="${colCount}"><div class="empty-state">No customers match your filters.</div></td></tr>` : rows.map(c=>`
         <tr class="${canManage?'clickable':''}" ${canManage?`data-customer-row="${c.id}"`:''}>
           ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
           <td>${esc(c.name)}</td>
-          <td>${esc(c.shortName)||'<span class="hint">—</span>'}</td>
-          <td>${esc(c.branchName)||'<span class="hint">—</span>'}</td>
-          <td>${esc(c.cityArea)||'<span class="hint">—</span>'}</td>
-          <td>${esc(c.phone)||'—'}</td>
-          <td>${esc(c.type)||'<span class="hint">—</span>'}</td>
-          <td>${esc(c.paymentTerms)||'<span class="hint">—</span>'}</td>
-          <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escAttr(c.address||'')}">${esc(c.address)||'<span class="hint">—</span>'}</td>
-          <td>${(()=>{ if(!c.salesman) return '<span class="hint">—</span>';
-            const spColor = (state.salesPersonColors||{})[c.salesman];
-            return `<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(c.salesman)}</span>`; })()}</td>
-          <td><span class="pill ${c.status==='Active'?'pill-active':'pill-inactive'}">${c.status}</span></td>
-          <td>${esc(c.salesGroup)||'<span class="hint">—</span>'}</td>
-          <td>${fmtDate(c.createdAt)}</td>
+          ${visibleCols.map(d=>`<td>${d.cell(c)}</td>`).join('')}
           ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
             <button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>
@@ -15869,6 +15904,7 @@ function renderModal(){
   if(type==='outstandingcsvformat') return outstandingCsvFormatModal();
   if(type==='customercsvformat') return customerCsvFormatModal();
   if(type==='customerimportreview') return customerImportReviewModal();
+  if(type==='customercolumns') return customerColumnsModal();
   if(type==='managelines') return manageDeliveryLinesModal();
   if(type==='managestaffcategories') return manageStaffCategoriesModal();
   if(type==='salespersoncolors') return salesPersonColorsModal();
@@ -19092,6 +19128,8 @@ function attachShellHandlers(){
   if(byIdEl('btn-close-customer-csv-format')) byIdEl('btn-close-customer-csv-format').onclick = closeModal;
   if(byIdEl('btn-close-customer-import-review')) byIdEl('btn-close-customer-import-review').onclick = closeModal;
   if(byIdEl('btn-customer-csv-format')) byIdEl('btn-customer-csv-format').onclick = ()=>openModal('customercsvformat');
+  if(byIdEl('btn-customer-columns')) byIdEl('btn-customer-columns').onclick = ()=>openModal('customercolumns');
+  if(byIdEl('btn-save-customer-columns')) byIdEl('btn-save-customer-columns').onclick = saveCustomerColumnPrefs;
   document.querySelectorAll('[data-preview-outstanding]').forEach(b=>b.addEventListener('click', ()=>previewOutstandingRecipient(b.dataset.previewOutstanding)));
   if(byIdEl('outstanding-import-input')) byIdEl('outstanding-import-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];

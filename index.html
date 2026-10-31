@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031160747">
+<meta name="app-build" content="20261031163922">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6895,7 +6895,9 @@ async function submitCustomer(e){
   const f = e.target; const editId = f.dataset.editId;
   const data = {
     name: f.name.value.trim(), shortName: f.shortName.value.trim(), branchName: f.branchName.value.trim(),
-    phone: f.phone.value.trim(), address: f.address.value.trim(), salesman: f.salesman.value || null,
+    phone: f.phone.value.trim(), address: f.address.value.trim(), cityArea: f.cityArea.value.trim(),
+    salesman: f.salesman.value || null, status: f.status.value,
+    type: f.type.value, paymentTerms: f.paymentTerms.value.trim(), salesGroup: f.salesGroup.value.trim(),
     outstandingAmount: Math.max(0, Number(f.outstandingAmount.value)||0),
     outstandingDueDate: f.outstandingDueDate.value || null
   };
@@ -6903,7 +6905,7 @@ async function submitCustomer(e){
   if(editId){
     const c = byId(state.customers, editId); Object.assign(c, data);
   } else {
-    state.customers.unshift({id:uid('CUS'), ...data, cityArea:'', email:'', type:'Individual', status:'Active', createdAt:new Date().toISOString()});
+    state.customers.unshift({id:uid('CUS'), ...data, email:'', createdAt:new Date().toISOString()});
   }
   if(!(await save('customers'))) return;
   closeModal();
@@ -6991,16 +6993,55 @@ function downloadOrdersCsv(){
   logActivity('Exported orders to CSV');
   showToast('Orders CSV downloaded');
 }
+// Column order matches the official format exactly (see customerCsvFormatModal) -- an Export
+// straight back into Import, or into the spreadsheet this list is maintained in, round-trips
+// cleanly with no column remapping on either side.
+const CUSTOMER_CSV_HEADERS = ['Name','Short Name','Branch Name','City/Area','SMS Phone','Sales Type','Payment Terms','Address','Salesman','Status','Sales Group'];
 function downloadCustomersCsv(){
-  const headers = ['Name','Short name','Branch','Phone','Address','City/Area','Email','Type','Status','Salesman','Created at'];
   const rows = state.customers.map(c => [
-    c.name||'', c.shortName||'', c.branchName||'', c.phone||'', c.address||'', c.cityArea||'',
-    c.email||'', c.type||'', c.status||'', c.salesman||'', fmtDateTime(c.createdAt),
+    c.name||'', c.shortName||'', c.branchName||'', c.cityArea||'', c.phone||'',
+    c.type||'', c.paymentTerms||'', c.address||'', c.salesman||'', c.status||'', c.salesGroup||'',
   ]);
   const stamp = new Date().toISOString().slice(0,10);
-  downloadFile(`audrey-care-ops-customers-${stamp}.csv`, rowsToCsv(headers, rows), 'text/csv');
+  downloadFile(`audrey-care-ops-customers-${stamp}.csv`, rowsToCsv(CUSTOMER_CSV_HEADERS, rows), 'text/csv');
   logActivity('Exported customers to CSV');
   showToast('Customers CSV downloaded');
+}
+function customerCsvFormatModal(){
+  const sampleRows = [
+    ['Hotel Kabalana', '0763601236', 'Hotel Kabalana', 'Ahangama', '0763601236', 'Retail', 'COD-IML', 'Mathara road, Kathaluwa, Ahangama.', 'Rumesh', 'Active', 'Hospitality - Retail'],
+    ['Y Cheep Distributors', '0715242445', 'Y Cheep Distributors', 'Anuradhapura', '0715242445', 'Bulk Sales', '15 Days', '242, Abayawewa, Anuradhapura.', 'SA2 - DC', 'Active', 'Hospitality - WS'],
+  ];
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:720px;">
+      <h2>CSV format</h2>
+      <div class="sub">This is the official format — column order doesn't matter, only the header names. Export CSV above always writes this exact format back out.</div>
+      <div style="overflow-x:auto;margin:12px 0;">
+      <table class="data-table">
+        <thead><tr>${CUSTOMER_CSV_HEADERS.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${sampleRows.map(r=>`<tr>${r.map(c=>`<td style="white-space:nowrap;">${esc(c)}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+      <div class="hint" style="line-height:1.7;">
+        <strong>Name</strong> — also accepts "Customer name" or "Full name".<br>
+        <strong>Short Name</strong>, <strong>Branch Name</strong>, <strong>City/Area</strong> — optional.<br>
+        <strong>SMS Phone</strong> — also accepts "Phone", "Mobile" or "Contact".<br>
+        <strong>Sales Type</strong> — also accepts "Type". Any text works; Retail and Bulk Sales are what's used today.<br>
+        <strong>Payment Terms</strong> — optional, any text (e.g. "COD-IML", "15 Days", "Bank Transfer").<br>
+        <strong>Address</strong> — optional.<br>
+        <strong>Salesman</strong> — matched to a Staff member if the name lines up; kept as typed either way.<br>
+        <strong>Status</strong> — "Active" unless this says "Inactive", "No" or "0".<br>
+        <strong>Sales Group</strong> — optional, any text (e.g. "Hospitality - Retail").<br><br>
+        A row matching an existing customer by name or phone <strong>updates</strong> that customer with whatever this file has, instead of creating a second one. After importing, anything that needed a closer look (no name, or text that looks garbled) shows up in a review list so you can fix it in your source file and re-upload — re-uploading is always safe, matched rows just update again.
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-customer-csv-format">Got it</button>
+      </div>
+    </div>
+  </div>`;
 }
 // Some CSV exports (WordPress, some CRMs) HTML-encode punctuation, e.g. "Fisherman&#039;s Cove".
 // Decode it back so the stored value reads normally.
@@ -7009,8 +7050,21 @@ function decodeHtmlEntities(str){
   t.innerHTML = str || '';
   return t.value;
 }
+// Reads a CSV file as text, correctly, even when it's not valid UTF-8 -- confirmed a real problem
+// with the actual official customer list: exported from older spreadsheet software in a legacy
+// encoding (Windows-1252), so a plain file.text() (always UTF-8) turns every curly apostrophe and
+// accented character into U+FFFD, silently corrupting names like "Bhagy Nature's Nook" on import.
+// UTF-8 decoded with fatal:false still produces U+FFFD wherever the bytes aren't valid UTF-8 — if
+// that happened at all, re-decode the same bytes as Windows-1252 instead, which covers every byte
+// value and is what Excel/legacy tools on Windows actually wrote.
+async function readCsvFileSmart(file){
+  const buf = await file.arrayBuffer();
+  const utf8 = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+  if(!utf8.includes('�')) return utf8;
+  try{ return new TextDecoder('windows-1252').decode(buf); }catch(e){ return utf8; }
+}
 async function importCustomersCsv(file){
-  const text = await file.text();
+  const text = await readCsvFileSmart(file);
   const rows = parseCsvText(text).filter(r=>r.some(cell=>cell.trim()!==''));
   if(rows.length===0){ showToast('That file has no rows to import'); return; }
   const header = rows[0].map(h=>h.trim().toLowerCase());
@@ -7022,52 +7076,93 @@ async function importCustomersCsv(file){
   const shortNameIdx = findCol(['short name','shortname']);
   const branchNameIdx = findCol(['branch name','branchname','branch']);
   const salesmanIdx = findCol(['salesman','sales man','sales person','salesperson']);
-  const emailIdx = findCol(['email','e-mail']);
-  const typeIdx = findCol(['type','customer type']);
+  const typeIdx = findCol(['sales type','type','customer type']);
+  const paymentTermsIdx = findCol(['payment terms','terms']);
+  const salesGroupIdx = findCol(['sales group','group']);
   const statusIdx = findCol(['status']);
   const dataRows = nameIdx===-1 ? rows : rows.slice(1);
   const cols = nameIdx===-1
-    ? {name:0, phone:1, address:2, city:-1, shortName:-1, branchName:-1, salesman:-1, email:-1, type:-1, status:-1}
-    : {name:nameIdx, phone:phoneIdx, address:addressIdx, city:cityIdx, shortName:shortNameIdx, branchName:branchNameIdx, salesman:salesmanIdx, email:emailIdx, type:typeIdx, status:statusIdx};
+    ? {name:0, phone:1, address:2, city:-1, shortName:-1, branchName:-1, salesman:-1, type:-1, paymentTerms:-1, salesGroup:-1, status:-1}
+    : {name:nameIdx, phone:phoneIdx, address:addressIdx, city:cityIdx, shortName:shortNameIdx, branchName:branchNameIdx, salesman:salesmanIdx, type:typeIdx, paymentTerms:paymentTermsIdx, salesGroup:salesGroupIdx, status:statusIdx};
   const cell = (r, idx) => idx>-1 ? decodeHtmlEntities((r[idx]||'').trim()) : '';
   // Anything but a recognizable "inactive"-ish value reads as Active — matches what the column
   // being absent already defaulted to, so files without a Status column behave exactly as before.
   const normStatus = v => ['inactive','no','0','false'].includes(v.toLowerCase()) ? 'Inactive' : 'Active';
-  // Skip rows that match a customer already in the list, so re-importing the same file
-  // (or an overlapping one) never creates duplicates. Matched by name or phone, whichever
-  // is present — either one being the same customer is enough to count as a duplicate.
+  // Matches an existing customer by name or phone, whichever is present — either one being the
+  // same customer is enough. A match now UPDATES that customer with whatever this row has instead
+  // of being skipped: this is meant to be re-run against the real, evolving customer list (e.g.
+  // the official sheet getting richer columns filled in over time), not a one-shot import that
+  // then ignores the same names forever after.
   const normName = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-  const existingNames = new Set(state.customers.map(c=>normName(c.name)));
-  const existingPhones = new Set(state.customers.map(c=>normPhone(c.phone)).filter(Boolean));
-  let added = 0, skipped = 0, duplicates = 0;
-  dataRows.forEach(r=>{
+  const byNormName = new Map(state.customers.map(c=>[normName(c.name), c]));
+  const byNormPhone = new Map(state.customers.map(c=>[normPhone(c.phone), c]).filter(([p])=>p));
+  let added = 0, updated = 0;
+  const errorRows = []; // {line, raw, reason} — shown in the post-import review panel
+  dataRows.forEach((r, i)=>{
+    const lineNum = (nameIdx===-1 ? i : i+2); // +2: 1-indexed, plus the header row itself
+    const raw = r.slice(0,4).filter(Boolean).join(' | ');
     const name = cell(r, cols.name);
-    if(!name){ skipped++; return; }
-    const phone = cell(r, cols.phone);
-    const nName = normName(name), nPhone = normPhone(phone);
-    if(existingNames.has(nName) || (nPhone && existingPhones.has(nPhone))){
-      duplicates++;
-      return;
-    }
-    state.customers.unshift({
-      id: uid('CUS'), name,
+    if(!name){ errorRows.push({line:lineNum, raw: raw || '(blank row)', reason:'No name in this row'}); return; }
+    const fields = {
       shortName: cell(r, cols.shortName), branchName: cell(r, cols.branchName),
-      phone, address: cell(r, cols.address), cityArea: cell(r, cols.city),
+      phone: cell(r, cols.phone), address: cell(r, cols.address), cityArea: cell(r, cols.city),
       salesman: cell(r, cols.salesman) || null,
-      email: cell(r, cols.email), type: cell(r, cols.type) || 'Individual', status: normStatus(cell(r, cols.status)),
-      createdAt: new Date().toISOString()
-    });
-    existingNames.add(nName);
-    if(nPhone) existingPhones.add(nPhone);
-    added++;
+      type: cell(r, cols.type), paymentTerms: cell(r, cols.paymentTerms), salesGroup: cell(r, cols.salesGroup),
+      status: cols.status>-1 ? normStatus(cell(r, cols.status)) : undefined,
+    };
+    if(Object.values(fields).concat(name).some(v=>typeof v==='string' && v.includes('�'))){
+      errorRows.push({line:lineNum, raw: name, reason:'Contains characters that didn’t decode cleanly — check this row’s encoding in the source file'});
+    }
+    const nName = normName(name), nPhone = normPhone(fields.phone);
+    const existing = byNormName.get(nName) || (nPhone ? byNormPhone.get(nPhone) : null);
+    if(existing){
+      Object.keys(fields).forEach(k=>{ if(fields[k]) existing[k] = fields[k]; });
+      existing.name = name;
+      updated++;
+    } else {
+      const c = {
+        id: uid('CUS'), name, email:'',
+        shortName:'', branchName:'', phone:'', address:'', cityArea:'', salesman:null,
+        type:'', paymentTerms:'', salesGroup:'', status:'Active',
+        ...Object.fromEntries(Object.entries(fields).filter(([,v])=>v!==undefined && v!==null)),
+        createdAt: new Date().toISOString(),
+      };
+      state.customers.unshift(c);
+      byNormName.set(nName, c);
+      if(nPhone) byNormPhone.set(nPhone, c);
+      added++;
+    }
   });
-  const saved = added>0 ? await save('customers') : true;
+  const saved = (added>0 || updated>0) ? await save('customers') : true;
   render();
   if(!saved) return;
+  state._customerImportReview = {added, updated, errorRows, fileName: file.name};
   const notes = [];
-  if(duplicates) notes.push(`skipped ${duplicates} already in your list`);
-  if(skipped) notes.push(`skipped ${skipped} with no name`);
-  showToast(`Imported ${added} customer${added===1?'':'s'}${notes.length?`, ${notes.join(', ')}`:''}`);
+  if(updated) notes.push(`updated ${updated} existing`);
+  if(errorRows.length) notes.push(`${errorRows.length} need a look`);
+  showToast(`Imported ${added} new customer${added===1?'':'s'}${notes.length?`, ${notes.join(', ')}`:''}`);
+  if(errorRows.length) openModal('customerimportreview');
+}
+function customerImportReviewModal(){
+  const r = state._customerImportReview;
+  if(!r) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:600px;">
+      <h2>Import review — ${esc(r.fileName)}</h2>
+      <div class="sub">${r.added} added, ${r.updated} updated. ${r.errorRows.length} row${r.errorRows.length===1?'':'s'} below need a look before they're fully in — fix these in your source file and re-upload; everything else above already imported fine.</div>
+      <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin:12px 0;">
+        ${r.errorRows.map(e=>`
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);">
+          <div style="font-weight:600;font-size:13px;">Row ${e.line}${e.raw?`: ${esc(e.raw)}`:''}</div>
+          <div class="hint" style="margin-top:2px;">${esc(e.reason)}</div>
+        </div>`).join('')}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-customer-import-review">Got it</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 /* ===================== Suppliers ===================== */
@@ -10688,11 +10783,12 @@ function renderCustomersPage(){
   <div class="toolbar">
     <div></div>
     ${canManage ? `
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       ${state.selectedCustomers.size>0 ? `
       <span class="hint">${state.selectedCustomers.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-customers">Delete selected</button>
       ` : ''}
+      <button class="btn" id="btn-customer-csv-format">CSV Format</button>
       <label class="btn" style="cursor:pointer;">⬆ Import CSV
         <input type="file" id="customer-import-input" accept=".csv,text/csv" style="display:none;">
       </label>
@@ -10707,38 +10803,47 @@ function renderCustomersPage(){
       <thead>
         <tr>
           ${canManage?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
-          <th>Name</th><th>Phone</th><th>Sales person</th><th>Type</th><th>Status</th><th>Added</th>${canManage?'<th>Actions</th>':''}
+          <th>Name</th><th>Short Name</th><th>Branch Name</th><th>City/Area</th><th>Phone</th><th>Sales Type</th><th>Payment Terms</th><th>Address</th><th>Sales person</th><th>Status</th><th>Sales Group</th><th>Added</th>${canManage?'<th>Actions</th>':''}
         </tr>
         <tr class="col-filter-row">
           ${canManage?'<th></th>':''}
           <th><input class="col-filter-input" id="customer-filter-name" placeholder="Search…" value="${escAttr(state.filters.customerSearch||'')}"></th>
+          <th></th><th></th><th></th>
           <th><input class="col-filter-input" id="customer-filter-phone" placeholder="Search…" value="${escAttr(state.filters.customerPhoneFilter||'')}"></th>
-          <th><select class="col-filter-select" id="customer-filter-salesman">
-            <option value="">All</option>
-            ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
-          </select></th>
           <th><select class="col-filter-select" id="customer-filter-type">
             <option value="">All</option>
             ${allTypes.map(t=>`<option value="${escAttr(t)}" ${t===typeF?'selected':''}>${esc(t)}</option>`).join('')}
+          </select></th>
+          <th></th><th></th>
+          <th><select class="col-filter-select" id="customer-filter-salesman">
+            <option value="">All</option>
+            ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
           </select></th>
           <th><select class="col-filter-select" id="customer-filter-status">
             <option value="">All</option>
             <option value="Active" ${statusF==='Active'?'selected':''}>Active</option>
             <option value="Inactive" ${statusF==='Inactive'?'selected':''}>Inactive</option>
           </select></th>
-          <th></th>${canManage?'<th></th>':''}
+          <th></th><th></th>${canManage?'<th></th>':''}
         </tr>
       </thead>
       <tbody>
-        ${rows.length===0 ? `<tr><td colspan="${canManage?8:6}"><div class="empty-state">No customers match your filters.</div></td></tr>` : rows.map(c=>`
+        ${rows.length===0 ? `<tr><td colspan="${canManage?14:12}"><div class="empty-state">No customers match your filters.</div></td></tr>` : rows.map(c=>`
         <tr class="${canManage?'clickable':''}" ${canManage?`data-customer-row="${c.id}"`:''}>
           ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
-          <td>${esc(c.name)}</td><td>${esc(c.phone)||'—'}</td>
+          <td>${esc(c.name)}</td>
+          <td>${esc(c.shortName)||'<span class="hint">—</span>'}</td>
+          <td>${esc(c.branchName)||'<span class="hint">—</span>'}</td>
+          <td>${esc(c.cityArea)||'<span class="hint">—</span>'}</td>
+          <td>${esc(c.phone)||'—'}</td>
+          <td>${esc(c.type)||'<span class="hint">—</span>'}</td>
+          <td>${esc(c.paymentTerms)||'<span class="hint">—</span>'}</td>
+          <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escAttr(c.address||'')}">${esc(c.address)||'<span class="hint">—</span>'}</td>
           <td>${(()=>{ if(!c.salesman) return '<span class="hint">—</span>';
             const spColor = (state.salesPersonColors||{})[c.salesman];
             return `<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(c.salesman)}</span>`; })()}</td>
-          <td>${esc(c.type)}</td>
           <td><span class="pill ${c.status==='Active'?'pill-active':'pill-inactive'}">${c.status}</span></td>
+          <td>${esc(c.salesGroup)||'<span class="hint">—</span>'}</td>
           <td>${fmtDate(c.createdAt)}</td>
           ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
             <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
@@ -15762,6 +15867,8 @@ function renderModal(){
   if(type==='brandnew') return brandingAddAddonModal();
   if(type==='brandcrop') return brandCropModal();
   if(type==='outstandingcsvformat') return outstandingCsvFormatModal();
+  if(type==='customercsvformat') return customerCsvFormatModal();
+  if(type==='customerimportreview') return customerImportReviewModal();
   if(type==='managelines') return manageDeliveryLinesModal();
   if(type==='managestaffcategories') return manageStaffCategoriesModal();
   if(type==='salespersoncolors') return salesPersonColorsModal();
@@ -16824,6 +16931,12 @@ function customerFormModal(id){
   const norm = v => String(v||'').trim().toLowerCase();
   const matchedStaff = c && c.salesman ? state.staff.find(s=>norm(s.name)===norm(c.salesman)) : null;
   const unmatchedSalesman = c && c.salesman && !matchedStaff ? c.salesman : null;
+  // Sales Type is free text underneath (an older import, or a value this form didn't anticipate,
+  // should never get silently clobbered) but Retail/Bulk Sales cover what's actually in use today \u2014
+  // offered as a select with the current value always present, even if it's something else.
+  const typeOptions = [...new Set(['Retail','Bulk Sales', ...(c&&c.type?[c.type]:[])])];
+  const paymentTermsOptions = [...new Set(state.customers.map(x=>x.paymentTerms).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const salesGroupOptions = [...new Set(state.customers.map(x=>x.salesGroup).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   return `
   <div class="overlay" id="overlay">
     <div class="modal">
@@ -16835,14 +16948,38 @@ function customerFormModal(id){
           <div class="field"><label>Short name</label><input name="shortName" autocomplete="off" value="${c?escAttr(c.shortName||''):''}"></div>
           <div class="field"><label>Branch name</label><input name="branchName" autocomplete="off" value="${c?escAttr(c.branchName||''):''}"></div>
         </div>
-        <div class="field"><label>SMS phone</label><input name="phone" autocomplete="off" value="${c?escAttr(c.phone):''}"></div>
+        <div class="field-row">
+          <div class="field"><label>SMS phone</label><input name="phone" autocomplete="off" value="${c?escAttr(c.phone):''}"></div>
+          <div class="field"><label>City/Area</label><input name="cityArea" autocomplete="off" value="${c?escAttr(c.cityArea||''):''}"></div>
+        </div>
         <div class="field"><label>Address</label><textarea name="address" placeholder="Enter complete address">${c?escBody(unbr(c.address)):''}</textarea></div>
-        <div class="field"><label>Salesman</label>
-          <select name="salesman">
-            <option value="">Unassigned</option>
-            ${unmatchedSalesman ? `<option value="${escAttr(unmatchedSalesman)}" selected>${esc(unmatchedSalesman)} (not in staff list)</option>` : ''}
-            ${state.staff.map(s=>`<option value="${escAttr(s.name)}" ${matchedStaff&&matchedStaff.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
-          </select>
+        <div class="field-row">
+          <div class="field"><label>Salesman</label>
+            <select name="salesman">
+              <option value="">Unassigned</option>
+              ${unmatchedSalesman ? `<option value="${escAttr(unmatchedSalesman)}" selected>${esc(unmatchedSalesman)} (not in staff list)</option>` : ''}
+              ${state.staff.map(s=>`<option value="${escAttr(s.name)}" ${matchedStaff&&matchedStaff.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label>Status</label>
+            <select name="status">
+              <option value="Active" ${!c||c.status==='Active'?'selected':''}>Active</option>
+              <option value="Inactive" ${c&&c.status==='Inactive'?'selected':''}>Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Sales Type</label>
+            <select name="type">${typeOptions.map(t=>`<option value="${escAttr(t)}" ${c&&c.type===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Payment Terms</label>
+            <input name="paymentTerms" list="customer-payment-terms-list" autocomplete="off" placeholder="e.g. COD-IML, 15 Days" value="${c?escAttr(c.paymentTerms||''):''}">
+            <datalist id="customer-payment-terms-list">${paymentTermsOptions.map(t=>`<option value="${escAttr(t)}">`).join('')}</datalist>
+          </div>
+        </div>
+        <div class="field"><label>Sales Group</label>
+          <input name="salesGroup" list="customer-sales-group-list" autocomplete="off" placeholder="e.g. Hospitality - Retail" value="${c?escAttr(c.salesGroup||''):''}">
+          <datalist id="customer-sales-group-list">${salesGroupOptions.map(t=>`<option value="${escAttr(t)}">`).join('')}</datalist>
         </div>
         <div class="field"><label>Outstanding amount <span class="hint">(what this customer currently owes, if anything)</span></label><input name="outstandingAmount" type="number" min="0" step="0.01" autocomplete="off" value="${c&&c.outstandingAmount?c.outstandingAmount:''}" placeholder="0.00"></div>
         <div class="field"><label>Due date <span class="hint">(for the payment reminder message's {date} field)</span></label><input name="outstandingDueDate" type="date" autocomplete="off" value="${c&&c.outstandingDueDate?esc(c.outstandingDueDate.slice(0,10)):''}"></div>
@@ -18952,6 +19089,9 @@ function attachShellHandlers(){
   if(byIdEl('btn-outstanding-csv-format')) byIdEl('btn-outstanding-csv-format').onclick = ()=>openModal('outstandingcsvformat');
   if(byIdEl('btn-delete-selected-outstanding')) byIdEl('btn-delete-selected-outstanding').onclick = deleteSelectedOutstandingRecipients;
   if(byIdEl('btn-close-outstanding-csv-format')) byIdEl('btn-close-outstanding-csv-format').onclick = closeModal;
+  if(byIdEl('btn-close-customer-csv-format')) byIdEl('btn-close-customer-csv-format').onclick = closeModal;
+  if(byIdEl('btn-close-customer-import-review')) byIdEl('btn-close-customer-import-review').onclick = closeModal;
+  if(byIdEl('btn-customer-csv-format')) byIdEl('btn-customer-csv-format').onclick = ()=>openModal('customercsvformat');
   document.querySelectorAll('[data-preview-outstanding]').forEach(b=>b.addEventListener('click', ()=>previewOutstandingRecipient(b.dataset.previewOutstanding)));
   if(byIdEl('outstanding-import-input')) byIdEl('outstanding-import-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];

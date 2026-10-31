@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031185831">
+<meta name="app-build" content="20261031190558">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -15213,6 +15213,7 @@ function renderCostingProductSheet(product, version){
         : (draft.productionMethod ? `<div class="hint" style="white-space:pre-wrap;text-align:left;">${esc(draft.productionMethod)}</div>` : '<div class="hint">—</div>')}
     </div>
   </div>
+  ${admin ? `<div id="costing-material-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;"></div>` : ''}
   ${admin ? `<div id="costing-supplier-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;"></div>` : ''}
   ${admin ? `<div id="costing-batchcolor-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;padding:7px;flex-wrap:wrap;gap:5px;width:116px;">
     ${BATCH_COLOR_PALETTE.map(c=>`<button type="button" class="row-color-dot" data-pick-batch-color="${c}" style="background:${c};"></button>`).join('')}
@@ -17751,6 +17752,47 @@ function costingRemoveSupplierTag(matId, idx){
   state._costingDirty = true;
   render();
 }
+// Mirrors attachCostingSupplierAutocomplete() below — one shared dropdown positioned under
+// whichever raw-material Name input is focused, suggesting matching Item List entries by name
+// as the user types so a row can be linked to Item List without typing the name exactly right.
+// Picking a suggestion fills the name field and runs it through the normal field-input handler
+// (costingOnFieldInput), which is what keeps the Std cost preview line and water auto-balance
+// in sync — same as if the name had been typed by hand.
+function attachCostingMaterialNameAutocomplete(){
+  const dropdown = document.getElementById('costing-material-dropdown');
+  if(!dropdown) return;
+  let activeInput = null;
+  const hide = ()=>{ dropdown.style.display='none'; dropdown.innerHTML=''; activeInput=null; };
+  const show = (input)=>{
+    const typed = input.value.trim().toLowerCase();
+    if(!typed){ hide(); return; }
+    const matches = state.inventoryItems.filter(it=>it.name && it.name.toLowerCase().includes(typed)).slice(0,8);
+    if(matches.length===0){ hide(); return; }
+    activeInput = input;
+    const r = input.getBoundingClientRect();
+    dropdown.style.position = 'fixed';
+    dropdown.style.margin = '0';
+    dropdown.style.left = r.left+'px';
+    dropdown.style.right = 'auto';
+    dropdown.style.top = (r.bottom+4)+'px';
+    dropdown.style.width = Math.max(r.width,220)+'px';
+    dropdown.innerHTML = matches.map(it=>`<div class="ac-item" data-name="${escAttr(it.name)}">${esc(it.name)} <span class="hint" style="float:right;">Rs. ${Number(it.standardCost||0).toFixed(2)}</span></div>`).join('');
+    dropdown.style.display = 'block';
+  };
+  document.querySelectorAll('.cst-field[data-field="name"]').forEach(input=>{
+    input.addEventListener('input', ()=>show(input));
+    input.addEventListener('focus', ()=>show(input));
+    input.addEventListener('blur', ()=>setTimeout(hide, 150));
+  });
+  dropdown.addEventListener('mousedown', (e)=>{
+    const item = e.target.closest('.ac-item');
+    if(!item || !activeInput) return;
+    e.preventDefault();
+    activeInput.value = item.dataset.name;
+    costingOnFieldInput(activeInput);
+    hide();
+  });
+}
 function attachCostingSupplierAutocomplete(){
   const dropdown = document.getElementById('costing-supplier-dropdown');
   if(!dropdown) return;
@@ -19459,6 +19501,7 @@ function attachShellHandlers(){
     draft[el.dataset.sheetfield] = el.value;
     state._costingDirty = true;
   }));
+  attachCostingMaterialNameAutocomplete();
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openBatchSheetModal(b.dataset.viewBatchsheet)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = (e)=>printBatchSheet(e.currentTarget.dataset.recipeId);

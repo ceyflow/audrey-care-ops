@@ -7188,10 +7188,10 @@ function customerImportReviewModal(){
 // Column order matches the official inventory valuation report exactly (see itemCsvFormatModal)
 // -- same reasoning as CUSTOMER_CSV_HEADERS: Export straight back into Import round-trips with no
 // column remapping.
-const ITEM_CSV_HEADERS = ['Category','Raw Material','RM Short Code','Quantity','UOM','Current Standard Cost'];
+const ITEM_CSV_HEADERS = ['Category','Raw Material','RM Short Code','UOM','Current Standard Cost'];
 function downloadItemsCsv(){
   const rows = state.inventoryItems.map(i => [
-    i.category||'', i.name||'', i.shortCode||'', i.quantity||0, i.uom||'', i.standardCost||0,
+    i.category||'', i.name||'', i.shortCode||'', i.uom||'', i.standardCost||0,
   ]);
   const stamp = new Date().toISOString().slice(0,10);
   downloadFile(`audrey-care-ops-items-${stamp}.csv`, rowsToCsv(ITEM_CSV_HEADERS, rows), 'text/csv');
@@ -7200,8 +7200,8 @@ function downloadItemsCsv(){
 }
 function itemCsvFormatModal(){
   const sampleRows = [
-    ['20015', 'SLES', '', '127', 'Kg', '1,000'],
-    ['20080', 'Travel Kit Shower Cap', '', '3,088', 'pcs', '12'],
+    ['20015', 'SLES', '', 'Kg', '1,000'],
+    ['20080', 'Travel Kit Shower Cap', '', 'pcs', '12'],
   ];
   return `
   <div class="overlay" id="overlay">
@@ -7220,7 +7220,6 @@ function itemCsvFormatModal(){
         <strong>Category</strong> — the item's own code (e.g. "20015"). Also accepts "Code" or "Item Code". A row needs this or a Raw Material name to import.<br>
         <strong>Raw Material</strong> — the item's name. Also accepts "Name" or "Item".<br>
         <strong>RM Short Code</strong> — optional.<br>
-        <strong>Quantity</strong> — optional, defaults to 0. Commas (3,088) are fine.<br>
         <strong>UOM</strong> — unit of measure (e.g. "Kg", "pcs"). Also accepts "Unit".<br>
         <strong>Current Standard Cost</strong> — optional, defaults to 0. Commas are fine. Also accepts "Cost" or "Standard Cost".<br><br>
         A row matching an existing item by Category code (or by name, if Category is blank) <strong>updates</strong> that item with whatever this file has, instead of creating a second one. After importing, anything that needs a closer look shows up in a review list so you can fix it in your source file and re-upload — re-uploading is always safe, matched rows just update again.
@@ -7247,7 +7246,6 @@ async function importItemsCsv(file){
   const categoryIdx = findCol(['category','code','item code']);
   const nameIdx = findCol(['raw material','name','item']);
   const shortCodeIdx = findCol(['rm short code','short code']);
-  const quantityIdx = findCol(['quantity','qty']);
   const uomIdx = findCol(['uom','unit']);
   const costIdx = findCol(['current standard cost','standard cost','cost']);
   if(categoryIdx===-1 && nameIdx===-1){ showToast('Could not find a Category or Raw Material column in that file'); return; }
@@ -7266,7 +7264,6 @@ async function importItemsCsv(file){
     if(!category && !name){ errorRows.push({line:lineNum, raw: raw || '(blank row)', reason:'No Category code or Raw Material name in this row'}); return; }
     const fields = {
       category, name, shortCode: cell(r, shortCodeIdx),
-      quantity: quantityIdx>-1 ? parseItemNumber(r[quantityIdx]) : undefined,
       uom: cell(r, uomIdx),
       standardCost: costIdx>-1 ? parseItemNumber(r[costIdx]) : undefined,
     };
@@ -7281,7 +7278,7 @@ async function importItemsCsv(file){
       updated++;
     } else {
       const it = {
-        id: uid('ITM'), category, name: name || category, shortCode:'', quantity:0, uom:'', standardCost:0,
+        id: uid('ITM'), category, name: name || category, shortCode:'', uom:'', standardCost:0,
         ...Object.fromEntries(Object.entries(fields).filter(([,v])=>v!==undefined && v!=='')),
         createdAt: new Date().toISOString(),
       };
@@ -7327,7 +7324,7 @@ async function submitItem(e){
   const f = e.target; const editId = f.dataset.editId;
   const data = {
     category: f.category.value.trim(), name: f.name.value.trim(), shortCode: f.shortCode.value.trim(),
-    quantity: parseItemNumber(f.quantity.value), uom: f.uom.value.trim(), standardCost: parseItemNumber(f.standardCost.value),
+    uom: f.uom.value.trim(), standardCost: parseItemNumber(f.standardCost.value),
   };
   if(!data.name) return;
   if(editId){
@@ -7379,10 +7376,7 @@ function itemFormModal(id){
           <div class="field"><label>Category <span class="hint">(item code)</span></label><input name="category" autocomplete="off" value="${i?escAttr(i.category||''):''}"></div>
           <div class="field"><label>RM Short Code</label><input name="shortCode" autocomplete="off" value="${i?escAttr(i.shortCode||''):''}"></div>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Quantity</label><input name="quantity" type="number" min="0" step="0.01" autocomplete="off" value="${i&&i.quantity?i.quantity:''}" placeholder="0"></div>
-          <div class="field"><label>UOM</label><input name="uom" autocomplete="off" placeholder="e.g. Kg, pcs" value="${i?escAttr(i.uom||''):''}"></div>
-        </div>
+        <div class="field"><label>UOM</label><input name="uom" autocomplete="off" placeholder="e.g. Kg, pcs" value="${i?escAttr(i.uom||''):''}"></div>
         <div class="field"><label>Current Standard Cost</label><input name="standardCost" type="number" min="0" step="0.01" autocomplete="off" value="${i&&i.standardCost?i.standardCost:''}" placeholder="0.00"></div>
         <div class="modal-actions" style="justify-content:space-between;">
           <div>${i?`<button type="button" class="btn btn-danger" id="btn-delete-item">Delete</button>`:''}</div>
@@ -7398,7 +7392,6 @@ function itemFormModal(id){
 const ITEM_COLUMN_DEFS = [
   {key:'category', label:'Category', cell:i=>esc(i.category)||'<span class="hint">—</span>'},
   {key:'shortCode', label:'RM Short Code', cell:i=>esc(i.shortCode)||'<span class="hint">—</span>'},
-  {key:'quantity', label:'Quantity', cell:i=>esc(String(i.quantity||0))},
   {key:'uom', label:'UOM', cell:i=>esc(i.uom)||'<span class="hint">—</span>'},
   {key:'standardCost', label:'Current Standard Cost', cell:i=>'Rs. '+Number(i.standardCost||0).toFixed(2)},
   {key:'createdAt', label:'Added', cell:i=>fmtDate(i.createdAt)},
@@ -7448,16 +7441,12 @@ function renderItemListPage(){
     if(categoryF && !(i.category||'').toLowerCase().includes(categoryF)) return false;
     return true;
   });
-  const totalValue = state.inventoryItems.reduce((s,i)=>s+(Number(i.quantity)||0)*(Number(i.standardCost)||0), 0);
-  const outOfStock = state.inventoryItems.filter(i=>!(Number(i.quantity)>0)).length;
   const canManage = state.session && roleCan(state.session.role, 'itemlist_manage');
   const visibleCols = ITEM_COLUMN_DEFS.filter(d=>itemColVisible(d.key));
   const colCount = (canManage?1:0) + 1 + visibleCols.length + (canManage?1:0);
   return `
-  <div class="stat-grid">
+  <div class="stat-grid" style="max-width:220px;">
     <div class="stat-card"><div class="label">Total items</div><div class="value"><span class="stat-num" data-target="${state.inventoryItems.length}">${state.inventoryItems.length}</span></div></div>
-    <div class="stat-card"><div class="label">Total stock value</div><div class="value accent">Rs. ${totalValue.toFixed(2)}</div></div>
-    <div class="stat-card"><div class="label">Out of stock</div><div class="value">${outOfStock}</div></div>
   </div>
   <div class="toolbar">
     <div></div>

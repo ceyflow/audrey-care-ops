@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031191718">
+<meta name="app-build" content="20261031191846">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8905,6 +8905,12 @@ const GRID_ICONS = {
   settings: '<path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />',
 };
 GRID_ICONS.ordersprocess = GRID_ICONS.orders;
+// Same box/crate outline as the sidebar's 'box' icon for Item List (ICONS.box) — Item List was
+// added to GRID_ICONS by page id ('itemlist'), which this set never had an entry for, so the
+// mobile Sections grid's badge silently fell through to icon('itemlist') (no such id in ICONS
+// either) and rendered blank. Any future NAV page needs its id added here too, or its grid tile
+// will show the same empty badge.
+GRID_ICONS.itemlist = '<path d="M3 7l9-4 9 4-9 4-9-4z" /><path d="M3 7v10l9 4 9-4V7" /><path d="M12 11v10" /><path d="M7.5 5l9 4" />';
 GRID_ICONS.attendance = '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 7v5l3 3" />';
 // Calendar (not the clock 'attendance' uses) -- distinguishes "check in/out now" from "look back
 // at my own history" at a glance, same way a phone's Clock and Calendar apps use different icons.

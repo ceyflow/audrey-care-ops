@@ -2685,6 +2685,21 @@ async function saveBulkSmsTemplateForm(e){
   if(!ok) return;
   showToast('Template saved');
 }
+async function deleteSelectedOutstandingRecipients(){
+  const ids = [...state.bulkSmsCustomers].filter(id=>findOutstandingRecipient(id));
+  if(!ids.length) return;
+  openConfirmModal({
+    title: 'Remove selected recipients', danger: true, confirmLabel: 'Remove',
+    message: `Remove ${ids.length} recipient${ids.length===1?'':'s'} from this uploaded list? This doesn't touch your Customers list — re-import the CSV any time to bring them back.`,
+    onConfirm: async ()=>{
+      state.outstandingRecipients = (state.outstandingRecipients||[]).filter(r=>!ids.includes(r.id));
+      ids.forEach(id=>state.bulkSmsCustomers.delete(id));
+      const ok = await save('outstandingRecipients');
+      render();
+      if(ok) showToast(`${ids.length} recipient${ids.length===1?'':'s'} removed`);
+    },
+  });
+}
 async function deleteBulkSmsTemplate(id){
   const t = byId(state.bulkSmsTemplates, id); if(!t) return;
   openConfirmModal({
@@ -11702,6 +11717,7 @@ function renderBulkSmsOutstandingTab(){
       <h3>Uploaded outstanding balances</h3>
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="hint" id="bulksms-recipient-count">${selectedCount} recipient${selectedCount===1?'':'s'} selected</span>
+        <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-outstanding" ${selectedCount===0?'disabled':''}>🗑 Delete selected</button>
         <button type="button" class="btn btn-sm" id="btn-outstanding-csv-format">CSV Format</button>
         <label class="btn btn-sm" style="cursor:pointer;margin:0;">⬆ Import CSV
           <input type="file" id="outstanding-import-input" accept=".csv,text/csv" style="display:none;">
@@ -18856,6 +18872,7 @@ function attachShellHandlers(){
   wireSmsCharCount('quicksms-message', 'quicksms-charcount', 'quicksms-segcount');
   if(byIdEl('btn-send-outstanding-sms')) byIdEl('btn-send-outstanding-sms').onclick = sendOutstandingSms;
   if(byIdEl('btn-outstanding-csv-format')) byIdEl('btn-outstanding-csv-format').onclick = ()=>openModal('outstandingcsvformat');
+  if(byIdEl('btn-delete-selected-outstanding')) byIdEl('btn-delete-selected-outstanding').onclick = deleteSelectedOutstandingRecipients;
   if(byIdEl('btn-close-outstanding-csv-format')) byIdEl('btn-close-outstanding-csv-format').onclick = closeModal;
   document.querySelectorAll('[data-preview-outstanding]').forEach(b=>b.addEventListener('click', ()=>previewOutstandingRecipient(b.dataset.previewOutstanding)));
   if(byIdEl('outstanding-import-input')) byIdEl('outstanding-import-input').addEventListener('change', async e=>{
@@ -18906,8 +18923,10 @@ function attachShellHandlers(){
     const total = state.bulkSmsCustomers.size;
     const countEl = byIdEl('bulksms-recipient-count');
     const sendCountEl = byIdEl('bulksms-send-count');
+    const deleteSelectedBtn = byIdEl('btn-delete-selected-outstanding');
     if(countEl) countEl.textContent = total + ' recipient' + (total===1?'':'s') + ' selected';
     if(sendCountEl) sendCountEl.textContent = total;
+    if(deleteSelectedBtn) deleteSelectedBtn.disabled = total===0;
   }
   const bulkSmsRowBoxes = [...document.querySelectorAll('.bulksms-customer-row')];
   const bulkSmsSelectAll = byIdEl('bulksms-select-all-customers');

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261030175322">
+<meta name="app-build" content="20261031062632">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -704,6 +704,28 @@ html{ visibility:hidden; }
   .rnd-att-pill{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
   .rnd-att-pill-in{background:var(--s-received-soft);color:var(--s-received);}
   .rnd-att-pill-out{background:var(--s-blending-soft);color:var(--s-blending);}
+  /* Liquid Glass, mobile: the Attendance staff report's day cards (.rnd-att-card). "Divider
+     Frost" (frosted card, hairline splitting the date from the In/Out rows) combined with
+     "Timeline Rail" (a blue-to-orange ::before bar down the left edge) -- picked together from
+     a 10-concept gallery. Desktop keeps the plain bordered card above; this only applies at
+     phone width, same breakpoint every other Liquid Glass surface in this file uses. */
+  @media (max-width:760px){
+    .rnd-att-card{
+      position:relative;
+      background:linear-gradient(160deg, rgba(255,255,255,.78), rgba(255,255,255,.42));
+      backdrop-filter:blur(14px) saturate(200%); -webkit-backdrop-filter:blur(14px) saturate(200%);
+      border:1px solid rgba(255,255,255,.8);border-radius:18px;
+      padding:13px 16px 15px 21px;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,1), 0 8px 22px rgba(31,55,90,.09);
+    }
+    .rnd-att-card::before{
+      content:'';position:absolute;left:9px;top:14px;bottom:14px;width:4px;border-radius:3px;
+      background:linear-gradient(var(--s-received) 0 50%, var(--s-blending) 50% 100%);
+    }
+    .rnd-att-card-top{margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid rgba(31,55,90,.08);}
+    .rnd-att-card-date{font-size:13.5px;letter-spacing:.01em;}
+    .rnd-att-pill{padding:4px 10px;font-size:11px;}
+  }
   .rnd-outcome-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
   .rnd-outcome-group:last-child{margin-bottom:0;}
   .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);border:none;}
@@ -8596,13 +8618,13 @@ function renderAttendanceStaffReport(staffName){
               <span class="rnd-att-pill rnd-att-pill-in">Check In</span>
               <span class="hint">${inE?fmtTimeOnly(inE.at):'—'}</span>
               ${inE ? locLink(inE) : ''}
-              ${inE?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;">🗑</button>`:''}
+              ${inE?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="rnd-att-pill rnd-att-pill-out">Check Out</span>
               <span class="hint">${outE?fmtTimeOnly(outE.at):'—'}</span>
               ${outE ? locLink(outE) : ''}
-              ${outE?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;">🗑</button>`:''}
+              ${outE?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}
             </div>
           </div>
         </div>`;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101164138">
+<meta name="app-build" content="20261101171052">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -20148,15 +20148,15 @@ function attachShellHandlers(){
   // outside-click close, only its own Close button or sending a reply.
   if(byIdEl('form-admin-broadcast-reply')) byIdEl('form-admin-broadcast-reply').addEventListener('submit', sendAdminBroadcastReply);
 
-  // Modal generic — clicking the overlay background closes the modal, except for New order:
-  // that form is easy to half-fill and lose with one stray click, so it only closes via its own
-  // Cancel/Create controls.
+  // Modal generic — clicking the overlay background closes the modal, except for forms that are
+  // easy to half-fill and lose with one stray click (New order, and the Mixing Step Templates
+  // editor), which only close via their own Cancel/Create/Save controls.
   bindRichTextFields(document);
   bindColorSwatchFields(document);
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && state.modal.startsWith('order:new')) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

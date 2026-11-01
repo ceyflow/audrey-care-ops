@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101154107">
+<meta name="app-build" content="20261101164138">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -20430,6 +20430,11 @@ document.addEventListener('click', e=>{
 // performGoTo (the hub sub-pages) — resync app state to whatever page the hash now names.
 window.addEventListener('popstate', ()=>{
   if(!state.session || state.trackMode || state.boardMode || state.complaintMode) return;
+  // A mobile back-gesture (an edge-swipe, easy to trigger by accident while typing near the
+  // screen's edge) fires this exactly like a real Back-button press. With any modal open —
+  // "Edit template" included — that silently popped state.modal below, discarding whatever was
+  // being typed with no warning. Re-assert the current URL and leave the modal open instead.
+  if(state.modal){ history.pushState(null, '', location.href); return; }
   const hashParts = (location.hash||'').replace('#','').split('/');
   const page = hashParts[0] || '';
   if(!page || !pageAllowed(page)) return;

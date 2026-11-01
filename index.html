@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101152743">
+<meta name="app-build" content="20261101153559">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5107,6 +5107,16 @@ async function loadAll(){
     });
   }
   state.loaded = true;
+  // Cold-start inactivity check — see persistLastActivity()'s comment. state.userRoles (needed by
+  // roleSignOffMinutes) is only reliably populated once the synced-keys fetch above has finished,
+  // which is why this has to live here and not any earlier in loadAll().
+  if(state.session){
+    const signOffMins = roleSignOffMinutes(state.session.role);
+    const lastActivity = getPersistedLastActivity();
+    if(signOffMins>0 && lastActivity!=null && (Date.now()-lastActivity) >= signOffMins*60*1000){
+      await logOut();
+    }
+  }
   applyTheme();
   applyFavicon();
   if(sweepCompletedOrders()) save('orders').catch(e=>console.error('archive sweep save failed', e));
@@ -5307,6 +5317,23 @@ async function _saveOnceQuietly(key){
 function saveSession(){
   try{ localStorage.setItem('audrey_session', JSON.stringify(state.session)); }
   catch(e){ console.error('save session failed', e); }
+  // A fresh login (or re-login) resets the inactivity clock — see persistLastActivity()'s own
+  // comment for why this needs to survive a page reload, not just live in a JS variable.
+  if(state.session) persistLastActivity();
+}
+// The in-tab inactivity ticker (armed near the bottom of this file) only tracks "last activity"
+// in a plain JS variable, which resets to right now on every page load — meaning it can only ever
+// catch inactivity while the tab stays open and running continuously. It does nothing while the
+// laptop is closed, asleep, or the browser is fully quit: no JS executes during that time to
+// notice the clock has run out. Persisting the real timestamp here, and checking it once at boot
+// (see loadAll()), closes that gap — confirmed reproducible: log in, close the laptop before the
+// role's sign-off timer would fire, reopen after it's long past due, and the page was still
+// showing a live session with no login prompt at all.
+function persistLastActivity(){
+  try{ localStorage.setItem('audrey_lastActivity', String(Date.now())); }catch(e){}
+}
+function getPersistedLastActivity(){
+  try{ const v = localStorage.getItem('audrey_lastActivity'); return v ? Number(v) : null; }catch(e){ return null; }
 }
 // A single admin-visible audit trail — who did what, and when. Call this alongside (never
 // instead of) the real action; a logging failure must never block or roll back the action it's
@@ -20411,8 +20438,21 @@ window.addEventListener('popstate', ()=>{
 // mousemove — and a single interval checks it every 15s rather than resetting a setTimeout on
 // every event, which is simpler to reason about and can't be left dangling by a stray early return.
 let _lastActivityAt = Date.now();
+// Throttled mirror of _lastActivityAt into localStorage (persistLastActivity, defined near
+// saveSession) — a laptop that sleeps mid-session rather than fully powering off keeps this tab
+// alive, so without this the persisted timestamp would still only reflect the original login
+// time, risking a premature cold-start logout next load even though the user was active right up
+// until it slept. Throttled to once per 10s rather than every mousemove — localStorage writes are
+// synchronous and this doesn't need sub-10-second precision.
+let _lastPersistedActivityWriteAt = 0;
 ['mousemove','keydown','mousedown','click','scroll','touchstart'].forEach(evt=>{
-  document.addEventListener(evt, ()=>{ _lastActivityAt = Date.now(); }, {passive:true});
+  document.addEventListener(evt, ()=>{
+    _lastActivityAt = Date.now();
+    if(state.session && _lastActivityAt - _lastPersistedActivityWriteAt >= 10000){
+      persistLastActivity();
+      _lastPersistedActivityWriteAt = _lastActivityAt;
+    }
+  }, {passive:true});
 });
 setInterval(()=>{
   const mins = state.session ? roleSignOffMinutes(state.session.role) : 0;

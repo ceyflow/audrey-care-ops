@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101153559">
+<meta name="app-build" content="20261101154107">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5115,6 +5115,13 @@ async function loadAll(){
     const lastActivity = getPersistedLastActivity();
     if(signOffMins>0 && lastActivity!=null && (Date.now()-lastActivity) >= signOffMins*60*1000){
       await logOut();
+    } else {
+      // Not expired — sync the in-tab timer's clock to the real persisted last-activity instead
+      // of leaving it at this page load's own Date.now(), then arm the precise sign-off deadline
+      // (scheduleSignOffTimer, defined near the bottom of this file) so a page refresh partway
+      // through someone's inactivity window doesn't quietly grant them a fresh full window.
+      if(lastActivity!=null) _lastActivityAt = lastActivity;
+      scheduleSignOffTimer();
     }
   }
   applyTheme();
@@ -5319,7 +5326,8 @@ function saveSession(){
   catch(e){ console.error('save session failed', e); }
   // A fresh login (or re-login) resets the inactivity clock — see persistLastActivity()'s own
   // comment for why this needs to survive a page reload, not just live in a JS variable.
-  if(state.session) persistLastActivity();
+  if(state.session){ persistLastActivity(); _lastActivityAt = Date.now(); }
+  scheduleSignOffTimer();
 }
 // The in-tab inactivity ticker (armed near the bottom of this file) only tracks "last activity"
 // in a plain JS variable, which resets to right now on every page load — meaning it can only ever
@@ -20434,10 +20442,33 @@ window.addEventListener('popstate', ()=>{
   render();
 });
 // Inactivity sign-off: armed once here (not per-render), so it survives every re-render without
-// piling up duplicate listeners. Each real input event just stamps a timestamp — cheap even on
-// mousemove — and a single interval checks it every 15s rather than resetting a setTimeout on
-// every event, which is simpler to reason about and can't be left dangling by a stray early return.
+// piling up duplicate listeners. Each real input event stamps a timestamp and reschedules a
+// setTimeout for exactly when the role's sign-off window will next elapse — a precise deadline
+// rather than a periodic poll, so sign-off fires the instant it's due instead of up to however
+// long the old poll interval was. Was a 15s setInterval poll; a user could stay "logged in" for
+// nearly 15 extra seconds past their configured timeout — fixed to fire immediately on request.
 let _lastActivityAt = Date.now();
+let _signOffTimer = null;
+function scheduleSignOffTimer(){
+  if(_signOffTimer){ clearTimeout(_signOffTimer); _signOffTimer = null; }
+  if(!state.session) return;
+  const mins = roleSignOffMinutes(state.session.role);
+  if(!mins) return;
+  const remaining = Math.max(0, mins*60*1000 - (Date.now()-_lastActivityAt));
+  _signOffTimer = setTimeout(()=>{
+    _signOffTimer = null;
+    if(!state.session) return;
+    const stillMins = roleSignOffMinutes(state.session.role);
+    if(stillMins && Date.now()-_lastActivityAt >= stillMins*60*1000){
+      showToast('Signed off after being inactive');
+      logOut();
+    } else {
+      // A role-timer edit or late-arriving activity moved the goalposts since this fired —
+      // reschedule for whatever's actually left rather than silently giving up.
+      scheduleSignOffTimer();
+    }
+  }, remaining);
+}
 // Throttled mirror of _lastActivityAt into localStorage (persistLastActivity, defined near
 // saveSession) — a laptop that sleeps mid-session rather than fully powering off keeps this tab
 // alive, so without this the persisted timestamp would still only reflect the original login
@@ -20448,20 +20479,15 @@ let _lastPersistedActivityWriteAt = 0;
 ['mousemove','keydown','mousedown','click','scroll','touchstart'].forEach(evt=>{
   document.addEventListener(evt, ()=>{
     _lastActivityAt = Date.now();
-    if(state.session && _lastActivityAt - _lastPersistedActivityWriteAt >= 10000){
-      persistLastActivity();
-      _lastPersistedActivityWriteAt = _lastActivityAt;
+    if(state.session){
+      scheduleSignOffTimer();
+      if(_lastActivityAt - _lastPersistedActivityWriteAt >= 10000){
+        persistLastActivity();
+        _lastPersistedActivityWriteAt = _lastActivityAt;
+      }
     }
   }, {passive:true});
 });
-setInterval(()=>{
-  const mins = state.session ? roleSignOffMinutes(state.session.role) : 0;
-  if(!state.session || !mins) return;
-  if(Date.now() - _lastActivityAt >= mins*60*1000){
-    showToast('Signed off after being inactive');
-    logOut();
-  }
-}, 15000);
 loadAll();
 </script>
 <script>

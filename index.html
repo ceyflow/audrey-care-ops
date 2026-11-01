@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101085025">
+<meta name="app-build" content="20261101132327">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4495,6 +4495,7 @@ let state = {
   chatEditId: null,
   chatTheme: 'rounded',
   chatThemeMenuOpen: false,
+  chatHeaderMenuOpen: false,
   chatReactionPickerId: null,
   chatSearchOpen: false,
   chatSearchQuery: '',
@@ -7857,7 +7858,11 @@ function renderKeepModalScroll(){
 }
 function toggleChatMenu(id){ state.chatMenuOpenId = state.chatMenuOpenId===id ? null : id; renderKeepChatScroll(); }
 function closeChatMenu(){ if(state.chatMenuOpenId){ state.chatMenuOpenId = null; renderKeepChatScroll(); } }
-function toggleChatThemeMenu(){ state.chatThemeMenuOpen = !state.chatThemeMenuOpen; renderKeepChatScroll(); }
+function toggleChatThemeMenu(){ state.chatThemeMenuOpen = !state.chatThemeMenuOpen; state.chatHeaderMenuOpen = false; renderKeepChatScroll(); }
+// Theme and Delete chat history live inside one ⋮ menu instead of two separate buttons — with
+// search added alongside them, three admin-only text-labeled buttons no longer fit a phone-width
+// header without wrapping or clipping.
+function toggleChatHeaderMenu(){ state.chatHeaderMenuOpen = !state.chatHeaderMenuOpen; state.chatThemeMenuOpen = false; renderKeepChatScroll(); }
 // Admin-only, and shared: the picked theme saves to the same synced key everyone's chat page
 // reads from, so one Admin's pick changes what the whole team sees, not just this device.
 async function pickChatTheme(key){
@@ -8126,6 +8131,7 @@ async function sendChatMessage(e){
 }
 function deleteChatHistory(){
   if(!(state.session && roleCan(state.session.role, 'chat_delete_history'))) return;
+  state.chatHeaderMenuOpen = false;
   openConfirmModal({
     title: 'Delete chat history', danger: true, confirmLabel: 'Delete',
     message: 'Delete the entire team chat history? This clears it for everyone and cannot be undone.',
@@ -16468,14 +16474,18 @@ function renderChatPage(){
     <div class="chat-mobile-toolbar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 18px 0;position:relative;">
       <a href="#${chatBackTarget}" class="chat-mobile-back" data-nav="${chatBackTarget}" aria-label="Back">${icon('chevron')}</a>
       <div class="chat-mobile-title">Team chat</div>
-      <button type="button" id="btn-chat-search-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 11px;font-size:13px;" aria-label="Search">🔍</button>
-      ${isAdmin() ? `
-      <button type="button" id="btn-chat-theme-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:500;">🎨 Theme</button>
+      <button type="button" id="btn-chat-search-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;" aria-label="Search">🔍</button>
+      ${(isAdmin() || deleteAllowed) ? `
+      <button type="button" id="btn-chat-header-menu" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;" aria-label="More options">⋮</button>
+      ${state.chatHeaderMenuOpen ? `
+      <div class="chat-dropdown" style="top:40px;right:0;min-width:200px;">
+        ${isAdmin() ? `<button type="button" id="btn-chat-theme-toggle">🎨 Theme</button>` : ''}
+        ${deleteAllowed ? `<button type="button" class="chat-dropdown-danger" id="btn-delete-chat-history">🗑️ Delete chat history</button>` : ''}
+      </div>` : ''}` : ''}
       ${state.chatThemeMenuOpen ? `
       <div class="chat-dropdown" style="top:40px;right:0;min-width:230px;">
         ${CHAT_THEME_ORDER.map(key=>`<button type="button" data-chat-theme-pick="${key}" style="${state.chatTheme===key?'font-weight:700;background:var(--bg);':''}">${state.chatTheme===key?'✓ ':''}${esc(CHAT_THEMES[key].label)}</button>`).join('')}
-      </div>` : ''}` : ''}
-      ${deleteAllowed ? `<button type="button" style="background:${theme.deleteBg};color:${theme.deleteColor};border:${theme.deleteBorder||'none'};border-radius:${theme.deleteRadius};padding:8px 16px;font-size:12px;font-weight:600;" id="btn-delete-chat-history">Delete chat history</button>` : ''}
+      </div>` : ''}
     </div>
     ${searching ? `
     <div class="chat-search-bar">
@@ -19909,6 +19919,7 @@ function attachShellHandlers(){
   if(byIdEl('chat-form')) byIdEl('chat-form').addEventListener('submit', sendChatMessage);
   if(byIdEl('btn-delete-chat-history')) byIdEl('btn-delete-chat-history').onclick = deleteChatHistory;
   if(byIdEl('btn-chat-theme-toggle')) byIdEl('btn-chat-theme-toggle').onclick = toggleChatThemeMenu;
+  if(byIdEl('btn-chat-header-menu')) byIdEl('btn-chat-header-menu').onclick = toggleChatHeaderMenu;
   document.querySelectorAll('[data-chat-theme-pick]').forEach(b=>b.addEventListener('click', ()=>pickChatTheme(b.dataset.chatThemePick)));
   document.querySelectorAll('[data-chat-menu]').forEach(b=>b.addEventListener('click', ()=>toggleChatMenu(b.dataset.chatMenu)));
   document.querySelectorAll('[data-chat-react-open]').forEach(b=>b.addEventListener('click', ()=>toggleChatReactionPicker(b.dataset.chatReactOpen)));

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101133818">
+<meta name="app-build" content="20261101152743">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -14148,6 +14148,26 @@ function ensureBatchAudioCtx(){
   if(_batchAudioCtx.state==='suspended'){ _batchAudioCtx.resume().catch(()=>{}); }
   return _batchAudioCtx;
 }
+// Left to its own devices, this AudioContext is only ever first created from inside the
+// countdown's own setInterval tick when a timed step hits zero — not a real user gesture. Most
+// mobile browsers (iOS Safari especially) keep an AudioContext permanently suspended unless it's
+// created/resumed synchronously inside a genuine click/touch handler; resuming it later from a
+// timer callback silently does nothing, no error thrown — so the step-finished alert could go
+// completely silent on a phone that never happened to trigger it from a real tap first (e.g. by
+// pressing "Test sound"). Warming it up on the very first interaction anywhere in the app (same
+// pattern as the boot sound's own unlock listeners, near the top of this file) means it's already
+// running by the time an automatic alert needs it.
+(function(){
+  const unlockBatchAudio = () => {
+    document.removeEventListener('touchstart', unlockBatchAudio, true);
+    document.removeEventListener('pointerdown', unlockBatchAudio, true);
+    document.removeEventListener('click', unlockBatchAudio, true);
+    ensureBatchAudioCtx();
+  };
+  document.addEventListener('touchstart', unlockBatchAudio, true);
+  document.addEventListener('pointerdown', unlockBatchAudio, true);
+  document.addEventListener('click', unlockBatchAudio, true);
+})();
 const ALERT_SOUNDS = {
   chime:  { name:'Chime',       notes:[{f:880,   t:'sine'},{f:1108.7,t:'sine'},{f:1318.5,t:'sine'}],           gap:0.16, dur:0.55, gain:0.3  },
   bell:   { name:'Bell',        notes:[{f:659.3, t:'sine'},{f:987.8, t:'sine'}],                                gap:0.05, dur:1.1,  gain:0.28 },

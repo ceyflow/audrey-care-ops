@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261031211803">
+<meta name="app-build" content="20261101085025">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -167,6 +167,38 @@ html{ visibility:hidden; }
   .chat-bubble-wrap:hover .chat-grouped-row{opacity:1;}
   .chat-bubble-time{float:right;margin:4px 0 -3px 10px;font-size:10px;opacity:.65;white-space:nowrap;}
   #btn-chat-theme-toggle:hover{background:var(--bg);}
+  /* Reactions: a row of emoji badges under a bubble (one per emoji used, with its count), and a
+     small picker popup that opens from the message's ⋮ menu to pick/change your own reaction. */
+  .chat-reactions-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+  .chat-reaction-badge{display:flex;align-items:center;gap:3px;font-size:11.5px;background:var(--surface,#fff);border:1px solid var(--border);border-radius:99px;padding:2px 7px;cursor:pointer;line-height:1.3;}
+  .chat-reaction-badge.mine{border-color:var(--accent);background:var(--accent-soft);}
+  .chat-reaction-picker{position:absolute;top:22px;z-index:31;background:var(--surface,#fff);border:1px solid var(--border);border-radius:999px;box-shadow:0 10px 24px rgba(20,25,20,.16);padding:5px 7px;display:flex;gap:7px;font-size:19px;}
+  .chat-reaction-picker button{background:none;border:none;cursor:pointer;line-height:1;padding:2px;border-radius:50%;}
+  .chat-reaction-picker button:hover{background:var(--bg);transform:scale(1.15);}
+  /* Pinned message banner, sticky under the chat header. */
+  .chat-pin-banner{display:flex;align-items:center;gap:8px;padding:9px 18px;background:var(--accent-soft);border-bottom:1px solid var(--border);font-size:12px;color:var(--ink);cursor:pointer;}
+  .chat-pin-banner-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chat-pin-unpin{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;}
+  .chat-pin-unpin:hover{color:var(--ink);}
+  /* Search bar, replaces the theme-toggle row when open. */
+  .chat-search-bar{display:flex;align-items:center;gap:8px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--surface,#fff);}
+  .chat-search-bar input{flex:1;border:none;outline:none;background:none;font-size:13.5px;color:var(--ink);font-family:inherit;}
+  .chat-search-close{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;}
+  .chat-search-hit{background:#FFE69A;color:#1D2430;border-radius:3px;padding:0 1px;}
+  .chat-search-nomatch{text-align:center;color:var(--muted);font-size:12.5px;padding:18px;}
+  /* @mention highlight, inline inside a bubble's text. */
+  .chat-mention{background:rgba(59,130,196,.18);color:var(--accent-dark);font-weight:700;border-radius:4px;padding:0 3px;}
+  /* Doubled-up class selector (vs. plain .ac-dropdown) so this reliably wins the cascade over
+     .ac-dropdown's own top:100% positioning regardless of which rule is defined later in the
+     file — this dropdown opens upward (above the chat input), that one opens downward. */
+  .chat-mention-dropdown.ac-dropdown{position:absolute;top:auto;bottom:100%;left:0;right:0;margin-bottom:4px;margin-top:0;background:var(--surface,#fff);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 24px rgba(20,25,20,.14);max-height:160px;overflow-y:auto;z-index:32;}
+  .chat-mention-dropdown .ac-item{padding:8px 12px;font-size:13px;cursor:pointer;}
+  .chat-mention-dropdown .ac-item:hover,.chat-mention-dropdown .ac-item.active{background:var(--bg);}
+  /* Seen/sent ticks on my own messages, WhatsApp-style. */
+  .chat-ticks{font-size:11px;letter-spacing:-1.5px;color:var(--muted);}
+  .chat-ticks.seen{color:#3B9BF0;letter-spacing:-1.5px;}
+  /* Swipe-to-reply: the reply icon that fades in as a bubble row is dragged sideways. */
+  .chat-swipe-hint{position:absolute;top:50%;transform:translateY(-50%);color:var(--accent-dark);font-size:16px;opacity:0;pointer-events:none;transition:opacity .08s;}
   .toast svg{width:18px;height:18px;flex-shrink:0;}
   .toast svg path{stroke-dasharray:28;stroke-dashoffset:28;animation:check-draw .45s ease forwards .1s;}
   @keyframes check-draw{to{stroke-dashoffset:0;}}
@@ -2867,7 +2899,7 @@ function subscribeRealtime(){
         // immediately. Everything else can be deferred while the user is mid-keystroke elsewhere.
         if(k==='chat' || k==='complaints' || k==='boxCounts' || k==='attendanceEditRequests') render(); else renderOrDefer();
         if(k==='chat'){
-          if(state.page==='chat') scrollChatToBottom();
+          if(state.page==='chat'){ scrollChatToBottom(); markChatSeenIfNeeded(); }
           if(prevChatLen!==null && state.chat.length>prevChatLen){
             const last = state.chat[state.chat.length-1];
             if(last && state.session && last.sender!==state.session.name){
@@ -4463,6 +4495,10 @@ let state = {
   chatEditId: null,
   chatTheme: 'rounded',
   chatThemeMenuOpen: false,
+  chatReactionPickerId: null,
+  chatSearchOpen: false,
+  chatSearchQuery: '',
+  chatMentionActive: false,
   sidebarOpen: false,
   ordersView: 'kanban',
   selectedCustomers: new Set(),
@@ -5902,7 +5938,7 @@ function performGoTo(page){
   state._myAttExpandedDay = null;
   state._settingsOpenPanel = null;
   state._moreFabOpen = false;
-  if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
+  if(page==='chat'){ state.chatUnread = false; state.chatNotice = null; clearTimeout(state._chatNoticeTimer); markChatSeenIfNeeded(); }
   const curHashParts = (location.hash||'').replace('#','').split('/');
   if((curHashParts[0]||'')!==page){
     // Costing & recipe / Production Guide / Mixing and Filling, and Order inquiry / Complaints,
@@ -7832,15 +7868,201 @@ async function pickChatTheme(key){
   if(!(await save('chatTheme'))) return;
   showToast('Chat theme updated for everyone');
 }
-async function toggleChatLike(id){
+const CHAT_REACTION_EMOJIS = ['👍','❤️','😂','😮','😢'];
+// Reads a message's reactions as {emoji: [names]}, migrating the old single-emoji `likes` array
+// (always a 👍) into that shape on the fly — existing chat history keeps rendering correctly
+// without a one-time data migration; the shape only actually changes on a message once someone
+// reacts to it after this feature shipped (see setChatReaction below).
+function chatReactionsOf(m){
+  if(m.reactions && typeof m.reactions==='object') return m.reactions;
+  if(Array.isArray(m.likes) && m.likes.length) return {'👍': m.likes};
+  return {};
+}
+function toggleChatReactionPicker(id){
+  state.chatReactionPickerId = state.chatReactionPickerId===id ? null : id;
+  state.chatMenuOpenId = null;
+  renderKeepChatScroll();
+}
+// One reaction per person per message, same as WhatsApp — picking a new emoji moves your
+// reaction rather than stacking a second one; picking the same emoji again removes it.
+async function setChatReaction(id, emoji){
   const m = state.chat.find(x=>x.id===id); if(!m) return;
-  if(!Array.isArray(m.likes)) m.likes = [];
-  const me = chatMyName();
-  const i = m.likes.indexOf(me);
-  if(i>-1) m.likes.splice(i,1); else m.likes.push(me);
+  const me = chatMyName(); if(!me) return;
+  const current = chatReactionsOf(m);
+  const hadThis = (current[emoji]||[]).includes(me);
+  const next = {};
+  Object.keys(current).forEach(k=>{
+    const names = current[k].filter(n=>n!==me);
+    if(names.length) next[k] = names;
+  });
+  if(!hadThis){ next[emoji] = [...(next[emoji]||[]), me]; }
+  m.reactions = next;
+  delete m.likes;
+  state.chatReactionPickerId = null;
   state.chatMenuOpenId = null;
   renderKeepChatScroll();
   await save('chat');
+}
+// Admin/Sub Admin only, mirroring deleteChatMessage's permission check — only one message pinned
+// at a time, matching the single-banner design: pinning a new one replaces whichever was pinned.
+function toggleChatPin(id){
+  if(!isAdminOrSubAdmin()) return;
+  const m = state.chat.find(x=>x.id===id); if(!m) return;
+  const wasPinned = !!m.pinned;
+  state.chat.forEach(x=>{ delete x.pinned; });
+  if(!wasPinned) m.pinned = true;
+  state.chatMenuOpenId = null;
+  renderKeepChatScroll();
+  save('chat');
+}
+function scrollToChatMessage(id){
+  const el = document.getElementById('chat-msg-'+id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function toggleChatSearch(){
+  state.chatSearchOpen = !state.chatSearchOpen;
+  if(!state.chatSearchOpen) state.chatSearchQuery = '';
+  renderKeepChatScroll();
+  if(state.chatSearchOpen){ const input = document.getElementById('chat-search-input'); if(input) input.focus(); }
+}
+// Every name a message could plausibly be from or @-mention — the Staff roster plus any name
+// that's actually sent a message, so a role-based login (Admin, Packing, …) that isn't in Staff
+// can still be found and @mentioned, same as it already shows up as a real sender in the chat.
+function chatMentionCandidates(){
+  const names = new Set();
+  (state.staff||[]).forEach(s=>{ if(s.name) names.add(s.name); });
+  (state.chat||[]).forEach(m=>{ if(m.sender) names.add(m.sender); });
+  return [...names];
+}
+function chatEscapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// Wraps every "@Name" occurrence in already-HTML-escaped text with a highlight span — matched
+// longest-name-first so e.g. "@Rumesh De Silva" isn't partially matched by a shorter "@Rumesh"
+// that's also a real name.
+function chatTextWithMentions(text){
+  let escaped = esc(text);
+  const names = chatMentionCandidates().sort((a,b)=>b.length-a.length);
+  names.forEach(n=>{
+    const escN = chatEscapeRegex(esc(n));
+    if(!escN) return;
+    escaped = escaped.replace(new RegExp('@'+escN+'\\b', 'g'), m=>`<span class="chat-mention">${m}</span>`);
+  });
+  return escaped;
+}
+// Same idea for the search view — highlights every match of the typed query instead of a name.
+function chatHighlightQuery(text, q){
+  const escaped = esc(text);
+  const escQ = chatEscapeRegex(esc(q||''));
+  if(!escQ) return escaped;
+  return escaped.replace(new RegExp(escQ, 'gi'), m=>`<span class="chat-search-hit">${m}</span>`);
+}
+// Marks every message not sent by me as seen by me, the moment I'm actually looking at the chat
+// page — called both on navigating into Team chat and when a realtime update delivers a new
+// message while I'm already there. Debounced so a burst of messages (or several renders while
+// the page sits open) costs one save a little after things settle, not one per message.
+let _chatSeenSaveTimer = null;
+function markChatSeenIfNeeded(){
+  if(!state.session || state.page!=='chat') return;
+  const me = chatMyName();
+  if(!me) return;
+  let changed = false;
+  (state.chat||[]).forEach(m=>{
+    if(m.sender===me) return;
+    if(!Array.isArray(m.seenBy)) m.seenBy = [];
+    if(!m.seenBy.includes(me)){ m.seenBy.push(me); changed = true; }
+  });
+  if(!changed) return;
+  clearTimeout(_chatSeenSaveTimer);
+  _chatSeenSaveTimer = setTimeout(()=>{ save('chat').catch(()=>{}); }, 1500);
+}
+// Shows a name-suggestion dropdown above the chat input while typing "@partial-name" — mirrors
+// the costing sheet's item-name autocomplete (attachCostingMaterialNameAutocomplete). Re-attached
+// after every render(), same as every other chat listener here, since the whole form is rebuilt.
+function attachChatMentionAutocomplete(){
+  const input = document.getElementById('chat-input');
+  const dropdown = document.getElementById('chat-mention-dropdown');
+  if(!input || !dropdown) return;
+  const hide = ()=>{ dropdown.style.display='none'; dropdown.innerHTML=''; };
+  const currentMentionMatch = ()=>{
+    const val = input.value, caret = input.selectionStart;
+    if(typeof caret!=='number') return null;
+    const uptoCaret = val.slice(0, caret);
+    const m = uptoCaret.match(/(?:^|\s)@([^\s@]*)$/);
+    return m ? {typed: m[1], start: caret - m[1].length - 1} : null;
+  };
+  const show = ()=>{
+    const match = currentMentionMatch();
+    if(!match){ hide(); return; }
+    const typed = match.typed.toLowerCase();
+    const names = chatMentionCandidates().filter(n=>n.toLowerCase().includes(typed)).slice(0,6);
+    if(names.length===0){ hide(); return; }
+    dropdown.innerHTML = names.map(n=>`<div class="ac-item" data-name="${escAttr(n)}">${esc(n)}</div>`).join('');
+    dropdown.style.display = 'block';
+  };
+  input.addEventListener('input', show);
+  input.addEventListener('click', show);
+  input.addEventListener('blur', ()=>setTimeout(hide, 150));
+  dropdown.addEventListener('mousedown', (e)=>{
+    const item = e.target.closest('.ac-item'); if(!item) return;
+    e.preventDefault();
+    const match = currentMentionMatch(); if(!match) return;
+    const val = input.value;
+    const before = val.slice(0, match.start);
+    const after = val.slice(match.start + 1 + match.typed.length);
+    input.value = before + '@' + item.dataset.name + ' ' + after;
+    const newPos = (before + '@' + item.dataset.name + ' ').length;
+    input.focus();
+    input.setSelectionRange(newPos, newPos);
+    hide();
+  });
+}
+// Swipes a message row sideways to start replying to it (startChatQuote — the same action as the
+// ⋮ menu's Reply button), reachable one-handed the way WhatsApp trained everyone to expect.
+// Re-attached after every render() since the whole chat DOM is rebuilt each time, so a row only
+// ever carries one set of listeners. Every listener here is passive (never calls
+// preventDefault()), so this never fights the page's normal vertical scroll — it only recognizes
+// a clearly horizontal drag past the trigger distance and resets on anything else, a vertical
+// scroll included.
+function attachChatSwipeToReply(){
+  const SWIPE_TRIGGER = 56, SWIPE_MAX = 76;
+  document.querySelectorAll('[data-chat-swipe]').forEach(row=>{
+    const id = row.dataset.chatSwipe;
+    const bubble = row.querySelector('.chat-bubble-wrap');
+    const hint = row.querySelector('.chat-swipe-hint');
+    if(!bubble) return;
+    let startX = 0, startY = 0, tracking = false, active = false;
+    row.addEventListener('touchstart', (e)=>{
+      if(e.touches.length!==1) return;
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      tracking = true; active = false;
+      bubble.style.transition = 'none';
+    }, {passive:true});
+    row.addEventListener('touchmove', (e)=>{
+      if(!tracking || e.touches.length!==1) return;
+      const dx = e.touches[0].clientX - startX, dy = e.touches[0].clientY - startY;
+      if(!active && Math.abs(dx)<10) return;
+      // Only a rightward drag starts a reply — same gesture WhatsApp uses regardless of whose
+      // bubble it is — so a leftward drag or a mostly-vertical one (scrolling) resets instead of
+      // animating backwards.
+      if(dx<0 || Math.abs(dy) > Math.abs(dx)){ tracking = false; active = false; bubble.style.transform = ''; if(hint) hint.style.opacity = 0; return; }
+      active = true;
+      const clamped = Math.max(0, Math.min(dx, SWIPE_MAX));
+      bubble.style.transform = `translateX(${clamped}px)`;
+      if(hint) hint.style.opacity = String(Math.min(1, clamped/SWIPE_TRIGGER));
+    }, {passive:true});
+    const end = ()=>{
+      if(!tracking) return;
+      tracking = false;
+      const match = (bubble.style.transform||'').match(/-?\d+(\.\d+)?/);
+      const dist = match ? parseFloat(match[0]) : 0;
+      bubble.style.transition = 'transform .15s ease';
+      bubble.style.transform = '';
+      if(hint) hint.style.opacity = 0;
+      if(active && dist >= SWIPE_TRIGGER) startChatQuote(id);
+      active = false;
+    };
+    row.addEventListener('touchend', end, {passive:true});
+    row.addEventListener('touchcancel', end, {passive:true});
+  });
 }
 function startChatQuote(id){
   state.chatQuoteId = id; state.chatMenuOpenId = null; renderKeepChatScroll();
@@ -16210,14 +16432,30 @@ function currentChatTheme(){ return CHAT_THEMES[state.chatTheme] || CHAT_THEMES.
 function renderChatPage(){
   const quoted = state.chatQuoteId ? state.chat.find(x=>x.id===state.chatQuoteId) : null;
   const theme = currentChatTheme();
-  let lastChatDay = null, lastSender = null;
-  const messagesHtml = state.chat.map(m=>{
-    const day = new Date(m.at).toDateString();
-    const divider = theme.dayDividers && day!==lastChatDay ? `<div class="chat-day-divider"><span>${new Date(m.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span></div>` : '';
-    const grouped = theme.grouped && !divider && m.sender===lastSender;
-    lastChatDay = day; lastSender = m.sender;
-    return divider + renderChatBubble(m, theme, grouped);
-  }).join('');
+  const pinned = state.chat.find(m=>m.pinned);
+  const searching = state.chatSearchOpen;
+  const query = (state.chatSearchQuery||'').trim();
+  let messagesHtml;
+  if(searching && query){
+    const hits = state.chat.filter(m=>m.text.toLowerCase().includes(query.toLowerCase()) || m.sender.toLowerCase().includes(query.toLowerCase()));
+    messagesHtml = hits.length===0
+      ? `<div class="chat-search-nomatch">No messages match "${esc(query)}"</div>`
+      // display:contents keeps this wrapper out of layout entirely — renderChatBubble's own
+      // top-level div relies on being a direct flex item of #chat-messages for its
+      // align-self:flex-end/flex-start (mine vs. theirs) to have any effect; a plain wrapping div
+      // here would break that alignment for every search result. The click listener still works
+      // normally on a display:contents element — only its box generation is suppressed.
+      : hits.map(m=>`<div data-chat-jump="${m.id}" style="cursor:pointer;display:contents;">${renderChatBubble(m, theme, false, {searchQuery: query})}</div>`).join('');
+  } else {
+    let lastChatDay = null, lastSender = null;
+    messagesHtml = state.chat.map(m=>{
+      const day = new Date(m.at).toDateString();
+      const divider = theme.dayDividers && day!==lastChatDay ? `<div class="chat-day-divider"><span>${new Date(m.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span></div>` : '';
+      const grouped = theme.grouped && !divider && m.sender===lastSender;
+      lastChatDay = day; lastSender = m.sender;
+      return divider + renderChatBubble(m, theme, grouped);
+    }).join('');
+  }
   const deleteAllowed = state.session && roleCan(state.session.role, 'chat_delete_history') && state.chat.length>0;
   // Mobile's slim chat header needs somewhere for its back link to go that's guaranteed to
   // actually be reachable — goTo() silently no-ops on a page the role isn't allowed, so a
@@ -16230,6 +16468,7 @@ function renderChatPage(){
     <div class="chat-mobile-toolbar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 18px 0;position:relative;">
       <a href="#${chatBackTarget}" class="chat-mobile-back" data-nav="${chatBackTarget}" aria-label="Back">${icon('chevron')}</a>
       <div class="chat-mobile-title">Team chat</div>
+      <button type="button" id="btn-chat-search-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 11px;font-size:13px;" aria-label="Search">🔍</button>
       ${isAdmin() ? `
       <button type="button" id="btn-chat-theme-toggle" style="border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:500;">🎨 Theme</button>
       ${state.chatThemeMenuOpen ? `
@@ -16238,6 +16477,17 @@ function renderChatPage(){
       </div>` : ''}` : ''}
       ${deleteAllowed ? `<button type="button" style="background:${theme.deleteBg};color:${theme.deleteColor};border:${theme.deleteBorder||'none'};border-radius:${theme.deleteRadius};padding:8px 16px;font-size:12px;font-weight:600;" id="btn-delete-chat-history">Delete chat history</button>` : ''}
     </div>
+    ${searching ? `
+    <div class="chat-search-bar">
+      🔍 <input id="chat-search-input" placeholder="Search this chat…" value="${escAttr(query)}" autocomplete="off">
+      <button type="button" class="chat-search-close" id="btn-chat-search-close" aria-label="Close search">✕</button>
+    </div>` : ''}
+    ${pinned && !searching ? `
+    <div class="chat-pin-banner" data-chat-jump="${pinned.id}">
+      <span>📌</span>
+      <div class="chat-pin-banner-text"><strong>${esc(pinned.sender)}:</strong> ${esc(pinned.text)}</div>
+      ${isAdminOrSubAdmin() ? `<button type="button" class="chat-pin-unpin" data-chat-unpin="${pinned.id}" aria-label="Unpin">✕</button>` : ''}
+    </div>` : ''}
     <div id="chat-messages" style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:${theme.compactGap?'2px':'14px'};background:${theme.pageBg||'transparent'};">
       ${state.chat.length===0 ? `<div class="empty-state">No messages yet — say hello to the team.</div>` : messagesHtml}
     </div>
@@ -16249,19 +16499,22 @@ function renderChatPage(){
       </div>
       <button type="button" class="chat-quote-cancel" id="btn-cancel-chat-quote" aria-label="Cancel reply">✕</button>
     </div>` : ''}
-    <form id="chat-form" style="display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);align-items:center;">
-      <input id="chat-input" class="search-input" style="flex:1;border-radius:${theme.inputRadius};background:${theme.inputBg};" placeholder="Type a message…" autocomplete="off">
+    <form id="chat-form" style="display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);align-items:center;position:relative;">
+      <div id="chat-mention-dropdown" class="chat-mention-dropdown ac-dropdown" style="display:none;"></div>
+      <input id="chat-input" class="search-input" style="flex:1;border-radius:${theme.inputRadius};background:${theme.inputBg};" placeholder="Type a message… (@ to mention)" autocomplete="off">
       <button type="submit" style="background:${theme.sendBg};color:${theme.sendColor};border:none;flex-shrink:0;${theme.sendShape==='circle'?`border-radius:50%;width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;`:`border-radius:${theme.sendRadius};padding:11px 22px;font-size:13px;font-weight:600;`}" aria-label="Send">${theme.sendShape==='circle'?'➤':'Send'}</button>
     </form>
   </div>`;
 }
-function renderChatBubble(m, theme, grouped){
+function renderChatBubble(m, theme, grouped, opts){
   theme = theme || currentChatTheme();
+  opts = opts || {};
   const mine = state.session && m.sender === (state.session.staffName || state.session.name);
   const menuOpen = state.chatMenuOpenId===m.id;
   const editing = state.chatEditId===m.id;
-  const likes = m.likes || [];
-  const iLiked = likes.includes(chatMyName());
+  const reactionPickerOpen = state.chatReactionPickerId===m.id;
+  const reactions = chatReactionsOf(m);
+  const me = chatMyName();
   const tag = theme.tagColors ? chatTagColor(m.sender) : null;
   const senderLabel = tag ? `<span style="font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:${tag.bg};color:${tag.text};">${esc(m.sender)}</span>` : esc(m.sender);
   const roleLabel = theme.rolePill ? ` <span class="chat-role-pill">${esc(m.role)}</span>` : '';
@@ -16281,19 +16534,36 @@ function renderChatBubble(m, theme, grouped){
       </div>`;
   const bubbleBorder = mine ? (theme.mineBorder||'') : (theme.otherBorder||'');
   const bubbleShadow = mine ? (theme.mineShadow||'') : (theme.otherShadow||'');
-  const bubbleTime = `<span class="chat-bubble-time">${fmtTimeOnly(m.at)}${m.editedAt?' · edited':''}</span>`;
-  return `<div style="display:flex;gap:8px;align-items:flex-start;max-width:78%;align-self:${mine?'flex-end':'flex-start'};${mine?'flex-direction:row-reverse;':''}">
+  // Seen ticks only make sense on my own messages, and only compare against OTHER people — a
+  // message always trivially includes its own sender once markChatSeenIfNeeded skips them, so
+  // "seen" here means at least one other person has actually opened Team chat since this landed.
+  const seenByOthers = Array.isArray(m.seenBy) && m.seenBy.some(n=>n!==m.sender);
+  const ticksHtml = mine ? `<span class="chat-ticks${seenByOthers?' seen':''}" title="${seenByOthers?'Seen':'Sent'}">✓✓</span>` : '';
+  const bubbleTime = `<span class="chat-bubble-time">${fmtTimeOnly(m.at)}${m.editedAt?' · edited':''} ${ticksHtml}</span>`;
+  const bodyText = opts.searchQuery ? chatHighlightQuery(m.text, opts.searchQuery) : chatTextWithMentions(m.text);
+  const reactionBadges = Object.keys(reactions).filter(k=>reactions[k].length).map(k=>{
+    const names = reactions[k];
+    const mineReacted = me && names.includes(me);
+    return `<button type="button" class="chat-reaction-badge${mineReacted?' mine':''}" data-chat-react="${m.id}" data-chat-react-emoji="${k}" title="${esc(names.join(', '))}">${k} ${names.length}</button>`;
+  }).join('');
+  return `<div class="chat-swipe-row" data-chat-swipe="${m.id}" style="position:relative;display:flex;gap:8px;align-items:flex-start;max-width:78%;align-self:${mine?'flex-end':'flex-start'};${mine?'flex-direction:row-reverse;':''}">
+    <span class="chat-swipe-hint" style="${mine?'right:-26px;':'left:-26px;'}">↩</span>
     ${avatarHtml}
-    <div class="chat-bubble-wrap" style="min-width:0;position:relative;">
+    <div class="chat-bubble-wrap" id="chat-msg-${m.id}" style="min-width:0;position:relative;">
       ${metaLine}
       ${menuOpen ? `
       <div class="chat-dropdown" style="${mine?'right:0;':'left:0;'}">
-        <button type="button" data-chat-like="${m.id}">${iLiked?'👍 Unlike':'👍 Like'}</button>
+        <button type="button" data-chat-react-open="${m.id}">😊 React</button>
         <button type="button" data-chat-quote="${m.id}">💬 Reply</button>
         <button type="button" data-chat-copy="${m.id}">📋 Copy</button>
         ${mine?`<button type="button" data-chat-edit="${m.id}">✏️ Edit</button>`:''}
+        ${isAdminOrSubAdmin()?`<button type="button" data-chat-pin="${m.id}">${m.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
         <button type="button" data-chat-unread="${m.id}">🔕 Mark as unread</button>
         ${isAdminOrSubAdmin()?`<button type="button" class="chat-dropdown-danger" data-chat-delete="${m.id}">🗑️ Delete</button>`:''}
+      </div>` : ''}
+      ${reactionPickerOpen ? `
+      <div class="chat-reaction-picker" style="${mine?'right:0;':'left:0;'}">
+        ${CHAT_REACTION_EMOJIS.map(e=>`<button type="button" data-chat-react="${m.id}" data-chat-react-emoji="${e}">${e}</button>`).join('')}
       </div>` : ''}
       ${editing ? `
       <div class="chat-edit-form">
@@ -16303,11 +16573,11 @@ function renderChatBubble(m, theme, grouped){
           <button type="button" class="btn btn-sm btn-primary" data-chat-save-edit="${m.id}">Save</button>
         </div>
       </div>` : `
-      <div style="background:${mine?theme.mineBg:theme.otherBg};color:${mine?theme.mineColor:theme.otherColor};padding:${theme.pad};border-radius:${theme.radius};font-size:${theme.font};line-height:1.5;overflow:hidden;overflow-wrap:break-word;${bubbleShadow?`box-shadow:${bubbleShadow};`:''}${bubbleBorder?`border:${bubbleBorder};`:''}${theme.memoStyle?'border-left:3px solid var(--accent-dark);':''}">
+      <div style="background:${mine?theme.mineBg:theme.otherBg};color:${mine?theme.mineColor:theme.otherColor};padding:${theme.pad};border-radius:${theme.radius};font-size:${theme.font};line-height:1.5;overflow:hidden;overflow-wrap:break-word;${bubbleShadow?`box-shadow:${bubbleShadow};`:''}${bubbleBorder?`border:${bubbleBorder};`:''}${theme.memoStyle?'border-left:3px solid var(--accent-dark);':''}${m.pinned?'outline:2px solid var(--accent);outline-offset:1px;':''}">
         ${m.quoted ? `<div class="chat-quote-inline"><div class="chat-quote-inline-sender">${esc(m.quoted.sender)}</div>${esc(m.quoted.text)}</div>` : ''}
-        ${esc(m.text)}${bubbleTime}
+        ${bodyText}${bubbleTime}
       </div>
-      ${likes.length ? `<div class="chat-like-badge" style="${mine?'justify-content:flex-end;':''}">👍 ${likes.length}</div>` : ''}
+      ${reactionBadges ? `<div class="chat-reactions-row" style="${mine?'justify-content:flex-end;':''}">${reactionBadges}</div>` : ''}
       `}
     </div>
   </div>`;
@@ -19641,19 +19911,39 @@ function attachShellHandlers(){
   if(byIdEl('btn-chat-theme-toggle')) byIdEl('btn-chat-theme-toggle').onclick = toggleChatThemeMenu;
   document.querySelectorAll('[data-chat-theme-pick]').forEach(b=>b.addEventListener('click', ()=>pickChatTheme(b.dataset.chatThemePick)));
   document.querySelectorAll('[data-chat-menu]').forEach(b=>b.addEventListener('click', ()=>toggleChatMenu(b.dataset.chatMenu)));
-  document.querySelectorAll('[data-chat-like]').forEach(b=>b.addEventListener('click', ()=>toggleChatLike(b.dataset.chatLike)));
+  document.querySelectorAll('[data-chat-react-open]').forEach(b=>b.addEventListener('click', ()=>toggleChatReactionPicker(b.dataset.chatReactOpen)));
+  document.querySelectorAll('[data-chat-react]').forEach(b=>b.addEventListener('click', ()=>setChatReaction(b.dataset.chatReact, b.dataset.chatReactEmoji)));
+  document.querySelectorAll('[data-chat-pin]').forEach(b=>b.addEventListener('click', ()=>toggleChatPin(b.dataset.chatPin)));
+  document.querySelectorAll('[data-chat-unpin]').forEach(b=>b.addEventListener('click', (e)=>{ e.stopPropagation(); toggleChatPin(b.dataset.chatUnpin); }));
   document.querySelectorAll('[data-chat-quote]').forEach(b=>b.addEventListener('click', ()=>startChatQuote(b.dataset.chatQuote)));
   document.querySelectorAll('[data-chat-copy]').forEach(b=>b.addEventListener('click', ()=>copyChatMessage(b.dataset.chatCopy)));
   document.querySelectorAll('[data-chat-edit]').forEach(b=>b.addEventListener('click', ()=>startChatEdit(b.dataset.chatEdit)));
   document.querySelectorAll('[data-chat-unread]').forEach(b=>b.addEventListener('click', markChatUnread));
   document.querySelectorAll('[data-chat-delete]').forEach(b=>b.addEventListener('click', ()=>deleteChatMessage(b.dataset.chatDelete)));
   document.querySelectorAll('[data-chat-save-edit]').forEach(b=>b.addEventListener('click', ()=>saveChatEdit(b.dataset.chatSaveEdit)));
+  // A pinned-banner click or a search-result click both jump to the same message in the normal
+  // (non-search) view — closing search first when the jump came from a search result.
+  document.querySelectorAll('[data-chat-jump]').forEach(el=>el.addEventListener('click', ()=>{
+    const id = el.dataset.chatJump;
+    if(state.chatSearchOpen){ state.chatSearchOpen = false; state.chatSearchQuery = ''; renderKeepChatScroll(); }
+    setTimeout(()=>scrollToChatMessage(id), 30);
+  }));
+  if(byIdEl('btn-chat-search-toggle')) byIdEl('btn-chat-search-toggle').onclick = toggleChatSearch;
+  if(byIdEl('btn-chat-search-close')) byIdEl('btn-chat-search-close').onclick = toggleChatSearch;
+  if(byIdEl('chat-search-input')) byIdEl('chat-search-input').addEventListener('input', (e)=>{
+    state.chatSearchQuery = e.target.value;
+    renderKeepChatScroll();
+    const input = document.getElementById('chat-search-input');
+    if(input){ input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+  });
   if(byIdEl('btn-cancel-chat-edit')) byIdEl('btn-cancel-chat-edit').onclick = cancelChatEdit;
   if(byIdEl('chat-edit-input')) byIdEl('chat-edit-input').addEventListener('keydown', (e)=>{
     if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); saveChatEdit(state.chatEditId); }
     else if(e.key==='Escape'){ e.preventDefault(); cancelChatEdit(); }
   });
   if(byIdEl('btn-cancel-chat-quote')) byIdEl('btn-cancel-chat-quote').onclick = cancelChatQuote;
+  attachChatMentionAutocomplete();
+  attachChatSwipeToReply();
 
   // Bulk SMS
   document.querySelectorAll('[data-bulksms-tab]').forEach(b=>b.addEventListener('click', ()=>{

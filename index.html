@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261102110106">
+<meta name="app-build" content="20261102110531">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4467,6 +4467,7 @@ let state = {
   boxCounts: [],
   _boxCountAlert: null,
   _boxCountEditId: null,
+  _boxCountSelected: [],
   staffCategories: [],
   complaintCategories: [],
   complaintPriorities: [],
@@ -6014,7 +6015,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -10742,14 +10743,48 @@ function boxCountSavedRowHtml(b){
       <button type="button" data-cancel-box-count-edit style="border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;flex:none;padding:4px;" aria-label="Cancel">✕</button>
     </div>`;
   }
+  const canBulk = isAdminOrSubAdmin();
+  const checked = (state._boxCountSelected||[]).includes(b.id);
   return `
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:8px;">
-    <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(b.boxType)} × ${b.boxCount}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;background:${checked?'var(--accent-soft)':'var(--bg)'};border:1px solid ${checked?'var(--accent)':'var(--border)'};border-radius:11px;padding:11px 13px;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+      ${canBulk ? `<input type="checkbox" data-select-box-count="${b.id}" ${checked?'checked':''} aria-label="Select ${escAttr(b.customerName)}" style="flex:none;width:16px;height:16px;accent-color:var(--accent);">` : ''}
+      <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(b.boxType)} × ${b.boxCount}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+    </div>
     <div style="display:flex;gap:2px;flex:none;">
       ${canEditBoxCount(b) ? `<button type="button" class="btn-text" data-edit-box-count="${b.id}" style="flex:none;color:var(--muted);padding:5px;" aria-label="Edit">${BOX_COUNT_ICON_EDIT}</button>` : ''}
       ${isAdminOrSubAdmin() ? `<button type="button" class="btn-text" data-delete-box-count="${b.id}" style="color:#C15B4E;flex:none;padding:5px;" aria-label="Delete">${BOX_COUNT_ICON_DELETE}</button>` : ''}
     </div>
   </div>`;
+}
+function toggleBoxCountSelect(id){
+  const sel = state._boxCountSelected||(state._boxCountSelected=[]);
+  const i = sel.indexOf(id);
+  if(i>-1) sel.splice(i,1); else sel.push(id);
+  renderKeepModalScroll();
+}
+function boxCountTodaysIds(){
+  const today = todayStr();
+  return (state.boxCounts||[]).filter(b=>b.date===today).map(b=>b.id);
+}
+function toggleBoxCountSelectAll(){
+  const ids = boxCountTodaysIds();
+  const sel = state._boxCountSelected||[];
+  state._boxCountSelected = ids.every(id=>sel.includes(id)) ? [] : ids.slice();
+  renderKeepModalScroll();
+}
+function deleteSelectedBoxCounts(){
+  const ids = state._boxCountSelected||[];
+  if(!ids.length) return;
+  openConfirmModal({
+    title: 'Delete box counts', danger: true, confirmLabel: 'Delete', requirePassword: true,
+    message: `Delete ${ids.length} selected box count ${ids.length===1?'entry':'entries'}? This cannot be undone.`,
+    onConfirm: async ()=>{
+      state.boxCounts = (state.boxCounts||[]).filter(b=>!ids.includes(b.id));
+      state._boxCountSelected = [];
+      await save('boxCounts');
+    },
+  });
 }
 function startEditBoxCount(id){ state._boxCountEditId = id; renderKeepModalScroll(); }
 function cancelEditBoxCount(){ state._boxCountEditId = null; renderKeepModalScroll(); }
@@ -10773,6 +10808,8 @@ async function saveEditBoxCount(id){
 function boxCountModal(){
   const today = todayStr();
   const todays = (state.boxCounts||[]).filter(b=>b.date===today).sort((a,b)=>new Date(b.at)-new Date(a.at));
+  const selectedCount = (state._boxCountSelected||[]).length;
+  const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:420px;">
@@ -10787,7 +10824,17 @@ function boxCountModal(){
         </div>
       </form>
       <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
-        <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px;">Saved today ${todays.length?`(${todays.length})`:''}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
+          <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Saved today ${todays.length?`(${todays.length})`:''}</div>
+          ${(isAdminOrSubAdmin() && todays.length>0) ? `
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${selectedCount>0 ? `<button type="button" class="btn-text" id="btn-box-count-delete-selected" style="color:#C15B4E;font-size:11.5px;font-weight:700;">Delete selected (${selectedCount})</button>` : ''}
+            <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);cursor:pointer;">
+              <input type="checkbox" id="chk-box-count-select-all" ${allSelected?'checked':''} style="width:14px;height:14px;accent-color:var(--accent);">
+              Select all
+            </label>
+          </div>` : ''}
+        </div>
         ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">Nothing logged yet today.</div>` : `
         <div style="max-height:260px;overflow-y:auto;">
           ${todays.map(b=>boxCountSavedRowHtml(b)).join('')}
@@ -18774,6 +18821,9 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-edit-box-count]').forEach(b=>b.addEventListener('click', ()=>startEditBoxCount(b.dataset.editBoxCount)));
   document.querySelectorAll('[data-save-box-count-edit]').forEach(b=>b.addEventListener('click', ()=>saveEditBoxCount(b.dataset.saveBoxCountEdit)));
   document.querySelectorAll('[data-cancel-box-count-edit]').forEach(b=>b.addEventListener('click', cancelEditBoxCount));
+  document.querySelectorAll('[data-select-box-count]').forEach(b=>b.addEventListener('change', ()=>toggleBoxCountSelect(b.dataset.selectBoxCount)));
+  if(byIdEl('chk-box-count-select-all')) byIdEl('chk-box-count-select-all').addEventListener('change', toggleBoxCountSelectAll);
+  if(byIdEl('btn-box-count-delete-selected')) byIdEl('btn-box-count-delete-selected').onclick = deleteSelectedBoxCounts;
   if(byIdEl('btn-dismiss-box-count-alert')) byIdEl('btn-dismiss-box-count-alert').onclick = async ()=>{
     const ids = new Set((state._boxCountAlert||[]).map(b=>b.id));
     state.boxCounts = (state.boxCounts||[]).map(b=>ids.has(b.id) ? {...b, ackedByAdmin:true} : b);

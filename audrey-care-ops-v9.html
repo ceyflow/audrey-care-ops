@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261102095834">
+<meta name="app-build" content="20261102110106">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6066,7 +6066,19 @@ function orderSmsSender(kind){
 }
 async function triggerAutoOrderSms(o, kind){
   if(!kind || !SMS_CONFIGURED){ closeModal(); return; }
-  if(orderSmsAutoSend()){
+  // Re-read orderSettings fresh rather than trusting this tab's in-memory copy, which only ever
+  // updates via realtime — a long-lived tab whose realtime connection dropped (common once a tab
+  // sits backgrounded for a while) would otherwise keep acting on whatever smsAutoSend was at
+  // login, even hours after an Admin turned it off. Confirmed concretely: a Packing session sent
+  // a processing SMS with zero confirmation while the live setting was already Off, because that
+  // tab's local copy was stale. One extra read per stage advance is worth never texting a
+  // customer the app was just told not to text without asking first.
+  let autoSend = orderSmsAutoSend();
+  try{
+    const fresh = await kvGet('orderSettings');
+    if(fresh && typeof fresh==='object'){ state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...fresh}; autoSend = state.orderSettings.smsAutoSend!==false; }
+  }catch(e){ console.error('fresh orderSettings check failed', e); }
+  if(autoSend){
     orderSmsSender(kind)(o);
     closeModal();
   } else {

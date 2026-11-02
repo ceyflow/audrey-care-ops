@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261102114455">
+<meta name="app-build" content="20261102175254">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -944,6 +944,22 @@ html{ visibility:hidden; }
   .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--ink);}
   .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);}
   .field input[type="checkbox"]{width:auto;padding:0;border:none;background:transparent;}
+  /* Settings → SMS settings message list — icon-tagged row with an inline phone-bubble preview. */
+  .sms-tpl-row{display:grid;grid-template-columns:34px minmax(0,1fr) 190px;gap:14px;align-items:start;background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .sms-tpl-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;}
+  .sms-tpl-icon-blue{background:var(--accent-soft,#E3EEF7);color:var(--accent-dark,#2E6698);}
+  .sms-tpl-icon-green{background:#E6F4EC;color:#227A4E;}
+  .sms-tpl-icon-amber{background:#FBF0DA;color:#9A6B1E;}
+  .sms-tpl-icon-pink{background:#FBE9ED;color:#B14A64;}
+  .sms-tpl-icon-purple{background:#EFE8FA;color:#6B4FA8;}
+  .sms-tpl-icon-teal{background:#E1F3F0;color:#1F8A77;}
+  .sms-tpl-main label{margin-bottom:5px;}
+  .sms-tpl-preview-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .sms-tpl-bubble{background:#DCF8C6;border-radius:12px 12px 2px 12px;padding:9px 11px;font-size:11px;line-height:1.45;color:var(--ink);word-break:break-word;}
+  @media (max-width:640px){
+    .sms-tpl-row{grid-template-columns:30px minmax(0,1fr);}
+    .sms-tpl-preview{grid-column:1 / -1;}
+  }
   .toggle-row,.field label.toggle-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;font-weight:500;cursor:pointer;}
   .toggle-input{position:absolute;opacity:0;width:0;height:0;}
   .toggle-track{position:relative;width:34px;height:19px;background:#D9D9D2;border-radius:999px;flex-shrink:0;transition:background .15s;}
@@ -2792,6 +2808,20 @@ const DEFAULT_SMS_TEMPLATES = {
 };
 function smsTemplate(key){ return (state.smsTemplates && state.smsTemplates[key]) || DEFAULT_SMS_TEMPLATES[key]; }
 function fillTemplate(str, vars){ return str.replace(/\{(\w+)\}/g, (m,k)=> (k in vars) ? vars[k] : m); }
+// Settings → SMS settings display only — a small colored icon per message type (for quick
+// scanning down the list) and sample values to fill {placeholders} into a live phone-bubble
+// preview next to each textarea. Pure presentation: smsTemplate()/fillTemplate() above (the
+// actual send path) are untouched.
+const SMS_TEMPLATE_ICON = {
+  orderProcessing: {cls:'blue', svg:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'},
+  orderPickedUp: {cls:'green', svg:'<path d="M3 7h13l4 4v6h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>'},
+  trackingUpdated: {cls:'amber', svg:'<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>'},
+  orderReviewFacebook: {cls:'purple', svg:'<path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8-6.1-3.4-6.1 3.4 1.4-6.8-5.1-4.7 6.9-.8Z"/>'},
+  orderReviewGoogle: {cls:'teal', svg:'<path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8-6.1-3.4-6.1 3.4 1.4-6.8-5.1-4.7 6.9-.8Z"/>'},
+  complaintOpen: {cls:'pink', svg:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>'},
+  complaintResolved: {cls:'green', svg:'<path d="M8 12.5 11 15.5 16 9"/><circle cx="12" cy="12" r="9"/>'},
+};
+const SMS_PREVIEW_SAMPLE_VARS = {customer:'Orelia Villa', orderNumber:'SO2611005', trackLink:'aud.re/t/9k2', reviewLink:'aud.re/r/4f1'};
 async function sendOrderTrackingSms(o){
   const msg = fillTemplate(smsTemplate('orderPickedUp'), {customer:o.customer, orderNumber:o.orderNumber||o.id, trackLink:orderTrackLink(o.id), reviewLink:FACEBOOK_REVIEW_LINK});
   const result = await sendSms(o.phone, msg);
@@ -13706,12 +13736,21 @@ function renderSmsTemplatesPanel(){
           <div class="hint">Also needs the "Drag cards between stages" permission for a role in Settings → User roles — this is the master switch, that's the per-role one.</div>
         </div>
         <div class="hint" style="font-weight:600;color:var(--ink);margin:16px 0 6px;">Message wording</div>
-        ${Object.keys(SMS_TEMPLATE_INFO).map(key=>`
-        <div class="field">
-          <label>${esc(SMS_TEMPLATE_INFO[key].label)}</label>
-          <textarea name="sms_${key}" style="min-height:56px;">${esc(smsTemplate(key))}</textarea>
-          <div class="hint">Placeholders: ${SMS_TEMPLATE_INFO[key].placeholders.map(p=>`{${p}}`).join(', ')}</div>
-        </div>`).join('')}
+        ${Object.keys(SMS_TEMPLATE_INFO).map(key=>{
+          const icon = SMS_TEMPLATE_ICON[key];
+          return `
+        <div class="field sms-tpl-row">
+          <div class="sms-tpl-icon sms-tpl-icon-${icon.cls}" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon.svg}</svg></div>
+          <div class="sms-tpl-main">
+            <label>${esc(SMS_TEMPLATE_INFO[key].label)}</label>
+            <textarea name="sms_${key}" data-sms-preview-src="${key}" style="min-height:56px;">${esc(smsTemplate(key))}</textarea>
+            <div class="hint">Placeholders: ${SMS_TEMPLATE_INFO[key].placeholders.map(p=>`{${p}}`).join(', ')}</div>
+          </div>
+          <div class="sms-tpl-preview">
+            <div class="sms-tpl-preview-label">Preview</div>
+            <div class="sms-tpl-bubble" data-sms-preview-out="${key}">${esc(fillTemplate(smsTemplate(key), SMS_PREVIEW_SAMPLE_VARS))}</div>
+          </div>
+        </div>`;}).join('')}
         <div class="modal-actions" style="justify-content:flex-start;">
           <button type="submit" class="btn btn-primary">Save SMS settings</button>
         </div>
@@ -20505,6 +20544,12 @@ function attachShellHandlers(){
     if(!(await save('smsTemplates'))) return;
     if(!(await save('orderSettings'))) return;
     showToast('SMS settings updated');
+  });
+  // Live phone-bubble preview next to each template — display only, updates as you type;
+  // doesn't touch the submit handler above or what actually gets saved.
+  document.querySelectorAll('[data-sms-preview-src]').forEach(ta=>{
+    const out = document.querySelector(`[data-sms-preview-out="${ta.dataset.smsPreviewSrc}"]`);
+    if(out) ta.addEventListener('input', ()=>{ out.textContent = fillTemplate(ta.value, SMS_PREVIEW_SAMPLE_VARS); });
   });
 
   if(byIdEl('form-alert-sound')) byIdEl('form-alert-sound').addEventListener('submit', async (e)=>{

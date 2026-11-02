@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261101171052">
+<meta name="app-build" content="20261102064022">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6034,16 +6034,21 @@ async function createOrder(e){
   };
   if(!order.orderNumber) order.orderNumber = order.id;
   const photoFile = f.elements['orderPhoto'] && f.elements['orderPhoto'].files && f.elements['orderPhoto'].files[0];
-  let photoError = null;
+  // The board and the modal update immediately on click — the merge-before-save round trip to
+  // Supabase (needed so a concurrent edit elsewhere never gets clobbered) runs in the background
+  // instead of holding up the UI. A photo, if attached, uploads in the background too; either
+  // step failing still surfaces its own toast (from uploadOrderPhoto below, or _saveOnce's own
+  // "Could not save" retry-failure toast) so a real failure is never silent, just not blocking.
+  state.orders.unshift(order);
+  closeModal();
+  showToast('Order created');
+  logActivity(`Created order ${order.orderNumber} (${order.customer})`);
   if(photoFile){
     const result = await uploadOrderPhoto(order.id, photoFile);
-    if(result.url){ order.photo = result.url; order.photoUploadedAt = new Date().toISOString(); } else photoError = result.error;
+    if(result.url){ order.photo = result.url; order.photoUploadedAt = new Date().toISOString(); }
+    else showToast(`The picture could not be uploaded: ${result.error}`, 9000);
   }
-  state.orders.unshift(order);
-  if(!(await save('orders'))) return;
-  logActivity(`Created order ${order.orderNumber} (${order.customer})`);
-  closeModal();
-  showToast(photoError ? `Order created, but the picture could not be uploaded: ${photoError}` : 'Order created', photoError?9000:undefined);
+  await save('orders');
 }
 // Which SMS template (if any) an order reaching this stage would automatically trigger.
 function orderAutoSmsKind(stage){

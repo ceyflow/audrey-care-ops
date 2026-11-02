@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261102075108">
+<meta name="app-build" content="20261102093712">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -10695,7 +10695,8 @@ function boxCountRowHtml(){
       <option value="Medium">Medium</option>
       <option value="Small">Small</option>
     </select>
-    <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:56px;flex:none;border:none;background:var(--bg);font-size:11.5px;text-align:center;border-radius:6px;padding:4px 2px;">
+    <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:48px;flex:none;border:none;background:var(--bg);font-size:11.5px;text-align:center;border-radius:6px;padding:4px 2px;">
+    <input name="totalKg" type="number" min="0" step="0.01" autocomplete="off" placeholder="Kg" style="width:52px;flex:none;border:none;background:var(--bg);font-size:11.5px;text-align:center;border-radius:6px;padding:4px 2px;">
     <button type="button" class="box-count-remove-row" style="border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;flex:none;padding:2px 4px;" aria-label="Remove row">✕</button>
   </div>`;
 }
@@ -10721,7 +10722,7 @@ function boxCountModal(){
         <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
           ${todays.map(b=>`
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);">
-            <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;">${esc(b.boxType)} × ${b.boxCount} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+            <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;">${esc(b.boxType)} × ${b.boxCount}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
             ${isAdminOrSubAdmin() ? `<button type="button" class="btn-text" data-delete-box-count="${b.id}" style="color:#C15B4E;flex:none;">🗑</button>` : ''}
           </div>`).join('')}
         </div>`}
@@ -10737,9 +10738,11 @@ async function submitBoxCount(e){
     const customerName = row.querySelector('[name="customerName"]').value.trim();
     const boxType = row.querySelector('[name="boxType"]').value;
     const boxCount = parseInt(row.querySelector('[name="boxCount"]').value, 10);
-    if(!customerName && !boxType && !boxCount) continue; // skip a row left completely blank
+    const totalKgRaw = row.querySelector('[name="totalKg"]').value.trim();
+    const totalKg = totalKgRaw ? parseFloat(totalKgRaw) : null;
+    if(!customerName && !boxType && !boxCount && !totalKgRaw) continue; // skip a row left completely blank
     if(!customerName || !boxType || !boxCount || boxCount<1) return; // a partially-filled row blocks save, same as a normal required-field form
-    recs.push({id: uid('BOX'), date: todayStr(), customerName, boxType, boxCount, enteredBy: (state.session.staffName||state.session.name), at: new Date().toISOString(), ackedByAdmin: false});
+    recs.push({id: uid('BOX'), date: todayStr(), customerName, boxType, boxCount, totalKg, enteredBy: (state.session.staffName||state.session.name), at: new Date().toISOString(), ackedByAdmin: false});
   }
   if(!recs.length) return;
   state.boxCounts = [...recs, ...(state.boxCounts||[])];
@@ -10780,7 +10783,7 @@ function renderBoxCountAlert(){
         ${entries.map(b=>`
         <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
           <div style="font-weight:600;font-size:13.5px;">${esc(b.customerName)}</div>
-          <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">${esc(b.boxType)} × ${b.boxCount} — by ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">${esc(b.boxType)} × ${b.boxCount}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — by ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div>
         </div>`).join('')}
       </div>
       <button type="button" class="btn btn-primary" id="btn-dismiss-box-count-alert" style="width:100%;">Close</button>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261102064022">
+<meta name="app-build" content="20261102075108">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -19984,6 +19984,18 @@ function attachShellHandlers(){
 
   // Chat
   if(byIdEl('chat-form')) byIdEl('chat-form').addEventListener('submit', sendChatMessage);
+  // Some mobile keyboards' Enter/Send action key doesn't reliably trigger a real native form
+  // "submit" event on a single-line input — on those, pressing it does nothing at all (the typed
+  // text just sits there, looking like the message never sent) rather than erroring, so there's
+  // nothing for the existing listener above to catch. Driving the send explicitly off the
+  // keydown itself, the same way message-edit and every other Enter-to-save field in this app
+  // already does, means it no longer depends on that native behavior firing at all.
+  if(byIdEl('chat-input')) byIdEl('chat-input').addEventListener('keydown', e=>{
+    if(e.key!=='Enter' || e.shiftKey) return;
+    e.preventDefault();
+    const form = byIdEl('chat-form');
+    if(form) form.requestSubmit ? form.requestSubmit() : sendChatMessage({preventDefault(){}, target:form});
+  });
   if(byIdEl('btn-delete-chat-history')) byIdEl('btn-delete-chat-history').onclick = deleteChatHistory;
   if(byIdEl('btn-chat-theme-toggle')) byIdEl('btn-chat-theme-toggle').onclick = toggleChatThemeMenu;
   if(byIdEl('btn-chat-header-menu')) byIdEl('btn-chat-header-menu').onclick = toggleChatHeaderMenu;

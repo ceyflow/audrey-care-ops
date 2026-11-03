@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261103114709">
+<meta name="app-build" content="20261103151901">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1910,8 +1910,19 @@ const BACKEND_CONFIGURED = !SUPABASE_URL.includes('PASTE_') && !SUPABASE_ANON_KE
 const supabaseClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 // A second, independent Supabase client used only by the one-time "Secure accounts" migration
 // (creating real Supabase Auth accounts). Kept separate from supabaseClient so each signUp()
-// call during migration never clobbers the admin's own active login session.
-const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// call during migration never clobbers the admin's own active login session — but a bare second
+// createClient() call still isn't fully isolated: with no storageKey of its own, supabase-js
+// defaults both clients to the SAME localStorage slot and the SAME cross-instance auth
+// BroadcastChannel, so this client's signUp()+signOut() around each new account still broadcasts
+// SIGNED_IN/SIGNED_OUT to the admin's own supabaseClient too. Root-caused from a real, repeatable
+// case: creating an account always saved fine, but the activityLog entry logged right after it
+// consistently failed to save — the signOut() broadcast was landing in that exact gap, briefly
+// knocking the admin's own client's identity out from under the very next write. storageKey
+// isolates the localStorage slot; persistSession/autoRefreshToken are off because this client only
+// ever needs to exist for the few calls in supabaseSignUpForMigration before signing out again.
+const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { storageKey: 'sb-audrey-migration-client', persistSession: false, autoRefreshToken: false }
+}) : null;
 // Private/incognito-browsing detection was tried here and retired: the storage-quota signal it
 // depended on turned out to be the same on current Chrome whether or not the window was actually
 // incognito (Chrome deliberately unified the two specifically so sites can't tell them apart),

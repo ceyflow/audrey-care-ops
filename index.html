@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261102175254">
+<meta name="app-build" content="20261103051446">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -20686,6 +20686,25 @@ let _lastPersistedActivityWriteAt = 0;
     }
   }, {passive:true});
 });
+// A phone lock or app-switch backgrounds the tab without reloading it, and without firing the
+// setTimeout above — mobile OSes suspend JS timers while backgrounded — so a session already
+// past its role's inactivity window can still be sitting on screen when the tab comes back to
+// the foreground. Re-run the same elapsed-time check loadAll()'s cold-start logic uses (above,
+// near roleSignOffMinutes), on every foreground, not just on a fresh page load.
+function checkInactivityOnForeground(){
+  if(!state.session) return;
+  const mins = roleSignOffMinutes(state.session.role);
+  const lastActivity = getPersistedLastActivity();
+  if(mins>0 && lastActivity!=null && (Date.now()-lastActivity) >= mins*60*1000){
+    showToast('Signed off after being inactive');
+    logOut();
+  } else {
+    if(lastActivity!=null) _lastActivityAt = lastActivity;
+    scheduleSignOffTimer();
+  }
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkInactivityOnForeground(); });
+window.addEventListener('pageshow', (e)=>{ if(e.persisted) checkInactivityOnForeground(); });
 loadAll();
 </script>
 <script>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261103151901">
+<meta name="app-build" content="20261103154944">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5178,6 +5178,7 @@ async function loadAll(){
       // through someone's inactivity window doesn't quietly grant them a fresh full window.
       if(lastActivity!=null) _lastActivityAt = lastActivity;
       scheduleSignOffTimer();
+      pingServerLastSeen();
     }
   }
   applyTheme();
@@ -5382,7 +5383,7 @@ function saveSession(){
   catch(e){ console.error('save session failed', e); }
   // A fresh login (or re-login) resets the inactivity clock — see persistLastActivity()'s own
   // comment for why this needs to survive a page reload, not just live in a JS variable.
-  if(state.session){ persistLastActivity(); _lastActivityAt = Date.now(); }
+  if(state.session){ persistLastActivity(); _lastActivityAt = Date.now(); _lastServerPingAt = 0; pingServerLastSeen(); }
   scheduleSignOffTimer();
 }
 // The in-tab inactivity ticker (armed near the bottom of this file) only tracks "last activity"
@@ -5398,6 +5399,24 @@ function persistLastActivity(){
 }
 function getPersistedLastActivity(){
   try{ const v = localStorage.getItem('audrey_lastActivity'); return v ? Number(v) : null; }catch(e){ return null; }
+}
+// Server-side twin of persistLastActivity() above — profiles.last_seen, read by the
+// session_is_active() Postgres function the "authenticated access" RLS policy on app_data now
+// calls, so the inactivity timeout is enforced by the database itself rather than trusted to
+// whatever's running client-side (a backgrounded or fully closed device can't be relied on to log
+// itself out — see checkInactivityOnForeground()'s own comment). Throttled the same way
+// persistLastActivity's caller throttles its own localStorage write, just server-side and with a
+// longer window since this is a real network write, not a local one.
+let _lastServerPingAt = 0;
+async function pingServerLastSeen(){
+  if(!state.auth.migratedToSupabaseAuth || !supabaseClient || !state.session) return;
+  if(Date.now() - _lastServerPingAt < 60000) return;
+  _lastServerPingAt = Date.now();
+  try{
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user) return;
+    await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', user.id);
+  }catch(e){ console.error('last_seen heartbeat failed', e); }
 }
 // A single admin-visible audit trail — who did what, and when. Call this alongside (never
 // instead of) the real action; a logging failure must never block or roll back the action it's
@@ -20719,6 +20738,7 @@ let _lastPersistedActivityWriteAt = 0;
         persistLastActivity();
         _lastPersistedActivityWriteAt = _lastActivityAt;
       }
+      pingServerLastSeen();
     }
   }, {passive:true});
 });
@@ -20737,6 +20757,7 @@ function checkInactivityOnForeground(){
   } else {
     if(lastActivity!=null) _lastActivityAt = lastActivity;
     scheduleSignOffTimer();
+    pingServerLastSeen();
   }
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkInactivityOnForeground(); });

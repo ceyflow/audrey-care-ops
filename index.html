@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261103114137">
+<meta name="app-build" content="20261103114709">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5949,7 +5949,14 @@ async function confirmLoginV2(){
     if(roleFixError) console.error('profiles.role self-heal failed', roleFixError);
     roleWasStale = true;
   }
-  const sessionName = (profile && profile.staff_name) || typedName;
+  // Falls back to acctEntry.name (the canonical, correctly-cased login name from secureAccounts —
+  // already looked up above for the deactivated check) rather than the raw typedName, for the rare
+  // case supabaseFetchProfile comes back empty (a network hiccup, not a real "no profile" case).
+  // Using typedName verbatim used to silently fork one person's identity across sessions whenever
+  // they happened to type their name in different casing — "Vihanga" vs "vihanga", "packing" vs
+  // "Packing" — each variant then showing up as a different Team chat sender forever after, since
+  // sender names are matched by exact string. Confirmed via chat history: real split, same accounts.
+  const sessionName = (profile && profile.staff_name) || (acctEntry && acctEntry.name) || typedName;
   // Employer code (User account setup) is how Ongoing orders (Customer Care) knows which orders
   // are "theirs" — acctEntry was already looked up above (for the deactivated check) from the
   // same secureAccounts roster this field lives on, by this same login name.

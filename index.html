@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261103154944">
+<meta name="app-build" content="20261103173108">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5948,6 +5948,19 @@ async function confirmLoginV2(){
     passInput.value = ''; passInput.focus();
     return;
   }
+  // Refresh profiles.last_seen right now, awaited, before any data fetch below — session_is_active()
+  // (the RLS gate every app_data read/write now goes through) checks this timestamp, and for anyone
+  // returning after their configured timeout — the normal case, not an edge case, for literally every
+  // first login of the day — it was still sitting at however long ago they last used the app. Without
+  // this, that gap meant every fresh login's very first synced-keys fetch got blocked by the database
+  // (refreshAppData logging "came back empty — retry 1/3", assorted save failures alongside it) until
+  // pingServerLastSeen() finally got a turn later in this same function. Caught live: a real account's
+  // first login after this feature shipped reproduced exactly this. try/catch because a failure here
+  // must never block sign-in itself — worst case this login behaves exactly as it did before this fix.
+  try{
+    await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', res.userId);
+    _lastServerPingAt = Date.now();
+  }catch(e){ console.error('last_seen pre-fetch refresh failed', e); }
   if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
   // The role on file in User account setup (secureAccounts, looked up above as `role`) is always
   // current — it's what Admin actually edits. profiles.role is only ever set once, at signup, and

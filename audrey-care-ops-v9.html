@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261103051446">
+<meta name="app-build" content="20261103114137">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -743,6 +743,10 @@ html{ visibility:hidden; }
   .rnd-att-pill{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
   .rnd-att-pill-in{background:var(--s-received-soft);color:var(--s-received);}
   .rnd-att-pill-out{background:var(--s-blending-soft);color:var(--s-blending);}
+  .rnd-att-month-group{margin-bottom:18px;}
+  .rnd-att-month-group:last-child{margin-bottom:0;}
+  .rnd-att-month-label{font-weight:700;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;padding-top:4px;border-top:1px solid var(--border);}
+  .rnd-att-month-group:first-child .rnd-att-month-label{border-top:none;padding-top:0;}
   /* Liquid Glass, mobile: the Attendance staff report's day cards (.rnd-att-card). "Divider
      Frost" (frosted card, hairline splitting the date from the In/Out rows) combined with
      "Timeline Rail" (a blue-to-orange ::before bar down the left edge) -- picked together from
@@ -11492,48 +11496,62 @@ function renderRndChemistsTab(){
   </div>
   <div class="panel">
     <div class="panel-head"><h3>Recent attendance</h3></div>
-    ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : `
-    <div class="rnd-desktop-table">
-    <table class="data-table">
-      <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th>${isAdminOrSubAdmin() ? '<th>Location</th>' : ''}<th></th></tr></thead>
-      <tbody>
-        ${state.rndAttendance.slice(0,30).map(a=>{
-          const inAt = rndAttLoginAt(a);
-          const locCell = isAdminOrSubAdmin() ? `<td>
-            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}In</a>` : ''}
-            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Out</a>` : ''}
-            ${!a.loginLat && !a.logoutLat ? '<span class="hint">—</span>' : ''}
-          </td>` : '';
-          return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td>${locCell}<td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    </div>
-    <div class="rnd-mobile-cards">
-      ${state.rndAttendance.slice(0,30).map(a=>{
-        const inAt = rndAttLoginAt(a);
+    ${state.rndAttendance.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : (()=>{
+      // Grouped by month (newest first) instead of one long flat list — each group reuses the
+      // exact same row/card markup the flat list used, just scoped to that month's entries.
+      const byMonth = {};
+      state.rndAttendance.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(a=>{
+        const ym = a.date.slice(0,7);
+        (byMonth[ym] = byMonth[ym] || []).push(a);
+      });
+      return Object.keys(byMonth).sort((a,b)=>b.localeCompare(a)).map(ym=>{
+        const entries = byMonth[ym];
         return `
-        <div class="rnd-att-card">
-          <div class="rnd-att-card-top">
-            <div>
-              <div class="rnd-att-card-date">${esc(a.date)}</div>
-              <div class="rnd-att-card-chemist">${esc(a.chemistName)}</div>
-            </div>
-            ${canDeleteAtt ? `<button type="button" class="btn-text" data-delete-rnd-attendance="${a.id}" style="color:#C15B4E;">🗑</button>` : ''}
+        <div class="rnd-att-month-group">
+          <div class="rnd-att-month-label">${esc(fmtMonthLabel(ym))}</div>
+          <div class="rnd-desktop-table">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th>${isAdminOrSubAdmin() ? '<th>Location</th>' : ''}<th></th></tr></thead>
+            <tbody>
+              ${entries.map(a=>{
+                const inAt = rndAttLoginAt(a);
+                const locCell = isAdminOrSubAdmin() ? `<td>
+                  ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}In</a>` : ''}
+                  ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Out</a>` : ''}
+                  ${!a.loginLat && !a.logoutLat ? '<span class="hint">—</span>' : ''}
+                </td>` : '';
+                return `<tr><td>${esc(a.date)}</td><td>${esc(a.chemistName)}</td><td>${inAt?fmtTimeOnly(inAt):'—'}</td><td>${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</td>${locCell}<td style="text-align:right;">${canDeleteAtt ? `<button type="button" class="btn btn-sm btn-danger" data-delete-rnd-attendance="${a.id}">Delete</button>` : ''}</td></tr>`;
+              }).join('')}
+            </tbody>
+          </table>
           </div>
-          <div style="display:flex;gap:6px;">
-            <span class="rnd-att-pill rnd-att-pill-in">In ${inAt?fmtTimeOnly(inAt):'—'}</span>
-            <span class="rnd-att-pill rnd-att-pill-out">Out ${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</span>
+          <div class="rnd-mobile-cards">
+            ${entries.map(a=>{
+              const inAt = rndAttLoginAt(a);
+              return `
+              <div class="rnd-att-card">
+                <div class="rnd-att-card-top">
+                  <div>
+                    <div class="rnd-att-card-date">${esc(a.date)}</div>
+                    <div class="rnd-att-card-chemist">${esc(a.chemistName)}</div>
+                  </div>
+                  ${canDeleteAtt ? `<button type="button" class="btn-text" data-delete-rnd-attendance="${a.id}" style="color:#C15B4E;">🗑</button>` : ''}
+                </div>
+                <div style="display:flex;gap:6px;">
+                  <span class="rnd-att-pill rnd-att-pill-in">In ${inAt?fmtTimeOnly(inAt):'—'}</span>
+                  <span class="rnd-att-pill rnd-att-pill-out">Out ${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</span>
+                </div>
+                ${isAdminOrSubAdmin() && (a.loginLat || a.logoutLat) ? `
+                <div style="display:flex;gap:10px;margin-top:6px;">
+                  ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Login location</a>` : ''}
+                  ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Logout location</a>` : ''}
+                </div>` : ''}
+              </div>`;
+            }).join('')}
           </div>
-          ${isAdminOrSubAdmin() && (a.loginLat || a.logoutLat) ? `
-          <div style="display:flex;gap:10px;margin-top:6px;">
-            ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Login location</a>` : ''}
-            ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Logout location</a>` : ''}
-          </div>` : ''}
         </div>`;
-      }).join('')}
-    </div>
-    `}
+      }).join('');
+    })()}
   </div>
   `;
 }

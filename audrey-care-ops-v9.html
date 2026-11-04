@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261103173108">
+<meta name="app-build" content="20261104034206">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7254,9 +7254,20 @@ function downloadFile(filename, content, mimeType){
 // Everything this workspace has saved, in one file — restorable, and complete enough to stand
 // in for the live database if it were ever needed. Admin-only (see settings-backup's adminOnly
 // flag): this is the one export that can see literally all of it at once.
-function downloadFullBackup(){
+//
+// Used to only cover SYNCED_KEYS, silently skipping every DEFERRED_KEY (tempAttendance,
+// attendanceEditRequests, and every GMP sub-feature) — those only ever load into state once their
+// page has actually been opened this session, so this export's own "everything" claim was false
+// for exactly the data that doesn't get looked at every day. Confirmed concretely: six days of
+// real Staff check-in/out history turned out to have no backup at all, in a file that was taken
+// specifically to have one, because tempAttendance was never in SYNCED_KEYS to begin with. Now
+// fetches each DEFERRED_KEY fresh rather than trusting whatever happens to already be in memory,
+// so the backup is actually complete regardless of which pages this Admin has visited.
+async function downloadFullBackup(){
   const data = {};
   SYNCED_KEYS.forEach(k => { data[k] = state[k]; });
+  const deferredPairs = await Promise.all(DEFERRED_KEYS.map(async k => [k, await kvGet(k)]));
+  deferredPairs.forEach(([k, v]) => { data[k] = (v===null || v===undefined) ? (state[k] ?? null) : v; });
   const payload = {app: 'Audrey Care Ops', exportedAt: new Date().toISOString(), data};
   const stamp = new Date().toISOString().slice(0,10);
   downloadFile(`audrey-care-ops-backup-${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');

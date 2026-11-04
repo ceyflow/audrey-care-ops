@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261104034206">
+<meta name="app-build" content="20261104112127">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -370,6 +370,23 @@ html{ visibility:hidden; }
   table.data-table tr.col-filter-row th{padding:5px 8px 9px;}
   .col-filter-input, .col-filter-select{width:100%;box-sizing:border-box;padding:5px 7px;font-size:11.5px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-weight:400;}
   .col-filter-input::placeholder{color:var(--muted);}
+  /* Generic desktop-table/mobile-card toggle for any data-table page (Customers, Suppliers, Item
+     List, Staff, Bulk SMS campaigns) — reuses the exact same breakpoint and show/hide rule the
+     R&D chemist table already proved out (.rnd-desktop-table/.rnd-mobile-cards below), so every
+     converted table behaves identically instead of each page inventing its own. .list-card is the
+     shared card shell; a page adds its own small tweaks (e.g. a status pill) with its own class
+     alongside list-card rather than overriding it. Root cause this exists: on mobile these tables
+     were just the desktop columns shrunk down, so the rightmost column(s) ran off the 390px screen
+     entirely (confirmed: Customers' Branch column, Suppliers' Added column, Item List's RM Short
+     Code column, Staff's second Actions button) — a stacked list-card has no rightmost column to lose. */
+  .list-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .list-card-top{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+  .list-card-title{font-weight:700;font-size:14px;}
+  .list-card-fields{display:flex;flex-direction:column;gap:5px;margin-bottom:4px;}
+  .list-card-field{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;}
+  .list-card-label{color:var(--muted);flex:none;}
+  .list-card-actions{display:flex;gap:8px;margin-top:10px;}
+  .list-card-actions .btn{flex:1;}
 
   /* "Modern Minimal Card" look for the batch sheet document — the on-screen modal, both print
      paths, and the Settings live preview all share these. Deliberately a fixed brand palette, not
@@ -11783,6 +11800,7 @@ function renderCustomersPage(){
   </div>
   <div class="panel">
     ${state.customers.length===0 ? `<div class="empty-state">No customers yet.</div>` : `
+    <div class="rnd-desktop-table">
     <table class="data-table">
       <thead>
         <tr>
@@ -11808,7 +11826,24 @@ function renderCustomersPage(){
           </td>`:''}
         </tr>`).join('')}
       </tbody>
-    </table>`}
+    </table>
+    </div>
+    <div class="rnd-mobile-cards">
+      ${rows.length===0 ? `<div class="empty-state">No customers match your filters.</div>` : rows.map(c=>`
+      <div class="list-card" ${canManage?`data-customer-row="${c.id}"`:''}>
+        <div class="list-card-top">
+          ${canManage?`<input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" onclick="event.stopPropagation()" ${state.selectedCustomers.has(c.id)?'checked':''}>`:''}
+          <span class="list-card-title">${esc(c.name)}</span>
+        </div>
+        <div class="list-card-fields">
+          ${visibleCols.map(d=>`<div class="list-card-field"><span class="list-card-label">${esc(d.label)}</span><span>${d.cell(c)}</span></div>`).join('')}
+        </div>
+        ${canManage?`<div class="list-card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>
+        </div>`:''}
+      </div>`).join('')}
+    </div>`}
   </div>
   `;
 }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261104112127">
+<meta name="app-build" content="20261104125542">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -744,7 +744,12 @@ html{ visibility:hidden; }
   .rnd-mobile-cards{display:none;}
   @media (max-width:760px){
     .rnd-desktop-table{display:none;}
-    .rnd-mobile-cards{display:flex;flex-direction:column;gap:9px;}
+    /* Bottom padding equal to the Notes FAB's own footprint (.notes-fab-btn: 52px + 34px bottom
+       offset) so scrolling to the end of a list never leaves its last card permanently stuck under
+       the floating button — mid-scroll the FAB sitting over content briefly is normal and expected
+       (every app with a floating action button does this), but the final item having no way to
+       ever clear it was the one actually-fixable part of that. */
+    .rnd-mobile-cards{display:flex;flex-direction:column;gap:9px;padding-bottom:96px;}
   }
   .rnd-chemist-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
   .rnd-chemist-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
@@ -7758,6 +7763,7 @@ function renderItemListPage(){
   </div>
   <div class="panel">
     ${state.inventoryItems.length===0 ? `<div class="empty-state">No items yet.</div>` : `
+    <div class="rnd-desktop-table">
     <table class="data-table">
       <thead>
         <tr>
@@ -7783,7 +7789,24 @@ function renderItemListPage(){
           </td>`:''}
         </tr>`).join('')}
       </tbody>
-    </table>`}
+    </table>
+    </div>
+    <div class="rnd-mobile-cards">
+      ${rows.length===0 ? `<div class="empty-state">No items match your filters.</div>` : rows.map(i=>`
+      <div class="list-card" ${canManage?`data-item-row="${i.id}"`:''}>
+        <div class="list-card-top">
+          ${canManage?`<input type="checkbox" class="item-select-row" data-item-id="${i.id}" onclick="event.stopPropagation()" ${state.selectedItems.has(i.id)?'checked':''}>`:''}
+          <span class="list-card-title">${esc(i.name)}</span>
+        </div>
+        <div class="list-card-fields">
+          ${visibleCols.map(d=>`<div class="list-card-field"><span class="list-card-label">${esc(d.label)}</span><span>${d.cell(i)}</span></div>`).join('')}
+        </div>
+        ${canManage?`<div class="list-card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-sm" data-edit-item="${i.id}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-delete-item="${i.id}">Delete</button>
+        </div>`:''}
+      </div>`).join('')}
+    </div>`}
   </div>
   `;
 }
@@ -11883,6 +11906,7 @@ function renderSuppliersPage(){
   </div>
   <div class="panel">
     ${state.suppliers.length===0 ? `<div class="empty-state">No suppliers yet.</div>` : `
+    <div class="rnd-desktop-table">
     <table class="data-table">
       <thead>
         <tr>
@@ -11914,7 +11938,26 @@ function renderSuppliersPage(){
           </td>`:''}
         </tr>`).join('')}
       </tbody>
-    </table>`}
+    </table>
+    </div>
+    <div class="rnd-mobile-cards">
+      ${rows.length===0 ? `<div class="empty-state">No suppliers match your filters.</div>` : rows.map(s=>`
+      <div class="list-card" ${canManage?`data-supplier-row="${s.id}"`:''}>
+        <div class="list-card-top">
+          ${canManage?`<input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" onclick="event.stopPropagation()" ${state.selectedSuppliers.has(s.id)?'checked':''}>`:''}
+          <span class="list-card-title">${esc(s.name)}</span>
+        </div>
+        <div class="list-card-fields">
+          <div class="list-card-field"><span class="list-card-label">Vendor ID</span><span>${esc(s.vendorId)||'—'}</span></div>
+          <div class="list-card-field"><span class="list-card-label">Status</span><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></div>
+          <div class="list-card-field"><span class="list-card-label">Added</span><span>${fmtDate(s.createdAt)}</span></div>
+        </div>
+        ${canManage?`<div class="list-card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>
+        </div>`:''}
+      </div>`).join('')}
+    </div>`}
   </div>
   `;
 }
@@ -12730,6 +12773,7 @@ function renderStaffPage(){
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-head"><h3>${esc(g.label)} <span class="hint" style="font-weight:400;">(${g.members.length})</span></h3></div>
       ${g.members.length===0 ? `<div class="empty-state">No one in this category yet.</div>` : `
+      <div class="rnd-desktop-table">
       <table class="data-table">
         <thead><tr><th>Photo</th><th>Name</th><th>Title</th>${(state.session && roleCan(state.session.role, 'staff_manage'))?'<th>Actions</th>':''}</tr></thead>
         <tbody>
@@ -12748,7 +12792,29 @@ function renderStaffPage(){
             </td>`:''}
           </tr>`).join('')}
         </tbody>
-      </table>`}
+      </table>
+      </div>
+      <div class="rnd-mobile-cards">
+        ${g.members.map(s=>`
+        <div class="list-card">
+          <div class="list-card-top">
+            ${staffAvatarHtml(s.name, 36)}
+            <span class="list-card-title">${esc(s.name)}</span>
+          </div>
+          <div class="list-card-fields">
+            <div class="list-card-field"><span class="list-card-label">Title</span><span>${s.title ? esc(s.title) : '<span class="hint">—</span>'}</span></div>
+          </div>
+          ${(state.session && roleCan(state.session.role, 'staff_manage'))?`
+          <div class="list-card-actions" style="flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
+            <label class="btn btn-sm" style="cursor:pointer;flex:1;text-align:center;">${s.photo?'Change photo':'Add photo'}
+              <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
+            </label>
+            ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}" style="flex-basis:100%;">Remove photo</button>`:''}
+            <button class="btn btn-sm btn-danger" data-remove-staff="${s.id}" style="flex-basis:100%;">Remove</button>
+          </div>` : ''}
+        </div>`).join('')}
+      </div>`}
     </div>`).join('')}
   `;
 }
@@ -12978,6 +13044,7 @@ function renderBulkSmsCampaignTab(){
   ${campaigns.length ? `
   <div class="panel">
     <div class="panel-head"><h3>Past campaigns</h3></div>
+    <div class="rnd-desktop-table">
     <table class="data-table">
       <thead><tr><th>Name</th><th>Message</th><th>Recipients</th><th>Result</th><th>Sent</th></tr></thead>
       <tbody>
@@ -12991,6 +13058,21 @@ function renderBulkSmsCampaignTab(){
         </tr>`).join('')}
       </tbody>
     </table>
+    </div>
+    <div class="rnd-mobile-cards">
+      ${campaigns.map(camp=>`
+      <div class="list-card">
+        <div class="list-card-top">
+          <span class="list-card-title">${esc(camp.name||'—')}</span>
+        </div>
+        <div class="hint" style="white-space:normal;margin-bottom:8px;">${esc((camp.message||'').slice(0,90))}${(camp.message||'').length>90?'…':''}</div>
+        <div class="list-card-fields">
+          <div class="list-card-field"><span class="list-card-label">Recipients</span><span>${camp.recipientCount}</span></div>
+          <div class="list-card-field"><span class="list-card-label">Result</span><span>${camp.sentCount} sent${camp.failedCount?`, ${camp.failedCount} failed`:''}</span></div>
+          <div class="list-card-field"><span class="list-card-label">Sent</span><span>${fmtDateTime(camp.at)} · ${esc(camp.by)}</span></div>
+        </div>
+      </div>`).join('')}
+    </div>
   </div>` : ''}
   `;
 }

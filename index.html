@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261104170155">
+<meta name="app-build" content="20261104191241">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4564,7 +4564,7 @@ let state = {
   chatMenuOpenId: null,
   chatQuoteId: null,
   chatEditId: null,
-  chatTheme: 'rounded',
+  chatTheme: 'whatsapp',
   chatThemeMenuOpen: false,
   chatHeaderMenuOpen: false,
   chatReactionPickerId: null,
@@ -16776,6 +16776,12 @@ async function saveBatchSheetSteps(recipeId){
 // the rendering logic itself, only this table. Picked theme is a personal, client-side preference
 // (localStorage), not synced workspace state — it's just how one person likes their own chat to look.
 const CHAT_THEMES = {
+  whatsapp:  { label:'WhatsApp-Style Blue', avatarSize:34, radius:'16px', mineRadius:'16px 16px 4px 16px', otherRadius:'16px 16px 16px 4px', pad:'8px 12px', font:'13.5px',
+               mineBg:'var(--accent)', mineColor:'#fff', otherBg:'#fff', otherColor:'var(--ink)', otherBorder:'1px solid var(--border)', otherShadow:'0 1px 2px rgba(20,25,40,.05)',
+               pageBg:'var(--bg)', dayDividers:true, grouped:true, avatarShadow:false, rolePill:false, tagColors:false,
+               sendBg:'var(--accent)', sendColor:'#fff', sendShape:'circle', sendRadius:'50%', sendSize:46,
+               deleteBg:'var(--danger-soft)', deleteColor:'var(--danger)', deleteRadius:'999px', deleteBorder:'none',
+               inputRadius:'24px', inputBg:'#fff', inputBorder:'none', inputPad:'12px 18px', inputFont:'14px', inputBarBg:'#F0F2F5' },
   rounded:   { label:'Clean Rounded Bubbles', avatarSize:36, radius:'18px', pad:'9px 14px', font:'13.5px',
                mineBg:'var(--accent)', mineColor:'#fff', otherBg:'var(--bg)', otherColor:'var(--ink)',
                pageBg:'', dayDividers:false, grouped:false, avatarShadow:false, rolePill:false, tagColors:false,
@@ -16838,7 +16844,7 @@ const CHAT_THEMES = {
                deleteBg:'#FBEAEA', deleteColor:'#A84B45', deleteRadius:'999px', deleteBorder:'none',
                inputRadius:'999px', inputBg:'#fff' }
 };
-const CHAT_THEME_ORDER = ['rounded','grouped','flat','pastel','outlined','tags','compact','gradient','sections','floating'];
+const CHAT_THEME_ORDER = ['whatsapp','rounded','grouped','flat','pastel','outlined','tags','compact','gradient','sections','floating'];
 const CHAT_TAG_PALETTE = [
   {bg:'#ECE9FA',text:'#5B4FB8'}, {bg:'#FBEBD8',text:'#B36B1E'}, {bg:'#E4F8EA',text:'#2C7A46'},
   {bg:'#FDE8EC',text:'#B8406B'}, {bg:'#E3F2FD',text:'#1D6FA5'}, {bg:'#FFF3D6',text:'#9C7A12'}
@@ -16847,7 +16853,7 @@ function chatTagColor(name){
   let h=0; for(let i=0;i<(name||'').length;i++) h=(h*31+name.charCodeAt(i))>>>0;
   return CHAT_TAG_PALETTE[h%CHAT_TAG_PALETTE.length];
 }
-function currentChatTheme(){ return CHAT_THEMES[state.chatTheme] || CHAT_THEMES.rounded; }
+function currentChatTheme(){ return CHAT_THEMES[state.chatTheme] || CHAT_THEMES.whatsapp; }
 function renderChatPage(){
   const quoted = state.chatQuoteId ? state.chat.find(x=>x.id===state.chatQuoteId) : null;
   const theme = currentChatTheme();
@@ -16922,10 +16928,10 @@ function renderChatPage(){
       </div>
       <button type="button" class="chat-quote-cancel" id="btn-cancel-chat-quote" aria-label="Cancel reply">✕</button>
     </div>` : ''}
-    <form id="chat-form" style="display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);align-items:center;position:relative;">
+    <form id="chat-form" style="display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);align-items:center;position:relative;background:${theme.inputBarBg||'transparent'};">
       <div id="chat-mention-dropdown" class="chat-mention-dropdown ac-dropdown" style="display:none;"></div>
-      <input id="chat-input" class="search-input" style="flex:1;border-radius:${theme.inputRadius};background:${theme.inputBg};" placeholder="Type a message… (@ to mention)" autocomplete="off">
-      <button type="submit" style="background:${theme.sendBg};color:${theme.sendColor};border:none;flex-shrink:0;${theme.sendShape==='circle'?`border-radius:50%;width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;`:`border-radius:${theme.sendRadius};padding:11px 22px;font-size:13px;font-weight:600;`}" aria-label="Send">${theme.sendShape==='circle'?'➤':'Send'}</button>
+      <input id="chat-input" class="search-input" style="flex:1;border-radius:${theme.inputRadius};background:${theme.inputBg};border:${theme.inputBorder||'1px solid var(--border)'};padding:${theme.inputPad||'9px 12px'};font-size:${theme.inputFont||'14px'};" placeholder="Type a message… (@ to mention)" autocomplete="off">
+      <button type="submit" style="background:${theme.sendBg};color:${theme.sendColor};border:none;flex-shrink:0;${theme.sendShape==='circle'?`border-radius:50%;width:${theme.sendSize||42}px;height:${theme.sendSize||42}px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;`:`border-radius:${theme.sendRadius};padding:11px 22px;font-size:13px;font-weight:600;`}" aria-label="Send">${theme.sendShape==='circle'?'➤':'Send'}</button>
     </form>
   </div>`;
 }
@@ -16996,7 +17002,7 @@ function renderChatBubble(m, theme, grouped, opts){
           <button type="button" class="btn btn-sm btn-primary" data-chat-save-edit="${m.id}">Save</button>
         </div>
       </div>` : `
-      <div style="background:${mine?theme.mineBg:theme.otherBg};color:${mine?theme.mineColor:theme.otherColor};padding:${theme.pad};border-radius:${theme.radius};font-size:${theme.font};line-height:1.5;overflow:hidden;overflow-wrap:break-word;${bubbleShadow?`box-shadow:${bubbleShadow};`:''}${bubbleBorder?`border:${bubbleBorder};`:''}${theme.memoStyle?'border-left:3px solid var(--accent-dark);':''}${m.pinned?'outline:2px solid var(--accent);outline-offset:1px;':''}">
+      <div style="background:${mine?theme.mineBg:theme.otherBg};color:${mine?theme.mineColor:theme.otherColor};padding:${theme.pad};border-radius:${mine?(theme.mineRadius||theme.radius):(theme.otherRadius||theme.radius)};font-size:${theme.font};line-height:1.5;overflow:hidden;overflow-wrap:break-word;${bubbleShadow?`box-shadow:${bubbleShadow};`:''}${bubbleBorder?`border:${bubbleBorder};`:''}${theme.memoStyle?'border-left:3px solid var(--accent-dark);':''}${m.pinned?'outline:2px solid var(--accent);outline-offset:1px;':''}">
         ${m.quoted ? `<div class="chat-quote-inline"><div class="chat-quote-inline-sender">${esc(m.quoted.sender)}</div>${esc(m.quoted.text)}</div>` : ''}
         ${bodyText}${bubbleTime}
       </div>

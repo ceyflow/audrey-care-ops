@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261104191241">
+<meta name="app-build" content="20261104193837">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2032,7 +2032,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','chatTheme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','chat','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','chatTheme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -2954,10 +2954,11 @@ function subscribeRealtime(){
         // the defer.
         if(k==='boxCounts') checkBoxCountAlert();
         if(k==='attendanceEditRequests') checkAttEditAlert();
+        if(k==='systemNotices') checkSystemNotices();
         // 'chat' and 'complaints' have follow-up effects right below that depend on the DOM
         // already reflecting this update (scroll-to-bottom, notice popups) — those always render
         // immediately. Everything else can be deferred while the user is mid-keystroke elsewhere.
-        if(k==='chat' || k==='complaints' || k==='boxCounts' || k==='attendanceEditRequests') render(); else renderOrDefer();
+        if(k==='chat' || k==='complaints' || k==='boxCounts' || k==='attendanceEditRequests' || k==='systemNotices') render(); else renderOrDefer();
         if(k==='chat'){
           if(state.page==='chat'){ scrollChatToBottom(); markChatSeenIfNeeded(); }
           if(prevChatLen!==null && state.chat.length>prevChatLen){
@@ -4528,6 +4529,8 @@ let state = {
   deliveryLines: [],
   boxCounts: [],
   _boxCountAlert: null,
+  systemNotices: [],
+  _systemNoticeAlert: null,
   _boxCountEditId: null,
   _boxCountSelected: [],
   staffCategories: [],
@@ -5281,6 +5284,7 @@ async function loadAll(){
   setInterval(checkDueNotes, 20000);
   checkBoxCountAlert();
   checkAttEditAlert();
+  checkSystemNotices();
   // Photo cleanup doesn't need to be prompt like the order/complaint archive sweep above — once
   // every 30 minutes is plenty for deleting old attachments.
   setInterval(async ()=>{
@@ -5922,6 +5926,7 @@ async function confirmLogin(){
   checkDueNotes();
   checkBoxCountAlert();
   checkAttEditAlert();
+  checkSystemNotices();
   await autoAddRndOfficerAsChemist();
   render();
 }
@@ -6032,6 +6037,7 @@ async function confirmLoginV2(){
   checkDueNotes();
   checkBoxCountAlert();
   checkAttEditAlert();
+  checkSystemNotices();
   await autoAddRndOfficerAsChemist();
   render();
 }
@@ -10550,6 +10556,7 @@ function renderShell(freshPage){
   ${state.adminBroadcast ? `<div class="${freshBroadcast?'':'reopen-noanim'}">${renderAdminBroadcastPanel()}</div>` : ''}
   ${state._dueNoteAlert ? renderDueNoteAlert() : ''}
   ${state._boxCountAlert ? renderBoxCountAlert() : ''}
+  ${state._systemNoticeAlert ? renderSystemNoticeAlert() : ''}
   ${state._attEditAlert ? renderAttEditAlert() : ''}
   `;
 }
@@ -11013,6 +11020,34 @@ function checkBoxCountAlert(){
   if(!state.session || !isAdminOrSubAdmin() || state._boxCountAlert) return;
   const pending = (state.boxCounts||[]).filter(b=>!b.ackedByAdmin);
   if(pending.length) state._boxCountAlert = pending;
+}
+// A one-off popup aimed at a single named account (e.g. an Admin pushing "heads up" text to one
+// person) rather than the whole workspace, unlike every other alert/notice in the app. Delivered
+// via the same SYNCED_KEY + realtime-broadcast path as everything else, so it shows up immediately
+// if that person is already mid-session, not just on their next login.
+function checkSystemNotices(){
+  if(!state.session || state._systemNoticeAlert) return;
+  const me = state.session.staffName || state.session.name;
+  const mine = (state.systemNotices||[]).filter(n=>n.forUser===me);
+  if(mine.length) state._systemNoticeAlert = mine;
+}
+function renderSystemNoticeAlert(){
+  const entries = state._systemNoticeAlert;
+  if(!entries || !entries.length) return '';
+  return `
+  <div class="notes-due-overlay" id="system-notice-alert-overlay">
+    <div class="notes-due-card" style="max-width:380px;">
+      <div class="notes-due-dot" style="background:var(--accent);">${icon('bell')}</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:10px;">System message</div>
+      <div style="text-align:left;display:flex;flex-direction:column;gap:10px;margin-bottom:20px;max-height:280px;overflow-y:auto;">
+        ${entries.map(n=>`
+        <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <div style="font-size:13.5px;">${esc(n.message)}</div>
+        </div>`).join('')}
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-dismiss-system-notice-alert" style="width:100%;">OK</button>
+    </div>
+  </div>`;
 }
 function renderBoxCountAlert(){
   const entries = state._boxCountAlert;
@@ -19095,6 +19130,13 @@ function attachShellHandlers(){
     state._boxCountAlert = null;
     render();
     await save('boxCounts');
+  };
+  if(byIdEl('btn-dismiss-system-notice-alert')) byIdEl('btn-dismiss-system-notice-alert').onclick = async ()=>{
+    const me = state.session.staffName || state.session.name;
+    state.systemNotices = (state.systemNotices||[]).filter(n=>n.forUser!==me);
+    state._systemNoticeAlert = null;
+    render();
+    await save('systemNotices');
   };
   // My Attendance: gear opens the Edit Time Log request form; the form itself submits a pending
   // request rather than writing tempAttendance directly (see submitAttendanceEditRequest).

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261105043243">
+<meta name="app-build" content="20261105045143">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5357,8 +5357,10 @@ async function _saveAuthOnce(){
   return false;
 }
 async function _saveOnce(key){
-  // Two attempts: the second covers a transient/rate-limit error on the first.
-  for(let attempt=0; attempt<2; attempt++){
+  // Four attempts with growing backoff (500ms/1000ms/1500ms between them) — widened from two
+  // after a confirmed-live race (see pingServerLastSeen's preflight below) showed two quick
+  // attempts aren't always enough room for a slow network or a just-triggered heartbeat to land.
+  for(let attempt=0; attempt<4; attempt++){
     try{
       // The "authenticated access" RLS policy gates every app_data read/write on
       // session_is_active(), which compares profiles.last_seen against this role's inactivity
@@ -5380,10 +5382,10 @@ async function _saveOnce(key){
         return true;
       }
     }catch(e){}
-    await new Promise(r=>setTimeout(r, 500));
+    await new Promise(r=>setTimeout(r, 500*(attempt+1)));
   }
   console.error('save '+key+' failed');
-  showToast('Could not save '+key+' — please try again');
+  showToast('Could not save '+key+' — please try again', 6000);
   return false;
 }
 // Same queue + merge-before-write protection as save()/_saveOnce(), but silent on failure
@@ -6186,7 +6188,31 @@ async function createOrder(e){
     if(result.url){ order.photo = result.url; order.photoUploadedAt = new Date().toISOString(); }
     else showToast(`The picture could not be uploaded: ${result.error}`, 9000);
   }
-  await save('orders');
+  // save() already retries 4 times internally (see _saveOnce) — this covers what that can't: a
+  // longer-lived outage (a dead wifi spot on the factory floor, say) that outlasts those few
+  // seconds. The order stays safely in state.orders the whole time (nothing here ever removes
+  // it), so retrying later is free — same order object, same id, mergeBeforeSave treats it as
+  // "created locally, not yet on the server" regardless of how many attempts it takes. Confirmed
+  // concretely: an order created, then genuinely never saved, with nothing short of a page reload
+  // telling the person it hadn't gone through.
+  if(!(await save('orders'))){
+    retrySaveInBackground('orders', `Order ${order.orderNumber||order.id} (${order.customer})`);
+  }
+}
+// Keeps trying a failed save every 15s (well past _saveOnce's own ~3.5s of immediate retries) for
+// up to 5 minutes, so a short-lived outage self-heals without the person needing to notice and
+// manually retry. Every failed round shows the same toast _saveOnce would have shown anyway;
+// success gets its own distinct one, since by then the original "created"/"sent" toast is long
+// gone and this is the only confirmation the record actually made it to the server.
+async function retrySaveInBackground(key, label){
+  for(let i=0; i<20; i++){
+    await new Promise(r=>setTimeout(r, 15000));
+    if(!state.session) return; // signed out — nothing left to retry into
+    if(await save(key)){
+      showToast(`${label} saved`);
+      return;
+    }
+  }
 }
 // Which SMS template (if any) an order reaching this stage would automatically trigger.
 function orderAutoSmsKind(stage){
@@ -8353,7 +8379,9 @@ async function sendChatMessage(e){
   state.chatQuoteId = null;
   render();
   scrollChatToBottom();
-  await save('chat');
+  if(!(await save('chat'))){
+    retrySaveInBackground('chat', `Message from ${msg.sender}`);
+  }
 }
 function deleteChatHistory(){
   if(!(state.session && roleCan(state.session.role, 'chat_delete_history'))) return;

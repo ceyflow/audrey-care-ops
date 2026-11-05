@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261105090108">
+<meta name="app-build" content="20261105163654">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4802,6 +4802,23 @@ async function loadAll(){
         supabaseClient.auth.getSession().then(({data})=>{ if(!settled){ settled = true; if(sub) sub.unsubscribe(); resolve(data.session); } }).catch(()=>{ if(!settled){ settled = true; resolve(null); } });
       });
     }catch(e){}
+  }
+  // A resumed session (the app reopened after sitting closed/backgrounded for hours — not a
+  // fresh login, so confirmLoginV2's own pre-fetch last_seen refresh never runs) still has
+  // whatever last_seen this device last wrote, however many hours ago that was. The very first
+  // read below is the "authenticated access" RLS policy's very first chance to evaluate
+  // session_is_active() for this session, and with a short-timeout role it fails outright before
+  // any later heartbeat (those only fire off a DOM activity event or inside a save — nothing has
+  // triggered either yet) gets a chance to run — the retry loop inside refreshAppData() just
+  // repeats the same still-blocked read 3 more times, so it never recovers on its own. Confirmed
+  // live as the exact cause of "couldn't load your data" always appearing after reopening the
+  // app hours later. Refreshing last_seen here, before that first read, closes the gap the same
+  // way confirmLoginV2's own pre-fetch refresh does for a fresh login.
+  if(_authSession && _authSession.user && supabaseClient){
+    try{
+      await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', _authSession.user.id);
+      _lastServerPingAt = Date.now();
+    }catch(e){ console.error('resumed-session last_seen refresh failed', e); }
   }
   // Fired together, not one after the other — 'auth' isn't a SYNCED_KEY (it has its own shape/
   // migration handling below) so it used to be fetched in its own sequential await AFTER this one

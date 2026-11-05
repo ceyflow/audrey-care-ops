@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261104193837">
+<meta name="app-build" content="20261105035511">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -232,13 +232,8 @@ html{ visibility:hidden; }
      flat row of items as always) and only turn into real two-row blocks at phone width, below. */
   .header-right-top, .header-right-links{display:contents;}
   .session-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
-  .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;border:none;padding:0;cursor:pointer;font-family:inherit;}
+  .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
   .topbar-icon-btn{position:relative;}
-  /* Team chat has its own full sidebar entry on desktop/tablet — this shortcut is only there
-     for phones, where the sidebar is replaced by the bottom tab bar and chat has no other way
-     in. Desktop showing both was never an intentional affordance, just the two sharing one
-     unconditional markup block; hide it here and the mobile media query below turns it back on. */
-  .topbar-icon-btn[data-nav="chat"]{display:none !important;}
   .topbar-icon-btn-dot{position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface);}
 
   .btn{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;transition:background .15s,border-color .15s,transform .15s ease,box-shadow .15s ease;}
@@ -1614,39 +1609,52 @@ html{ visibility:hidden; }
         linear-gradient(165deg, #EAF1FB 0%, #ECE9F6 45%, #FBEEE6 100%);
       background-attachment:fixed;
     }
-    /* Facebook-style app bar (2026-11-04, second pass — the first "Borderless Blend" pass kept
-       title and session info on two stacked flat rows; the actual ask was ONE row, flush to the
-       notch, icon-only on the right, like Facebook's own top bar). Activity log / Change password
-       / Log out no longer fit inline on one row, so they moved behind a tap on the avatar — the
-       same pattern Facebook's own profile icon uses — into accountMenuModal(), same destinations
-       (openModal/logOut) as the links they replace, nothing removed, just relocated. */
+    /* Liquid Glass (picked sample): the page now sits on a vivid, saturated gradient (see body,
+       below) instead of a flat page color -- .topbar and .header-right float on top of it as two
+       translucent, blurred panels instead of one solid gradient-filled band. Both get the same
+       "sheen" treatment (a diagonal highlight via ::before) and a bright inset top edge to read
+       as curved glass catching light, not just a tinted rectangle. Dark text now that the band
+       itself is no longer a solid dark fill. */
     .topbar{
-      flex-direction:row;align-items:center;justify-content:space-between;gap:10px;
-      background:none;border:none;box-shadow:none;border-radius:0;
-      border-bottom:1px solid rgba(29,36,48,.1);
-      margin:0;padding:calc(7px + env(safe-area-inset-top)) 14px 7px;
+      flex-direction:column;align-items:stretch;gap:0;
+      background:linear-gradient(160deg, rgba(255,255,255,.55), rgba(255,255,255,.2));
+      -webkit-backdrop-filter:blur(22px) saturate(220%); backdrop-filter:blur(22px) saturate(220%);
+      border:1px solid rgba(255,255,255,.55);
+      border-radius:24px; margin:12px 12px 0;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.9), 0 14px 32px rgba(31,55,90,.14);
+      padding:18px 18px 22px;
       position:relative;
     }
-    .topbar::before{display:none;}
-    .topbar > div:first-child{margin-bottom:0;position:relative;display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
-    .topbar .page-title{color:#1C2430;font-size:17px;font-weight:700;position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .topbar::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.5) 0%, transparent 32%, transparent 68%, rgba(255,255,255,.15) 100%);
+    }
+    .topbar .page-title{color:#1C2430;font-size:20px;position:relative;}
     .topbar .page-sub{display:none;}
+    /* Flex-item margins never collapse, so this reserves real clearance below the title before
+       the card's own -14px pulls it back up — without it the card overlapped the title's own
+       line-height and clipped it (the card's margin-top assumed a gap that wasn't actually there). */
+    .topbar > div:first-child{margin-bottom:20px;position:relative;}
     .header-right{
-      background:none;border:none;box-shadow:none;border-radius:0;
-      margin:0;padding:0;flex-shrink:0;
+      background:linear-gradient(160deg, rgba(255,255,255,.62), rgba(255,255,255,.28));
+      -webkit-backdrop-filter:blur(20px) saturate(220%); backdrop-filter:blur(20px) saturate(220%);
+      border:1px solid rgba(255,255,255,.6);border-radius:18px;
+      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 26px rgba(31,55,90,.14);
+      margin-top:-14px;padding:13px 14px;
       position:relative;
     }
-    .header-right::before{display:none;}
-    .header-right-top{position:relative;display:flex;align-items:center;gap:10px;}
-    /* The name/role text and the three account links only ever fit on their own separate rows —
-       there's no room for them beside the page title on a 390px bar. The avatar stays (now a
-       button) as the one thing that opens accountMenuModal with all of it inside. */
-    .session-chip{background:none;border:none;padding:0;}
-    .session-chip-text{display:none;}
-    .header-right-links{display:none;}
-    .topbar-icon-btn{width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-    .topbar-icon-btn[data-nav="chat"]{display:flex !important;}
-    .topbar-icon-btn svg{width:18px;height:18px;}
+    .header-right::before{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(115deg, rgba(255,255,255,.55) 0%, transparent 35%, transparent 70%, rgba(255,255,255,.15) 100%);
+    }
+    .header-right-top, .header-right-links{position:relative;}
+    .header-right-top, .header-right-links{display:flex;align-items:center;flex-wrap:wrap;width:100%;}
+    .header-right-top{gap:10px;}
+    .header-right-links{gap:16px;margin-top:11px;}
+    .session-chip{background:none;border:none;padding:0;margin-right:auto;}
+    .header-right-links .btn-text{text-decoration:none;font-size:11.5px;font-weight:600;padding:0;}
+    .topbar-icon-btn{width:38px;height:38px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .topbar-icon-btn svg{width:19px;height:19px;}
     .topbar-icon-btn-label{display:none;}
     /* Replaced by the Sections grid as the mobile home/nav screen -- kept display:none rather
        than deleted, so the markup and its data-nav wiring stay intact if this ever needs
@@ -1659,7 +1667,7 @@ html{ visibility:hidden; }
     }
     .mobile-tab svg{width:25px;height:25px;flex-shrink:0;}
     .mobile-tab.active{color:var(--accent-dark);}
-    .sections-home-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:none;background:var(--bg);color:var(--ink);flex-shrink:0;}
+    .sections-home-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:none;background:var(--bg);color:var(--ink);flex-shrink:0;margin-right:4px;}
     .sections-home-btn svg{width:19px;height:19px;}
     .sections-grid-page{padding-top:2px;}
 
@@ -10508,10 +10516,9 @@ function renderShell(freshPage){
         <div class="header-right">
           <div class="header-right-top">
             <div class="session-chip">
-              <button type="button" class="avatar" id="btn-account-menu" aria-label="Account menu — ${esc(state.session.name)}, ${esc(state.session.role)}">${initials(state.session.name)}</button>
-              <span class="session-chip-text">${esc(state.session.name)} · ${esc(state.session.role)}</span>
+              <span class="avatar">${initials(state.session.name)}</span>
+              <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
             </div>
-            <button type="button" class="btn btn-sm topbar-icon-btn" data-nav="chat" title="Team chat" style="display:flex;align-items:center;gap:6px;">${icon('chat')}<span class="topbar-icon-btn-label">Team chat</span>${state.chatUnread ? '<span class="topbar-icon-btn-dot"></span>' : ''}</button>
             <button class="btn btn-sm topbar-icon-btn" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span id="dally-orb-topbar" class="dally-orb-lottie dally-orb-lottie-xs" style="margin:0;"></span><span class="topbar-icon-btn-label">Dally</span></button>
           </div>
           <div class="header-right-links">
@@ -17088,7 +17095,6 @@ function renderModal(){
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
   if(type==='smsconfirm') return smsConfirmModal();
-  if(type==='accountmenu') return accountMenuModal();
   if(type==='costingbatchsize') return costingAddBatchSizeModal();
   if(type==='costingaddproduct') return costingAddProductModal();
   if(type==='costingsavechoice') return costingSaveChoiceModal();
@@ -17398,30 +17404,6 @@ async function setDeliveryOutcome(orderId, outcome){
   closeModal();
 }
 
-// Opened by tapping the avatar in the topbar — holds what used to be three always-visible text
-// links (Activity log / Change password / Log out) that no longer fit once the header became one
-// compact row instead of three stacked ones. Same conditions, same destinations (openModal/logOut)
-// as the links they replace; this is just where they live now.
-function accountMenuModal(){
-  const canChangePassword = !!(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role)));
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:340px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-        <span class="avatar" style="width:40px;height:40px;font-size:15px;flex-shrink:0;">${initials(state.session.name)}</span>
-        <div>
-          <div style="font-weight:700;font-size:15px;">${esc(state.session.name)}</div>
-          <div class="hint">${esc(state.session.role)}</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${isAdmin() ? `<button type="button" class="btn" id="btn-account-menu-activity-log" style="justify-content:flex-start;">Activity log</button>` : ''}
-        ${canChangePassword ? `<button type="button" class="btn" id="btn-account-menu-change-password" style="justify-content:flex-start;">Change password</button>` : ''}
-        <button type="button" class="btn btn-danger" id="btn-account-menu-logout" style="justify-content:flex-start;">Log out</button>
-      </div>
-    </div>
-  </div>`;
-}
 function smsConfirmModal(){
   const pc = state.pendingSmsConfirm;
   const o = pc && byId(state.orders, pc.orderId);
@@ -18914,10 +18896,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-open-aibot')) byIdEl('btn-open-aibot').onclick = ()=>openModal('aibot');
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
   if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
-  if(byIdEl('btn-account-menu')) byIdEl('btn-account-menu').onclick = ()=>openModal('accountmenu');
-  if(byIdEl('btn-account-menu-logout')) byIdEl('btn-account-menu-logout').onclick = logOut;
-  if(byIdEl('btn-account-menu-change-password')) byIdEl('btn-account-menu-change-password').onclick = ()=>openModal('changepassword');
-  if(byIdEl('btn-account-menu-activity-log')) byIdEl('btn-account-menu-activity-log').onclick = ()=>openModal('activitylog');
   document.querySelectorAll('[data-delete-login]').forEach(b=>b.addEventListener('click', ()=>deleteLoginEntry(b.dataset.deleteLogin)));
   if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;

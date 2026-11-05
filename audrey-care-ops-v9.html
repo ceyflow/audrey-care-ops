@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261105045143">
+<meta name="app-build" content="20261105050038">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -17771,7 +17771,6 @@ function newOrderModal(presetCourier){
           <div class="field"><label>Due date</label><input type="date" name="dueDate" value="${new Date().toISOString().slice(0,10)}"></div>
         </div>
         <div class="field"><label>Address</label><textarea name="address" placeholder="Delivery address"></textarea></div>
-        ${orderPhotoField('neworder-photo', null, false)}
         ${richTextField({name:'product', label:'Product / task', placeholder:'e.g. Herbal Hair Oil — 200ml', required:true})}
         <div class="field-row">
           <div class="field"><label>Delivery method</label>
@@ -17783,6 +17782,7 @@ function newOrderModal(presetCourier){
           <div class="field"><label>Delivery tracking number</label><input name="courierNumber" autocomplete="off" placeholder="Optional"></div>
         </div>
         <div class="field"><label>Notes</label><textarea name="notes" data-color-tintable placeholder="Any special instructions"></textarea></div>
+        ${orderPhotoField('neworder-photo', null, false)}
         ${canManageColorTags() ? colorSwatchField(null, false) : ''}
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
@@ -17847,6 +17847,7 @@ function renderOrderDrawer(id){
     <form id="form-order-edit" data-order-id="${o.id}">
       ${richTextField({name:'product', label:'Product / task', value:o.product, required:true, readOnly:ro})}
       <div class="field"><label>Notes</label><textarea name="notes" data-color-tintable ${roAttr} ${o.color?`style="background:${o.color}1f;border-color:${o.color};"`:''}>${escBody(unbr(o.notes))}</textarea></div>
+      ${limited ? '' : orderPhotoField('order-photo', o.photo, ro)}
       ${canManageColorTags() ? colorSwatchField(o.color, ro) : ''}
       ${limited ? '' : `
       <div class="field-row-3">
@@ -17875,7 +17876,6 @@ function renderOrderDrawer(id){
         <div class="field"><label>Customer address</label><textarea name="address" ${roAttr}>${escBody(unbr(o.address||''))}</textarea></div>
         <div class="field"><label>Delivery tracking number</label><input name="courierNumber" value="${escAttr(o.courierNumber||'')}" placeholder="Tracking number" ${courierNumberRoAttr}></div>
       </div>
-      ${orderPhotoField('order-photo', o.photo, ro)}
       `}
 
       <div class="field-row" style="align-items:start;">

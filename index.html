@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261105085649">
+<meta name="app-build" content="20261105090108">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1733,6 +1733,7 @@ html{ visibility:hidden; }
   .cob-row:last-child{border-bottom:none;}
   .cob-row-clickable{cursor:pointer;transition:background-color .12s;}
   .cob-row-clickable:hover{background:var(--bg);}
+  .cob-row-locked{color:var(--muted);cursor:default;}
   .cob-empty{padding:20px 18px;text-align:center;color:var(--muted);font-size:12.5px;}
   .cob-updated{text-align:center;font-size:11.5px;color:var(--muted);margin-top:16px;display:flex;align-items:center;justify-content:center;gap:6px;}
 
@@ -10490,7 +10491,7 @@ const PAGE_META = {
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
   customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
-  ongoingorders:{title:'Ongoing orders', sub:'Every order in the pipeline — click one to see its status and sales person.'},
+  ongoingorders:{title:'Ongoing orders', sub:'Every order in the pipeline — click to open only your own.'},
   blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, recipe library, or costing.'},
   blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
@@ -11286,6 +11287,8 @@ function renderCustomerCarePage(){
 // an owning rep opens is forced read-only by renderOrderDrawer's own state.page==='ongoingorders'
 // check, so they can look but never edit, even on their own orders.
 function renderOngoingOrdersPage(){
+  const admin = isAdmin();
+  const code = normEmployerCode(state.session && state.session.employerCode);
   const active = activeOrders();
   // Same split the Orders board itself uses — one section per delivery list (Citypak Deliveries,
   // AC Deliveries, etc.), plus Unassigned for anything that doesn't match a current list. Keeps
@@ -11298,13 +11301,14 @@ function renderOngoingOrdersPage(){
   <div class="panel">
     <div class="panel-head"><h3>Ongoing orders</h3></div>
     <div class="panel-body">
-      ${sections.map(sec=>renderOngoingOrdersSection(sec)).join('')}
+      ${(!admin && !code) ? `<div class="hint" style="margin-bottom:12px;">Your account doesn't have an Employer code set yet — ask your Admin to set one in Settings → User account setup (matching your Sales person code) so you can open your own orders below.</div>` : ''}
+      ${sections.map(sec=>renderOngoingOrdersSection(sec, admin, code)).join('')}
       <div class="cob-updated"><span class="pulse-dot" style="background:var(--accent);"></span>Live — updates automatically</div>
     </div>
   </div>
   `;
 }
-function renderOngoingOrdersSection(sec){
+function renderOngoingOrdersSection(sec, admin, code){
   return `
   <div class="board-section">
     <div class="board-section-title">${esc(sec.label)}</div>
@@ -11319,9 +11323,12 @@ function renderOngoingOrdersSection(sec){
             <span>${esc(s)}</span>
           </div>
           <div class="cob-col-body">
-            ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>
-              `<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`
-            ).join('')}
+            ${list.length===0 ? `<div class="cob-empty">Nothing here right now.</div>` : list.map(o=>{
+              const mine = admin || (!!code && normEmployerCode(orderSalesmanFor(o))===code);
+              return mine
+                ? `<div class="cob-row cob-row-clickable" data-order-row="${o.id}">${esc(o.customer||o.orderNumber||o.id)}</div>`
+                : `<div class="cob-row cob-row-locked" title="Assigned to another sales person — you can only open your own orders">${esc(o.customer||o.orderNumber||o.id)}</div>`;
+            }).join('')}
           </div>
         </div>`;
       }).join('')}

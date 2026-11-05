@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261105035511">
+<meta name="app-build" content="20261105043243">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4870,13 +4870,21 @@ async function loadAll(){
   // genuinely doesn't exist yet; only Admin's unconditional RLS grant can tell the difference
   // safely. Reseeding on a false-empty read here would silently duplicate these defaults into the
   // real shared data the next time a confirmed read succeeds, same failure shape userRoles had.
+  // All three branches below write back to a key every role reads, not just Admin's — gated to
+  // isAdmin() like every other reseed-defaults-if-empty block, for the same reason: a non-Admin
+  // (or, concretely confirmed, the anonymous pre-login bootstrap fetch) reads this key through a
+  // narrower RLS grant, so an empty/incomplete array here can mean "genuinely needs backfilling"
+  // or just "this read can't see it all" — only Admin's unconditional RLS grant can tell those
+  // apart safely. Before this gate, the 2nd/3rd branches ran unconditionally and fired a write
+  // attempt guaranteed to be RLS-rejected (42501, confirmed live) on literally every anonymous
+  // page load, since an anon read of 'deliveryLines' comes back empty and looks CustomerPickup-less.
   if(isAdmin() && (!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0)){
     state.deliveryLines = JSON.parse(JSON.stringify(DEFAULT_DELIVERY_LINES));
     saveQuietly('deliveryLines').catch(()=>{});
-  } else if(Array.isArray(state.deliveryLines) && !state.deliveryLines.some(l=>l.key==='CustomerPickup')){
+  } else if(isAdmin() && Array.isArray(state.deliveryLines) && !state.deliveryLines.some(l=>l.key==='CustomerPickup')){
     state.deliveryLines = [...state.deliveryLines, {key:'CustomerPickup', label:'Customer Pickup', hidden:true}];
     saveQuietly('deliveryLines').catch(()=>{});
-  } else if(Array.isArray(state.deliveryLines)){
+  } else if(isAdmin() && Array.isArray(state.deliveryLines)){
     // Customer Pickup was added as a visible board section before it was decided to keep it
     // out of the board by default — hide it for anyone who already has it from that rollout.
     const existing = state.deliveryLines.find(l=>l.key==='CustomerPickup');
@@ -5352,6 +5360,17 @@ async function _saveOnce(key){
   // Two attempts: the second covers a transient/rate-limit error on the first.
   for(let attempt=0; attempt<2; attempt++){
     try{
+      // The "authenticated access" RLS policy gates every app_data read/write on
+      // session_is_active(), which compares profiles.last_seen against this role's inactivity
+      // timeout — see pingServerLastSeen's own comment. That heartbeat is fire-and-forget
+      // everywhere it's triggered (an activity event, coming back from background), so a save
+      // landing right after a gap (tab backgrounded, phone locked, just woken from sleep) can
+      // race a last_seen update that hasn't committed yet and get silently RLS-rejected — for a
+      // short-timeout role (5-10 min) this doesn't need a long gap. Confirmed concretely via a
+      // live repro: a stray unawaited write got rejected with exactly this RLS error. Awaiting a
+      // fresh ping here closes that gap at the one place every save goes through; it's a no-op
+      // most of the time (throttled to once per 60s server-side already).
+      await pingServerLastSeen();
       const merged = await mergeBeforeSave(key);
       const ok = await kvSet(key, merged);
       if(ok){
@@ -5384,6 +5403,8 @@ function saveQuietly(key){
 async function _saveOnceQuietly(key){
   for(let attempt=0; attempt<2; attempt++){
     try{
+      // Same last_seen-freshness preflight as _saveOnce above, same reason.
+      await pingServerLastSeen();
       const merged = await mergeBeforeSave(key);
       const ok = await kvSet(key, merged);
       if(ok){
@@ -5429,7 +5450,7 @@ function getPersistedLastActivity(){
 // longer window since this is a real network write, not a local one.
 let _lastServerPingAt = 0;
 async function pingServerLastSeen(){
-  if(!state.auth.migratedToSupabaseAuth || !supabaseClient || !state.session) return;
+  if(!state.auth || !state.auth.migratedToSupabaseAuth || !supabaseClient || !state.session) return;
   if(Date.now() - _lastServerPingAt < 60000) return;
   _lastServerPingAt = Date.now();
   try{

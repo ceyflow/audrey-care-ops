@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106040142">
+<meta name="app-build" content="20261106045941">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -232,8 +232,10 @@ html{ visibility:hidden; }
      flat row of items as always) and only turn into real two-row blocks at phone width, below. */
   .header-right-top, .header-right-links{display:contents;}
   .session-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
-  .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+  .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;overflow:hidden;}
+  .session-chip .avatar img{width:100%;height:100%;object-fit:cover;}
   .header-menu-toggle{display:none;}
+  .header-menu-backdrop{display:none;}
   /* Desktop keeps its original flat row of plain text links (display:contents on
      .header-right-links passes them straight through) -- the profile card and group labels are
      new mobile-only decoration that would otherwise duplicate the session chip right next to
@@ -752,9 +754,19 @@ html{ visibility:hidden; }
        .card) go from a bordered box to the same white + soft-shadow treatment as every other
        mobile card; the left accent border some orders carry stays, it still reads as a tag. */
     .card{background:#fff;border:none;border-radius:16px;padding:12px 14px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
-    .board-stage-tabs{background:transparent;padding:0;gap:8px;overflow-x:auto;}
-    .board-stage-tab{flex:none;background:#fff;border-radius:999px;padding:9px 14px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);color:#8A9290;}
-    .board-stage-tab.active{background:#1C4D44;color:#fff;box-shadow:none;}
+    /* Clean Clinical pill tabs used to scroll horizontally -- on a 390px phone the 4th stage
+       ("Picked Up by Delivery") landed half off the right edge with no fade or arrow hinting
+       there was more to scroll to, so it just looked cut off and broken (reference: a Dribbble
+       filter-pill pattern that wraps instead of scrolling, rather than inventing a scroll hint).
+       There are always exactly 4 stages (STAGES is fixed), so a 2x2 wrap guarantees every one is
+       fully visible and tappable without any scrolling at all. */
+    .board-stage-tabs{background:transparent;padding:0;gap:8px;flex-wrap:wrap;}
+    .board-stage-tab{flex:1 1 calc(50% - 4px);min-width:calc(50% - 4px);background:#fff;border-radius:14px;padding:11px 10px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);color:#8A9290;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    /* !important: the active tab also carries an inline color (its stage's own semantic color,
+       e.g. blue for "Received") meant for the old white active background -- on this dark green
+       active background that same blue reads as low-contrast and off-brand, so this wins over it
+       rather than leaving the markup's inline style untouched. */
+    .board-stage-tab.active{background:#1C4D44;color:#fff !important;box-shadow:none;}
   }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
   .column{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
@@ -1647,6 +1659,12 @@ html{ visibility:hidden; }
       background:transparent;border:none;box-shadow:none;
       padding:4px 20px 10px;
       position:relative;
+      /* The desktop rule above sets backdrop-filter:blur(22px) for its old frosted-glass look —
+         invisible here since this background is transparent, but backdrop-filter still creates a
+         CSS containing block for any position:fixed descendant, which silently confined the new
+         account-menu backdrop to this element's own box (121px tall) instead of the full screen.
+         Found via the backdrop's own getBoundingClientRect() coming back 121px instead of 844. */
+      backdrop-filter:none;-webkit-backdrop-filter:none;
     }
     .topbar .page-title{color:#13201E;font-size:25px;font-weight:800;letter-spacing:-.3px;position:relative;}
     .topbar .page-sub{display:block;color:#8A9290;font-size:13px;margin-top:2px;}
@@ -1674,8 +1692,10 @@ html{ visibility:hidden; }
     .header-menu-toggle{
       display:flex;width:34px;height:34px;border-radius:50%;border:none;flex-shrink:0;
       background:#1C4D44;color:#fff;align-items:center;justify-content:center;
-      font-size:12px;font-weight:700;padding:0;
+      font-size:12px;font-weight:700;padding:0;overflow:hidden;
     }
+    .header-menu-toggle img{width:100%;height:100%;object-fit:cover;}
+    .header-menu-backdrop{display:block;position:fixed;inset:0;z-index:38;background:rgba(19,32,30,.32);animation:overlay-fade .2s ease;}
     .header-right-links{
       display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:40;
       flex-direction:column;width:250px;
@@ -1684,14 +1704,17 @@ html{ visibility:hidden; }
     }
     .header-right-links.open{display:flex;}
     .header-menu-profile{display:flex;align-items:center;gap:12px;padding-bottom:12px;}
-    .header-menu-avatar{width:40px;height:40px;border-radius:50%;background:#1C4D44;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+    .header-menu-avatar-wrap{position:relative;border:none;background:none;padding:0;flex-shrink:0;border-radius:50%;}
+    .header-menu-avatar{width:40px;height:40px;border-radius:50%;background:#1C4D44;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden;}
+    .header-menu-avatar img{width:100%;height:100%;object-fit:cover;}
+    .header-menu-avatar-edit{position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#1C4D44;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;}
     .header-menu-name{font-size:14px;font-weight:700;color:#13201E;}
     .header-menu-role{font-size:12px;color:#8A9290;margin-top:1px;}
     .header-menu-group-label{font-size:10.5px;font-weight:700;color:#8A9290;text-transform:uppercase;letter-spacing:.4px;padding:10px 2px 6px;}
     .header-menu-group{background:#F6F7F8;border-radius:14px;overflow:hidden;}
     .header-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;font-size:13px;font-weight:600;color:#13201E;text-align:left;border:none;background:none;}
     .header-menu-item:not(:last-child){border-bottom:1px solid #EDEFEE;}
-    .header-menu-item-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .header-menu-item-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#E8F0EE;color:#1C4D44;}
     .header-menu-item-icon svg{width:15px;height:15px;}
     .header-menu-item span:nth-child(2){flex:1;}
     .header-menu-chevron{flex-shrink:0;}
@@ -3759,6 +3782,17 @@ async function uploadComplaintPhotos(complaintId, fileList, limit){
     if(data && data.publicUrl) entries.push({url: data.publicUrl, uploadedAt: new Date().toISOString()});
   }
   return entries;
+}
+// The account menu's own avatar reuses the Staff page's existing photo mechanism
+// (state.staff[].photo, set via uploadStaffPhoto/removeStaffPhoto) instead of a separate store —
+// one photo per person, shown consistently here, on the Staff page, and in Team chat.
+function myStaffRecord(){
+  const name = state.session && (state.session.staffName || state.session.name);
+  return name ? state.staff.find(st=>st.name===name) : null;
+}
+function myProfilePhotoUrl(){
+  const s = myStaffRecord();
+  return (s && s.photo) || null;
 }
 const ORDER_PHOTOS_BUCKET = 'order-photos';
 // Single-photo upload for the order "Add a picture" field — one image per order, not a gallery.
@@ -10647,17 +10681,22 @@ function renderShell(freshPage){
         <div class="header-right">
           <div class="header-right-top">
             <div class="session-chip">
-              <span class="avatar">${initials(state.session.name)}</span>
+              <span class="avatar">${myProfilePhotoUrl() ? `<img src="${escAttr(myProfilePhotoUrl())}" alt="">` : initials(state.session.name)}</span>
               <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
             </div>
             <button class="btn btn-sm topbar-icon-btn" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span id="dally-orb-topbar" class="dally-orb-lottie dally-orb-lottie-xs" style="margin:0;"></span><span class="topbar-icon-btn-label">Dally</span></button>
             <button type="button" class="header-menu-toggle" id="btn-header-menu-toggle" aria-label="Account menu" aria-expanded="${state._headerMenuOpen?'true':'false'}">
-              ${initials(state.session.name)}
+              ${myProfilePhotoUrl() ? `<img src="${escAttr(myProfilePhotoUrl())}" alt="">` : initials(state.session.name)}
             </button>
           </div>
+          ${state._headerMenuOpen ? `<div class="header-menu-backdrop" id="header-menu-backdrop"></div>` : ''}
           <div class="header-right-links ${state._headerMenuOpen?'open':''}">
             <div class="header-menu-profile">
-              <span class="header-menu-avatar">${initials(state.session.name)}</span>
+              <button type="button" class="header-menu-avatar-wrap" id="btn-change-profile-photo" aria-label="Change your picture">
+                <span class="header-menu-avatar">${myProfilePhotoUrl() ? `<img src="${escAttr(myProfilePhotoUrl())}" alt="">` : initials(state.session.name)}</span>
+                <span class="header-menu-avatar-edit"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+                <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
+              </button>
               <div>
                 <div class="header-menu-name">${esc(state.session.name)}</div>
                 <div class="header-menu-role">${esc(state.session.role)}</div>
@@ -10666,12 +10705,12 @@ function renderShell(freshPage){
             ${(isAdmin() || state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `
             <div class="header-menu-group-label">Account</div>
             <div class="header-menu-group">
-              ${isAdmin() ? `<button class="header-menu-item" id="btn-activity-log"><span class="header-menu-item-icon" style="background:#E3EEFB;color:#3B6FE0;">${icon('clock')}</span><span>Activity log</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
-              ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="header-menu-item" id="btn-change-password"><span class="header-menu-item-icon" style="background:#F1EEF9;color:#5B4B8A;">${icon('fingerprint')}</span><span>Change password</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
+              ${isAdmin() ? `<button class="header-menu-item" id="btn-activity-log"><span class="header-menu-item-icon">${icon('clock')}</span><span>Activity log</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
+              ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="header-menu-item" id="btn-change-password"><span class="header-menu-item-icon">${icon('fingerprint')}</span><span>Change password</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
             </div>` : ''}
             <div class="header-menu-group-label">App</div>
             <div class="header-menu-group">
-              <button class="header-menu-item header-menu-item-danger" id="btn-switch-role"><span class="header-menu-item-icon" style="background:#FBE9EA;color:#B3384A;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span><span>Log out</span></button>
+              <button class="header-menu-item header-menu-item-danger" id="btn-switch-role"><span class="header-menu-item-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span><span>Log out</span></button>
             </div>
           </div>
         </div>
@@ -11604,7 +11643,7 @@ function renderRndPage(){
   <div class="toolbar" style="flex-wrap:wrap;">
     <div class="tabs">
       <button type="button" class="tab ${view==='board'||view==='outcome'?'active':''}" data-rnd-view-mode="board">Products</button>
-      <button type="button" class="tab ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">🧪 Chemists</button>
+      <button type="button" class="tab rnd-tab-attendance ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">${icon('clock')}Attendance</button>
     </div>
     ${view==='chemists'
       ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
@@ -11620,7 +11659,7 @@ function renderRndPage(){
     <div class="rnd-mobile-row1">
       <div class="tabs">
         <button type="button" class="tab ${view==='board'||view==='outcome'?'active':''}" data-rnd-view-mode="board">Products</button>
-        <button type="button" class="tab ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">🧪 Chemists</button>
+        <button type="button" class="tab rnd-tab-attendance ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">${icon('clock')}Attendance</button>
       </div>
       ${view==='chemists'
         ? (canManageRnd() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-chemist-m" aria-label="Add chemist">+</button>` : '')
@@ -19044,8 +19083,22 @@ function attachShellHandlers(){
   // on the shared wrapper does the latter without touching the former.
   if(byIdEl('btn-header-menu-toggle')){
     const headerLinksEl = byIdEl('btn-header-menu-toggle').closest('.header-right').querySelector('.header-right-links');
-    if(headerLinksEl) headerLinksEl.addEventListener('click', ()=>{ state._headerMenuOpen = false; });
+    // Excludes the "change your picture" control — that one opens a file picker instead of
+    // navigating away, and closing the dropdown mid-pick would tear out the very <input> the
+    // OS file dialog is about to report back to.
+    if(headerLinksEl) headerLinksEl.addEventListener('click', (e)=>{ if(e.target.closest('#btn-change-profile-photo')) return; state._headerMenuOpen = false; });
   }
+  if(byIdEl('header-menu-backdrop')) byIdEl('header-menu-backdrop').onclick = ()=>{ state._headerMenuOpen = false; render(); };
+  if(byIdEl('btn-change-profile-photo')) byIdEl('btn-change-profile-photo').onclick = (e)=>{ e.stopPropagation(); byIdEl('profile-photo-input').click(); };
+  if(byIdEl('profile-photo-input')) byIdEl('profile-photo-input').addEventListener('change', async e=>{
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    const s = myStaffRecord();
+    if(!s){ showToast('Add yourself on the Staff page first to set a profile picture'); return; }
+    await uploadStaffPhoto(s.id, file);
+    render();
+  });
   if(state._headerMenuOpen && !_headerMenuOutsideClickBound){
     _headerMenuOutsideClickBound = true;
     document.addEventListener('click', function headerMenuOutsideClick(e){

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106122817">
+<meta name="app-build" content="20261106125852">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -812,6 +812,20 @@ html{ visibility:hidden; }
   .column-head .name{font-weight:600;font-size:13.5px;}
   .column-head .count{font-size:12px;font-weight:600;background:rgba(255,255,255,.6);padding:2px 8px;border-radius:999px;}
   .column-body{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;}
+  /* Desktop kanban board polish (2026-11, reference: a Dribbble SaaS kanban pattern -- rounder
+     cards with a soft shadow instead of a hairline border, columns on a flat tint instead of a
+     bordered white box). Scoped to desktop width only -- mobile's own "Clean Clinical" board
+     styling (.card/.column overrides under max-width:760px, further below) is untouched. Shared
+     by every board that uses .card/.column (Orders/Packing, Blending, R&D), so one pass here
+     reaches all of them at once. */
+  @media (min-width:761px){
+    .column{background:var(--bg);border:none;border-radius:16px;}
+    .column-head{border-bottom:none;padding:14px 16px 8px;}
+    .column-head .count{background:rgba(255,255,255,.75);}
+    .column-body{padding:8px 10px 14px;gap:10px;}
+    .card{border:none;border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 4px 12px rgba(19,32,30,.06);}
+    .card:hover{border-color:transparent;box-shadow:0 2px 4px rgba(19,32,30,.06), 0 10px 22px rgba(19,32,30,.1);transform:translateY(-1px);}
+  }
   .empty-col{color:var(--muted);font-size:12.5px;text-align:center;padding:18px 6px;border:1px dashed var(--border);border-radius:8px;}
   .rnd-log-timeline{max-height:440px;overflow-y:auto;padding-right:6px;gap:14px;}
   .rnd-log-timeline .item{padding:14px 16px;font-size:13.5px;line-height:1.55;}
@@ -9802,10 +9816,10 @@ function renderAttendanceStaffList(){
     }).join('')}
   </div>`;
 }
-// Read-only month heatmap sitting above the day-by-day list -- reuses the exact .cal-grid/.cal-day
-// markup GMP's Cleaning checklist calendar already established for "a month of colored dots", so
-// this reads as the same kind of calendar already seen elsewhere rather than a new one-off widget.
-// Plain <div>s, not GMP's <button>s: there's nothing to click through to per day here.
+// No longer called (2026-11, per explicit request: no calendar view on the Attendance staff
+// report, PC or mobile) -- kept, not deleted, in case this needs to come back. Reuses the exact
+// .cal-grid/.cal-day markup GMP's Cleaning checklist calendar already established for "a month of
+// colored dots". Plain <div>s, not GMP's <button>s: there's nothing to click through to per day.
 function renderAttendanceCalGrid(byDate, ym){
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -9852,13 +9866,6 @@ function renderAttendanceStaffReport(staffName){
         <button type="button" class="btn-text" data-att-month-prev aria-label="Previous month">‹</button>
         <span style="font-weight:600;font-size:13px;">${fmtMonthLabel(ym)}</span>
         <button type="button" class="btn-text" data-att-month-next aria-label="Next month">›</button>
-      </div>
-    </div>
-    <div class="panel-body" style="padding-bottom:6px;">
-      ${renderAttendanceCalGrid(byDate, ym)}
-      <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--muted);">
-        <span style="display:flex;align-items:center;gap:5px;"><span class="cal-day-dot" style="background:var(--accent-dark);"></span>In &amp; out</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span class="cal-day-dot" style="background:var(--s-blending);"></span>In only</span>
       </div>
     </div>
     ${dates.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded for ${fmtMonthLabel(ym)}.</div>` : `

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106052652">
+<meta name="app-build" content="20261106053507">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -42,13 +42,6 @@ html{ visibility:hidden; }
     --accent-dark:#3C9058;
     --accent-soft:#E4F8EA;
     --accent-grad:linear-gradient(90deg,#5CC084,#3FA968);
-    /* "Clean Clinical" mobile theme's own accent (2026-11) — kept separate from --accent above
-       (the older desktop green) since the two redesigns deliberately use different colors. Every
-       teal reference in the mobile (max-width:760px) styles below should use these two, not a
-       hardcoded hex, so changing the mobile theme color is a one-line edit here instead of a
-       hunt through every rule that happens to match it. */
-    --mobile-accent:#1C4D44;
-    --mobile-accent-soft:#E8F0EE;
     --clay:#B5651D;
     --clay-soft:#F5E7DA;
     --danger:#C15B4E;
@@ -773,7 +766,7 @@ html{ visibility:hidden; }
        e.g. blue for "Received") meant for the old white active background -- on this dark green
        active background that same blue reads as low-contrast and off-brand, so this wins over it
        rather than leaving the markup's inline style untouched. */
-    .board-stage-tab.active{background:var(--mobile-accent);color:#fff !important;box-shadow:none;}
+    .board-stage-tab.active{background:var(--accent-dark);color:#fff !important;box-shadow:none;}
   }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
   .column{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
@@ -1665,8 +1658,11 @@ html{ visibility:hidden; }
       flex-direction:column;align-items:stretch;gap:2px;
       /* Solid theme-color header block (reference: a Dribbble banking-app pattern of a solid-color
          header card sitting above a light content area) instead of blending into the page
-         background -- gives the header its own clear visual region. */
-      background:var(--mobile-accent);border:none;box-shadow:none;
+         background -- gives the header its own clear visual region. Uses the same
+         --accent-dark the Settings > Appearance palette picker already drives everywhere else
+         (sidebar highlight, buttons, charts), not a fixed color, so it switches with the rest of
+         the app when the palette changes. */
+      background:var(--accent-dark);border:none;box-shadow:none;
       padding:calc(4px + env(safe-area-inset-top)) 20px 14px;
       /* Sticky, not static: the topbar used to scroll away with the page like any other content,
          so the page title and account menu were gone the moment you scrolled down a long list.
@@ -1707,9 +1703,9 @@ html{ visibility:hidden; }
        the standard pattern on both iOS and Android. */
     .header-menu-toggle{
       display:flex;width:34px;height:34px;border-radius:50%;flex-shrink:0;
-      /* The topbar itself is now the same teal -- a plain teal circle here would vanish into it,
-         so this ring is what actually marks it as a button. */
-      background:var(--mobile-accent);color:#fff;border:2px solid rgba(255,255,255,.55);align-items:center;justify-content:center;
+      /* The topbar itself is now the same accent color -- a plain same-color circle here would
+         vanish into it, so this ring is what actually marks it as a button. */
+      background:var(--accent-dark);color:#fff;border:2px solid rgba(255,255,255,.55);align-items:center;justify-content:center;
       font-size:12px;font-weight:700;padding:0;overflow:hidden;
     }
     .header-menu-toggle img{width:100%;height:100%;object-fit:cover;}
@@ -1723,16 +1719,16 @@ html{ visibility:hidden; }
     .header-right-links.open{display:flex;}
     .header-menu-profile{display:flex;align-items:center;gap:12px;padding-bottom:12px;}
     .header-menu-avatar-wrap{position:relative;border:none;background:none;padding:0;flex-shrink:0;border-radius:50%;}
-    .header-menu-avatar{width:40px;height:40px;border-radius:50%;background:var(--mobile-accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden;}
+    .header-menu-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden;}
     .header-menu-avatar img{width:100%;height:100%;object-fit:cover;}
-    .header-menu-avatar-edit{position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:var(--mobile-accent);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;}
+    .header-menu-avatar-edit{position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;}
     .header-menu-name{font-size:14px;font-weight:700;color:#13201E;}
     .header-menu-role{font-size:12px;color:#8A9290;margin-top:1px;}
     .header-menu-group-label{font-size:10.5px;font-weight:700;color:#8A9290;text-transform:uppercase;letter-spacing:.4px;padding:10px 2px 6px;}
     .header-menu-group{background:#F6F7F8;border-radius:14px;overflow:hidden;}
     .header-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;font-size:13px;font-weight:600;color:#13201E;text-align:left;border:none;background:none;}
     .header-menu-item:not(:last-child){border-bottom:1px solid #EDEFEE;}
-    .header-menu-item-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--mobile-accent-soft);color:var(--mobile-accent);}
+    .header-menu-item-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent-dark);}
     .header-menu-item-icon svg{width:15px;height:15px;}
     .header-menu-item span:nth-child(2){flex:1;}
     .header-menu-chevron{flex-shrink:0;}
@@ -1759,10 +1755,7 @@ html{ visibility:hidden; }
     }
     .mobile-tab svg{width:21px;height:21px;flex-shrink:0;}
     .mobile-tab-label{font-size:10px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    /* Was var(--accent-dark)/#EAF2F0 -- the old desktop green, left behind when the rest of this
-       page switched to the mobile teal accent, so the active bottom-tab color quietly didn't
-       match everything else. */
-    .mobile-tab.active{color:var(--mobile-accent);background:var(--mobile-accent-soft);}
+    .mobile-tab.active{color:var(--accent-dark);background:var(--accent-soft);}
     /* Redundant with the bottom tab bar's own Sections icon (re-enabled 2026-11) -- kept
        display:none (the desktop default, line 599) rather than deleting the button/markup, same
        reversible-disable pattern used elsewhere in this file. */

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106003934">
+<meta name="app-build" content="20261106011211">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -384,7 +384,12 @@ html{ visibility:hidden; }
      were just the desktop columns shrunk down, so the rightmost column(s) ran off the 390px screen
      entirely (confirmed: Customers' Branch column, Suppliers' Added column, Item List's RM Short
      Code column, Staff's second Actions button) — a stacked list-card has no rightmost column to lose. */
-  .list-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  /* Clean Clinical (2026-11): each entry used to be its own bordered box, stacked with gaps --
+     now a flat row inside the single white .panel it already sits in (same shadow/radius as
+     every other Clean Clinical surface), divided by a hairline instead of a border, so these
+     share the grouped-list look used on Settings/the hub pages rather than double-boxing. */
+  .list-card{background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:14px 2px;}
+  .list-card:last-child{border-bottom:none;}
   .list-card-top{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
   .list-card-title{font-weight:700;font-size:14px;}
   .list-card-fields{display:flex;flex-direction:column;gap:5px;margin-bottom:4px;}
@@ -554,26 +559,20 @@ html{ visibility:hidden; }
 
   /* Mobile-only: grid tiles, matching the mobile Sections home grid's own look (icon badge on
      top, label below) -- Customer Care, Blending Department, GMP and Settings all share this
-     on phones; desktop keeps the pill-style card above. */
+     on phones; desktop keeps the pill-style card above. Clean Clinical (2026-11): swapped the
+     old frosted "Liquid Glass" sheen for the same solid white card + neutral shadow as
+     .sections-tile, so these hub pages finally match the rest of the redesign instead of being
+     the one place still carrying the old blur treatment. */
   @media (max-width:760px){
     .landing-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
     .landing-card{
       flex-direction:column;align-items:center;gap:8px;
-      background:linear-gradient(160deg, rgba(255,255,255,.62), rgba(255,255,255,.26));
-      backdrop-filter:blur(18px) saturate(220%); -webkit-backdrop-filter:blur(18px) saturate(220%);
-      color:var(--ink);border:1px solid rgba(255,255,255,.6);border-radius:20px;padding:16px 6px;
+      background:#fff;color:var(--ink);border:none;border-radius:20px;padding:16px 6px;
       font-size:11px;text-align:center;
-      box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 24px rgba(31,55,90,.1);
+      box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
     }
-    .landing-card::before{
-      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-      background:linear-gradient(115deg, rgba(255,255,255,.55) 0%, transparent 35%, transparent 70%, rgba(255,255,255,.15) 100%);
-    }
-    /* ::before is itself a positioned (z-index:auto) layer, which paints AFTER plain in-flow
-       content per stacking order -- without this, the sheen would sit on top of the icon/label
-       instead of behind them. Applies to every liquid-glass surface with the ::before trick. */
-    .landing-card > *{position:relative;z-index:1;}
-    .landing-card:hover{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 14px 30px rgba(31,55,90,.14);}
+    .landing-card::before{content:none;}
+    .landing-card:hover{box-shadow:0 1px 2px rgba(19,32,30,.04), 0 10px 24px rgba(19,32,30,.08);}
     .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(20,25,20,.12);}
     .landing-card-icon{width:40px;height:40px;border-radius:12px;}
     .landing-card-icon i{width:21px !important;height:21px !important;}
@@ -732,6 +731,13 @@ html{ visibility:hidden; }
        existed. */
     .board{display:none;}
     .board-mobile{display:block;}
+    /* Clean Clinical: kanban cards (Orders/Packing, Blending batches, R&D projects all share
+       .card) go from a bordered box to the same white + soft-shadow treatment as every other
+       mobile card; the left accent border some orders carry stays, it still reads as a tag. */
+    .card{background:#fff;border:none;border-radius:16px;padding:12px 14px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
+    .board-stage-tabs{background:transparent;padding:0;gap:8px;overflow-x:auto;}
+    .board-stage-tab{flex:none;background:#fff;border-radius:999px;padding:9px 14px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);color:#8A9290;}
+    .board-stage-tab.active{background:#1C4D44;color:#fff;box-shadow:none;}
   }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
   .column{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
@@ -16890,11 +16896,11 @@ async function saveBatchSheetSteps(recipeId){
 // (localStorage), not synced workspace state — it's just how one person likes their own chat to look.
 const CHAT_THEMES = {
   whatsapp:  { label:'WhatsApp-Style Blue', avatarSize:34, radius:'16px', mineRadius:'16px 16px 4px 16px', otherRadius:'16px 16px 16px 4px', pad:'8px 12px', font:'13.5px',
-               mineBg:'var(--accent)', mineColor:'#fff', otherBg:'#fff', otherColor:'var(--ink)', otherBorder:'1px solid var(--border)', otherShadow:'0 1px 2px rgba(20,25,40,.05)',
-               pageBg:'var(--bg)', dayDividers:true, grouped:true, avatarShadow:false, rolePill:false, tagColors:false,
-               sendBg:'var(--accent)', sendColor:'#fff', sendShape:'circle', sendRadius:'50%', sendSize:46,
+               mineBg:'#1C4D44', mineColor:'#fff', otherBg:'#fff', otherColor:'var(--ink)', otherBorder:'none', otherShadow:'0 1px 2px rgba(19,32,30,.04), 0 4px 10px rgba(19,32,30,.04)',
+               pageBg:'#F6F7F8', dayDividers:true, grouped:true, avatarShadow:false, rolePill:false, tagColors:false,
+               sendBg:'#1C4D44', sendColor:'#fff', sendShape:'circle', sendRadius:'50%', sendSize:40,
                deleteBg:'var(--danger-soft)', deleteColor:'var(--danger)', deleteRadius:'999px', deleteBorder:'none',
-               inputRadius:'24px', inputBg:'#fff', inputBorder:'none', inputPad:'12px 18px', inputFont:'14px', inputBarBg:'#F0F2F5' },
+               inputRadius:'999px', inputBg:'#fff', inputBorder:'none', inputPad:'11px 18px', inputFont:'14px', inputBarBg:'#F6F7F8' },
   rounded:   { label:'Clean Rounded Bubbles', avatarSize:36, radius:'18px', pad:'9px 14px', font:'13.5px',
                mineBg:'var(--accent)', mineColor:'#fff', otherBg:'var(--bg)', otherColor:'var(--ink)',
                pageBg:'', dayDividers:false, grouped:false, avatarShadow:false, rolePill:false, tagColors:false,

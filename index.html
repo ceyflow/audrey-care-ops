@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106012337">
+<meta name="app-build" content="20261106034806">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1672,8 +1672,10 @@ html{ visibility:hidden; }
     .mobile-tab svg{width:21px;height:21px;flex-shrink:0;}
     .mobile-tab-label{font-size:10px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .mobile-tab.active{color:var(--accent-dark);background:#EAF2F0;}
-    .sections-home-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:none;background:var(--bg);color:var(--ink);flex-shrink:0;margin-right:4px;}
-    .sections-home-btn svg{width:19px;height:19px;}
+    /* Redundant with the bottom tab bar's own Sections icon (re-enabled 2026-11) -- kept
+       display:none (the desktop default, line 599) rather than deleting the button/markup, same
+       reversible-disable pattern used elsewhere in this file. */
+    .sections-home-btn{display:none;}
     .sections-grid-page{padding-top:2px;}
 
     /* Team chat goes full-screen and WhatsApp-style on mobile: the normal tall gradient topbar,

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106011211">
+<meta name="app-build" content="20261106012337">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9454,6 +9454,11 @@ const GRID_ICONS = {
   settings: '<path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />',
 };
 GRID_ICONS.ordersprocess = GRID_ICONS.orders;
+// Bottom tab bar only — 'home' isn't a real NAV page id, so it's never a Sections-grid tile; it
+// exists purely so the Home tab can show a house, distinct from the Sections tab's grid icon
+// (both previously rendered gridDuotoneIcon('dashboard'), the same icon, since the Home tab's
+// page id IS 'dashboard' — see MOBILE_TAB_ICON_OVERRIDE below).
+GRID_ICONS.home = '<path d="M5 12l-2 0l9 -9l9 9l-2 0" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />';
 // Same box/crate outline as the sidebar's 'box' icon for Item List (ICONS.box) — Item List was
 // added to GRID_ICONS by page id ('itemlist'), which this set never had an entry for, so the
 // mobile Sections grid's badge silently fell through to icon('itemlist') (no such id in ICONS
@@ -10249,7 +10254,7 @@ function deleteAttendanceEntry(id){
 // which already only ever lists what that account can see) — nothing in the bar itself needs to
 // know or guess which sections any given role has.
 const MOBILE_TAB_LABEL_OVERRIDE = {orders:'Packing'};
-const MOBILE_TAB_ICON_OVERRIDE = {orders:'box'};
+const MOBILE_TAB_ICON_OVERRIDE = {orders:'box', dashboard:'home'};
 function mobileTabItemsFor(navGroups){
   const all = navGroups.flatMap(g=>g.items);
   const byId = {}; all.forEach(it=>{ byId[it.id]=it; });

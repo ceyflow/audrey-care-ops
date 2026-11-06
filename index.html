@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106034806">
+<meta name="app-build" content="20261106040142">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -233,6 +233,23 @@ html{ visibility:hidden; }
   .header-right-top, .header-right-links{display:contents;}
   .session-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
   .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+  .header-menu-toggle{display:none;}
+  /* Desktop keeps its original flat row of plain text links (display:contents on
+     .header-right-links passes them straight through) -- the profile card and group labels are
+     new mobile-only decoration that would otherwise duplicate the session chip right next to
+     them, and the icon/chevron would make each link look like a different control than before.
+     Scoped to a real min-width query (not just "the base rule"): unscoped, this would have no
+     viewport of its own and so would apply inside the mobile @media block too, stomping the
+     mobile item styling below regardless of screen size — exactly what happened the first time
+     this was written as a bare rule here. */
+  @media (min-width:761px){
+    .header-menu-profile, .header-menu-group-label{display:none;}
+    .header-menu-group{display:contents;}
+    .header-menu-item{display:contents;}
+    .header-menu-item-icon, .header-menu-chevron{display:none;}
+    .header-menu-item span:nth-child(2){all:unset;font-size:13px;color:var(--muted);text-decoration:underline;padding:4px;cursor:pointer;}
+    .header-menu-item-danger span:nth-child(2){color:var(--muted);}
+  }
   .topbar-icon-btn{position:relative;}
   .topbar-icon-btn-dot{position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface);}
 
@@ -1639,16 +1656,46 @@ html{ visibility:hidden; }
       margin-top:0;padding:0;
       position:relative;
     }
-    .header-right-top, .header-right-links{position:relative;}
-    .header-right-top, .header-right-links{display:flex;align-items:center;flex-wrap:wrap;width:100%;}
-    .header-right-top{gap:10px;}
-    .header-right-links{gap:16px;margin-top:8px;}
+    .header-right-top{position:relative;}
+    .header-right-top{display:flex;align-items:center;flex-wrap:wrap;width:100%;gap:10px;}
     .session-chip{background:none;border:none;padding:0;margin-right:auto;font-size:12.5px;color:#8A9290;}
     .session-chip .avatar{width:22px;height:22px;font-size:10px;}
-    .header-right-links .btn-text{text-decoration:none;font-size:11.5px;font-weight:600;padding:0;color:#8A9290;}
     .topbar-icon-btn{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
     .topbar-icon-btn svg{width:18px;height:18px;}
     .topbar-icon-btn-label{display:none;}
+    /* Account menu (2026-11): Activity log / Change password / Log out used to sit as a plain
+       text row under the session chip, always visible and taking up its own line. Collapsed
+       behind a 3-line icon button next to Dally, matching the request to tidy the header — the
+       three items now live in a small dropdown anchored under that button instead. */
+    /* Account menu trigger: the session avatar itself (matches how the mockup's own profile
+       card uses the same initials circle) instead of a separate hamburger icon — one less
+       unrelated glyph in the header, and tapping "your own avatar" to reach account actions is
+       the standard pattern on both iOS and Android. */
+    .header-menu-toggle{
+      display:flex;width:34px;height:34px;border-radius:50%;border:none;flex-shrink:0;
+      background:#1C4D44;color:#fff;align-items:center;justify-content:center;
+      font-size:12px;font-weight:700;padding:0;
+    }
+    .header-right-links{
+      display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:40;
+      flex-direction:column;width:250px;
+      background:#fff;border-radius:20px;box-shadow:0 10px 28px rgba(19,32,30,.14);
+      padding:14px;
+    }
+    .header-right-links.open{display:flex;}
+    .header-menu-profile{display:flex;align-items:center;gap:12px;padding-bottom:12px;}
+    .header-menu-avatar{width:40px;height:40px;border-radius:50%;background:#1C4D44;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+    .header-menu-name{font-size:14px;font-weight:700;color:#13201E;}
+    .header-menu-role{font-size:12px;color:#8A9290;margin-top:1px;}
+    .header-menu-group-label{font-size:10.5px;font-weight:700;color:#8A9290;text-transform:uppercase;letter-spacing:.4px;padding:10px 2px 6px;}
+    .header-menu-group{background:#F6F7F8;border-radius:14px;overflow:hidden;}
+    .header-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;font-size:13px;font-weight:600;color:#13201E;text-align:left;border:none;background:none;}
+    .header-menu-item:not(:last-child){border-bottom:1px solid #EDEFEE;}
+    .header-menu-item-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .header-menu-item-icon svg{width:15px;height:15px;}
+    .header-menu-item span:nth-child(2){flex:1;}
+    .header-menu-chevron{flex-shrink:0;}
+    .header-menu-item-danger{color:#B3384A;}
     /* Re-enabled (2026-11, Clean Clinical): the bottom tab bar is back as the primary mobile nav
        surface — every reference the user pointed to uses one, and the markup/data-nav wiring was
        deliberately kept intact under this same display:none for exactly this reversion. Visible
@@ -8840,6 +8887,7 @@ let _lastEnterPage = null;
 // the panel kept popping up again ("double show") every time something was edited or saved.
 let _lastOpenModal = null;
 let _lastAdminBroadcastId = null;
+let _headerMenuOutsideClickBound = false;
 function render(){
   // Any re-render while Team Chat is open rebuilds #chat-messages from scratch, which resets its
   // scroll to the top -- not just from chat's own actions (renderKeepChatScroll already covered
@@ -10603,11 +10651,28 @@ function renderShell(freshPage){
               <span>${esc(state.session.name)} · ${esc(state.session.role)}</span>
             </div>
             <button class="btn btn-sm topbar-icon-btn" id="btn-open-aibot" title="Ask Dally, the workspace assistant" style="display:flex;align-items:center;gap:6px;"><span id="dally-orb-topbar" class="dally-orb-lottie dally-orb-lottie-xs" style="margin:0;"></span><span class="topbar-icon-btn-label">Dally</span></button>
+            <button type="button" class="header-menu-toggle" id="btn-header-menu-toggle" aria-label="Account menu" aria-expanded="${state._headerMenuOpen?'true':'false'}">
+              ${initials(state.session.name)}
+            </button>
           </div>
-          <div class="header-right-links">
-            ${isAdmin() ? `<button class="btn-text" id="btn-activity-log">Activity log</button>` : ''}
-            ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="btn-text" id="btn-change-password">Change password</button>` : ''}
-            <button class="btn-text" id="btn-switch-role">Log out</button>
+          <div class="header-right-links ${state._headerMenuOpen?'open':''}">
+            <div class="header-menu-profile">
+              <span class="header-menu-avatar">${initials(state.session.name)}</span>
+              <div>
+                <div class="header-menu-name">${esc(state.session.name)}</div>
+                <div class="header-menu-role">${esc(state.session.role)}</div>
+              </div>
+            </div>
+            ${(isAdmin() || state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `
+            <div class="header-menu-group-label">Account</div>
+            <div class="header-menu-group">
+              ${isAdmin() ? `<button class="header-menu-item" id="btn-activity-log"><span class="header-menu-item-icon" style="background:#E3EEFB;color:#3B6FE0;">${icon('clock')}</span><span>Activity log</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
+              ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="header-menu-item" id="btn-change-password"><span class="header-menu-item-icon" style="background:#F1EEF9;color:#5B4B8A;">${icon('fingerprint')}</span><span>Change password</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
+            </div>` : ''}
+            <div class="header-menu-group-label">App</div>
+            <div class="header-menu-group">
+              <button class="header-menu-item header-menu-item-danger" id="btn-switch-role"><span class="header-menu-item-icon" style="background:#FBE9EA;color:#B3384A;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span><span>Log out</span></button>
+            </div>
           </div>
         </div>
       </header>
@@ -18973,6 +19038,22 @@ function attachShellHandlers(){
     state.navExpanded[id] = !state.navExpanded[id];
     render();
   }));
+  if(byIdEl('btn-header-menu-toggle')) byIdEl('btn-header-menu-toggle').onclick = (e)=>{ e.stopPropagation(); state._headerMenuOpen = !state._headerMenuOpen; render(); };
+  // Clicking Activity log / Change password / Log out inside the dropdown should still run that
+  // button's own handler (wired separately below) AND close the dropdown — a delegated listener
+  // on the shared wrapper does the latter without touching the former.
+  if(byIdEl('btn-header-menu-toggle')){
+    const headerLinksEl = byIdEl('btn-header-menu-toggle').closest('.header-right').querySelector('.header-right-links');
+    if(headerLinksEl) headerLinksEl.addEventListener('click', ()=>{ state._headerMenuOpen = false; });
+  }
+  if(state._headerMenuOpen && !_headerMenuOutsideClickBound){
+    _headerMenuOutsideClickBound = true;
+    document.addEventListener('click', function headerMenuOutsideClick(e){
+      if(!e.target.closest('.header-right')){ state._headerMenuOpen = false; render(); }
+      document.removeEventListener('click', headerMenuOutsideClick);
+      _headerMenuOutsideClickBound = false;
+    });
+  }
   if(byIdEl('btn-menu-toggle')) byIdEl('btn-menu-toggle').onclick = toggleSidebar;
   if(byIdEl('btn-mobile-more')) byIdEl('btn-mobile-more').onclick = toggleSidebar;
   if(byIdEl('sidebar-backdrop')) byIdEl('sidebar-backdrop').onclick = toggleSidebar;

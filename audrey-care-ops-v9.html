@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106073942">
+<meta name="app-build" content="20261106121408">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -937,6 +937,17 @@ html{ visibility:hidden; }
   .att-fingerprint-btn svg{width:30px;height:30px;}
   .att-fingerprint-btn:active:not(:disabled){transform:scale(.95);}
   .att-fingerprint-btn:disabled{background:var(--border);color:var(--muted);box-shadow:none;cursor:not-allowed;}
+  .att-week-strip{display:flex;justify-content:center;gap:14px;margin-top:22px;}
+  .att-week-dot-col{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .att-week-dot{width:9px;height:9px;border-radius:50%;background:var(--border);}
+  .att-week-dot.present{background:var(--accent-dark);}
+  .att-week-dot.is-today{box-shadow:0 0 0 3px var(--accent-soft);}
+  .att-week-dot-label{font-size:10.5px;color:var(--muted);}
+  .att-week-dot-label.is-today{color:var(--accent-dark);font-weight:700;}
+  .att-hours-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);}
+  .att-inout-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .att-inout-icon.in{background:var(--s-received-soft);color:var(--s-received);}
+  .att-inout-icon.out{background:var(--s-blending-soft);color:var(--s-blending);}
   .rnd-cal-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px;}
   .rnd-cal-month{font-weight:600;font-size:14px;}
   .rnd-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
@@ -10257,10 +10268,31 @@ function printAttendanceSheet(staffName){
 // The landing view itself stays lightweight (time + one button) -- tapping the button is what
 // pops up the map/location/fingerprint panel (attendanceCheckinModal below), matching the
 // reference flow: tap Attendance, a popup appears with the map and a fingerprint button.
+// Xh Ym between two timestamps (or a timestamp and now) -- just for the "worked so far" stat
+// below, nowhere else in the file needed this, so it isn't a shared helper.
+function fmtHoursWorked(startIso, endIso){
+  const ms = new Date(endIso||Date.now()) - new Date(startIso);
+  if(ms<=0) return '0h 0m';
+  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  return `${h}h ${m}m`;
+}
 function renderAttendanceCheckinView(){
   const now = new Date();
   const todayEntries = (state.tempAttendance||[]).filter(a=>a.staffName===state.session.name && a.date===todayStr()).sort((a,b)=>new Date(a.at)-new Date(b.at));
+  const inE = todayEntries.find(a=>a.type==='in'), outE = todayEntries.find(a=>a.type==='out');
   const next = attendanceTodayState();
+
+  // Last 7 days (oldest to newest, ending today) -- a quick "did I show up" strip, the personal-
+  // scale version of the Admin staff list's single "seen today" dot.
+  const dayMs = 86400000;
+  const weekDots = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(now.getTime() - i*dayMs);
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const present = (state.tempAttendance||[]).some(a=>a.staffName===state.session.name && a.date===ds && a.type==='in');
+    weekDots.push({label: d.toLocaleDateString(undefined,{weekday:'narrow'}), present, isToday: i===0});
+  }
+
   return `
   <div class="att-time-card">
     <div class="att-time">${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
@@ -10270,15 +10302,32 @@ function renderAttendanceCheckinView(){
     <button type="button" class="att-fingerprint-btn" id="btn-att-open" aria-label="Check in or out" ${next?'':'disabled'}>${icon('fingerprint')}</button>
     <div class="hint" style="margin-top:8px;">${next ? 'Tap to check in or out' : "You're done for today"}</div>
   </div>
+
+  <div class="att-week-strip">
+    ${weekDots.map(d=>`
+    <div class="att-week-dot-col">
+      <span class="att-week-dot ${d.present?'present':''} ${d.isToday?'is-today':''}"></span>
+      <span class="att-week-dot-label ${d.isToday?'is-today':''}">${esc(d.label)}</span>
+    </div>`).join('')}
+  </div>
+
   ${todayEntries.length>0 ? `
-  <div class="panel" style="margin-top:18px;">
-    <div class="panel-head"><h3>Today</h3></div>
-    <div style="display:flex;flex-direction:column;gap:8px;padding:2px 2px 4px;">
-      ${todayEntries.map(a=>`
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span class="rnd-att-pill ${a.type==='in'?'rnd-att-pill-in':'rnd-att-pill-out'}">${a.type==='in'?'Check In':'Check Out'}</span>
-        <span class="hint">${fmtTimeOnly(a.at)}</span>
-      </div>`).join('')}
+  <div class="panel" style="margin-top:14px;">
+    <div class="panel-head">
+      <h3>Today</h3>
+      ${inE ? `<span class="att-hours-badge">${esc(fmtHoursWorked(inE.at, outE && outE.at))}${outE?' worked':' so far'}</span>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;padding:4px 2px;">
+      ${inE ? `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="att-inout-icon in">${myAttInIcon()}</span>
+        <div><div style="font-weight:600;font-size:13px;">Check In</div><div class="hint">${fmtTimeOnly(inE.at)}</div></div>
+      </div>` : ''}
+      ${outE ? `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="att-inout-icon out">${myAttOutIcon()}</span>
+        <div><div style="font-weight:600;font-size:13px;">Check Out</div><div class="hint">${fmtTimeOnly(outE.at)}</div></div>
+      </div>` : ''}
     </div>
   </div>` : ''}
   `;
@@ -11295,7 +11344,6 @@ function renderOrdersPage(){
   </div>
   ${active.length===0 && canCreate ? `<div class="hint" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
   ${state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryBoardSection(line, active)).join('')}
-  ${renderUnassignedBoardSection(active)}
   `;
 }
 /* ===================== Box Count (daily packing log) ===================== */
@@ -11541,6 +11589,10 @@ function renderBoxCountAlert(){
     </div>
   </div>`;
 }
+// No longer called (2026-11, per explicit request: an order without a matching delivery list
+// should not surface anywhere special, not even a labeled "needs attention" section) -- kept,
+// not deleted, in case this needs to come back. ordersOutsideLines() itself is untouched, since
+// ordersInLine()/renderOngoingOrdersPanel's own unassigned branch below still reference it.
 function renderUnassignedBoardSection(active){
   const lineOrders = ordersOutsideLines(active);
   if(lineOrders.length===0) return '';
@@ -11705,12 +11757,11 @@ function renderOngoingOrdersPage(){
   const code = normEmployerCode(state.session && state.session.employerCode);
   const active = activeOrders();
   // Same split the Orders board itself uses — one section per delivery list (Citypak Deliveries,
-  // AC Deliveries, etc.), plus Unassigned for anything that doesn't match a current list. Keeps
-  // every real delivery line visible even when it's empty (consistent, predictable layout), but
-  // only shows Unassigned when there's actually something in it — same as the Orders board.
+  // AC Deliveries, etc.). Keeps every real delivery line visible even when it's empty (consistent,
+  // predictable layout). No "Unassigned" catch-all (2026-11, per explicit request): an order
+  // without a matching delivery list doesn't get a special section here either, same as the
+  // Orders board above.
   const sections = state.deliveryLines.filter(l=>!l.hidden).map(l=>({key:l.key, label:l.label, orders: ordersInLine(active, l.key)}));
-  const unassigned = ordersOutsideLines(active);
-  if(unassigned.length) sections.push({key:'', label:'Unassigned', orders: unassigned});
   return `
   <div class="panel">
     <div class="panel-head"><h3>Ongoing orders</h3></div>

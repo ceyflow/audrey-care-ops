@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107213939">
+<meta name="app-build" content="20261107214654">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -495,8 +495,6 @@ html{ visibility:hidden; }
     .dash-stat-card .label{font-size:12px;color:#8A93A8;margin:0 0 2px;}
     .dash-stat-card .value{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
     .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;width:fit-content;}
-    .dash-stat-trend.up{background:var(--accent-soft);color:var(--accent-dark);}
-    .dash-stat-trend.flat{background:var(--bg);color:var(--muted);}
     /* Sections grid: 4-per-row on mobile (was 3), matching the reference's Quick Access card
        density -- this is the one place that card style actually lives now that Dashboard's own
        Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
@@ -11613,13 +11611,20 @@ function renderDashboard(){
   // scope the Pipeline donut below uses), so each one means what its label says. Open Complaints
   // moves to a small inline badge next to the Pipeline heading instead of a 5th hero card, so it
   // stays visible without breaking the reference's 2x2 stat grid.
+  // Tints/icon colors sampled pixel-by-pixel from the reference image's own four cards (not
+  // approximated) -- each card's badge/tag below is colored to match its OWN icon family
+  // (blue/pink/orange/purple), not a single shared "positive" green or the app's brand blue.
   const totalOrdersTrend = ordersOverviewSeries(30);
   const stats = [
-    {label:'Total Orders', value: state.orders.length, icon:'orders', tint:'#E6E1FB', iconColor:'#6A5FCF', nav:'orders',
+    {label:'Total Orders', value: state.orders.length, icon:'orders', tint:'#DDE9FE', iconColor:'#0F62F8', nav:'orders',
+      // Green here specifically, not the card's own blue family -- the one place the reference
+      // itself breaks its "badge matches this card's icon color" rule (every other card's badge
+      // does match), so this is copied as-is rather than forced into that pattern.
+      trendBg:'#DCF5EC', trendColor:'#00793C',
       trend: totalOrdersTrend.total>0 || totalOrdersTrend.changePct!==0 ? {pct:totalOrdersTrend.changePct, dir:totalOrdersTrend.changePct>=0?'up':'down'} : null},
-    {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FDE8EC', iconColor:'#C2567A', nav:'customers'},
-    {label:'Total Products', value: state.recipes.length, sub:'In catalog', icon:'box', tint:'#FDF0DC', iconColor:'#C98A2E', nav:'recipelibrary'},
-    {label:'Pending Orders', value: pending, icon:'clock', tint:'#E3EEFB', iconColor:'#3B6FE0', nav:'orders'},
+    {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FEDBE7', iconColor:'#E54D78', nav:'customers'},
+    {label:'Total Products', value: state.recipes.length, sub:'In catalog', icon:'box', tint:'#FDEBD1', iconColor:'#FA8300', nav:'recipelibrary'},
+    {label:'Pending Orders', value: pending, icon:'clock', tint:'#E8E0FD', iconColor:'#8643EA', nav:'orders'},
   ];
 
   // Pipeline donut: each stage's arc sized to its share of active orders, using the same
@@ -11735,7 +11740,7 @@ function renderDashboard(){
         </div>
         <div class="label">${s.label}</div>
         <div class="value"><span class="stat-num" data-target="${s.value}">${s.value}</span></div>
-        ${s.trend ? `<span class="dash-stat-trend ${s.trend.dir==='up'?'up':'flat'}">${s.trend.dir==='up'?'↑':'↓'} ${Math.abs(s.trend.pct)}%</span>` : s.sub ? `<span class="dash-stat-trend flat">${s.sub}</span>` : ''}
+        ${s.trend ? `<span class="dash-stat-trend" style="background:${s.trendBg||s.tint};color:${s.trendColor||s.iconColor};">${s.trend.dir==='up'?'↑':'↓'} ${Math.abs(s.trend.pct)}%</span>` : s.sub ? `<span class="dash-stat-trend" style="background:${s.tint};color:${s.iconColor};">${s.sub}</span>` : ''}
       </button>`).join('')}
   </div>
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107175758">
+<meta name="app-build" content="20261107181922">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -19769,6 +19769,53 @@ function attachShellHandlers(){
       if(e.dataTransfer){ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.dataset.settingsJump || ''); }
     });
     card.addEventListener('dragend', ()=>card.classList.remove('dragging'));
+
+    // Native HTML5 drag (above) never fires from a touch gesture, so these cards were
+    // reorderable with a mouse only. Pointer Events cover touch too, but only take over here
+    // for pointerType!=='mouse' so desktop keeps using the already-working path untouched.
+    // A press-and-hold threshold (same gesture as reordering home-screen apps) tells a real
+    // drag apart from an ordinary tap-to-open or a swipe scrolling the page past this card.
+    let pressTimer = null, dragStarted = false, pid = null, startX = 0, startY = 0;
+    const cancelPress = ()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; } };
+    card.addEventListener('pointerdown', e=>{
+      if(e.pointerType==='mouse') return;
+      pid = e.pointerId; startX = e.clientX; startY = e.clientY; dragStarted = false;
+      cancelPress();
+      pressTimer = setTimeout(()=>{
+        dragStarted = true;
+        card.classList.add('dragging');
+        try{ card.setPointerCapture(pid); }catch(_){}
+        if(navigator.vibrate) navigator.vibrate(12);
+      }, 350);
+    });
+    card.addEventListener('pointermove', e=>{
+      if(pid===null || e.pointerId!==pid) return;
+      if(!dragStarted){
+        if(Math.hypot(e.clientX-startX, e.clientY-startY) > 10){ cancelPress(); pid = null; }
+        return;
+      }
+      e.preventDefault();
+      const grid = byIdEl('settings-jump-grid');
+      if(!grid) return;
+      const after = gridDragAfterElement(grid, e.clientX, e.clientY);
+      if(after==null) grid.appendChild(card); else grid.insertBefore(card, after);
+    });
+    const endTouchDrag = async e=>{
+      if(pid===null) return;
+      cancelPress();
+      const wasDragging = dragStarted;
+      dragStarted = false; pid = null;
+      if(!wasDragging) return;
+      card.classList.remove('dragging');
+      try{ card.releasePointerCapture(e.pointerId); }catch(_){}
+      const grid = byIdEl('settings-jump-grid');
+      if(!grid) return;
+      state.settingsCardOrder = [...grid.querySelectorAll('[data-settings-jump]')].map(b=>b.dataset.settingsJump);
+      const ok = await save('settingsCardOrder');
+      if(ok) showToast('Card order saved');
+    };
+    card.addEventListener('pointerup', endTouchDrag);
+    card.addEventListener('pointercancel', endTouchDrag);
   });
   if(byIdEl('settings-jump-grid')){
     const grid = byIdEl('settings-jump-grid');

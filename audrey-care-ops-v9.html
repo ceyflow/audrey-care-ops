@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107040258">
+<meta name="app-build" content="20261107060818">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -133,7 +133,7 @@ html{ visibility:hidden; }
   .pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);display:inline-block;margin-right:7px;animation:pulse-dot 1.8s infinite;}
   @keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(177,75,63,.5);}70%{box-shadow:0 0 0 7px rgba(177,75,63,0);}100%{box-shadow:0 0 0 0 rgba(177,75,63,0);}}
 
-  .toast{position:fixed;bottom:60px;right:22px;max-width:380px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;box-shadow:0 10px 28px rgba(0,0,0,.2);z-index:300;animation:toast-in .25s ease;}
+  .toast{position:fixed;bottom:60px;right:22px;max-width:380px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;box-shadow:0 10px 28px rgba(0,0,0,.2);z-index:300;animation:toast-pop-in .38s cubic-bezier(.34,1.56,.64,1);}
   .chat-notice{position:fixed;top:20px;right:22px;background:#fff;border:1px solid var(--border);border-left:5px solid var(--accent);color:var(--ink);padding:18px 22px;border-radius:14px;display:flex;align-items:flex-start;gap:14px;max-width:440px;min-width:300px;box-shadow:0 18px 44px rgba(30,60,40,.2);z-index:320;cursor:pointer;animation:toast-in .28s ease;}
   .chat-notice:hover{background:var(--bg);}
   .chat-notice-icon{font-size:26px;line-height:1;margin-top:1px;}
@@ -142,6 +142,12 @@ html{ visibility:hidden; }
   .chat-notice-close{background:none;border:none;color:var(--muted);font-size:15px;line-height:1;padding:4px;margin:-4px -6px -4px 0;cursor:pointer;border-radius:6px;flex-shrink:0;}
   .chat-notice-close:hover{background:var(--border);color:var(--ink);}
   @keyframes toast-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  /* .toast only (not .chat-notice/.admin-broadcast-overlay, which keep the plain toast-in above) —
+     a small overshoot-then-settle spring pop, closer to the "Toast"/"Success State" micro-
+     interactions on 60fps.design than a flat linear fade. Kept to its own keyframe so the overlay's
+     full-viewport backdrop (which shares toast-in) never gets a scale transform that could peek
+     past its edges mid-animation. */
+  @keyframes toast-pop-in{from{opacity:0;transform:translateY(14px) scale(.92);}60%{opacity:1;transform:translateY(-2px) scale(1.02);}to{opacity:1;transform:translateY(0) scale(1);}}
 
   .chat-menu-btn{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:1px 4px;border-radius:4px;}
   .chat-menu-btn:hover{background:var(--bg);color:var(--ink);}
@@ -257,7 +263,10 @@ html{ visibility:hidden; }
 
   .btn{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;transition:background .15s,border-color .15s,transform .15s ease,box-shadow .15s ease;}
   .btn:hover{background:var(--bg);box-shadow:0 6px 14px rgba(20,25,20,.12);}
-  .btn:active{transform:translateY(0);box-shadow:none;}
+  /* Tap/press feedback, inspired by 60fps.design's Button micro-interactions: a quick squish on
+     press reads as instant response on a touch screen, where :hover never fires. transform doesn't
+     affect layout (no reflow of neighbors), so this is safe everywhere .btn is used. */
+  .btn:active{transform:scale(.96);box-shadow:none;}
   .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
   .btn-primary:hover{background:var(--accent-dark);}
   .btn-text{border:none;background:none;color:var(--muted);font-size:13px;text-decoration:underline;padding:4px;}
@@ -360,6 +369,27 @@ html{ visibility:hidden; }
   .hbar-track{flex:1;height:10px;background:var(--bg);border-radius:6px;overflow:hidden;}
   .hbar-fill{height:100%;background:var(--accent-dark);border-radius:6px;transition:width .7s cubic-bezier(.4,0,.2,1);}
   .hbar-count{width:24px;text-align:right;font-size:12px;font-weight:700;flex-shrink:0;}
+  /* Delivery mix: a tall segmented bar, not a donut/pie -- per the dataviz skill's part-to-whole
+     guidance, bars on one baseline (or here, one stack) compare more exactly than slices, and this
+     is the one place a segmented-bar legend is kept (see marks-and-anatomy "Figures"). Each
+     segment's own share is printed on it when it's wide enough to hold the text; otherwise the
+     legend row below carries it. */
+  .seg-bar{display:flex;width:100%;height:34px;border-radius:10px;overflow:hidden;background:var(--bg);}
+  .seg-bar-part{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;transition:flex-basis .7s cubic-bezier(.4,0,.2,1);}
+  .seg-bar-part:not(:last-child){border-right:2px solid var(--surface);}
+  .seg-legend{display:flex;flex-wrap:wrap;gap:12px 18px;margin-top:14px;}
+  .seg-legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;}
+  .seg-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .seg-legend-name{color:var(--ink);font-weight:600;}
+  .seg-legend-count{color:var(--muted);}
+  /* Next-30-days estimate chart: the solid line is real history, the dashed continuation is the
+     projection -- dash pattern (not a color change) is what marks it as "different kind of data"
+     at a glance, same convention most forecast charts on Dribbble use, so it reads correctly even
+     without the caption. */
+  .forecast-chart{width:100%;height:84px;display:block;}
+  .forecast-today-marker{stroke:var(--border);stroke-width:1;stroke-dasharray:2 3;}
+  .forecast-caption{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;}
+  .forecast-caption b{color:var(--ink);}
   /* "Clean Clinical" mobile redesign (2026-11, succeeding "Soft Rounded"): every page's actual
      content is built from .panel/.stat-card (tables, KPI tiles) and .card (kanban board cards on
      Orders/Packing/Blending/R&D) -- restyling these three on mobile is what makes the redesign
@@ -5132,7 +5162,14 @@ async function loadAll(){
     saveQuietly('complaintPriorities').catch(()=>{});
   }
   if(!Array.isArray(state.recipes)) state.recipes = [];
-  if(recipesNeverSaved && !state.recipes.some(r=>r.name==='Body Lotion - Hotel Range')){
+  // Same isAdmin() gating as deliveryLines/staffCategories/complaintCategories/complaintPriorities
+  // above — a non-Admin role (or a page load that races ahead of RLS resolving) can see an empty
+  // 'recipes'/'mixingStepTemplates' read that looks exactly like "never saved" without being one,
+  // and this block used to fire the seed write regardless of role. Confirmed as the live cause of
+  // saveQuietly('recipes'/'mixingStepTemplates') failing with "could not confirm the server's
+  // current contents" right at login — the seed write landed before this session's read of its own
+  // key had resolved, so mergeBeforeSave correctly refused to save blind.
+  if(isAdmin() && recipesNeverSaved && !state.recipes.some(r=>r.name==='Body Lotion - Hotel Range')){
     const mat = (name, percent) => ({id:uid('MAT'), name, percent});
     state.recipes.unshift({
       id: uid('RCP'), name: 'Body Lotion - Hotel Range', description: '',
@@ -5156,7 +5193,7 @@ async function loadAll(){
     saveQuietly('recipes').catch(()=>{});
   }
   if(!Array.isArray(state.mixingStepTemplates)) state.mixingStepTemplates = [];
-  if(mixingStepTemplatesNeverSaved && state.mixingStepTemplates.length===0){
+  if(isAdmin() && mixingStepTemplatesNeverSaved && state.mixingStepTemplates.length===0){
     const DEFAULT_MIXING_TEMPLATE_NAMES = ['Shower Gel', 'Shampoo', 'Conditioner', 'Body Lotion', 'Hand Wash'];
     state.mixingStepTemplates = DEFAULT_MIXING_TEMPLATE_NAMES.map(name => ({id: uid('MTPL'), name, steps: [newStepDraft()]}));
     saveQuietly('mixingStepTemplates').catch(()=>{});
@@ -5319,10 +5356,15 @@ async function loadAll(){
     saveQuietly('userRoles').catch(()=>{});
   }
   if(!Array.isArray(state.staff)) state.staff = [];
-  {
+  // isAdmin()-gated for the same reason as deliveryLines/staffCategories above — this block used
+  // to run for every role, so a non-Admin's (or a racing) read of 'staff' coming back short of
+  // these names was enough to re-push them as "missing", duplicating real people. Concretely
+  // confirmed as how a misspelled "Madhushanka" kept reappearing even after being merged into the
+  // correct "Madushanka" record below — this seed list is corrected to match.
+  if(isAdmin()){
     const SEED_STAFF = [
       {name:'Vihanga', title:'Operation Assistant Manager', category:'operation'},
-      {name:'Madhushanka', title:'Production Executive', category:'operation'},
+      {name:'Madushanka', title:'Production Executive', category:'operation'},
       {name:'Chamalka', title:'Packing Trainee', category:'operation'},
       {name:'Naduni', title:'Packing Trainee', category:'operation'},
       {name:'Daham', title:'Blending Trainee', category:'operation'},
@@ -11199,7 +11241,50 @@ function computeDashboardAnalytics(){
   orders.forEach(o=>{ if(o.product) productCounts[o.product] = (productCounts[o.product]||0)+1; });
   const topProducts = Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([name,count])=>({name,count}));
 
-  return { trendDays, trendTotal, trendChangePct, weekBars, thisMonthCount, lastMonthCount, monthPct, topProducts };
+  // Delivery mix: how orders actually go out, across the full order history. Real, named,
+  // low-cardinality field (courierService) -- exactly the shape a part-to-whole chart needs,
+  // unlike product (too many near-equal, long-named categories) or stage (already has its own
+  // donut below). Folds anything past the top 3 into "Other" rather than growing past a legible
+  // handful of segments.
+  const courierCounts = {};
+  orders.forEach(o=>{ const c = (o.courierService||'').trim() || 'Other'; courierCounts[c] = (courierCounts[c]||0)+1; });
+  const courierSorted = Object.entries(courierCounts).sort((a,b)=>b[1]-a[1]);
+  const deliveryMix = courierSorted.slice(0,3).map(([name,count])=>({name,count}));
+  const courierTail = courierSorted.slice(3).reduce((s,[,c])=>s+c,0);
+  if(courierTail>0) deliveryMix.push({name:'Other', count:courierTail});
+  const deliveryMixTotal = deliveryMix.reduce((s,d)=>s+d.count,0);
+
+  // Next-30-days estimate: ordinary least-squares line fit over the last 30 days' real daily
+  // order counts, projected forward. Labeled as an estimate everywhere it's shown -- this is a
+  // trend extrapolation from five-ish weeks of real data, not a guarantee, and the UI must never
+  // imply otherwise (same honesty bar as the order tracker's stage timestamps).
+  const histDays = 30, projDays = 14;
+  const histStart = new Date(today0.getTime() - (histDays-1)*dayMs);
+  const histSeries = [];
+  for(let i=0;i<histDays;i++) histSeries.push({date: new Date(histStart.getTime()+i*dayMs), count:0});
+  orders.forEach(o=>{
+    if(!o.createdAt) return;
+    const idx = Math.floor((new Date(o.createdAt).getTime() - histStart.getTime()) / dayMs);
+    if(idx>=0 && idx<histDays) histSeries[idx].count++;
+  });
+  const n = histSeries.length;
+  const sumX = histSeries.reduce((s,_,i)=>s+i,0);
+  const sumY = histSeries.reduce((s,d)=>s+d.count,0);
+  const sumXY = histSeries.reduce((s,d,i)=>s+i*d.count,0);
+  const sumXX = histSeries.reduce((s,_,i)=>s+i*i,0);
+  const denom = n*sumXX - sumX*sumX;
+  const slope = denom!==0 ? (n*sumXY - sumX*sumY) / denom : 0;
+  const intercept = (sumY - slope*sumX) / n;
+  const projSeries = [];
+  for(let i=0;i<projDays;i++){
+    const x = n + i;
+    projSeries.push({date: new Date(today0.getTime() + (i+1)*dayMs), count: Math.max(0, slope*x + intercept)});
+  }
+  const projTotal = Math.round(projSeries.reduce((s,d)=>s+d.count,0));
+  const projPerDay = (projTotal/projDays);
+  const forecast = { histSeries, projSeries, projTotal, projPerDay, slope };
+
+  return { trendDays, trendTotal, trendChangePct, weekBars, thisMonthCount, lastMonthCount, monthPct, topProducts, deliveryMix, deliveryMixTotal, forecast };
 }
 // Replays the four analytics charts' entrance (bars/arc/sparkline growing in from zero) exactly
 // once per fresh Dashboard visit -- same "draw itself in" convention as animatePipelineDonut(),
@@ -11280,6 +11365,30 @@ function renderDashboard(){
   const weekMax = Math.max(1, ...an.weekBars.map(b=>b.count));
   const todayStr = new Date().toDateString();
   const topProductMax = an.topProducts.length ? an.topProducts[0].count : 1;
+
+  // Forecast chart geometry: 30 real days + 14 projected days on one continuous x-axis, scaled to
+  // a shared y-max so the projection visually continues the real line instead of rescaling.
+  const fc = an.forecast;
+  const fcAll = [...fc.histSeries, ...fc.projSeries];
+  const fcMax = Math.max(1, ...fcAll.map(d=>d.count));
+  const fcStepX = 440/(fcAll.length-1);
+  const fcY = c => (76-(c/fcMax)*66).toFixed(1);
+  const fcHistPoints = fc.histSeries.map((d,i)=>`${(i*fcStepX).toFixed(1)},${fcY(d.count)}`).join(' ');
+  const fcProjPoints = [fc.histSeries[fc.histSeries.length-1], ...fc.projSeries]
+    .map((d,i)=>`${((fc.histSeries.length-1+i)*fcStepX).toFixed(1)},${fcY(d.count)}`).join(' ');
+  const fcTodayX = (fc.histSeries.length-1)*fcStepX;
+
+  // Delivery mix segmented bar: each part's share of the bar as a flex-basis percentage. Color
+  // keyed by NAME, not sort rank, so a given courier keeps its color even if the order of parts
+  // shifts between renders (per the dataviz skill: color follows the entity, never its rank).
+  const dmTotal = Math.max(1, an.deliveryMixTotal);
+  // Validated via the dataviz skill's palette checker (scripts/validate_palette.js): blue/green/
+  // purple clear the CVD-separation and contrast checks together as a trio (an earlier pink 3rd
+  // color read too close to the green for deuteranopia, ΔE 4.4 against an 6-8 floor). "Other"
+  // uses var(--muted) rather than a 4th hue -- it's a de-emphasis role, not a real identity, and
+  // the legend's name+count label (not color) is what actually identifies it.
+  const DELIVERY_COLOR_BY_NAME = {'CityPak':CHART_PALETTE[1], 'AC Delivery':CHART_PALETTE[2], 'Customer Pickup':CHART_PALETTE[0]};
+  const deliveryColorFor = name => DELIVERY_COLOR_BY_NAME[name] || 'var(--muted)';
 
   return `
   <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
@@ -11380,6 +11489,41 @@ function renderDashboard(){
             <span style="margin-left:auto;font-weight:700;">${counts[i]}</span>
           </div>`;
         }).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-head"><h3>Delivery mix</h3></div>
+    <div class="panel-body">
+      ${an.deliveryMixTotal===0 ? `<div class="empty-state">No orders yet.</div>` : `
+      <div class="seg-bar">
+        ${an.deliveryMix.map(d=>{
+          const pct = d.count/dmTotal*100;
+          return `<div class="seg-bar-part" style="flex-basis:${pct}%;background:${deliveryColorFor(d.name)};" title="${esc(d.name)}: ${d.count}">${pct>=13?Math.round(pct)+'%':''}</div>`;
+        }).join('')}
+      </div>
+      <div class="seg-legend">
+        ${an.deliveryMix.map(d=>`
+        <div class="seg-legend-item">
+          <span class="seg-legend-dot" style="background:${deliveryColorFor(d.name)};"></span>
+          <span class="seg-legend-name">${esc(d.name)}</span>
+          <span class="seg-legend-count">${d.count}</span>
+        </div>`).join('')}
+      </div>`}
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-head"><h3>Next 30 days (estimate)</h3></div>
+    <div class="panel-body">
+      <svg class="forecast-chart" viewBox="0 0 440 84" preserveAspectRatio="none">
+        <line x1="${fcTodayX.toFixed(1)}" y1="6" x2="${fcTodayX.toFixed(1)}" y2="76" class="forecast-today-marker"/>
+        <polyline points="${fcHistPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <polyline points="${fcProjPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 5" opacity=".65"/>
+      </svg>
+      <div class="forecast-caption">
+        Estimated <b>${an.forecast.projTotal} orders</b> over the next 14 days (~${an.forecast.projPerDay.toFixed(1)}/day), based on the last 30 days' trend. An estimate, not a guarantee — the dashed line is projected, not actual.
       </div>
     </div>
   </div>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107033806">
+<meta name="app-build" content="20261107040258">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -645,6 +645,10 @@ html{ visibility:hidden; }
   /* ---------------- Mobile "Sections" home grid ---------------- */
   .sections-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
   .sections-tile{background:#fff;border:none;border-radius:20px;padding:16px 6px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-family:inherit;cursor:pointer;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);}
+  /* Entrance-only: animateSectionsTiles() adds/removes this class on fresh page loads (see JS). Size,
+     layout and the rule above are untouched — this only animates opacity/transform on top of them. */
+  @keyframes sections-tile-in{from{opacity:0;transform:translateY(10px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+  .sections-tile.tile-enter{animation:sections-tile-in .42s cubic-bezier(.22,.9,.32,1) both;animation-delay:calc(var(--tile-i, 0) * 45ms);}
   .sections-tile span:last-child{font-size:11px;font-weight:600;color:var(--ink);line-height:1.25;}
   .sections-tile-badge{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
   .sections-tile-badge svg{width:23px;height:23px;}
@@ -9094,7 +9098,7 @@ function renderInner(){
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
   if(freshPage){
-    animateStatCards(); animatePipelineDonut(); animateDashboardCharts();
+    animateStatCards(); animatePipelineDonut(); animateDashboardCharts(); animateSectionsTiles();
     // A fresh render (page refresh, or navigating in) leaves #chat-messages at its default
     // scroll position (top, oldest message) -- jump straight to the latest message instead,
     // same as every other chat app. renderKeepChatScroll handles in-page actions (like/edit/
@@ -9748,8 +9752,8 @@ function renderSectionsGridPage(){
   <div class="sections-grid-page">
     ${items.length===0 ? `<div class="empty-state"><p>No sections to show here yet.</p><div class="hint">Ask your Admin to check this role's Mobile view in Settings → User roles.</div></div>` : `
     <div class="sections-grid">
-      ${items.map(it=>`
-      <button type="button" class="sections-tile" data-nav="${it.id}">
+      ${items.map((it,i)=>`
+      <button type="button" class="sections-tile" data-nav="${it.id}" style="--tile-i:${i}">
         <span class="sections-tile-badge sections-tile-${gridTileColor(it.id)}">${gridDuotoneIcon(it.id, 23)}</span>
         <span>${esc(navLabel(it))}</span>
       </button>`).join('')}
@@ -11087,6 +11091,22 @@ function animateStatCards(){
       };
       requestAnimationFrame(tick);
     }, Math.min(i, 3)*70);
+  });
+}
+
+// Sections grid (the mobile hub of role tiles): tiles fade/slide in with a staggered delay on a
+// fresh visit, same no-op-off-page and no-replay-on-background-render guarantees as
+// animateStatCards() above. The CSS class (.tile-enter) only ever ADDS a transform/opacity
+// animation on top of the tile's real, always-final size/position/padding set in .sections-tile
+// — it never touches those values, so this can't affect the locked-in tile layout. Each tile's
+// stagger comes from --tile-i (its index), set inline in the markup.
+function animateSectionsTiles(){
+  const tiles = document.querySelectorAll('.sections-tile');
+  if(!tiles.length) return;
+  tiles.forEach(el=>{
+    el.classList.remove('tile-enter');
+    void el.offsetWidth; // force reflow so the re-added class restarts the animation
+    el.classList.add('tile-enter');
   });
 }
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107153921">
+<meta name="app-build" content="20261107165738">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -139,7 +139,7 @@ html{ visibility:hidden; }
   .chat-notice-icon{font-size:26px;line-height:1;margin-top:1px;}
   .chat-notice-sender{font-weight:700;font-size:14.5px;color:var(--accent-dark);margin-bottom:4px;}
   .chat-notice-text{font-size:15px;color:var(--ink);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
-  .chat-notice-close{background:none;border:none;color:var(--muted);font-size:15px;line-height:1;padding:4px;margin:-4px -6px -4px 0;cursor:pointer;border-radius:6px;flex-shrink:0;}
+  .chat-notice-close{background:none;border:none;color:var(--muted);font-size:15px;line-height:1;padding:12px;margin:-12px -14px -12px -8px;cursor:pointer;border-radius:6px;flex-shrink:0;}
   .chat-notice-close:hover{background:var(--border);color:var(--ink);}
   @keyframes toast-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
   /* .toast only (not .chat-notice/.admin-broadcast-overlay, which keep the plain toast-in above) —
@@ -196,7 +196,7 @@ html{ visibility:hidden; }
   /* Search bar, replaces the theme-toggle row when open. */
   .chat-search-bar{display:flex;align-items:center;gap:8px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--surface,#fff);}
   .chat-search-bar input{flex:1;border:none;outline:none;background:none;font-size:13.5px;color:var(--ink);font-family:inherit;}
-  .chat-search-close{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;}
+  .chat-search-close{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:12px;margin:-12px;}
   .chat-search-hit{background:#FFE69A;color:#1D2430;border-radius:6px;padding:0 1px;}
   .chat-search-nomatch{text-align:center;color:var(--muted);font-size:12.5px;padding:18px;}
   /* @mention highlight, inline inside a bubble's text. */
@@ -738,7 +738,7 @@ html{ visibility:hidden; }
   }
   .notes-fab-popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .notes-fab-popup-head h3{margin:0;font-size:14px;font-weight:700;}
-  .notes-fab-close{width:22px;height:22px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;}
+  .notes-fab-close{width:36px;height:36px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;flex-shrink:0;}
   .notes-fab-close svg{width:12px;height:12px;}
   .notes-next-card{background:linear-gradient(135deg,#2F6FE4,#4F8DF7);border-radius:12px;padding:13px 14px;color:#fff;margin-bottom:12px;}
   .notes-next-card .notes-eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85;}
@@ -1144,7 +1144,7 @@ html{ visibility:hidden; }
   .photo-lightbox{position:fixed;inset:0;z-index:500;background:rgba(10,12,10,.88);display:none;align-items:center;justify-content:center;padding:32px;}
   .photo-lightbox.open{display:flex;animation:overlay-fade .2s ease;}
   .photo-lightbox img{max-width:100%;max-height:100%;border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:modal-pop .25s cubic-bezier(.16,.84,.44,1);}
-  .photo-lightbox-close{position:fixed;top:18px;right:22px;background:rgba(255,255,255,.12);color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:18px;cursor:pointer;}
+  .photo-lightbox-close{position:fixed;top:15px;right:19px;background:rgba(255,255,255,.12);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;}
   .photo-dropzone{border:1.5px dashed var(--border-strong);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s,background .15s;}
   .photo-dropzone:hover,.photo-dropzone.drag-over{border-color:var(--accent);background:var(--accent-soft);}
   .photo-dropzone-empty{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;padding:16px 0;text-align:center;}
@@ -1658,7 +1658,10 @@ html{ visibility:hidden; }
   .drawer-hero .stat-chip .v{font-size:16px;font-weight:700;margin-top:2px;}
   @media (max-width:760px){ .drawer-hero{margin:-22px -22px 20px;padding:18px 22px 20px;} }
   @keyframes drawer-in{from{transform:translateX(100%);}to{transform:translateX(0);}}
-  .drawer-close{position:absolute;top:20px;right:20px;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer;line-height:1;}
+  /* Touch target widened to ~44px via padding rather than a bigger glyph (WCAG target-size
+     guidance) -- top/right pulled in by the same amount the padding adds, so the X itself stays
+     visually anchored where it always was; only the invisible tappable area around it grows. */
+  .drawer-close{position:absolute;top:8px;right:8px;padding:12px;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer;line-height:1;}
 
   .welcome-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:linear-gradient(135deg,#F2F9F4,#E4F8EA);overflow:hidden;position:relative;}
   .welcome-logo{max-height:90px;max-width:220px;object-fit:contain;opacity:0;transform:scale(.85);animation:welcome-logo-in .55s ease forwards;}
@@ -11276,14 +11279,29 @@ function computeDashboardAnalytics(){
   const denom = n*sumXX - sumX*sumX;
   const slope = denom!==0 ? (n*sumXY - sumX*sumY) / denom : 0;
   const intercept = (sumY - slope*sumX) / n;
+  // Residual spread of the fit against the real history -- how much actual days deviated from
+  // the straight line. Drives the confidence band below: a flat week of orders gets a narrow
+  // band, a volatile one gets a wide one, instead of every forecast claiming the same false
+  // precision regardless of how noisy the underlying data actually was.
+  const residualVariance = n>2 ? histSeries.reduce((s,d,i)=>{ const fit = slope*i+intercept; return s+(d.count-fit)**2; }, 0) / (n-2) : 0;
+  const residualStdDev = Math.sqrt(residualVariance);
   const projSeries = [];
   for(let i=0;i<projDays;i++){
     const x = n + i;
-    projSeries.push({date: new Date(today0.getTime() + (i+1)*dayMs), count: Math.max(0, slope*x + intercept)});
+    const fit = slope*x + intercept;
+    // Band widens with distance into the future (sqrt growth, the standard shape for a
+    // prediction interval) -- day 1 is closer to the real trend than day 14.
+    const margin = residualStdDev * Math.sqrt(1 + (i+1)/n) * 1.3;
+    projSeries.push({
+      date: new Date(today0.getTime() + (i+1)*dayMs),
+      count: Math.max(0, fit),
+      low: Math.max(0, fit-margin),
+      high: Math.max(0, fit+margin)
+    });
   }
   const projTotal = Math.round(projSeries.reduce((s,d)=>s+d.count,0));
   const projPerDay = (projTotal/projDays);
-  const forecast = { histSeries, projSeries, projTotal, projPerDay, slope };
+  const forecast = { histSeries, projSeries, projTotal, projPerDay, slope, residualStdDev };
 
   return { trendDays, trendTotal, trendChangePct, weekBars, thisMonthCount, lastMonthCount, monthPct, topProducts, deliveryMix, deliveryMixTotal, forecast };
 }
@@ -11376,13 +11394,26 @@ function renderDashboard(){
   // a shared y-max so the projection visually continues the real line instead of rescaling.
   const fc = an.forecast;
   const fcAll = [...fc.histSeries, ...fc.projSeries];
-  const fcMax = Math.max(1, ...fcAll.map(d=>d.count));
+  // fcMax includes the band's own high edge so the shaded uncertainty area never clips against
+  // the top of the viewBox even when it pushes above the plain actual/projected line values.
+  const fcMax = Math.max(1, ...fcAll.map(d=>d.count), ...fc.projSeries.map(d=>d.high));
   const fcStepX = 440/(fcAll.length-1);
   const fcY = c => (76-(c/fcMax)*66).toFixed(1);
   const fcHistPoints = fc.histSeries.map((d,i)=>`${(i*fcStepX).toFixed(1)},${fcY(d.count)}`).join(' ');
   const fcProjPoints = [fc.histSeries[fc.histSeries.length-1], ...fc.projSeries]
     .map((d,i)=>`${((fc.histSeries.length-1+i)*fcStepX).toFixed(1)},${fcY(d.count)}`).join(' ');
-  const fcTodayX = (fc.histSeries.length-1)*fcStepX;
+  const fcLastX = (fc.histSeries.length-1)*fcStepX;
+  const fcLastY = fcY(fc.histSeries[fc.histSeries.length-1].count);
+  // Confidence band polygon: the forecast's high edge forward, then the low edge back to today --
+  // a closed shape to fill. Starts pinned at today's real last value (zero-width band) since
+  // there's no uncertainty about a day that already happened.
+  const fcBandTop = fc.projSeries.map((d,i)=>`${((fc.histSeries.length+i)*fcStepX).toFixed(1)},${fcY(d.high)}`).join(' ');
+  const fcBandBottomRev = fc.projSeries.slice().reverse().map((d,i,arr)=>{
+    const origIdx = fc.projSeries.length-1-i;
+    return `${((fc.histSeries.length+origIdx)*fcStepX).toFixed(1)},${fcY(d.low)}`;
+  }).join(' ');
+  const fcBandPoints = `${fcLastX.toFixed(1)},${fcLastY} ${fcBandTop} ${fcBandBottomRev}`;
+  const fcTodayX = fcLastX;
 
   // Delivery mix segmented bar: each part's share of the bar as a flex-basis percentage. Color
   // keyed by NAME, not sort rank, so a given courier keeps its color even if the order of parts
@@ -11524,12 +11555,13 @@ function renderDashboard(){
     <div class="panel-head"><h3>Next 30 days (estimate)</h3></div>
     <div class="panel-body">
       <svg class="forecast-chart" viewBox="0 0 440 84" preserveAspectRatio="none">
+        <polygon points="${fcBandPoints}" fill="var(--accent)" opacity=".12"/>
         <line x1="${fcTodayX.toFixed(1)}" y1="6" x2="${fcTodayX.toFixed(1)}" y2="76" class="forecast-today-marker"/>
         <polyline points="${fcHistPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
         <polyline points="${fcProjPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 5" opacity=".65"/>
       </svg>
       <div class="forecast-caption">
-        Estimated <b>${an.forecast.projTotal} orders</b> over the next 14 days (~${an.forecast.projPerDay.toFixed(1)}/day), based on the last 30 days' trend. An estimate, not a guarantee — the dashed line is projected, not actual.
+        Estimated <b>${an.forecast.projTotal} orders</b> (likely <b>${Math.round(an.forecast.projSeries.reduce((s,d)=>s+d.low,0))}–${Math.round(an.forecast.projSeries.reduce((s,d)=>s+d.high,0))}</b>) over the next 14 days, based on the last 30 days' trend. The shaded band is the uncertainty range, not a guarantee — it widens the further out the forecast reaches.
       </div>
     </div>
   </div>

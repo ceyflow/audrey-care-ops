@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107200355">
+<meta name="app-build" content="20261107213219">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -31,17 +31,20 @@ html{ visibility:hidden; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
   :root{
-    --ink:#20291F;
-    --bg:#F2F9F4;
+    --ink:#1B2340;
+    --bg:#F3F6FD;
     --surface:#FFFFFF;
     --sidebar-bg:#FFFFFF;
-    --border:#D9EDE0;
-    --muted:#6C8071;
-    --accent:#4CAF6D;
-    --accent-rgb:76,175,109;
-    --accent-dark:#3C9058;
-    --accent-soft:#E4F8EA;
-    --accent-grad:linear-gradient(90deg,#5CC084,#3FA968);
+    --border:#DCE6FB;
+    --muted:#64719A;
+    --accent:#2F6FED;
+    --accent-rgb:47,111,237;
+    --accent-dark:#1E40AF;
+    --accent-soft:#E3EDFF;
+    /* Sampled pixel-by-pixel from the reference screenshot's hero card (bottom-left #214FA4 to
+       top-right #43A2FD, via center #2454AD) rather than approximated, per the explicit "exact
+       colors" ask. */
+    --accent-grad:linear-gradient(to top right,#214FA4 0%,#2454AD 45%,#43A2FD 100%);
     --clay:#B5651D;
     --clay-soft:#F5E7DA;
     --danger:#C15B4E;
@@ -327,6 +330,11 @@ html{ visibility:hidden; }
   .stat-card .value.accent{color:var(--accent-dark);}
   .stat-card .value.danger{color:var(--danger);}
   .stat-icon-badge{display:none;}
+  /* Icon badge + chevron row is a mobile-only decoration, same convention as .stat-icon-badge
+     itself above -- without this, the chevron's bare <svg> (sized only inside the mobile media
+     query below) has no width/height constraint on desktop and renders at native giant size. */
+  .dash-stat-card-top{display:none;}
+  .topbar-brand-row{display:none;}
 
   .panel{
     background:rgba(255,255,255,.4);
@@ -352,6 +360,43 @@ html{ visibility:hidden; }
   .analytics-sparkline{width:100%;height:50px;display:block;}
   .analytics-sparkline-days{display:flex;justify-content:space-between;margin-top:2px;font-size:10px;color:var(--muted);}
   .analytics-gauge-wrap{position:relative;display:flex;justify-content:center;margin:2px 0 6px;}
+  /* Dashboard hero banner + "Orders Overview" period toggle + full-ring month donut (2026-11,
+     reference: a blue-gradient ops-dashboard mock the Admin asked to match). Same data this page
+     already computed (an.trendTotal/trendChangePct, an.monthPct/thisMonthCount/lastMonthCount) --
+     this only adds the period-pill variant of the trend chart and a round version of the existing
+     half-gauge, both still driven by var(--accent)/--accent-dark/--accent-soft so they follow
+     Settings > Appearance like everything else here. */
+  /* Sized to match the reference's own hero card exactly -- measured from the source image
+     (793/852 width, 183/1846 height -> a 4.34:1 width:height banner, not the taller ~3:1 box
+     this started as), by trimming padding and the text block's own line-heights/margins rather
+     than shrinking the card's width, which already matched. */
+  .dash-hero{
+    position:relative;overflow:hidden;border-radius:20px;padding:14px 20px;margin-bottom:18px;
+    background:var(--accent-grad);color:#fff;
+    box-shadow:0 14px 32px rgba(var(--accent-rgb),.28);
+  }
+  .dash-hero-swoosh{position:absolute;inset:0;opacity:.5;pointer-events:none;}
+  .dash-hero-row{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
+  .dash-hero-greet{font-size:13px;color:rgba(255,255,255,.82);margin:0;line-height:1.3;}
+  .dash-hero-name{font-size:20px;font-weight:800;margin:0 0 2px;line-height:1.15;}
+  .dash-hero-sub{font-size:11.5px;color:rgba(255,255,255,.82);margin:0;line-height:1.3;}
+  .dash-hero-trend{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .dash-period-toggle{display:flex;gap:4px;background:var(--bg);border-radius:999px;padding:3px;}
+  .dash-period-btn{border:none;background:none;font-size:12px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer;font-family:inherit;}
+  .dash-period-btn.active{background:var(--accent);color:#fff;}
+  .dash-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px;}
+  .dash-chart-title{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;}
+  .dash-chart-peak{font-size:10.5px;font-weight:700;fill:#fff;}
+  .dash-chart-peak-bg{fill:var(--ink);}
+  .dash-donut-wrap{display:flex;align-items:center;gap:18px;}
+  .dash-donut-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .dash-donut-legend{display:flex;flex-direction:column;gap:8px;font-size:12.5px;flex:1;min-width:0;}
+  .dash-donut-legend-item{display:flex;align-items:center;gap:7px;}
+  .dash-donut-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dash-donut-legend-val{font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums;}
+  .dash-month-callout{background:var(--bg);border-radius:14px;padding:12px 14px;text-align:center;flex-shrink:0;min-width:92px;}
+  .dash-month-callout-num{font-size:19px;font-weight:800;color:var(--accent-dark);font-variant-numeric:tabular-nums;}
+  .dash-month-callout-label{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3;}
   .analytics-gauge-num{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;}
   .week-bar-chart{display:flex;align-items:flex-end;gap:8px;height:130px;padding-top:18px;}
   .week-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;min-width:0;}
@@ -426,6 +471,34 @@ html{ visibility:hidden; }
     .stat-row-text .label{font-size:13px;color:#8A9290;margin-bottom:1px;}
     .stat-row-text .value{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;}
     .stat-row-pill{font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;flex-shrink:0;}
+    /* Dashboard-only variant: 2-up vertical cards (icon bubble, then label/value/trend stacked),
+       matching the reference mock's home-screen stat tiles. Scoped to .dash-stat-grid/-card
+       specifically rather than changing .stat-grid/.stat-card everywhere, so every other page's
+       stat row (Orders, Customers, Staff, ...) keeps today's horizontal layout untouched. */
+    .dash-stat-grid{display:grid;grid-template-columns:1fr 1fr !important;gap:10px;}
+    .dash-stat-card{
+      background:#fff;border:none;border-radius:16px;padding:14px;
+      box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
+      display:flex;flex-direction:column;gap:8px;text-align:left;font-family:inherit;cursor:pointer;
+    }
+    .dash-stat-card-top{display:flex;align-items:flex-start;justify-content:space-between;}
+    .dash-stat-card .stat-icon-badge{width:38px;height:38px;border-radius:12px;}
+    .dash-stat-card .stat-icon-badge svg{width:19px;height:19px;}
+    .dash-stat-chevron{color:var(--muted);flex-shrink:0;margin-top:4px;}
+    .dash-stat-chevron svg{width:16px;height:16px;}
+    .dash-stat-card .label{font-size:12px;color:#8A93A8;margin:0 0 2px;}
+    .dash-stat-card .value{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
+    .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;width:fit-content;}
+    .dash-stat-trend.up{background:var(--accent-soft);color:var(--accent-dark);}
+    .dash-stat-trend.flat{background:var(--bg);color:var(--muted);}
+    /* Sections grid: 4-per-row on mobile (was 3), matching the reference's Quick Access card
+       density -- this is the one place that card style actually lives now that Dashboard's own
+       Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
+    .sections-grid{grid-template-columns:repeat(4,1fr) !important;}
+    .sections-tile{padding:14px 4px;}
+    .sections-tile-badge{width:38px;height:38px;}
+    .sections-tile-badge svg{width:20px;height:20px;}
+    .sections-tile span:last-child{font-size:10.5px;}
   }
 
   .stage-breakdown{display:flex;flex-direction:column;gap:10px;}
@@ -1769,14 +1842,17 @@ html{ visibility:hidden; }
        slim, unboxed session line (name/role + the three account actions) underneath it. */
     .topbar{
       flex-direction:column;align-items:stretch;gap:2px;
-      /* Solid theme-color header block (reference: a Dribbble banking-app pattern of a solid-color
-         header card sitting above a light content area) instead of blending into the page
-         background -- gives the header its own clear visual region. Uses the same
-         --accent-dark the Settings > Appearance palette picker already drives everywhere else
-         (sidebar highlight, buttons, charts), not a fixed color, so it switches with the rest of
-         the app when the palette changes. */
-      background:var(--accent-dark);border:none;box-shadow:none;
-      padding:calc(3px + env(safe-area-inset-top)) 20px 7px;
+      /* Soft gradient header (2026-11, reference: a light base with a brand-colored glow in the
+         top-right corner) replacing the old solid --accent-dark block -- sampled from the same
+         reference screenshot as --accent-grad: a pale base plus a soft rgba(--accent-rgb) glow,
+         the same radial-blob convention body's own background already uses, so it still follows
+         Settings > Appearance rather than a fixed color. Text/icon colors below flip from white
+         to dark to stay legible against this much lighter background. */
+      background:
+        radial-gradient(480px 260px at 100% -15%, rgba(var(--accent-rgb),.4), transparent 65%),
+        var(--bg);
+      border:none;box-shadow:none;
+      padding:calc(3px + env(safe-area-inset-top)) 20px 5px;
       /* Sticky, not static: the topbar used to scroll away with the page like any other content,
          so the page title and account menu were gone the moment you scrolled down a long list.
          Pinned to the viewport top instead, with an opaque background (was transparent) so
@@ -1789,9 +1865,28 @@ html{ visibility:hidden; }
          Found via the backdrop's own getBoundingClientRect() coming back 121px instead of 844. */
       backdrop-filter:none;-webkit-backdrop-filter:none;
     }
-    .topbar .page-title{color:#fff;font-size:19px;font-weight:800;letter-spacing:-.3px;position:relative;}
-    .topbar .page-sub{display:block;color:rgba(255,255,255,.72);font-size:11px;margin-top:1px;}
-    .topbar > div:first-child{margin-bottom:5px;position:relative;}
+    /* Brand row (2026-11): AUDREY's own logo + a notes bell, in the same top-row spot the
+       reference's own logo+bell+avatar row occupies -- sits above the existing page-title row
+       rather than replacing it, so every other page keeps its own heading. The bell opens the
+       same Notes & reminders panel the old floating FAB did (state._notesFabOpen); that FAB's
+       round button is hidden on mobile just below, in favor of this one. */
+    .topbar-brand-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+    /* Dashboard's own page-sub ("Here's what's happening today") repeats the hero card's own
+       text immediately below it -- hidden here (mobile only) to cut that duplication and bring
+       the header's height back down closer to the reference's own, now that the brand row adds a
+       second line above it. Every other page keeps its subtitle, since nothing else restates it
+       lower on the page. */
+    .page-dashboard .page-sub.mobile-hide-on-dashboard{display:none;}
+    .topbar-brand-mark{display:flex;align-items:center;gap:7px;}
+    .topbar-brand-mark img{height:26px;width:auto;object-fit:contain;display:block;}
+    .topbar-bell-btn{position:relative;width:38px;height:38px;border-radius:50%;background:#fff;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);color:var(--accent-dark);flex-shrink:0;}
+    .topbar-bell-btn svg{width:18px;height:18px;}
+    .topbar-bell-badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;border-radius:999px;background:var(--danger);color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;box-shadow:0 0 0 2px #fff;}
+    #btn-open-aibot{display:none;}
+    .notes-fab-btn{display:none;}
+    .topbar .page-title{color:var(--ink);font-size:19px;font-weight:800;letter-spacing:-.3px;position:relative;}
+    .topbar .page-sub{display:block;color:var(--muted);font-size:11px;margin-top:1px;}
+    .topbar > div:first-child{margin-bottom:3px;position:relative;}
     .header-right{
       background:none;border:none;box-shadow:none;
       margin-top:0;padding:0;
@@ -1799,7 +1894,7 @@ html{ visibility:hidden; }
     }
     .header-right-top{position:relative;}
     .header-right-top{display:flex;align-items:center;flex-wrap:wrap;width:100%;gap:10px;}
-    .session-chip{background:none;border:none;padding:0;margin-right:auto;font-size:12.5px;color:rgba(255,255,255,.75);}
+    .session-chip{background:none;border:none;padding:0;margin-right:auto;font-size:12.5px;color:var(--muted);}
     /* Redundant next to the account-menu avatar on the right (same photo, one tap away) -- this
        one is just a label, not a button, so the picture here was decoration twice over. */
     .session-chip .avatar{display:none;}
@@ -1868,7 +1963,12 @@ html{ visibility:hidden; }
     }
     .mobile-tab svg{width:24px;height:24px;flex-shrink:0;}
     .mobile-tab-label{font-size:10.5px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .mobile-tab.active{color:var(--accent-dark);background:var(--accent-soft);}
+    /* Solid-fill active pill, exactly as the reference's own "Home" tab (white icon/label on a
+       solid accent-colored capsule), not the light accent-soft pill the rest of the app's own
+       tab/badge language otherwise uses -- this one tab is deliberately styled off the
+       reference's own footer, pixel-checked against it. */
+    .mobile-tab.active{color:#fff;background:var(--accent);box-shadow:0 6px 14px -4px rgba(var(--accent-rgb),.6);}
+    .mobile-tab-unread-dot{position:absolute;top:-1px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px #fff;animation:pulse-dot 1.6s infinite;}
     /* Redundant with the bottom tab bar's own Sections icon (re-enabled 2026-11) -- kept
        display:none (the desktop default, line 599) rather than deleting the button/markup, same
        reversible-disable pattern used elsewhere in this file. */
@@ -3885,17 +3985,6 @@ async function syncAllRoleDataAccess(){
   try{ return await _roleDataAccessSyncInFlight; }
   finally{ _roleDataAccessSyncInFlight = null; }
 }
-// Mirrors syncRoleDataAccess, but for one ACCOUNT's individually-granted extra pages
-// (secureAccounts[].extraPages, set from editSecureAccountModal's "Extra access" checklist)
-// rather than a whole role. The database can only ever check a logged-in session against its
-// real profiles.id (see user_data_access's RLS policy) -- never a display name -- so this has to
-// resolve that id first. Admin sessions can read every profiles row (not just their own) per the
-// "admin read all profiles" policy added alongside user_data_access, specifically so this lookup
-// works. Grants to every profiles row under that staff_name, not just one: an account that's
-// changed role/re-signed-up in the past can leave more than one profiles row sharing the same
-// display name, and there's no reliable way from here to tell which one is this person's current
-// login -- granting all of them is harmless (an orphaned old row with nobody able to sign into it
-// grants nothing to anyone) and guarantees whichever one IS still in use gets it.
 // Corrects the role RLS actually enforces (profiles.role) the moment an Admin changes someone's
 // Access level in Settings, instead of leaving them on their old role's data access until their
 // next full sign-in (the self-heal-on-login path confirmLoginV2 already does — this is the same
@@ -3904,8 +3993,11 @@ async function syncAllRoleDataAccess(){
 // care representative" in Settings but his Complaints access silently staying blocked -- his
 // profiles.role was still "Team", frozen from whenever that login was first created, because
 // nothing had ever written to it since (confirmed: the same staleness existed for three other
-// accounts at once, not just his). Same multi-row-safe approach as syncUserDataAccess above:
-// updates every profiles row under this staff_name, not just one.
+// accounts at once, not just his). Grants to every profiles row under that staff_name, not just
+// one: an account that's changed role/re-signed-up in the past can leave more than one profiles
+// row sharing the same display name, and there's no reliable way from here to tell which one is
+// this person's current login -- updating all of them is harmless and guarantees whichever one
+// IS still in use gets it.
 async function syncProfileRole(name, role){
   if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
   const { data: profRows, error: profErr } = await supabaseClient.from('profiles').select('id').eq('staff_name', name);
@@ -3917,26 +4009,6 @@ async function syncProfileRole(name, role){
   }
   return {ok:true};
 }
-async function syncUserDataAccess(name){
-  if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
-  const acct = (state.auth.secureAccounts||[]).find(a=>a.name===name);
-  const extraPages = (acct && acct.extraPages) || [];
-  const { data: profRows, error: profErr } = await supabaseClient.from('profiles').select('id').eq('staff_name', name);
-  if(profErr) return {ok:false, error: profErr.message};
-  if(!profRows || !profRows.length) return {ok:true}; // never signed in yet — nothing to grant until a profiles row exists; re-synced the next time this account is saved
-  const keys = new Set();
-  extraPages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
-  const keyList = [...keys];
-  for(const row of profRows){
-    const del = await supabaseClient.from('user_data_access').delete().eq('user_id', row.id);
-    if(del.error) return {ok:false, error: del.error.message};
-    if(keyList.length){
-      const ins = await supabaseClient.from('user_data_access').insert(keyList.map(k=>({user_id: row.id, data_key:k})));
-      if(ins.error) return {ok:false, error: ins.error.message};
-    }
-  }
-  return {ok:true};
-}
 // 'sections' (the mobile Sections grid) is a virtual home screen, not a permission -- every
 // logged-in session can reach it regardless of role, same as every role already gets its own
 // (possibly empty) grid of whatever pages it's actually assigned.
@@ -3944,20 +4016,16 @@ async function syncUserDataAccess(name){
 // to 'Attendance') isn't a real assignable page in any role's pages list -- it rides along with
 // whatever role already has 'attendance' (the check-in page), so no Admin needs to go update
 // every role in Settings just to turn this on.
-// The current session's own effective page list: its role's pages, plus any individual extra
-// pages an Admin granted just this ONE account (Settings -> User account setup's "Extra access"
-// checklist, see editSecureAccountModal) on top of whatever role it shares with others. Reads
-// secureAccounts fresh each call rather than caching onto state.session at login, so a grant an
-// Admin adds while this person is already signed in elsewhere takes effect on their next render,
-// not just their next login. pagesForRole(role) alone stays purely role-based everywhere else
-// (Settings -> User roles, the Mobile view picker's default, etc.) -- only call sites asking
-// "what can THIS browser's own signed-in session reach" should use this instead.
+// The current session's own effective page list. Used to be role pages plus whatever individual
+// extra pages an Admin granted just this one account (Settings -> User account setup's old
+// "Extra access" checklist) -- removed in favor of granting pages at the role level only, in
+// Settings -> User role permission, so every account sharing a role gets the same access.
+// pagesForRole(role) alone stays purely role-based everywhere else (Settings -> User roles, the
+// Mobile view picker's default, etc.) -- only call sites asking "what can THIS browser's own
+// signed-in session reach" should use this instead.
 function mySessionPages(){
   if(!state.session) return [];
-  const rolePages = pagesForRole(state.session.role);
-  const acct = (state.auth.secureAccounts||[]).find(a=>a.name===state.session.name);
-  const extra = (acct && Array.isArray(acct.extraPages)) ? acct.extraPages : [];
-  return extra.length ? [...new Set([...rolePages, ...extra])] : rolePages;
+  return pagesForRole(state.session.role);
 }
 function pageAllowed(page){
   if(!state.session) return false;
@@ -10773,7 +10841,10 @@ function mobileTabItemsFor(navGroups){
   const all = navGroups.flatMap(g=>g.items);
   const byId = {}; all.forEach(it=>{ byId[it.id]=it; });
   const primary = ['dashboard'].map(id=>byId[id]).filter(Boolean);
-  return { primary, hasMore: false };
+  // 'chat' rides alongside the hardcoded Sections tab below (not in primary), so the three real
+  // tabs read in a fixed Home / Sections / Chat order -- matching the reference's 3-item footer.
+  const chat = byId['chat'] || null;
+  return { primary, chat, hasMore: false };
 }
 // Everything NOT already reachable from the six-icon tab bar or the topbar's Team chat icon —
 // shown as a bottom sheet from the tab bar's "Settings" icon on phones (see renderMoreFabMenu)
@@ -11081,7 +11152,7 @@ function renderShell(freshPage){
   const freshBroadcast = broadcastId !== _lastAdminBroadcastId;
   _lastAdminBroadcastId = broadcastId;
   return `
-  <div class="shell ${justLoggedIn?'shell-enter':''} ${state.page==='chat'?'page-chat':''}">
+  <div class="shell ${justLoggedIn?'shell-enter':''} ${state.page==='chat'?'page-chat':''} ${state.page==='dashboard'?'page-dashboard':''}">
     ${state.sidebarOpen ? `<div class="sidebar-backdrop" id="sidebar-backdrop"></div>` : ''}
     <aside class="sidebar ${state.sidebarOpen?'open':''}">
       <div class="brand">
@@ -11100,12 +11171,19 @@ function renderShell(freshPage){
 
     <div class="main">
       <header class="topbar">
+        <div class="topbar-brand-row">
+          <div class="topbar-brand-mark"><img src="${currentLogo()}" alt="Audrey"></div>
+          <button type="button" class="topbar-bell-btn" id="btn-header-notes-toggle" title="Notes &amp; reminders" aria-label="Notes &amp; reminders">
+            ${icon('bell')}
+            ${(() => { const n = (typeof ownNotes==='function' && state.session) ? ownNotes().length : 0; return n ? `<span class="topbar-bell-badge">${n}</span>` : ''; })()}
+          </button>
+        </div>
         <div style="display:flex;align-items:center;gap:12px;">
           <button class="menu-toggle" id="btn-menu-toggle">☰</button>
           <button type="button" class="sections-home-btn" data-nav="sections" aria-label="Sections">${gridDuotoneIcon('dashboard', 19)}</button>
           <div>
             <div class="page-title">${esc((state.navLabels && state.navLabels[state.page]) || meta.title)}</div>
-            <div class="page-sub">${meta.sub}</div>
+            <div class="page-sub mobile-hide-on-dashboard">${meta.sub}</div>
           </div>
         </div>
         <div class="header-right">
@@ -11164,6 +11242,10 @@ function renderShell(freshPage){
       return `<a href="#${it.id}" class="mobile-tab ${isActive?'active':''}" data-nav="${it.id}" title="${esc(tabLabel)}" aria-label="${esc(tabLabel)}">${gridDuotoneIcon(tabIcon, 21)}<span class="mobile-tab-label">${esc(tabLabel)}</span></a>`;
     }).join('')}
     <a href="#sections" class="mobile-tab ${state.page==='sections'?'active':''}" data-nav="sections" title="Sections" aria-label="Sections — everything you have access to">${gridDuotoneIcon('dashboard', 21)}<span class="mobile-tab-label">Sections</span></a>
+    ${mobileTabs.chat ? `<a href="#chat" class="mobile-tab ${state.page==='chat'?'active':''}" data-nav="chat" title="Team chat" aria-label="Team chat">
+      <span style="position:relative;display:inline-flex;">${gridDuotoneIcon('chat', 21)}${state.chatUnread?'<span class="mobile-tab-unread-dot"></span>':''}</span>
+      <span class="mobile-tab-label">Chat</span>
+    </a>` : ''}
   </nav>
   ${renderMoreFabMenu(navGroups)}
   ${renderNotesFab()}
@@ -11345,25 +11427,40 @@ function animatePipelineDonut(){
 // (purple/pink/orange/blue) plus a few more in the same family, rather than inventing a new
 // color vocabulary just for these two charts.
 const CHART_PALETTE = ['#6A5FCF','#3B6FE0','#2E9E5B','#C98A2E','#C2567A','#2FBF8F','#C15B4E','#5B4FE8'];
+// "Orders Overview" chart data for a given window (state._dashPeriod: '7d'/'30d'/'90d'), plus the
+// % change against the equal-length window immediately before it. 90D buckets by week (13 points)
+// rather than by day (90 points) -- a daily line that dense reads as noise, not a trend; 7D/30D
+// stay daily since both are still legible as individual days. Built from the FULL state.orders
+// (archived included, like the rest of this page's analytics) since a history chart needs
+// completed-and-archived orders too, not just what's currently on the active board.
+function ordersOverviewSeries(days){
+  const orders = state.orders;
+  const dayMs = 86400000;
+  const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+  const today0 = startOfDay(new Date());
+  const bucketSize = days>60 ? 7 : 1;
+  const nBuckets = Math.ceil(days/bucketSize);
+  const start = new Date(today0.getTime() - (nBuckets*bucketSize-1)*dayMs);
+  const buckets = [];
+  for(let i=0;i<nBuckets;i++) buckets.push({date: new Date(start.getTime()+i*bucketSize*dayMs), count:0});
+  let prevCount = 0;
+  orders.forEach(o=>{
+    if(!o.createdAt) return;
+    const idx = Math.floor((new Date(o.createdAt).getTime() - start.getTime()) / (dayMs*bucketSize));
+    if(idx>=0 && idx<nBuckets) buckets[idx].count++;
+    else if(idx<0 && idx>=-nBuckets) prevCount++;
+  });
+  const total = buckets.reduce((s,b)=>s+b.count,0);
+  const changePct = prevCount>0 ? Math.round((total-prevCount)/prevCount*100) : (total>0?100:0);
+  const peakIdx = buckets.reduce((best,b,i)=>b.count>buckets[best].count?i:best, 0);
+  return {buckets, total, changePct, bucketSize, peakIdx};
+}
 function computeDashboardAnalytics(){
   const orders = state.orders;
   const now = new Date();
   const dayMs = 86400000;
   const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
   const today0 = startOfDay(now);
-
-  // Orders created per day, last 14 days, plus % change vs the 14 days before that.
-  const trendDays = [];
-  for(let i=13;i>=0;i--) trendDays.push({date: new Date(today0.getTime() - i*dayMs), count:0});
-  let prevPeriodCount = 0;
-  orders.forEach(o=>{
-    if(!o.createdAt) return;
-    const idx = Math.floor((new Date(o.createdAt).getTime() - trendDays[0].date.getTime()) / dayMs);
-    if(idx>=0 && idx<14) trendDays[idx].count++;
-    else if(idx>=-14 && idx<0) prevPeriodCount++;
-  });
-  const trendTotal = trendDays.reduce((s,d)=>s+d.count,0);
-  const trendChangePct = prevPeriodCount>0 ? Math.round((trendTotal-prevPeriodCount)/prevPeriodCount*100) : (trendTotal>0?100:0);
 
   // This week's completions (Mon-Sun) -- completedAt is the closest real signal this app has to
   // "an order finished the pipeline that day", so it stands in for daily packing/output volume.
@@ -11376,15 +11473,24 @@ function computeDashboardAnalytics(){
     if(idx>=0 && idx<7) weekBars[idx].count++;
   });
 
-  // This month's completions vs last month's.
+  // This month's completions vs last month's. lastMonthToDateCount mirrors the SAME day-of-month
+  // range this month has lived through so far (e.g. Nov 1-7 vs Oct 1-7, not Oct 1-31) -- comparing
+  // a partial month against a full one always reads as a steep, fake-looking decline no matter how
+  // the real pace is going, purely because last month had more days to accumulate in. Growth %
+  // below is computed against this like-for-like figure; lastMonthCount (the full prior month) is
+  // kept only as a separate, clearly-labeled raw total for the donut's own two segments.
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  let thisMonthCount = 0, lastMonthCount = 0;
+  const prevMonthToDateEnd = new Date(prevMonthStart.getFullYear(), prevMonthStart.getMonth(), now.getDate(), 23, 59, 59, 999);
+  let thisMonthCount = 0, lastMonthCount = 0, lastMonthToDateCount = 0;
   orders.forEach(o=>{
     if(!o.completedAt) return;
     const t = new Date(o.completedAt);
     if(t>=monthStart) thisMonthCount++;
-    else if(t>=prevMonthStart && t<monthStart) lastMonthCount++;
+    else if(t>=prevMonthStart && t<monthStart){
+      lastMonthCount++;
+      if(t<=prevMonthToDateEnd) lastMonthToDateCount++;
+    }
   });
   const monthPct = lastMonthCount>0 ? Math.round(thisMonthCount/lastMonthCount*100) : (thisMonthCount>0?100:0);
 
@@ -11451,7 +11557,7 @@ function computeDashboardAnalytics(){
   const projPerDay = (projTotal/projDays);
   const forecast = { histSeries, projSeries, projTotal, projPerDay, slope, residualStdDev };
 
-  return { trendDays, trendTotal, trendChangePct, weekBars, thisMonthCount, lastMonthCount, monthPct, topProducts, deliveryMix, deliveryMixTotal, forecast };
+  return { weekBars, thisMonthCount, lastMonthCount, lastMonthToDateCount, monthPct, topProducts, deliveryMix, deliveryMixTotal, forecast };
 }
 // Replays the four analytics charts' entrance (bars/arc/sparkline growing in from zero) exactly
 // once per fresh Dashboard visit -- same "draw itself in" convention as animatePipelineDonut(),
@@ -11496,22 +11602,18 @@ function renderDashboard(){
   const total = orders.length;
   const pending = total - counts[STAGES.length-1];
   const openComplaints = state.complaints.filter(c=>c.status==='Open'||c.status==='In Progress').length;
-  const products = new Set(orders.map(o=>o.product).filter(Boolean));
 
-  // icon/tint/iconColor are only ever drawn by the mobile "Soft Rounded" stat-icon-badge (see its
-  // CSS, display:none outside that media query) — harmless extra data on desktop, which still
-  // renders these stat-cards exactly as before.
+  // Four cards matching the reference layout exactly: lifetime totals (not the active-board-only
+  // scope the Pipeline donut below uses), so each one means what its label says. Open Complaints
+  // moves to a small inline badge next to the Pipeline heading instead of a 5th hero card, so it
+  // stays visible without breaking the reference's 2x2 stat grid.
+  const totalOrdersTrend = ordersOverviewSeries(30);
   const stats = [
-    // Was labeled "Total Orders" with value = activeOrders().length (non-archived only) -- read as
-    // "all orders ever", which this isn't: the real all-time count is 204 while this shows 10,
-    // since completed/archived orders drop out. Renamed to say what it actually counts instead of
-    // changing the number, which would make it disagree with the Pipeline donut's "in motion"
-    // total right below it on the same page -- both read off the same activeOrders() scope.
-    {label:'Active Orders', value: total, sub:null, icon:'orders', tint:'#E6E1FB', iconColor:'#6A5FCF'},
-    {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FDE8EC', iconColor:'#C2567A'},
-    {label:'Total Products', value: products.size, sub:'In catalog', icon:'box', tint:'#FDF0DC', iconColor:'#C98A2E'},
-    {label:'Pending Orders', value: pending, sub:null, icon:'clock', tint:'#E3EEFB', iconColor:'#3B6FE0'},
-    {label:'Open Complaints', value: openComplaints, sub:null, danger: openComplaints>0, icon:'complaints', tint:'#FBE4E6', iconColor:'#C2566A'},
+    {label:'Total Orders', value: state.orders.length, icon:'orders', tint:'#E6E1FB', iconColor:'#6A5FCF', nav:'orders',
+      trend: totalOrdersTrend.total>0 || totalOrdersTrend.changePct!==0 ? {pct:totalOrdersTrend.changePct, dir:totalOrdersTrend.changePct>=0?'up':'down'} : null},
+    {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FDE8EC', iconColor:'#C2567A', nav:'customers'},
+    {label:'Total Products', value: state.recipes.length, sub:'In catalog', icon:'box', tint:'#FDF0DC', iconColor:'#C98A2E', nav:'recipelibrary'},
+    {label:'Pending Orders', value: pending, icon:'clock', tint:'#E3EEFB', iconColor:'#3B6FE0', nav:'orders'},
   ];
 
   // Pipeline donut: each stage's arc sized to its share of active orders, using the same
@@ -11528,12 +11630,37 @@ function renderDashboard(){
   });
 
   const an = computeDashboardAnalytics();
-  const sparkMax = Math.max(1, ...an.trendDays.map(d=>d.count));
-  const sparkStepX = 280/(an.trendDays.length-1);
-  const sparkPoints = an.trendDays.map((d,i)=>`${(i*sparkStepX).toFixed(1)},${(54-(d.count/sparkMax)*46).toFixed(1)}`).join(' ');
-  const sparkArea = `0,58 ${sparkPoints} 280,58`;
-  const gaugeCirc = Math.PI*50;
-  const gaugeFillLen = Math.min(1, an.monthPct/100) * gaugeCirc;
+
+  // "Orders Overview" line chart: period comes from state._dashPeriod (set by the 7D/30D/90D
+  // pills below, click handler in attachShellHandlers), defaulting to 7D on first visit.
+  const DASH_PERIODS = {'7d':7, '30d':30, '90d':90};
+  const dashPeriod = DASH_PERIODS[state._dashPeriod] ? state._dashPeriod : '7d';
+  const ov = ordersOverviewSeries(DASH_PERIODS[dashPeriod]);
+  const ovMax = Math.max(1, ...ov.buckets.map(b=>b.count));
+  const ovN = ov.buckets.length;
+  const ovStepX = ovN>1 ? 300/(ovN-1) : 0;
+  const ovY = c => (62-(c/ovMax)*52).toFixed(1);
+  const ovPoints = ov.buckets.map((b,i)=>`${(i*ovStepX).toFixed(1)},${ovY(b.count)}`).join(' ');
+  const ovArea = `0,66 ${ovPoints} ${(ovStepX*(ovN-1)).toFixed(1)},66`;
+  const ovPeakX = (ov.peakIdx*ovStepX).toFixed(1);
+  const ovPeakY = ovY(ov.buckets[ov.peakIdx].count);
+  // Weekday initials for 7D (matching the reference); sparse date ticks otherwise, so labels never
+  // collide however many buckets are on screen.
+  const ovLabelEvery = ovN<=7 ? 1 : (ovN<=30 ? 5 : 2);
+  const ovLabels = ov.buckets.map((b,i)=>({
+    show: i%ovLabelEvery===0 || i===ovN-1,
+    text: dashPeriod==='7d' ? b.date.toLocaleDateString(undefined,{weekday:'short'}) : `${b.date.getDate()}/${b.date.getMonth()+1}`
+  }));
+
+  // Month-over-month donut: a genuine part-to-whole split (this month's share of this+last
+  // month's combined volume) for the ring itself, plus a separately-labeled real growth % for the
+  // side callout -- two different real numbers, not the same figure drawn twice.
+  const monthSum = Math.max(1, an.thisMonthCount + an.lastMonthCount);
+  const thisShare = an.thisMonthCount/monthSum;
+  const donutCirc = 2*Math.PI*42;
+  const donutThisLen = thisShare*donutCirc;
+  const monthGrowthPct = an.lastMonthToDateCount>0 ? Math.round((an.thisMonthCount-an.lastMonthToDateCount)/an.lastMonthToDateCount*100) : (an.thisMonthCount>0?100:0);
+
   const weekMax = Math.max(1, ...an.weekBars.map(b=>b.count));
   const todayStr = new Date().toDateString();
   const topProductMax = an.topProducts.length ? an.topProducts[0].count : 1;
@@ -11575,52 +11702,90 @@ function renderDashboard(){
   const DELIVERY_COLOR_BY_NAME = {'CityPak':CHART_PALETTE[1], 'AC Delivery':CHART_PALETTE[2], 'Customer Pickup':CHART_PALETTE[0]};
   const deliveryColorFor = name => DELIVERY_COLOR_BY_NAME[name] || 'var(--muted)';
 
+  const sessionPages = mySessionPages();
+
   return `
-  <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+  <div class="dash-hero">
+    <svg class="dash-hero-swoosh" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+      <circle cx="370" cy="10" r="90" fill="rgba(255,255,255,.08)"/>
+      <circle cx="320" cy="120" r="60" fill="rgba(255,255,255,.06)"/>
+    </svg>
+    <div class="dash-hero-row">
+      <div>
+        <p class="dash-hero-greet">Welcome back,</p>
+        <p class="dash-hero-name">${esc(state.session.name)}!</p>
+        <p class="dash-hero-sub">Here's what's happening today.</p>
+      </div>
+      <div class="dash-hero-trend"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L10 11 L14 15 L20 7"/><path d="M14 7h6v6"/></svg></div>
+    </div>
+  </div>
+
+  <div class="dash-stat-grid stat-grid">
     ${stats.map(s=>`
-      <div class="stat-card stat-row-card">
-        <div class="stat-icon-badge" style="background:${s.tint};color:${s.iconColor};">${cardDuotoneIcon(s.icon, 20)}</div>
-        <div class="stat-row-text">
-          <div class="label">${s.label}</div>
-          <div class="value ${s.danger?'danger':''}">${s.danger?'<span class="pulse-dot"></span>':''}<span class="stat-num" data-target="${s.value}">${s.value}</span></div>
+      <button type="button" class="dash-stat-card stat-card" ${s.nav && sessionPages.includes(s.nav) ? `data-nav="${s.nav}"` : ''}>
+        <div class="dash-stat-card-top">
+          <div class="stat-icon-badge" style="background:${s.tint};color:${s.iconColor};">${cardDuotoneIcon(s.icon, 20)}</div>
+          <span class="dash-stat-chevron">${icon('chevron')}</span>
         </div>
-        ${s.sub?`<div class="stat-row-pill" style="color:${s.iconColor};background:${s.tint};">${s.sub}</div>`:''}
-      </div>`).join('')}
+        <div class="label">${s.label}</div>
+        <div class="value"><span class="stat-num" data-target="${s.value}">${s.value}</span></div>
+        ${s.trend ? `<span class="dash-stat-trend ${s.trend.dir==='up'?'up':'flat'}">${s.trend.dir==='up'?'↑':'↓'} ${Math.abs(s.trend.pct)}%</span>` : s.sub ? `<span class="dash-stat-trend flat">${s.sub}</span>` : ''}
+      </button>`).join('')}
   </div>
 
-  <div class="dash-analytics-row" style="margin-top:20px;">
-    <div class="panel" style="margin-bottom:0;">
-      <div class="panel-body">
-        <div class="analytics-card-title">Orders, last 14 days</div>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-          <div class="analytics-card-value">${an.trendTotal}</div>
-          <div class="analytics-badge ${an.trendChangePct>=0?'up':'down'}">${an.trendChangePct>=0?'▲':'▼'} ${Math.abs(an.trendChangePct)}%</div>
-        </div>
-        <svg class="analytics-sparkline" viewBox="0 0 280 60" preserveAspectRatio="none">
-          <polygon points="${sparkArea}" fill="var(--accent-soft)" opacity=".6"/>
-          <polyline class="analytics-sparkline-line" points="${sparkPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-        </svg>
-        <div class="analytics-sparkline-days">
-          ${an.trendDays.filter((d,i)=>i%2===0).map(d=>`<span>${d.date.getDate()}</span>`).join('')}
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-body">
+      <div class="dash-chart-head">
+        <div class="dash-chart-title">Orders Overview</div>
+        <div class="dash-period-toggle" data-dash-period-toggle>
+          ${Object.keys(DASH_PERIODS).map(p=>`<button type="button" class="dash-period-btn ${p===dashPeriod?'active':''}" data-dash-period="${p}">${p.toUpperCase()}</button>`).join('')}
         </div>
       </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 4px;">
+        <div class="analytics-card-value">${ov.total}</div>
+        <div class="analytics-badge ${ov.changePct>=0?'up':'down'}">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
+        <div class="hint" style="font-size:11px;">vs previous ${dashPeriod.toUpperCase()}</div>
+      </div>
+      <svg class="analytics-sparkline" viewBox="0 0 300 78" style="height:78px;">
+        <polygon points="${ovArea}" fill="var(--accent-soft)" opacity=".6"/>
+        <polyline class="analytics-sparkline-line" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${ov.buckets[ov.peakIdx].count>0 ? `
+        <line x1="${ovPeakX}" y1="${ovPeakY}" x2="${ovPeakX}" y2="66" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3"/>
+        <circle cx="${ovPeakX}" cy="${ovPeakY}" r="3.5" fill="var(--accent-dark)"/>
+        <rect class="dash-chart-peak-bg" x="${Math.max(0,Math.min(300-54,Number(ovPeakX)-27))}" y="${Math.max(0,Number(ovPeakY)-20)}" width="54" height="16" rx="8"/>
+        <text class="dash-chart-peak" x="${Math.max(27,Math.min(300-27,Number(ovPeakX)))}" y="${Math.max(12,Number(ovPeakY)-8)}" text-anchor="middle">${ov.buckets[ov.peakIdx].count} orders</text>` : ''}
+      </svg>
+      <div class="analytics-sparkline-days">
+        ${ovLabels.map(l=>`<span>${l.show?l.text:''}</span>`).join('')}
+      </div>
     </div>
-    <div class="panel" style="margin-bottom:0;">
-      <div class="panel-body">
-        <div class="analytics-card-title">This month vs last</div>
-        <div class="analytics-gauge-wrap">
-          <svg viewBox="0 0 120 70" width="120" height="70">
-            <path d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="var(--border)" stroke-width="10" stroke-linecap="round"/>
-            <path id="month-gauge-arc" d="M10,65 A50,50 0 0,1 110,65" fill="none" stroke="var(--accent-dark)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${gaugeFillLen.toFixed(2)} ${gaugeCirc.toFixed(2)}"/>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-body">
+      <div class="analytics-card-title" style="margin-bottom:10px;">This Month vs Last</div>
+      <div class="dash-donut-wrap">
+        <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
+          <svg viewBox="0 0 96 96" width="96" height="96">
+            <circle cx="48" cy="48" r="42" fill="none" stroke="var(--accent-soft)" stroke-width="12"/>
+            <circle cx="48" cy="48" r="42" fill="none" stroke="var(--accent-dark)" stroke-width="12" stroke-linecap="round"
+              stroke-dasharray="${donutThisLen.toFixed(2)} ${donutCirc.toFixed(2)}" transform="rotate(-90 48 48)"/>
           </svg>
-          <div class="analytics-gauge-num">${an.monthPct}%</div>
+          <div class="dash-donut-num">${Math.round(thisShare*100)}%</div>
         </div>
-        <div class="hint" style="font-size:11.5px;text-align:center;">${an.thisMonthCount} this month · ${an.lastMonthCount} last month</div>
+        <div class="dash-donut-legend">
+          <div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:var(--accent-dark);"></span>This Month<span class="dash-donut-legend-val">${an.thisMonthCount}</span></div>
+          <div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:var(--accent-soft);"></span>Last Month<span class="dash-donut-legend-val">${an.lastMonthCount}</span></div>
+        </div>
+        <div class="dash-month-callout">
+          <div class="dash-month-callout-num" style="color:${monthGrowthPct>=0?'var(--accent-dark)':'var(--danger)'};">${monthGrowthPct>=0?'+':''}${monthGrowthPct}%</div>
+          <div class="dash-month-callout-label">vs same days<br>last month</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="panel" style="margin-top:0;">
+  <div class="panel" style="margin-top:16px;">
     <div class="panel-head"><h3>This week's packing output</h3></div>
     <div class="panel-body">
       ${an.weekBars.every(b=>b.count===0) ? `<div class="empty-state">No completed orders this week yet.</div>` : `
@@ -11651,7 +11816,7 @@ function renderDashboard(){
   </div>
 
   <div class="panel" style="margin-top:20px;">
-    <div class="panel-head"><h3>Pipeline overview</h3></div>
+    <div class="panel-head"><h3>Pipeline overview</h3>${openComplaints>0?`<a href="#complaints" data-nav="complaints" class="analytics-badge down" style="text-decoration:none;">${openComplaints} open complaint${openComplaints===1?'':'s'}</a>`:''}</div>
     <div class="panel-body" style="display:flex;align-items:center;gap:30px;flex-wrap:wrap;">
       <div id="pipeline-donut" style="position:relative;width:150px;height:150px;flex-shrink:0;">
         <svg viewBox="0 0 150 150" width="150" height="150" style="overflow:visible;">
@@ -15252,16 +15417,7 @@ function editSecureAccountModal(){
         <div class="field"><label>Access level</label>
           <select name="role">${[...new Set([current.role, ...secureAccountRoleNames()])].map(role=>`<option value="${role}" ${current.role===role?'selected':''}>${role}</option>`).join('')}</select>
         </div>
-        <div class="field">
-          <label>Extra access <span class="hint">(beyond what their Access level already grants — only this one account, nobody else sharing that role)</span></label>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
-            ${ASSIGNABLE_ROLE_PAGES.map(id=>`
-            <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
-              <input type="checkbox" class="toggle-input" data-extra-page="${id}" ${(current.extraPages||[]).includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
-            </label>`).join('')}
-          </div>
-        </div>
-        <div class="hint" style="margin:4px 0 10px;">Password isn't shown or changeable here — each person changes their own from "Change password" next to Log out.</div>
+        <div class="hint" style="margin:4px 0 10px;">Password isn't shown or changeable here — each person changes their own from "Change password" next to Log out. To grant an extra page, give it to this account's whole role in Settings → User role permission.</div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
@@ -15276,18 +15432,13 @@ async function submitEditSecureAccount(e){
   const f = e.target;
   const role = f.role.value;
   const fullName = f.fullName.value.trim();
-  const extraPages = [...f.querySelectorAll('[data-extra-page]')].filter(cb=>cb.checked).map(cb=>cb.dataset.extraPage);
   const before = (state.auth.secureAccounts||[]).find(r=>r.name===name);
-  state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role, fullName, extraPages}:r)};
+  state.auth = {...state.auth, secureAccounts: (state.auth.secureAccounts||[]).map(r=>r.name===name?{...r, role, fullName}:r)};
   // saveAuth() already shows its own "Could not save account changes" toast and retries twice —
   // closing the modal and claiming "Access level updated" regardless of whether it actually
   // landed is exactly how an Employer code / Access level edit looks saved but silently isn't,
   // with the edit form itself then gone so there's nothing left open to just retry.
   if(!(await saveAuth())) return;
-  // Same reasoning as the role-save flow's own syncAllRoleDataAccess await below: a silent
-  // database-side failure here would leave the checklist looking saved while user_data_access
-  // never actually got the new grant, so Extra access would look checked but just not work.
-  const syncRes = await syncUserDataAccess(name);
   // A role change needs its own correction on top of that: role_data_access is keyed by
   // profiles.role, not by this account's name, so changing role here does nothing to what the
   // database actually lets this login read until profiles.role catches up too.
@@ -15298,9 +15449,8 @@ async function submitEditSecureAccount(e){
   if(before && before.role!==role) changes.push(`role ${before.role} → ${role}`);
   if(before && (before.fullName||'')!==fullName) changes.push(`Employer code "${before.fullName||''}" → "${fullName}"`);
   logActivity(`Edited account "${name}"${changes.length ? ' (' + changes.join('; ') + ')' : ''}`);
-  if(syncRes && syncRes.ok && roleSyncRes && roleSyncRes.ok) showToast('Access level updated');
-  else if(!(roleSyncRes && roleSyncRes.ok)) showToast('Account saved, but correcting their real database access failed (' + (roleSyncRes && roleSyncRes.error || 'unknown error') + ') — try Save again');
-  else showToast('Account saved, but pushing extra access failed (' + (syncRes && syncRes.error || 'unknown error') + ') — try Save again');
+  if(roleSyncRes && roleSyncRes.ok) showToast('Access level updated');
+  else showToast('Account saved, but correcting their real database access failed (' + (roleSyncRes && roleSyncRes.error || 'unknown error') + ') — try Save again');
 }
 // Settings → User roles: Admin-defined access levels (name, description, active/inactive, and
 // exactly which pages each one can open) — replaces the old fixed role list. These names also
@@ -19668,6 +19818,13 @@ function attachShellHandlers(){
     state._notesFabOpen = !state._notesFabOpen;
     render();
   };
+  // Header bell (mobile): same notes panel, same toggle logic, just triggered from the new
+  // brand row instead of the old floating round button (hidden on mobile -- see .notes-fab-btn).
+  if(byIdEl('btn-header-notes-toggle')) byIdEl('btn-header-notes-toggle').onclick = ()=>{
+    captureNoteComposeDraft();
+    state._notesFabOpen = !state._notesFabOpen;
+    render();
+  };
   if(byIdEl('notes-fab-backdrop')) byIdEl('notes-fab-backdrop').onclick = ()=>{ state._notesFabOpen = false; render(); };
   if(byIdEl('notes-fab-close')) byIdEl('notes-fab-close').onclick = ()=>{ state._notesFabOpen = false; render(); };
   document.querySelectorAll('[data-note-color]').forEach(b=>b.addEventListener('click', ()=>{
@@ -21697,6 +21854,10 @@ function attachShellHandlers(){
     state._rolePermExpanded = {};
     render();
   });
+  document.querySelectorAll('[data-dash-period]').forEach(el=>el.addEventListener('click', ()=>{
+    state._dashPeriod = el.dataset.dashPeriod;
+    render();
+  }));
   document.querySelectorAll('[data-role-perm-expand]').forEach(el=>el.addEventListener('click', ()=>{
     const id = el.dataset.rolePermExpand;
     if(!state._rolePermExpanded) state._rolePermExpanded = {};

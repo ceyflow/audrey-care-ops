@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261106165209">
+<meta name="app-build" content="20261107033806">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1032,7 +1032,7 @@ html{ visibility:hidden; }
   .dally-orb-lottie{border-radius:50%;flex-shrink:0;overflow:hidden;}
   .dally-orb-lottie-lg{width:128px;height:128px;}
   .dally-orb-lottie-sm{width:34px;height:34px;}
-  .dally-orb-lottie-xs{width:24px;height:24px;margin-bottom:1px;}
+  .dally-orb-lottie-xs{width:28px;height:28px;margin-bottom:1px;}
   .dally-rail{width:200px;flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto;}
   .dally-rail-title{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:2px 8px 8px;}
   .dally-rail-item{display:block;width:100%;text-align:left;background:none;border:none;border-radius:8px;padding:9px 10px;font-size:11.5px;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:3px;transition:background .15s;}
@@ -1751,7 +1751,7 @@ html{ visibility:hidden; }
     /* Redundant next to the account-menu avatar on the right (same photo, one tap away) -- this
        one is just a label, not a button, so the picture here was decoration twice over. */
     .session-chip .avatar{display:none;}
-    .topbar-icon-btn{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
+    .topbar-icon-btn{width:42px;height:42px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
     .topbar-icon-btn svg{width:18px;height:18px;}
     .topbar-icon-btn-label{display:none;}
     /* Account menu (2026-11): Activity log / Change password / Log out used to sit as a plain
@@ -1763,11 +1763,11 @@ html{ visibility:hidden; }
        unrelated glyph in the header, and tapping "your own avatar" to reach account actions is
        the standard pattern on both iOS and Android. */
     .header-menu-toggle{
-      display:flex;width:34px;height:34px;border-radius:50%;flex-shrink:0;
+      display:flex;width:42px;height:42px;border-radius:50%;flex-shrink:0;
       /* The topbar itself is now the same accent color -- a plain same-color circle here would
          vanish into it, so this ring is what actually marks it as a button. */
       background:var(--accent-dark);color:#fff;border:2px solid rgba(255,255,255,.55);align-items:center;justify-content:center;
-      font-size:12px;font-weight:700;padding:0;overflow:hidden;
+      font-size:14px;font-weight:700;padding:0;overflow:hidden;
     }
     .header-menu-toggle img{width:100%;height:100%;object-fit:cover;}
     .header-menu-backdrop{display:block;position:fixed;inset:0;z-index:38;background:rgba(19,32,30,.32);animation:overlay-fade .2s ease;}
@@ -1814,8 +1814,8 @@ html{ visibility:hidden; }
       background:none;border:none;min-width:0;max-width:120px;
       transition:background .15s ease,color .15s ease;
     }
-    .mobile-tab svg{width:21px;height:21px;flex-shrink:0;}
-    .mobile-tab-label{font-size:10px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .mobile-tab svg{width:24px;height:24px;flex-shrink:0;}
+    .mobile-tab-label{font-size:10.5px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .mobile-tab.active{color:var(--accent-dark);background:var(--accent-soft);}
     /* Redundant with the bottom tab bar's own Sections icon (re-enabled 2026-11) -- kept
        display:none (the desktop default, line 599) rather than deleting the button/markup, same

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107213219">
+<meta name="app-build" content="20261107213939">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -480,6 +480,12 @@ html{ visibility:hidden; }
       background:#fff;border:none;border-radius:16px;padding:14px;
       box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
       display:flex;flex-direction:column;gap:8px;text-align:left;font-family:inherit;cursor:pointer;
+      /* This is a <button> (so it's tappable/focusable), and Safari's own default button text
+         color -- its system accent blue, confirmed live on a real iPhone -- otherwise shows
+         through on anything here that doesn't set its own color, since .value below never did.
+         appearance:none strips Safari's whole native button rendering, not just color, so it
+         can't resurface some other default (background, border) the same way later. */
+      appearance:none;-webkit-appearance:none;color:var(--ink);
     }
     .dash-stat-card-top{display:flex;align-items:flex-start;justify-content:space-between;}
     .dash-stat-card .stat-icon-badge{width:38px;height:38px;border-radius:12px;}

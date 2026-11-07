@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107060818">
+<meta name="app-build" content="20261107104949">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -11335,7 +11335,12 @@ function renderDashboard(){
   // CSS, display:none outside that media query) — harmless extra data on desktop, which still
   // renders these stat-cards exactly as before.
   const stats = [
-    {label:'Total Orders', value: total, sub:'Active', icon:'orders', tint:'#E6E1FB', iconColor:'#6A5FCF'},
+    // Was labeled "Total Orders" with value = activeOrders().length (non-archived only) -- read as
+    // "all orders ever", which this isn't: the real all-time count is 204 while this shows 10,
+    // since completed/archived orders drop out. Renamed to say what it actually counts instead of
+    // changing the number, which would make it disagree with the Pipeline donut's "in motion"
+    // total right below it on the same page -- both read off the same activeOrders() scope.
+    {label:'Active Orders', value: total, sub:null, icon:'orders', tint:'#E6E1FB', iconColor:'#6A5FCF'},
     {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FDE8EC', iconColor:'#C2567A'},
     {label:'Total Products', value: products.size, sub:'In catalog', icon:'box', tint:'#FDF0DC', iconColor:'#C98A2E'},
     {label:'Pending Orders', value: pending, sub:null, icon:'clock', tint:'#E3EEFB', iconColor:'#3B6FE0'},

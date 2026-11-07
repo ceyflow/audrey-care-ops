@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107165738">
+<meta name="app-build" content="20261107175758">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1128,6 +1128,20 @@ html{ visibility:hidden; }
   .toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s;}
   .toggle-input:checked + .toggle-track{background:var(--accent);}
   .toggle-input:checked + .toggle-track::after{left:17px;}
+  /* User role permission panel: one expandable row per page, real action toggles underneath --
+     same accordion-list shape as the CRM reference's left nav + expand pattern, collapsed to a
+     single column since this app is mobile-first and has no two-pane layout anywhere else. */
+  .role-perm-list{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .role-perm-row{border-bottom:1px solid var(--border);}
+  .role-perm-row:last-child{border-bottom:none;}
+  .role-perm-row-head{display:flex;align-items:center;gap:8px;padding:11px 12px;cursor:pointer;}
+  .role-perm-caret{width:16px;height:16px;flex-shrink:0;color:var(--muted);transition:transform .15s;display:flex;}
+  .role-perm-caret.open{transform:rotate(90deg);}
+  .role-perm-caret-spacer{width:16px;flex-shrink:0;}
+  .role-perm-row-label{font-size:13.5px;font-weight:600;color:var(--ink);}
+  .role-perm-page-toggle{margin-left:auto;padding:0;}
+  .role-perm-sub{background:var(--bg);padding:6px 12px 10px 38px;display:flex;flex-direction:column;gap:2px;}
+  .role-perm-sub-row{padding:5px 8px;font-size:12.5px;}
   .password-field-wrap{position:relative;}
   .password-field-wrap input{padding-right:38px;}
   .password-toggle-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:auto;background:none;border:none;padding:6px 8px;cursor:pointer;font-size:16px;line-height:1;color:var(--muted);display:flex;align-items:center;justify-content:center;}
@@ -3610,6 +3624,131 @@ function permissionsByDepartment(){
   });
   return groups;
 }
+// Which PERMISSION_REGISTRY department a real, toggleable page's fine-grained actions live under
+// -- the two don't always share a spelling (the page is "blending", the department bucket is
+// "blendingboard"; "recipes"/"recipelibrary" are real pages but their actions live under the
+// single combined "costing" bucket alongside the Costing & recipe page itself). Any page in
+// ASSIGNABLE_ROLE_PAGES with no entry here has no fine-grained actions yet -- just the plain
+// open/closed page toggle. Built directly from PERMISSION_REGISTRY's own dept ids, not guessed.
+const ROLE_PERM_PAGE_DEPT = {
+  orders:'orders', orderinquiry:'orderinquiry', blending:'blendingboard', costing:'costing',
+  rnd:'rnd', complaints:'complaints', staff:'staff', chat:'chat', customers:'customers',
+  suppliers:'suppliers', itemlist:'itemlist', ratings:'ratings', settings:'settings',
+};
+// Departments with real permissions but no page of their own to hang off (Branding is edited from
+// Settings -> Appearance, Notes is a floating widget, neither is in ASSIGNABLE_ROLE_PAGES) -- listed
+// as their own standalone rows so every PERMISSION_REGISTRY entry appears somewhere in this panel.
+const ROLE_PERM_STANDALONE_DEPTS = ['branding','notes'];
+// Independent of the User roles editor on purpose -- state._roleEditForm/autoSaveRoleToggle()
+// belong to that form's own edit-then-Save-changes flow (name/description/status still live
+// there). This panel is a separate, standalone surface: state._rolePermRoleId is its only piece
+// of state (which role is picked, UI-only, never saved itself), it reads straight from
+// state.userRoles rather than a draft copy, and saveRolePermissionField() below is its own
+// dedicated write path -- built on the same save()/syncAllRoleDataAccess() every other feature
+// in the app already persists through (there's no second database to write to), but never
+// touching state._roleEditForm or autoSaveRoleToggle().
+async function saveRolePermissionField(roleId, kind, key, checked){
+  const idx = state.userRoles.findIndex(r=>r.id===roleId);
+  if(idx===-1) return;
+  const r = state.userRoles[idx];
+  let patch;
+  if(kind==='page'){
+    const pages = new Set(r.pages||[]);
+    if(checked) pages.add(key); else pages.delete(key);
+    patch = {pages:[...pages]};
+  } else if(kind==='mobile'){
+    const ms = new Set(r.mobileSections||[]);
+    if(checked) ms.add(key); else ms.delete(key);
+    patch = {mobileSections:[...ms]};
+  } else { // 'permission'
+    patch = {permissions:{...(r.permissions||{}), [key]:checked}};
+  }
+  state.userRoles = state.userRoles.map((x,i)=>i===idx ? {...x, ...patch} : x);
+  render();
+  if(!(await save('userRoles'))) return;
+  syncAllRoleDataAccess();
+}
+function renderRolePermissionsPanel(){
+  const selectedId = state._rolePermRoleId || '';
+  const r = state.userRoles.find(x=>x.id===selectedId) || null;
+  return `
+  <div class="panel" id="settings-role-permissions">
+    <div class="panel-head"><h3>User role permission</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:14px;">Pick a role, then open any section to turn its exact pages and actions on or off. Every switch saves straight to the database the moment you flip it — nothing to click after.</div>
+      <div class="field" style="max-width:360px;">
+        <label>Role</label>
+        <select id="role-perm-select">
+          <option value="">Choose a role…</option>
+          ${state.userRoles.map(x=>`<option value="${x.id}" ${selectedId===x.id?'selected':''}>${esc(x.name)}${x.locked?' (built-in)':''}</option>`).join('')}
+        </select>
+      </div>
+      ${r ? renderRolePermissionBody(r) : `<div class="hint" style="margin-top:18px;">Select a role above to edit what it can see and do.</div>`}
+    </div>
+  </div>`;
+}
+function renderRolePermissionBody(r){
+  const pages = r.pages||[];
+  const permissions = r.permissions||{};
+  const expanded = state._rolePermExpanded || {};
+  const pageRows = ASSIGNABLE_ROLE_PAGES.map(pageId=>{
+    const deptId = ROLE_PERM_PAGE_DEPT[pageId];
+    const items = deptId ? PERMISSION_REGISTRY.filter(p=>p.dept===deptId) : [];
+    const isOpen = pages.includes(pageId);
+    const isExpanded = !!expanded[pageId];
+    return `
+    <div class="role-perm-row">
+      <div class="role-perm-row-head" ${items.length ? `data-role-perm-expand="${pageId}"` : ''}>
+        ${items.length ? `<span class="role-perm-caret${isExpanded?' open':''}">${icon('chevron')}</span>` : `<span class="role-perm-caret-spacer"></span>`}
+        <span class="role-perm-row-label">${esc(PAGE_META[pageId].title)}</span>
+        <label class="toggle-row role-perm-page-toggle">
+          <input type="checkbox" class="toggle-input" data-rp-page="${pageId}" ${isOpen?'checked':''}><span class="toggle-track"></span>
+        </label>
+      </div>
+      ${(items.length && isExpanded) ? `
+      <div class="role-perm-sub">
+        ${items.map(p=>`
+        <label class="toggle-row role-perm-sub-row">
+          <input type="checkbox" class="toggle-input" data-rp-permission="${p.id}" ${permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
+        </label>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  const standaloneRows = ROLE_PERM_STANDALONE_DEPTS.map(deptId=>{
+    const items = PERMISSION_REGISTRY.filter(p=>p.dept===deptId);
+    if(!items.length) return '';
+    const isExpanded = !!expanded[deptId];
+    return `
+    <div class="role-perm-row">
+      <div class="role-perm-row-head" data-role-perm-expand="${deptId}">
+        <span class="role-perm-caret${isExpanded?' open':''}">${icon('chevron')}</span>
+        <span class="role-perm-row-label">${esc(items[0].deptLabel)}</span>
+      </div>
+      ${isExpanded ? `
+      <div class="role-perm-sub">
+        ${items.map(p=>`
+        <label class="toggle-row role-perm-sub-row">
+          <input type="checkbox" class="toggle-input" data-rp-permission="${p.id}" ${permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
+        </label>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  const mobileOptions = NAV.flatMap(g=>g.items).filter(it=>pages.includes(it.id) || (it.children && it.children.some(c=>pages.includes(c.id))));
+  return `
+  <div class="role-perm-list">${pageRows}${standaloneRows}</div>
+  ${mobileOptions.length ? `
+  <div class="field" style="margin-top:18px;">
+    <label>Mobile view</label>
+    <div class="hint" style="margin-bottom:8px;">Which of this role's pages show as a tile on the phone home grid. Leave all unchecked to show every page it's assigned (the default).</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${mobileOptions.map(it=>`
+      <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
+        <input type="checkbox" class="toggle-input" data-rp-mobile="${it.id}" ${(r.mobileSections||[]).includes(it.id)?'checked':''}><span class="toggle-track"></span> ${esc(it.label)}
+      </label>`).join('')}
+    </div>
+  </div>` : ''}
+  `;
+}
 // Bump this whenever a key is added to (or removed from) PAGE_DATA_KEYS below. role_data_access
 // only gets re-synced for a role when someone re-saves it in Settings → User roles, so a role
 // nobody happens to re-save after such a change keeps missing that key's data forever — it can
@@ -5263,7 +5402,16 @@ async function loadAll(){
   // but still confusing clutter in Settings, and a real risk if that ever changed). Admin's RLS
   // grant is unconditional (see the app_data policies), so restricting this seed to an Admin
   // session closes that race instead of just tolerating it.
-  if(isAdmin() && state.userRoles.length===0){
+  //
+  // isAdmin() alone didn't fully close it: the SAME ambiguity can hit an actual Admin's own
+  // read too (confirmed live -- the 5 default roles reached SIX copies each, well past the two
+  // this comment originally described, meaning this exact condition kept re-firing on later
+  // Admin logins after this gate was already in place). state.userRoles.length===0 can't tell
+  // "genuinely never seeded" apart from "this read raced and came back empty" -- only the raw
+  // batch-fetch result can, the same way recipesNeverSaved/mixingStepTemplatesNeverSaved do it
+  // above. Checking that instead is what actually closes the race, not just narrows who can hit it.
+  const userRolesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('userRoles')] == null;
+  if(isAdmin() && userRolesNeverSaved && state.userRoles.length===0){
     state.userRoles = [
       {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS.Admin)},
       {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'])},
@@ -14645,6 +14793,7 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-timer-alert-sound': renderTimerAlertSoundPanel,
   'settings-secure-accounts': renderSecureAccountsPanel,
   'settings-user-roles': renderUserRolesPanel,
+  'settings-role-permissions': renderRolePermissionsPanel,
   'settings-login-activity': renderLoginActivityPanel,
   'settings-sms-settings': renderSmsTemplatesPanel,
   'settings-backup': renderBackupPanel,
@@ -14676,6 +14825,7 @@ function renderSettingsPage(){
     {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset', adminOnly:false},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers', adminOnly:true},
     {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
+    {id:'settings-role-permissions', label:'User role permission', icon:'fingerprint', adminOnly:true},
     {id:'settings-login-activity', label:'Login activity', icon:'search', adminOnly:false},
     {id:'settings-sms-settings', label:'SMS settings', icon:'send', adminOnly:false},
     {id:'settings-backup', label:'Backup & export', icon:'list', adminOnly:true},
@@ -15186,8 +15336,8 @@ function renderUserRolesPanel(){
 }
 function renderRoleEditForm(f){
   return `
-  <div style="padding-top:14px;border-top:1px solid var(--border);display:flex;gap:28px;flex-wrap:wrap;">
-    <div style="width:280px;flex-shrink:0;">
+  <div style="padding-top:14px;border-top:1px solid var(--border);">
+    <div style="width:280px;max-width:100%;">
       <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:10px;">${f.isNew ? 'New role' : 'Edit role'}</div>
       <div class="field"><label>Role name</label><input id="role-form-name" value="${escAttr(f.name)}" ${f.locked?'disabled':''}></div>
       <div class="field"><label>Status</label>
@@ -15202,45 +15352,10 @@ function renderRoleEditForm(f){
         </select>
       </div>
       <div class="field"><label>Description</label><input id="role-form-description" value="${escAttr(f.description)}" placeholder="What this role is for"></div>
-      <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;gap:8px;">
+      ${f.isNew ? `<div class="hint" style="margin-bottom:10px;">Pages and permissions are set up afterward, in Settings → User role permission.</div>` : `<div class="hint" style="margin-bottom:10px;">Which pages and actions this role can use now lives in Settings → <a href="#" data-goto-role-permissions>User role permission</a>.</div>`}
+      <div class="modal-actions" style="justify-content:flex-start;margin-top:4px;gap:8px;">
         <button type="button" class="btn btn-primary" id="btn-save-role">${f.isNew ? 'Insert new role' : 'Save changes'}</button>
         <button type="button" class="btn" id="btn-cancel-role-edit">Cancel</button>
-      </div>
-    </div>
-    <div style="flex:1;min-width:360px;">
-      <div class="field">
-        <label>Access — departments &amp; pages</label>
-        <div class="hint" style="margin-bottom:8px;">Choose exactly which pages this role can open.</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-          ${ASSIGNABLE_ROLE_PAGES.map(id=>`
-          <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
-            <input type="checkbox" class="toggle-input" data-role-page="${id}" ${f.pages.includes(id)?'checked':''}><span class="toggle-track"></span> ${esc(PAGE_META[id].title)}
-          </label>`).join('')}
-        </div>
-      </div>
-      <div class="field">
-        <label>Mobile view</label>
-        <div class="hint" style="margin-bottom:8px;">Which of the pages above show as a tile on the phone home grid. Leave all unchecked to show every page this role is assigned (the default).</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-          ${NAV.flatMap(g=>g.items).filter(it=>f.pages.includes(it.id) || (it.children && it.children.some(c=>f.pages.includes(c.id)))).map(it=>`
-          <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:13px;">
-            <input type="checkbox" class="toggle-input" data-role-mobile-section="${it.id}" ${(f.mobileSections||[]).includes(it.id)?'checked':''}><span class="toggle-track"></span> ${esc(it.label)}
-          </label>`).join('')}
-        </div>
-      </div>
-      <div class="field">
-        <label>Fine-grained permissions</label>
-        <div class="hint" style="margin-bottom:10px;">Within a department this role can already open, choose exactly which actions it can take — drag-and-drop, delete, edit after the fact, bulk actions, and so on.</div>
-        ${permissionsByDepartment().map(g=>`
-        <div style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
-          <div style="font-weight:600;color:var(--ink);font-size:13px;margin-bottom:8px;">${esc(g.label)}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            ${g.items.map(p=>`
-            <label class="toggle-row" style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);font-size:12.5px;">
-              <input type="checkbox" class="toggle-input" data-role-permission="${p.id}" ${f.permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
-            </label>`).join('')}
-          </div>
-        </div>`).join('')}
       </div>
     </div>
   </div>`;
@@ -21515,6 +21630,46 @@ function attachShellHandlers(){
     const r = state.userRoles.find(x=>x.id===b.dataset.editRole); if(!r) return;
     state._roleEditForm = {...r, pages:[...(r.pages||[])], mobileSections:[...(r.mobileSections||[])], permissions:{...(r.permissions||{})}, inactivityTimeoutMinutes:Number(r.inactivityTimeoutMinutes)||0, isNew:false};
     render();
+  }));
+  document.querySelectorAll('[data-goto-role-permissions]').forEach(el=>el.addEventListener('click', e=>{
+    e.preventDefault();
+    const f = state._roleEditForm; if(!f || f.isNew) return;
+    // Only reads which role was open in the User roles form, to carry it over as a convenience --
+    // _rolePermRoleId is still the only state the destination panel itself reads or writes.
+    state._rolePermRoleId = f.id;
+    state._rolePermExpanded = {};
+    history.pushState(null,'','#settings/settings-role-permissions');
+    state._settingsOpenPanel = 'settings-role-permissions';
+    render();
+  }));
+  // User role permission -- its own state (_rolePermRoleId, UI-only) and its own save path
+  // (saveRolePermissionField), entirely separate from state._roleEditForm/autoSaveRoleToggle()
+  // the User roles editor uses. Nothing here reads or writes that form's state.
+  if(byIdEl('role-perm-select')) byIdEl('role-perm-select').addEventListener('change', e=>{
+    state._rolePermRoleId = e.target.value || null;
+    state._rolePermExpanded = {};
+    render();
+  });
+  document.querySelectorAll('[data-role-perm-expand]').forEach(el=>el.addEventListener('click', ()=>{
+    const id = el.dataset.rolePermExpand;
+    if(!state._rolePermExpanded) state._rolePermExpanded = {};
+    state._rolePermExpanded[id] = !state._rolePermExpanded[id];
+    render();
+  }));
+  // The page-open toggle sits inside the same row that expands/collapses on click -- without this,
+  // flipping the toggle would also bubble up and fire the expand handler above on every tap.
+  document.querySelectorAll('.role-perm-page-toggle').forEach(el=>el.addEventListener('click', e=>e.stopPropagation()));
+  document.querySelectorAll('[data-rp-page]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!state._rolePermRoleId) return;
+    saveRolePermissionField(state._rolePermRoleId, 'page', cb.dataset.rpPage, cb.checked);
+  }));
+  document.querySelectorAll('[data-rp-permission]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!state._rolePermRoleId) return;
+    saveRolePermissionField(state._rolePermRoleId, 'permission', cb.dataset.rpPermission, cb.checked);
+  }));
+  document.querySelectorAll('[data-rp-mobile]').forEach(cb=>cb.addEventListener('change', ()=>{
+    if(!state._rolePermRoleId) return;
+    saveRolePermissionField(state._rolePermRoleId, 'mobile', cb.dataset.rpMobile, cb.checked);
   }));
   document.querySelectorAll('[data-delete-role]').forEach(b=>b.addEventListener('click', ()=>{
     const r = state.userRoles.find(x=>x.id===b.dataset.deleteRole); if(!r || r.locked) return;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107104949">
+<meta name="app-build" content="20261107152938">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -323,7 +323,7 @@ html{ visibility:hidden; }
   }
   .stat-card:hover{box-shadow:0 1px 1px rgba(255,255,255,.7) inset, 0 14px 32px rgba(20,40,30,.1);}
   .stat-card .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
-  .stat-card .value{font-size:24px;font-weight:600;}
+  .stat-card .value{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;}
   .stat-card .value.accent{color:var(--accent-dark);}
   .stat-card .value.danger{color:var(--danger);}
   .stat-icon-badge{display:none;}
@@ -348,14 +348,14 @@ html{ visibility:hidden; }
   .analytics-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;flex-shrink:0;}
   .analytics-badge.up{background:var(--accent-soft);color:var(--accent-dark);}
   .analytics-badge.down{background:var(--danger-soft);color:var(--danger);}
-  .analytics-card-value{font-size:27px;font-weight:800;margin:4px 0 8px;}
+  .analytics-card-value{font-size:27px;font-weight:800;margin:4px 0 8px;font-variant-numeric:tabular-nums;}
   .analytics-sparkline{width:100%;height:50px;display:block;}
   .analytics-sparkline-days{display:flex;justify-content:space-between;margin-top:2px;font-size:10px;color:var(--muted);}
   .analytics-gauge-wrap{position:relative;display:flex;justify-content:center;margin:2px 0 6px;}
-  .analytics-gauge-num{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:21px;font-weight:800;}
+  .analytics-gauge-num{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;}
   .week-bar-chart{display:flex;align-items:flex-end;gap:8px;height:130px;padding-top:18px;}
   .week-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;min-width:0;}
-  .week-bar-count{font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:4px;height:14px;}
+  .week-bar-count{font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:4px;height:14px;font-variant-numeric:tabular-nums;}
   .week-bar-track{flex:1;width:100%;max-width:28px;background:var(--bg);border-radius:8px;display:flex;align-items:flex-end;overflow:hidden;}
   /* Today's track gets a ring instead of a reserved color, now that every bar (today included)
      carries its own CHART_PALETTE hue -- a fixed "today" color would've meant one fewer color
@@ -368,20 +368,20 @@ html{ visibility:hidden; }
   .hbar-label{width:40%;flex-shrink:0;font-size:12.5px;font-weight:600;line-height:1.3;}
   .hbar-track{flex:1;height:10px;background:var(--bg);border-radius:6px;overflow:hidden;}
   .hbar-fill{height:100%;background:var(--accent-dark);border-radius:6px;transition:width .7s cubic-bezier(.4,0,.2,1);}
-  .hbar-count{width:24px;text-align:right;font-size:12px;font-weight:700;flex-shrink:0;}
+  .hbar-count{width:24px;text-align:right;font-size:12px;font-weight:700;flex-shrink:0;font-variant-numeric:tabular-nums;}
   /* Delivery mix: a tall segmented bar, not a donut/pie -- per the dataviz skill's part-to-whole
      guidance, bars on one baseline (or here, one stack) compare more exactly than slices, and this
      is the one place a segmented-bar legend is kept (see marks-and-anatomy "Figures"). Each
      segment's own share is printed on it when it's wide enough to hold the text; otherwise the
      legend row below carries it. */
   .seg-bar{display:flex;width:100%;height:34px;border-radius:10px;overflow:hidden;background:var(--bg);}
-  .seg-bar-part{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;transition:flex-basis .7s cubic-bezier(.4,0,.2,1);}
+  .seg-bar-part{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;transition:flex-basis .7s cubic-bezier(.4,0,.2,1);}
   .seg-bar-part:not(:last-child){border-right:2px solid var(--surface);}
   .seg-legend{display:flex;flex-wrap:wrap;gap:12px 18px;margin-top:14px;}
   .seg-legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;}
   .seg-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .seg-legend-name{color:var(--ink);font-weight:600;}
-  .seg-legend-count{color:var(--muted);}
+  .seg-legend-count{color:var(--muted);font-variant-numeric:tabular-nums;}
   /* Next-30-days estimate chart: the solid line is real history, the dashed continuation is the
      projection -- dash pattern (not a color change) is what marks it as "different kind of data"
      at a glance, same convention most forecast charts on Dribbble use, so it reads correctly even
@@ -389,6 +389,7 @@ html{ visibility:hidden; }
   .forecast-chart{width:100%;height:84px;display:block;}
   .forecast-today-marker{stroke:var(--border);stroke-width:1;stroke-dasharray:2 3;}
   .forecast-caption{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;}
+  .forecast-caption b{font-variant-numeric:tabular-nums;}
   .forecast-caption b{color:var(--ink);}
   /* "Clean Clinical" mobile redesign (2026-11, succeeding "Soft Rounded"): every page's actual
      content is built from .panel/.stat-card (tables, KPI tiles) and .card (kanban board cards on
@@ -423,7 +424,7 @@ html{ visibility:hidden; }
     .stat-row-card .label{flex:none;}
     .stat-row-text{flex:1;min-width:0;}
     .stat-row-text .label{font-size:13px;color:#8A9290;margin-bottom:1px;}
-    .stat-row-text .value{font-size:21px;font-weight:800;}
+    .stat-row-text .value{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;}
     .stat-row-pill{font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;flex-shrink:0;}
   }
 
@@ -9367,7 +9368,7 @@ function renderComplaintPublicPage(){
       ${logo
         ? `<img src="${esc(logo)}" alt="Audrey Care" style="display:block;margin:0 auto 8px;max-height:64px;max-width:240px;object-fit:contain;">`
         : `<span class="wordmark" style="display:block;text-align:center;font-size:24px;color:var(--accent-dark);">Audrey Care</span>`}
-      <div class="lead" style="text-align:center;">${c ? 'Your complaint' : 'Submit a complaint'}</div>
+      <div class="track-lead" style="margin-bottom:${c?'0':'22px'};">${c ? 'Your complaint' : 'Submit a complaint'}</div>
       ${c ? renderComplaintStatusView(c) : renderComplaintSubmitForm()}
     </div>
   </div>`;
@@ -11461,7 +11462,7 @@ function renderDashboard(){
   <div class="panel" style="margin-top:20px;">
     <div class="panel-head"><h3>Top products</h3></div>
     <div class="panel-body">
-      ${an.topProducts.length===0 ? `<div class="empty-state">Nothing to show yet.</div>` : an.topProducts.map((p,i)=>`
+      ${an.topProducts.length===0 ? `<div class="empty-state">No products ordered yet.</div>` : an.topProducts.map((p,i)=>`
       <div class="hbar-row">
         <div class="hbar-label">${esc(p.name)}</div>
         <div class="hbar-track"><div class="hbar-fill" style="width:${Math.round(p.count/topProductMax*100)}%;background:${CHART_PALETTE[i%CHART_PALETTE.length]};"></div></div>
@@ -11481,7 +11482,7 @@ function renderDashboard(){
           </g>
         </svg>
         <div style="position:absolute;top:22px;left:22px;width:106px;height:106px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div style="font-size:24px;font-weight:700;"><span id="pipeline-total-num" class="stat-num" data-target="${total}">${total}</span></div>
+          <div style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;"><span id="pipeline-total-num" class="stat-num" data-target="${total}">${total}</span></div>
           <div class="hint" style="font-size:10.5px;">in motion</div>
         </div>
       </div>
@@ -11491,7 +11492,7 @@ function renderDashboard(){
           return `<div style="display:flex;align-items:center;gap:9px;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border);">
             <span style="width:9px;height:9px;border-radius:50%;background:${style.c};flex-shrink:0;"></span>
             ${esc(s)}
-            <span style="margin-left:auto;font-weight:700;">${counts[i]}</span>
+            <span style="margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;">${counts[i]}</span>
           </div>`;
         }).join('')}
       </div>
@@ -11544,7 +11545,7 @@ function renderDashboard(){
   <div class="panel" style="margin-top:20px;">
     <div class="panel-head"><h3>Recent orders</h3>${pageAllowed('orders') ? `<button class="btn btn-sm" id="dash-view-orders">View board</button>` : ''}</div>
     <div class="panel-body">
-      ${total===0 ? `<div class="empty-state">Nothing to show yet.</div>` : `
+      ${total===0 ? `<div class="empty-state">No orders yet.</div>` : `
       ${[...state.orders].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5).map((o,i,arr)=>{
         const style = STAGE_STYLE[STAGE_KEYS[o.stage]];
         return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;${i<arr.length-1?'border-bottom:1px solid var(--border);':''}">
@@ -11973,7 +11974,7 @@ function renderCustomerCarePage(){
   return `
   <div class="landing-section">
     <div class="landing-section-title">Customer Support</div>
-    ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : `
+    ${cards.length===0 ? `<div class="empty-state">Ask your Admin to enable a page here for your role in Settings → User roles.</div>` : `
     <div class="landing-grid">
       ${cards.map((c,i)=>`
       <button type="button" class="landing-card" data-nav="${c.id}">
@@ -12147,7 +12148,7 @@ function renderBlendingDeptPage(){
   return `
   <div class="landing-section">
     <div class="landing-section-title">Production</div>
-    ${cards.length===0 ? `<div class="empty-state">Nothing available here.</div>` : `
+    ${cards.length===0 ? `<div class="empty-state">Ask your Admin to enable a page here for your role in Settings → User roles.</div>` : `
     <div class="landing-grid">
       ${cards.map((c,i)=>`
       <button type="button" class="landing-card" data-nav="${c.id}">

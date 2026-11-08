@@ -2015,7 +2015,14 @@ html{ visibility:hidden; }
       background-size:220% 100%;
       animation:mobileHeaderGlassSheen 9s ease-in-out infinite;
     }
-    html.mobile-header-has-image .topbar > *{position:relative;z-index:2;}
+    /* Excludes .header-menu-backdrop and .header-right-links deliberately: both are also direct
+       children of .topbar, but they rely on their own position:fixed (confirmed live as the
+       cause of a real bug -- this blanket rule used to catch them too, and position:relative
+       beat their fixed positioning on specificity, so the account menu stopped floating above
+       the page and sat squashed in normal flow instead, unusable, "goes under" the hero card).
+       Only the topbar's own always-visible header content needs lifting above the tilt/sheen
+       layers; the two overlay elements must keep positioning themselves independently of it. */
+    html.mobile-header-has-image .topbar > *:not(.header-menu-backdrop):not(.header-right-links){position:relative;z-index:2;}
     @keyframes mobileHeaderGlassTilt{
       0%,100%{transform:scale(1.14) rotate(-0.6deg) translate(0,0);}
       50%{transform:scale(1.14) rotate(0.6deg) translate(1.5%,0.8%);}

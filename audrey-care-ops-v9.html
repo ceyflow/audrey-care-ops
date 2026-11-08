@@ -431,6 +431,14 @@ html{ visibility:hidden; }
   .dash-chart-pt{cursor:pointer;}
   .dash-chart-pt-tip-bg{fill:var(--ink);}
   .dash-chart-pt-tip{font-size:10.5px;font-weight:700;fill:#fff;}
+  /* Two donut groups ("This Month vs Last" + "This Month by Priority") side by side on a wide
+     desktop panel, wrapping to stacked rows once a group drops below its own min-width -- the
+     same flex-wrap that gives each group room on mobile also closes the gap that used to open up
+     on desktop (the legend's own flex:1 used to stretch across the FULL panel width pushing the
+     callout box far right; now it only stretches within its own ~300px+ group). */
+  .dash-month-panel-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+  .dash-month-group{flex:1 1 280px;min-width:0;}
+  .dash-month-divider{width:1px;align-self:stretch;background:var(--border);flex-shrink:0;}
   .dash-donut-wrap{display:flex;align-items:center;gap:18px;}
   .dash-donut-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
   .dash-donut-legend{display:flex;flex-direction:column;gap:8px;font-size:12.5px;flex:1;min-width:0;}
@@ -578,6 +586,10 @@ html{ visibility:hidden; }
     /* Sections grid: 4-per-row on mobile (was 3), matching the reference's Quick Access card
        density -- this is the one place that card style actually lives now that Dashboard's own
        Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
+    /* The two "This Month vs Last"/"This Month by Priority" donut groups always stack on mobile
+       (each has its own 280px min-width, wider than the whole viewport) -- the divider between
+       them is a vertical rule meant for sitting side by side, so it just hides once stacked. */
+    .dash-month-divider{display:none;}
     .sections-grid{grid-template-columns:repeat(4,1fr) !important;}
     .sections-tile{padding:calc(14px * var(--mobile-card-pad-scale)) calc(4px * var(--mobile-card-pad-scale));border-radius:calc(16px * var(--mobile-card-radius-scale));}
     .sections-tile-badge{width:calc(38px * var(--mobile-card-pad-scale));height:calc(38px * var(--mobile-card-pad-scale));}
@@ -9810,7 +9822,7 @@ function renderInner(){
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
   if(freshPage){
-    animateStatCards(); animatePipelineDonut(); animateDashboardCharts(); animateSectionsTiles();
+    animateStatCards(); animatePipelineDonut(); animateMonthDonuts(); animateDashboardCharts(); animateSectionsTiles();
     // A fresh render (page refresh, or navigating in) leaves #chat-messages at its default
     // scroll position (top, oldest message) -- jump straight to the latest message instead,
     // same as every other chat app. renderKeepChatScroll handles in-page actions (like/edit/
@@ -11877,6 +11889,51 @@ function animatePipelineDonut(){
     requestAnimationFrame(tick);
   }
 }
+// "This Month vs Last" + "This Month by Priority" donuts: same Synced Count-Up technique as
+// animatePipelineDonut() just above (ring segments grow from 0 to their real length while their
+// center/legend numbers count up in lockstep) -- on both desktop and mobile, since this just
+// hooks the freshPage render path every other dashboard entrance animation already uses, not a
+// viewport-gated one. Each ring's own stored data-final-dasharray (set at render time, since the
+// percentage is real app data, not a CSS constant like DONUT_CIRC) is what gets restored after
+// the reset.
+function animateMonthDonuts(){
+  const arcs = document.querySelectorAll('.dash-month-arc');
+  if(!arcs.length) return;
+  const dur = 1000;
+  arcs.forEach(c=>{
+    const final = c.dataset.finalDasharray;
+    const circ = c.getAttribute('stroke-dasharray').split(' ')[1] || final.split(' ')[1];
+    c.style.transition = 'none';
+    c.setAttribute('stroke-dasharray', `0 ${circ}`);
+    c.getBoundingClientRect();
+    c.style.transition = `stroke-dasharray ${dur}ms cubic-bezier(.4,0,.2,1)`;
+    requestAnimationFrame(()=>{ c.setAttribute('stroke-dasharray', final); });
+  });
+  const countUp = (id)=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const target = parseInt(el.dataset.target, 10) || 0;
+    el.textContent = id==='dash-month-pct' ? '0%' : '0';
+    const start = performance.now();
+    const tick = now=>{
+      const p = Math.min(1, (now-start)/dur);
+      const val = Math.round(target*p);
+      el.textContent = id==='dash-month-pct' ? `${val}%` : String(val);
+      if(p < 1) requestAnimationFrame(tick); else el.textContent = id==='dash-month-pct' ? `${target}%` : String(target);
+    };
+    requestAnimationFrame(tick);
+  };
+  ['dash-month-pct','dash-month-this-val','dash-month-last-val','dash-priority-total','dash-priority-val-low','dash-priority-val-medium','dash-priority-val-high'].forEach(countUp);
+  const callout = document.getElementById('dash-month-callout');
+  if(callout){
+    callout.style.transition = 'none';
+    callout.style.opacity = '0';
+    callout.style.transform = 'scale(.85)';
+    callout.getBoundingClientRect();
+    callout.style.transition = `opacity 300ms ease-out ${dur-250}ms, transform 300ms cubic-bezier(.2,.9,.3,1.3) ${dur-250}ms`;
+    requestAnimationFrame(()=>{ callout.style.opacity = '1'; callout.style.transform = 'scale(1)'; });
+  }
+}
 // Dashboard "Growth & analytics" charts: built entirely from fields state.orders already has
 // (createdAt/completedAt/product) -- no fabricated numbers, no new backend data. Uses the FULL
 // state.orders (archived included), unlike activeOrders() below, since a trend/history chart
@@ -11997,10 +12054,20 @@ function computeDashboardAnalytics(){
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1);
   const prevMonthToDateEnd = new Date(prevMonthStart.getFullYear(), prevMonthStart.getMonth(), now.getDate(), 23, 59, 59, 999);
   let thisMonthCount = 0, lastMonthCount = 0, lastMonthToDateCount = 0;
+  // This month's own priority mix (Low/Medium/High) -- the companion donut next to "This Month
+  // vs Last" (same completedAt/monthStart filter as thisMonthCount, so the two numbers are
+  // directly comparable). Picked over re-showing stage or delivery method, which already have
+  // their own cards (Pipeline overview, Delivery mix) elsewhere on this dashboard -- priority mix
+  // isn't visualized anywhere else yet.
+  const thisMonthPriority = {Low:0, Medium:0, High:0};
   orders.forEach(o=>{
     if(!o.completedAt) return;
     const t = new Date(o.completedAt);
-    if(t>=monthStart) thisMonthCount++;
+    if(t>=monthStart){
+      thisMonthCount++;
+      const p = thisMonthPriority.hasOwnProperty(o.priority) ? o.priority : 'Medium';
+      thisMonthPriority[p]++;
+    }
     else if(t>=prevMonthStart && t<monthStart){
       lastMonthCount++;
       if(t<=prevMonthToDateEnd) lastMonthToDateCount++;
@@ -12071,7 +12138,7 @@ function computeDashboardAnalytics(){
   const projPerDay = (projTotal/projDays);
   const forecast = { histSeries, projSeries, projTotal, projPerDay, slope, residualStdDev };
 
-  return { weekBars, thisMonthCount, lastMonthCount, lastMonthToDateCount, monthPct, topProducts, deliveryMix, deliveryMixTotal, forecast };
+  return { weekBars, thisMonthCount, lastMonthCount, lastMonthToDateCount, monthPct, thisMonthPriority, topProducts, deliveryMix, deliveryMixTotal, forecast };
 }
 // Replays the four analytics charts' entrance (bars/arc/sparkline growing in from zero) exactly
 // once per fresh Dashboard visit -- same "draw itself in" convention as animatePipelineDonut(),
@@ -12261,6 +12328,19 @@ function renderDashboard(){
   const donutThisLen = thisShare*donutCirc;
   const monthGrowthPct = an.lastMonthToDateCount>0 ? Math.round((an.thisMonthCount-an.lastMonthToDateCount)/an.lastMonthToDateCount*100) : (an.thisMonthCount>0?100:0);
 
+  // This month's priority mix -- same stacked-stroke-segment technique as the Pipeline donut
+  // above (donutSegs), on the same ring size as the month-vs-last donut (donutCirc) so the two
+  // read as one family rather than two unrelated chart styles side by side.
+  const PRIORITY_COLORS = {Low:'#2E9E5B', Medium:'#C98A2E', High:'var(--danger)'};
+  const priorityTotal = Math.max(1, an.thisMonthPriority.Low + an.thisMonthPriority.Medium + an.thisMonthPriority.High);
+  let _prioAcc = 0;
+  const prioritySegs = ['Low','Medium','High'].map(k=>{
+    const len = an.thisMonthPriority[k]/priorityTotal*donutCirc;
+    const start = _prioAcc;
+    _prioAcc += len;
+    return {key:k, color: PRIORITY_COLORS[k], len, start, count: an.thisMonthPriority[k]};
+  });
+
   const weekMax = Math.max(1, ...an.weekBars.map(b=>b.count));
   const todayStr = new Date().toDateString();
   const topProductMax = an.topProducts.length ? an.topProducts[0].count : 1;
@@ -12392,23 +12472,44 @@ function renderDashboard(){
   ${dashSectionsCfg.monthCompare===false ? '' : `
   <div class="panel" style="margin-top:16px;">
     <div class="panel-body">
-      <div class="analytics-card-title" style="margin-bottom:10px;">This Month vs Last</div>
-      <div class="dash-donut-wrap">
-        <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
-          <svg viewBox="0 0 96 96" width="96" height="96">
-            <circle cx="48" cy="48" r="42" fill="none" stroke="var(--accent-soft)" stroke-width="12"/>
-            <circle cx="48" cy="48" r="42" fill="none" stroke="var(--accent-dark)" stroke-width="12" stroke-linecap="round"
-              stroke-dasharray="${donutThisLen.toFixed(2)} ${donutCirc.toFixed(2)}" transform="rotate(-90 48 48)"/>
-          </svg>
-          <div class="dash-donut-num">${Math.round(thisShare*100)}%</div>
+      <div class="dash-month-panel-row">
+        <div class="dash-month-group">
+          <div class="analytics-card-title" style="margin-bottom:10px;">This Month vs Last</div>
+          <div class="dash-donut-wrap">
+            <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
+              <svg viewBox="0 0 96 96" width="96" height="96">
+                <circle cx="48" cy="48" r="42" fill="none" stroke="var(--accent-soft)" stroke-width="12"/>
+                <circle class="dash-month-arc" cx="48" cy="48" r="42" fill="none" stroke="var(--accent-dark)" stroke-width="12" stroke-linecap="round"
+                  data-final-dasharray="${donutThisLen.toFixed(2)} ${donutCirc.toFixed(2)}" stroke-dasharray="${donutThisLen.toFixed(2)} ${donutCirc.toFixed(2)}" transform="rotate(-90 48 48)"/>
+              </svg>
+              <div class="dash-donut-num" id="dash-month-pct" data-target="${Math.round(thisShare*100)}">${Math.round(thisShare*100)}%</div>
+            </div>
+            <div class="dash-donut-legend">
+              <div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:var(--accent-dark);"></span>This Month<span class="dash-donut-legend-val" id="dash-month-this-val" data-target="${an.thisMonthCount}">${an.thisMonthCount}</span></div>
+              <div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:var(--accent-soft);"></span>Last Month<span class="dash-donut-legend-val" id="dash-month-last-val" data-target="${an.lastMonthCount}">${an.lastMonthCount}</span></div>
+            </div>
+            <div class="dash-month-callout" id="dash-month-callout">
+              <div class="dash-month-callout-num" style="color:${monthGrowthPct>=0?'var(--accent-dark)':'var(--danger)'};">${monthGrowthPct>=0?'+':''}${monthGrowthPct}%</div>
+              <div class="dash-month-callout-label">vs same days<br>last month</div>
+            </div>
+          </div>
         </div>
-        <div class="dash-donut-legend">
-          <div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:var(--accent-dark);"></span>This Month<span class="dash-donut-legend-val">${an.thisMonthCount}</span></div>
-          <div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:var(--accent-soft);"></span>Last Month<span class="dash-donut-legend-val">${an.lastMonthCount}</span></div>
-        </div>
-        <div class="dash-month-callout">
-          <div class="dash-month-callout-num" style="color:${monthGrowthPct>=0?'var(--accent-dark)':'var(--danger)'};">${monthGrowthPct>=0?'+':''}${monthGrowthPct}%</div>
-          <div class="dash-month-callout-label">vs same days<br>last month</div>
+        <div class="dash-month-divider"></div>
+        <div class="dash-month-group">
+          <div class="analytics-card-title" style="margin-bottom:10px;">This Month by Priority</div>
+          <div class="dash-donut-wrap">
+            <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
+              <svg viewBox="0 0 96 96" width="96" height="96">
+                <circle cx="48" cy="48" r="42" fill="none" stroke="var(--border)" stroke-width="12"/>
+                ${prioritySegs.map(seg=>`<circle class="dash-month-arc" cx="48" cy="48" r="42" fill="none" stroke-width="12" stroke-linecap="butt" style="stroke:${seg.color};"
+                  data-final-dasharray="${seg.len.toFixed(2)} ${(donutCirc-seg.len).toFixed(2)}" stroke-dasharray="${seg.len.toFixed(2)} ${(donutCirc-seg.len).toFixed(2)}" stroke-dashoffset="${(-seg.start).toFixed(2)}" transform="rotate(-90 48 48)"/>`).join('')}
+              </svg>
+              <div class="dash-donut-num" id="dash-priority-total" data-target="${an.thisMonthCount}">${an.thisMonthCount}</div>
+            </div>
+            <div class="dash-donut-legend">
+              ${prioritySegs.map(seg=>`<div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:${seg.color};"></span>${seg.key}<span class="dash-donut-legend-val" id="dash-priority-val-${seg.key.toLowerCase()}" data-target="${seg.count}">${seg.count}</span></div>`).join('')}
+            </div>
+          </div>
         </div>
       </div>
     </div>

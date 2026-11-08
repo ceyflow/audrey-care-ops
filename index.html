@@ -1996,33 +1996,47 @@ html{ visibility:hidden; }
     /* "Glass Tilt" header background, Custom image mode only (html.mobile-header-has-image,
        toggled by applyMobileUiRuntime() off Settings > Mobile appearance's own header.mode --
        pointless on a solid color/gradient, so it never applies there). Picked from a 5-option
-       "make the static header photo feel alive" comparison. The photo itself moves on a ::before
-       layer (oversized via inset:-16%, since the rock-and-drift transform would otherwise reveal
-       its edges), with a diagonal glass-sheen ::after layer on top of that; the topbar's own real
-       content (logo, title, icons) gets position:relative + a z-index above both so neither layer
-       ever paints over it. overflow:hidden on the topbar itself clips the oversized photo layer
-       back down to the header's real bounds. */
-    html.mobile-header-has-image .topbar{overflow:hidden;}
-    html.mobile-header-has-image .topbar::before{
-      content:'';position:absolute;inset:-16%;z-index:0;pointer-events:none;
+       "make the static header photo feel alive" comparison.
+       Two real bugs happened getting here, both now fixed by keeping this entirely off
+       .topbar itself:
+       1) overflow:hidden directly on .topbar (which is position:sticky) clipped the account
+          menu dropdown in Mobile Safari specifically -- a known WebKit quirk where a
+          position:fixed descendant nested inside a sticky+overflow:hidden ancestor gets
+          incorrectly clipped by it, even though position:fixed should escape ancestor overflow
+          by spec. Reproduced only on a real iPhone/Safari, never in headless Chromium testing.
+       2) Giving every direct child of .topbar (via a blanket .topbar > * rule) an explicit
+          z-index, to lift the real header content above the tilt/sheen layers, also caught
+          .header-right -- which already had position:relative on its own, and already held the
+          account menu's dropdown as a descendant. An explicit z-index on a positioned element
+          creates a NEW stacking context, so that one extra z-index trapped the dropdown's own
+          z-index:40 inside .header-right's now-local context instead of letting it reach the
+          page's real top stacking layer -- the menu rendered, but got clipped/covered by
+          whatever came after .topbar in the page instead of floating above it.
+       The photo and its sheen now live on a dedicated wrapper (.topbar-img-layer, markup-first
+       child of .topbar) that carries its own position/overflow/stacking entirely separately --
+       .topbar itself never gets overflow:hidden, and .header-right is never touched at all.
+       Only .topbar-brand-row and .topbar-title-row (the two other direct children that need to
+       sit above the wrapper) get position:relative -- no z-index, since position:relative alone
+       is enough to out-rank a plain positioned sibling in DOM order without creating a stacking
+       context of its own either. */
+    .topbar-img-layer{display:none;}
+    html.mobile-header-has-image .topbar-img-layer{
+      display:block;position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none;
+      border-radius:inherit;
+    }
+    html.mobile-header-has-image .topbar-img-layer::before{
+      content:'';position:absolute;inset:-16%;
       background:var(--mobile-header-bg);background-size:cover;background-position:center;
       animation:mobileHeaderGlassTilt 9s ease-in-out infinite;
     }
-    html.mobile-header-has-image .topbar::after{
-      content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+    html.mobile-header-has-image .topbar-img-layer::after{
+      content:'';position:absolute;inset:0;
       mix-blend-mode:screen;
       background:linear-gradient(118deg, transparent 30%, rgba(255,255,255,.35) 46%, rgba(255,255,255,.08) 54%, transparent 68%);
       background-size:220% 100%;
       animation:mobileHeaderGlassSheen 9s ease-in-out infinite;
     }
-    /* Excludes .header-menu-backdrop and .header-right-links deliberately: both are also direct
-       children of .topbar, but they rely on their own position:fixed (confirmed live as the
-       cause of a real bug -- this blanket rule used to catch them too, and position:relative
-       beat their fixed positioning on specificity, so the account menu stopped floating above
-       the page and sat squashed in normal flow instead, unusable, "goes under" the hero card).
-       Only the topbar's own always-visible header content needs lifting above the tilt/sheen
-       layers; the two overlay elements must keep positioning themselves independently of it. */
-    html.mobile-header-has-image .topbar > *:not(.header-menu-backdrop):not(.header-right-links){position:relative;z-index:2;}
+    html.mobile-header-has-image .topbar-brand-row, html.mobile-header-has-image .topbar-title-row{position:relative;}
     @keyframes mobileHeaderGlassTilt{
       0%,100%{transform:scale(1.14) rotate(-0.6deg) translate(0,0);}
       50%{transform:scale(1.14) rotate(0.6deg) translate(1.5%,0.8%);}
@@ -2032,7 +2046,7 @@ html{ visibility:hidden; }
       50%{background-position:100% 0;}
     }
     @media (prefers-reduced-motion: reduce){
-      html.mobile-header-has-image .topbar::before, html.mobile-header-has-image .topbar::after{animation:none;}
+      html.mobile-header-has-image .topbar-img-layer::before, html.mobile-header-has-image .topbar-img-layer::after{animation:none;}
     }
     /* Brand row (2026-11): AUDREY's own logo + a notes bell, in the same top-row spot the
        reference's own logo+bell+avatar row occupies -- sits above the existing page-title row
@@ -11678,6 +11692,7 @@ function renderShell(freshPage){
 
     <div class="main">
       <header class="topbar">
+        <div class="topbar-img-layer"></div>
         <div class="topbar-brand-row">
           <div class="topbar-brand-mark"><img src="${currentLogo()}" alt="Audrey"></div>
           <div class="topbar-brand-actions">
@@ -11690,7 +11705,7 @@ function renderShell(freshPage){
             </button>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
+        <div class="topbar-title-row" style="display:flex;align-items:center;gap:12px;">
           <button class="menu-toggle" id="btn-menu-toggle">☰</button>
           <button type="button" class="sections-home-btn" data-nav="sections" aria-label="Sections">${gridDuotoneIcon('dashboard', 19)}</button>
           <div>

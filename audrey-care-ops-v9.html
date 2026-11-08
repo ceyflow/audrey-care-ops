@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261107214654">
+<meta name="app-build" content="20261108064119">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1886,7 +1886,11 @@ html{ visibility:hidden; }
     .topbar-bell-btn{position:relative;width:38px;height:38px;border-radius:50%;background:#fff;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);color:var(--accent-dark);flex-shrink:0;}
     .topbar-bell-btn svg{width:18px;height:18px;}
     .topbar-bell-badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;border-radius:999px;background:var(--danger);color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;box-shadow:0 0 0 2px #fff;}
-    #btn-open-aibot{display:none;}
+    /* !important: the button itself carries an inline style="display:flex" (set in its own
+       markup, for desktop), which otherwise beats any plain stylesheet rule regardless of
+       selector specificity -- confirmed live, the button was still showing on mobile with this
+       rule in place but no !important. */
+    #btn-open-aibot{display:none !important;}
     .notes-fab-btn{display:none;}
     .topbar .page-title{color:var(--ink);font-size:19px;font-weight:800;letter-spacing:-.3px;position:relative;}
     .topbar .page-sub{display:block;color:var(--muted);font-size:11px;margin-top:1px;}

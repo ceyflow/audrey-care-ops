@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108111448">
+<meta name="app-build" content="20261108120032">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -346,9 +346,14 @@ html{ visibility:hidden; }
   .stat-card .value.accent{color:var(--accent-dark);}
   .stat-card .value.danger{color:var(--danger);}
   .stat-icon-badge{display:none;}
-  /* Icon badge + chevron row is a mobile-only decoration, same convention as .stat-icon-badge
-     itself above -- without this, the chevron's bare <svg> (sized only inside the mobile media
-     query below) has no width/height constraint on desktop and renders at native giant size. */
+  /* Icon badge + chevron are a mobile-only decoration, same convention as .stat-icon-badge
+     itself above -- without an explicit rule here, the chevron's bare <svg> (sized only inside
+     the mobile media query below) has no width/height constraint on desktop and renders at
+     native giant size. This used to ride along with .dash-stat-card-top hiding a shared wrapper
+     div; a later markup change made the chevron a direct sibling instead (not nested in that
+     wrapper), which silently broke this protection -- confirmed live, giant chevrons and no icon
+     badges on the desktop dashboard. Given directly now instead of depending on markup nesting. */
+  .dash-stat-chevron{display:none;}
   .dash-stat-card-top{display:none;}
   .topbar-brand-row{display:none;}
 
@@ -534,7 +539,7 @@ html{ visibility:hidden; }
     .dash-stat-card .stat-icon-badge{width:calc(46px * var(--mobile-card-pad-scale));height:calc(46px * var(--mobile-card-pad-scale));border-radius:calc(14px * var(--mobile-card-radius-scale));flex-shrink:0;}
     .dash-stat-card .stat-icon-badge svg{width:24px;height:24px;}
     .dash-stat-text{flex:1;min-width:0;}
-    .dash-stat-chevron{color:var(--muted);flex-shrink:0;}
+    .dash-stat-chevron{display:flex;color:var(--muted);flex-shrink:0;}
     .dash-stat-chevron svg{width:16px;height:16px;}
     .dash-stat-card .label{font-size:12px;color:#8A93A8;margin:0 0 2px;line-height:1.25;}
     .dash-stat-value-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}

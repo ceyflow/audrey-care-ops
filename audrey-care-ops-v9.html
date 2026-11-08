@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108080919">
+<meta name="app-build" content="20261108081334">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1847,12 +1847,15 @@ html{ visibility:hidden; }
        drawer was reopened for, so it goes back to hidden here — one overflow menu, not two. */
     .menu-toggle{display:none !important;}
     main.page{padding-bottom:calc(96px + env(safe-area-inset-bottom)) !important;}
-    /* "Clean Clinical" (2026-11, picked after the Soft Rounded round — reference: a Dribbble
-       healthcare-app pattern the user pointed to): flat neutral background instead of a tinted
-       one, cards carry a neutral dark-based shadow instead of the previous lavender-tinted glow
-       so they read as plain white regardless of what color sits behind them. */
+    /* Superseded (2026-11): the flat neutral gray below made every page cut hard from the
+       header's own colored gradient straight into gray, on every single page (confirmed live on
+       Orders/Sections, not just Dashboard) -- exactly the "needs background color design"
+       complaint. Replaced with the pale lavender-blue sampled directly from the reference
+       screenshot's own body background (PIL-sampled well below the header/hero area, where it
+       settles to a near-flat ~#F5F7FD rather than pure white or gray). Cards stay plain white on
+       top either way, so this only changes the color between them. */
     body{
-      background:#F6F7F8;
+      background:#F5F7FD;
       background-attachment:fixed;
     }
     /* Clean Clinical topbar: plain bold title, no card/shadow wrapper — primary navigation moves
@@ -1869,7 +1872,7 @@ html{ visibility:hidden; }
          Text/icon colors below flip from white to dark to stay legible against this much lighter
          background. */
       background:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1179 650' preserveAspectRatio='xMidYMin slice'%3E%3Cdefs%3E%3Cfilter id='b' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeGaussianBlur stdDeviation='16'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='1179' height='650' fill='%23EEF2FE'/%3E%3Cpath d='M820,-10 C900,70 940,140 910,210 C890,255 850,280 870,320 C890,360 950,370 1010,330 C1070,290 1120,220 1179,160 L1179,-10 Z' fill='%23AFCBFC' opacity='.75' filter='url(%23b)'/%3E%3Cpath d='M700,-10 C800,70 860,150 830,230 C800,300 710,340 630,410 C540,490 450,570 390,660 L610,660 C670,580 760,500 850,430 C930,370 1020,320 1050,230 C1075,155 1010,70 910,-10 Z' fill='%239CC2FD' opacity='.85' filter='url(%23b)'/%3E%3Cellipse cx='1140' cy='40' rx='280' ry='220' fill='%2378B4FD' opacity='.5' filter='url(%23b)'/%3E%3C/svg%3E") no-repeat center/cover,
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1179 650' preserveAspectRatio='xMidYMin slice'%3E%3Cdefs%3E%3Cfilter id='b' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeGaussianBlur stdDeviation='6'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='1179' height='650' fill='%23EEF2FE'/%3E%3Cpath d='M820,-10 C900,70 940,140 910,210 C890,255 850,280 870,320 C890,360 950,370 1010,330 C1070,290 1120,220 1179,160 L1179,-10 Z' fill='%23AFCBFC' opacity='.75' filter='url(%23b)'/%3E%3Cpath d='M700,-10 C800,70 860,150 830,230 C800,300 710,340 630,410 C540,490 450,570 390,660 L610,660 C670,580 760,500 850,430 C930,370 1020,320 1050,230 C1075,155 1010,70 910,-10 Z' fill='%239CC2FD' opacity='.85' filter='url(%23b)'/%3E%3Cellipse cx='1140' cy='40' rx='280' ry='220' fill='%2378B4FD' opacity='.5' filter='url(%23b)'/%3E%3C/svg%3E") no-repeat center/cover,
         #EEF2FE;
       border:none;box-shadow:none;
       padding:calc(3px + env(safe-area-inset-top)) 20px 5px;
@@ -1898,7 +1901,7 @@ html{ visibility:hidden; }
        lower on the page. */
     .page-dashboard .page-sub.mobile-hide-on-dashboard{display:none;}
     .topbar-brand-mark{display:flex;align-items:center;gap:7px;}
-    .topbar-brand-mark img{height:26px;width:auto;object-fit:contain;display:block;}
+    .topbar-brand-mark img{height:34px;width:auto;object-fit:contain;display:block;}
     /* Bell + avatar grouped together, top-right -- matches ref_header_crop.png, where both
        icons sit side by side in the same row as the logo, not split across two header rows. */
     .topbar-brand-actions{display:flex;align-items:center;gap:10px;flex-shrink:0;}

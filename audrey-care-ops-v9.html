@@ -7643,30 +7643,43 @@ function brandCropModal(){
   const pc = state.pendingCrop;
   if(!pc) return '';
   const isLogo = pc.addonId === 'logo' || pc.addonId === 'ordersBoardLogo' || pc.addonId === 'trackPageLogo' || pc.addonId === 'welcomeLogo' || pc.addonId === 'loginHeroLogo' || pc.addonId === 'batchSheetLogo';
-  // mobileBgImage rides the same tall-frame/cover-crop/zoom-out-allowed treatment as the mobile
-  // login hero photo -- it's the same kind of asset (a full-bleed photo behind a phone-shaped
-  // viewport), just for the signed-in app header instead of the sign-in screen.
-  const isMobileHeroPhoto = pc.addonId === 'loginHeroPhotoMobile' || pc.addonId === 'mobileBgImage';
-  const isHeroPhoto = pc.addonId === 'loginHeroPhoto' || isMobileHeroPhoto;
+  // loginHeroPhotoMobile is a genuine full-bleed, full-phone-height background (the sign-in
+  // screen's own illustration pane) -- it keeps the tall, narrow phone-shaped frame below.
+  const isMobileHeroPhoto = pc.addonId === 'loginHeroPhotoMobile';
+  // mobileBgImage is NOT that: it only ever paints the topbar strip (background: ... center/cover
+  // on .topbar, ~120px tall at a typical phone width -- see mobileHeaderBgCss()), a wide, SHORT
+  // band, not a tall one. It used to share loginHeroPhotoMobile's tall 220x390 frame, which meant
+  // whatever the admin carefully positioned there got silently re-cropped to a totally different
+  // (wide/short) aspect ratio the moment it actually rendered in the real header -- confirmed via
+  // a user screenshot asking for a header-shaped preview "so I can perfectly fit the image". Its
+  // own frame below is sized to match that real strip's aspect ratio instead, so the frame IS the
+  // actual preview: whatever's inside it edge-to-edge is exactly what the header shows, nothing
+  // more cropped off top/bottom after the fact.
+  const isHeaderBgImage = pc.addonId === 'mobileBgImage';
+  const isHeroPhoto = pc.addonId === 'loginHeroPhoto' || isMobileHeroPhoto || isHeaderBgImage;
   // The mobile hero photo gets its own tall, narrow frame (roughly a phone's own proportions)
   // instead of the desktop photo's wide one — composing a crop in a frame shaped like a phone
   // screen is how the admin actually sees whether the subject survives that aspect ratio,
   // instead of guessing from a wide preview.
-  const frameW = isMobileHeroPhoto ? 220 : (isHeroPhoto ? 420 : (isLogo ? 340 : 220));
-  const frameH = isMobileHeroPhoto ? 390 : (isHeroPhoto ? 240 : (isLogo ? 130 : 220));
+  const frameW = isHeaderBgImage ? 325 : (isMobileHeroPhoto ? 220 : (isHeroPhoto ? 420 : (isLogo ? 340 : 220)));
+  const frameH = isHeaderBgImage ? 100 : (isMobileHeroPhoto ? 390 : (isHeroPhoto ? 240 : (isLogo ? 130 : 220)));
   // Every other addon's minimum zoom is 100% — the frame can only ever crop in, never show empty
-  // space, which is right for a logo dropped onto a small fixed box. The hero photo is the
+  // space, which is right for a logo dropped onto a small fixed box. The login hero photo is the
   // opposite case: it gets cover-cropped again at render time onto whatever shape the viewer's
   // screen happens to be (see .login-illustration.has-photo), so if 100% (filling this frame edge
   // to edge) is already as tight a shot as the subject can take, there's no way to pull back
   // further — zooming out here, leaving the subject smaller with margin around it, is the only way
-  // to give that later crop something to work with besides the subject itself.
-  const minZoom = isHeroPhoto ? 30 : 100;
+  // to give that later crop something to work with besides the subject itself. mobileBgImage's own
+  // frame is now the real final aspect ratio (see above), so it goes back to the logo-style 100%
+  // floor -- zooming out here would leave empty margin in the saved crop that then gets stretched
+  // by the real header's own background-size:cover, which is exactly the broken mismatch this
+  // frame resize was meant to fix.
+  const minZoom = isHeaderBgImage ? 100 : (isHeroPhoto ? 30 : 100);
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:460px;">
       <h2>Crop &amp; resize image</h2>
-      <div class="sub">Drag the image to reposition it, use the slider to zoom${isHeroPhoto ? (isMobileHeroPhoto ? ' — this crop is used only on phones; zoom out to leave margin if the subject feels too tight' : ' — zoom out to leave margin around the subject, since this photo gets cropped again on top of this crop') : ''}, then save.</div>
+      <div class="sub">Drag the image to reposition it, use the slider to zoom${isHeaderBgImage ? ' — this frame is exactly the header strip behind your logo, title and icons, so what you see here is what shows, edge to edge' : isMobileHeroPhoto ? ' — this crop is used only on phones; zoom out to leave margin if the subject feels too tight' : isHeroPhoto ? ' — zoom out to leave margin around the subject, since this photo gets cropped again on top of this crop' : ''}, then save.</div>
       <div id="crop-frame" style="position:relative;width:${frameW}px;height:${frameH}px;overflow:hidden;border-radius:12px;border:1px solid var(--border);margin:14px auto;background:repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px;cursor:grab;touch-action:none;">
         <img id="crop-img" src="${pc.dataUrl}" draggable="false" style="position:absolute;top:0;left:0;transform-origin:top left;user-select:none;pointer-events:none;">
       </div>
@@ -15493,18 +15506,24 @@ function renderMobileAppearancePanel(){
         </div>
       </div>` : ''}
       ${bgMode==='image' ? `
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
-        <div style="width:90px;height:160px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#EEF2FE;flex-shrink:0;">
-          ${bgImg ? `<img src="${escAttr(bgImg)}" alt="Mobile background" style="width:100%;height:100%;object-fit:cover;display:block;">` : ''}
+      <!-- Header-shaped, not the old tall/narrow box -- matches the real topbar's own aspect
+           ratio (measured ~390x120 at a typical phone width) and renders the image the exact
+           same way the real header does (center/cover), so this box alone is the header area
+           preview: what shows here is what shows there, no guessing from a differently-shaped
+           thumbnail. The crop tool itself (brandCropModal, addonId mobileBgImage) was fixed the
+           same way, so a freshly-cropped image already matches this box edge to edge. -->
+      <div style="margin-bottom:14px;">
+        <div style="width:260px;max-width:100%;height:80px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#EEF2FE;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">
+          ${bgImg ? `<img src="${escAttr(bgImg)}" alt="Header area preview" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;">` : 'Header area preview'}
         </div>
-        <div>
+        <div style="margin-top:10px;">
           ${canEdit ? `
           <label class="btn btn-sm" style="cursor:pointer;">${bgImg?'Change image':'Upload image'}
             <input type="file" class="brand-change-input" data-addon="mobileBgImage" style="display:none;" accept="image/*">
           </label>
           ${bgImg ? `<button type="button" class="btn btn-sm btn-danger" data-brand-delete="mobileBgImage" style="margin-left:8px;">Remove</button>` : ''}
           ` : ''}
-          <div class="hint" style="margin-top:6px;">A tall photo works best — it's cropped to fill the header area behind your content.</div>
+          <div class="hint" style="margin-top:6px;">The crop tool opens to this same wide, short shape — position your photo there and it'll land exactly as shown above, no surprises.</div>
         </div>
       </div>` : ''}
 

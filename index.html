@@ -533,15 +533,17 @@ html{ visibility:hidden; }
        specifically rather than changing .stat-grid/.stat-card everywhere, so every other page's
        stat row (Orders, Customers, Staff, ...) keeps today's horizontal layout untouched. */
     .dash-stat-grid{display:grid;grid-template-columns:1fr 1fr !important;gap:10px;}
-    /* Horizontal row, not a vertical stack -- re-measured directly off the reference image
-       (icon ~54x54 CSS px, nearly the card's full height, text stacked to its right, chevron at
-       the far end) after the vertical 4-row version came out noticeably taller and the icon
-       noticeably smaller than the reference's own card. */
+    /* "Single Line" design (picked from a 5-option compact-card comparison over the earlier
+       150px/78px-icon version, which wrapped both the title and the trend badge to two lines).
+       Icon, label and value all share a tight row: a 36px icon badge instead of 78px, the trend
+       demoted from a pill to small colored text sitting right next to the value instead of
+       wrapping inside its own background -- this is the most aggressive shrink of the 5 that
+       still kept the 2x2 grid (card height ~60px vs. 150px). */
     .dash-stat-card{
-      background:#fff;border:none;border-radius:calc(30px * var(--mobile-card-radius-scale));padding:calc(18px * var(--mobile-card-pad-scale)) calc(16px * var(--mobile-card-pad-scale));
+      background:#fff;border:none;border-radius:calc(16px * var(--mobile-card-radius-scale));padding:calc(10px * var(--mobile-card-pad-scale)) calc(12px * var(--mobile-card-pad-scale));
       box-shadow:0 2px 6px rgba(19,32,30,.04), 0 10px 24px rgba(19,32,30,.07);
-      display:flex;align-items:center;gap:14px;text-align:left;font-family:inherit;cursor:pointer;
-      height:calc(150px * var(--mobile-card-pad-scale));
+      display:flex;align-items:center;gap:9px;text-align:left;font-family:inherit;cursor:pointer;
+      min-height:calc(60px * var(--mobile-card-pad-scale));
       /* A grid item's default min-width is auto (shrink no further than its content), so without
          this the icon+text+chevron row's natural width pushed the whole 1fr column wider than
          the card and spilled text/chevrons off the right edge -- confirmed live, "778" and the
@@ -559,16 +561,20 @@ html{ visibility:hidden; }
        on tap -- this just matches the visual affordance to that (no pointer cursor, no chevron,
        which the markup already omits for this state). */
     .dash-stat-card.not-clickable{cursor:default;}
-    .dash-stat-card .stat-icon-badge{width:calc(78px * var(--mobile-card-pad-scale));height:calc(78px * var(--mobile-card-pad-scale));border-radius:calc(22px * var(--mobile-card-radius-scale));flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-    .dash-stat-card .stat-icon-badge i{width:34px !important;height:34px !important;}
-    .dash-stat-card .stat-icon-badge svg{width:34px !important;height:34px !important;}
-    .dash-stat-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+    .dash-stat-card .stat-icon-badge{width:calc(36px * var(--mobile-card-pad-scale));height:calc(36px * var(--mobile-card-pad-scale));border-radius:calc(11px * var(--mobile-card-radius-scale));flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+    .dash-stat-card .stat-icon-badge i{width:17px !important;height:17px !important;}
+    .dash-stat-card .stat-icon-badge svg{width:17px !important;height:17px !important;}
+    .dash-stat-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
     .dash-stat-chevron{display:flex;color:var(--muted);flex-shrink:0;}
-    .dash-stat-chevron svg{width:16px;height:16px;}
-    .dash-stat-card .label{font-size:13px;color:#8A93A8;margin:0;line-height:1.25;}
-    .dash-stat-value-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
-    .dash-stat-card .value{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
-    .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;width:fit-content;flex-shrink:0;}
+    .dash-stat-chevron svg{width:14px;height:14px;}
+    .dash-stat-card .label{font-size:10.5px;color:#8A93A8;margin:0;line-height:1.25;}
+    .dash-stat-value-row{display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;min-width:0;}
+    .dash-stat-card .value{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15;flex-shrink:0;}
+    /* Demoted from a pill (background+padding+radius) to plain colored text -- the per-item
+       background/color still come from the same inline style the markup already sets (tint vs.
+       trendBg, iconColor vs. trendColor), so this only strips the chip look, nothing upstream
+       needed to change. nowrap+ellipsis keeps a longer sub-label ("Registered") from wrapping. */
+    .dash-stat-trend{background:none !important;padding:0;border-radius:0;font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
     /* Sections grid: 4-per-row on mobile (was 3), matching the reference's Quick Access card
        density -- this is the one place that card style actually lives now that Dashboard's own
        Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
@@ -1347,6 +1353,15 @@ html{ visibility:hidden; }
      window, or the settings panel itself on a split screen) the preview column drops out rather
      than squeezing an iPhone-width frame into too little space. */
   .mobile-appearance-layout{display:flex;gap:28px;align-items:flex-start;}
+  /* Shows only while a Mobile appearance edit is in progress (mobileUiHasPendingChanges()) --
+     sticky so it stays reachable while scrolling a long settings panel, same convention as every
+     other sticky bar in this app (the topbar, the live-preview column's own sticky wrapper). */
+  .mobileui-savebar{
+    position:sticky;top:10px;z-index:5;display:flex;align-items:center;gap:10px;
+    background:#FFF8E6;border:1px solid #F3D98B;border-radius:12px;padding:10px 14px;margin-bottom:16px;
+  }
+  .mobileui-savebar-dot{width:7px;height:7px;border-radius:50%;background:#D9A520;flex-shrink:0;}
+  .mobileui-savebar-text{font-size:13px;font-weight:600;color:#6B5614;flex:1;min-width:0;}
   .mobile-appearance-form{flex:1;min-width:0;}
   .mobile-ui-preview-col{flex-shrink:0;}
   @media (max-width:1100px){ .mobile-ui-preview-col{display:none;} }
@@ -3546,6 +3561,25 @@ function mobileBgImage(){
   const found = addons.find(a=>a.id==='mobileBgImage');
   return (found && found.image) || null;
 }
+// Settings > Mobile appearance edits a local draft (state._mobileUiDraft), not the real saved
+// config -- every picker row just mutates this clone and re-renders, so nothing anyone else sees
+// changes until the panel's own Save button commits it (see draftMobileUiField/saveMobileUiDraft
+// below). Everywhere ELSE in the app -- the real topbar, hero, stat cards, footer this very page
+// renders -- keeps reading mobileUiConfig() directly and is unaffected by an in-progress edit.
+function mobileUiDraft(){
+  return state._mobileUiDraft || mobileUiConfig();
+}
+// Same draft/real split as mobileUiDraft(), for the one field (the header background photo) that
+// isn't a plain JSON value in mobileUi -- it lives in branding.addons, uploaded through the crop
+// modal. 'image' in state means a pending upload or removal is in progress; undefined means
+// nothing pending, read the real saved addon. A pending value of null specifically means "pending
+// removal" (Remove was clicked but Save hasn't run yet), not "no addon" -- see brandingDeleteAddon.
+function mobileUiDraftImage(){
+  return ('_mobileUiPendingImage' in state) ? state._mobileUiPendingImage : mobileBgImage();
+}
+function mobileUiHasPendingChanges(){
+  return !!state._mobileUiDraft || ('_mobileUiPendingImage' in state);
+}
 // Card size (padding/icon size only now) and corner roundness (border-radius) used to be one
 // combined preset -- split apart because they're genuinely different questions ("how roomy" vs
 // "how rounded") and a workspace might want compact-but-very-rounded or spacious-but-sharp, which
@@ -3555,8 +3589,8 @@ const MOBILE_CARD_SIZES = {
   comfortable: {label:'Comfortable', pad:1},
   large:       {label:'Large',       pad:1.25},
 };
-function currentMobileCardSize(){
-  const id = mobileUiConfig().cardSize || 'comfortable';
+function currentMobileCardSize(cfgOverride){
+  const id = (cfgOverride || mobileUiConfig()).cardSize || 'comfortable';
   return MOBILE_CARD_SIZES[id] ? id : 'comfortable';
 }
 const MOBILE_RADIUS_PRESETS = {
@@ -3564,8 +3598,8 @@ const MOBILE_RADIUS_PRESETS = {
   rounded:     {label:'Rounded',       scale:1},
   veryrounded: {label:'Very rounded',  scale:1.6},
 };
-function currentMobileRoundness(){
-  const id = mobileUiConfig().cornerRoundness || 'rounded';
+function currentMobileRoundness(cfgOverride){
+  const id = (cfgOverride || mobileUiConfig()).cornerRoundness || 'rounded';
   return MOBILE_RADIUS_PRESETS[id] ? id : 'rounded';
 }
 // The header background the mobile editor can override -- matches --mobile-header-bg's own
@@ -3598,8 +3632,8 @@ const MOBILE_FOOTER_HEIGHTS = {
   tall:     {label:'Tall',     scale:1.25},
 };
 const MOBILE_FOOTER_MARGINS = { small:10, medium:14, large:22 };
-function currentMobileFooterHeight(){
-  const id = (mobileUiConfig().footer||{}).height || 'standard';
+function currentMobileFooterHeight(cfgOverride){
+  const id = ((cfgOverride || mobileUiConfig()).footer||{}).height || 'standard';
   return MOBILE_FOOTER_HEIGHTS[id] ? id : 'standard';
 }
 function mobileFooterBgCss(){
@@ -3706,6 +3740,28 @@ function mobilePreviewHtml(){
   const savedLastBroadcastId = _lastAdminBroadcastId;
   state.page = 'dashboard';
   state._justLoggedIn = false;
+  // While Mobile appearance has an in-progress edit, the preview shows the DRAFT, not the real
+  // saved config -- state.branding.mobileUi/addons are swapped for this one snapshot (markup AND
+  // the --mobile-* runtime CSS vars applyMobileUiRuntime() sets on <html>, which several of these
+  // settings -- card size, roundness, footer margin -- only ever take effect through, not inline
+  // markup) and restored immediately after, so the real app's own chrome never shows an unsaved
+  // change. Nothing here touches the real admin.save flow; it's pure in-memory, synchronous, and
+  // fully undone before the next paint.
+  const hasDraft = mobileUiHasPendingChanges();
+  const savedMobileUi = state.branding.mobileUi;
+  const savedAddons = state.branding.addons;
+  if(hasDraft){
+    if(state._mobileUiDraft) state.branding.mobileUi = state._mobileUiDraft;
+    if('_mobileUiPendingImage' in state){
+      const addons = (state.branding.addons||[]).map(a=>({...a}));
+      const idx = addons.findIndex(a=>a.id==='mobileBgImage');
+      if(state._mobileUiPendingImage===null){ if(idx>=0) addons.splice(idx,1); }
+      else if(idx>=0) addons[idx] = {...addons[idx], image: state._mobileUiPendingImage};
+      else addons.push({id:'mobileBgImage', name: BRAND_ADDON_NAMES.mobileBgImage, image: state._mobileUiPendingImage, updatedAt: new Date().toISOString()});
+      state.branding.addons = addons;
+    }
+    applyMobileUiRuntime();
+  }
   let shellHtml;
   try{ shellHtml = renderShell(false); }
   finally{
@@ -3717,6 +3773,11 @@ function mobilePreviewHtml(){
   const styleTags = [...document.querySelectorAll('style')].map(s=>s.outerHTML).join('');
   const rootStyle = escAttr(document.documentElement.getAttribute('style') || '');
   const rootClass = escAttr(document.documentElement.className || '');
+  if(hasDraft){
+    state.branding.mobileUi = savedMobileUi;
+    state.branding.addons = savedAddons;
+    applyMobileUiRuntime();
+  }
   // pointer-events:none -- this is a snapshot with no app JS loaded alongside it, so any of the
   // real markup's onclick handlers would just throw "not defined" if actually clickable; it's a
   // picture of the layout, not a second live app instance.
@@ -7937,19 +7998,25 @@ const BRAND_ADDON_NAMES = {
 async function finishBrandCrop(dataUrl){
   const pc = state.pendingCrop;
   if(!pc || !(state.session && roleCan(state.session.role, 'branding_manage'))) return;
+  const label = BRAND_ADDON_NAMES[pc.addonId] || pc.addonId;
+  // The header background photo is part of the Mobile appearance draft+Save flow, same as every
+  // other picker in that panel (see mobileUiDraft/draftMobileUiField) -- it doesn't touch the
+  // real branding.addons array, isn't saved, and isn't pushed to anyone until that panel's own
+  // Save button runs. Uploading still switches the mode picker to "Custom image" (pick = apply,
+  // same convention the Appearance palette's own swatches use), just on the draft, not live.
+  if(pc.addonId==='mobileBgImage'){
+    if(!state._mobileUiDraft) state._mobileUiDraft = JSON.parse(JSON.stringify(mobileUiConfig()));
+    if(!state._mobileUiDraft.header) state._mobileUiDraft.header = {};
+    state._mobileUiDraft.header.mode = 'image';
+    state._mobileUiPendingImage = dataUrl;
+    state.pendingCrop = null;
+    closeModal();
+    return;
+  }
   const addons = state.branding.addons || (state.branding.addons = []);
   const existing = addons.find(a=>a.id===pc.addonId);
-  const label = BRAND_ADDON_NAMES[pc.addonId] || pc.addonId;
   if(existing){ existing.image = dataUrl; existing.updatedAt = new Date().toISOString(); }
   else { addons.push({id:pc.addonId, name: label, image:dataUrl, updatedAt:new Date().toISOString()}); }
-  // Uploading a background photo should just show it, not also require a separate trip to the
-  // mode picker to switch "Default" to "Custom image" -- switching it here is what the Appearance
-  // palette's own swatch click already does (pick = apply), so this matches that convention.
-  if(pc.addonId==='mobileBgImage'){
-    if(!state.branding.mobileUi) state.branding.mobileUi = {};
-    if(!state.branding.mobileUi.header) state.branding.mobileUi.header = {};
-    state.branding.mobileUi.header.mode = 'image';
-  }
   state.pendingCrop = null;
   if(!(await save('branding'))) return;
   applyFavicon(); applyMobileUiRuntime(); closeModal();
@@ -7975,6 +8042,14 @@ async function brandingAddAddon(e){
 }
 function brandingDeleteAddon(id){
   if(!(state.session && roleCan(state.session.role, 'branding_manage')) || id==='logo') return;
+  // The header background photo is part of the Mobile appearance draft+Save flow (see
+  // mobileUiDraft/draftMobileUiField) -- removing it here is reversible via that same panel's
+  // Discard button until Save actually runs, so no confirm dialog and no immediate delete.
+  if(id==='mobileBgImage'){
+    state._mobileUiPendingImage = null;
+    render();
+    return;
+  }
   openConfirmModal({
     title: 'Delete addon', danger: true, confirmLabel: 'Delete',
     message: 'Delete this addon?',
@@ -12014,35 +12089,67 @@ function animateDashboardCharts(){
     el.style.transition = `${isWidth?'width':'height'} ${dur}ms cubic-bezier(.4,0,.2,1)`;
     requestAnimationFrame(()=>{ el.style[isWidth?'width':'height'] = final; });
   });
+  // Orders Overview "Draw & Reveal": the line draws itself in, the fill reveals via clip-path
+  // right behind it (not a flat fade -- it follows the same duration/easing as the line so the
+  // paint and the draw finish together), each point (and the peak's own pill) pops in the
+  // instant the line reaches its x position rather than on a fixed stagger, and the big total
+  // counts up over the same span -- all driven off one shared duration so everything lands in
+  // sync. Chosen over a flat-fade/fixed-stagger version via a side-by-side animation comparison.
+  const lineDur = 950;
   const spark = document.querySelector('.analytics-sparkline-line');
   if(spark){
-    const len = spark.getTotalLength();
     spark.style.transition = 'none';
-    spark.style.strokeDasharray = `${len} ${len}`;
-    spark.style.strokeDashoffset = String(len);
+    spark.style.strokeDasharray = '1';
+    spark.style.strokeDashoffset = '1';
     spark.getBoundingClientRect();
-    spark.style.transition = `stroke-dashoffset ${dur+300}ms cubic-bezier(.4,0,.2,1)`;
+    spark.style.transition = `stroke-dashoffset ${lineDur}ms cubic-bezier(.4,0,.2,1)`;
     requestAnimationFrame(()=>{ spark.style.strokeDashoffset = '0'; });
   }
   const sparkArea = document.querySelector('.dash-chart-area');
   if(sparkArea){
     sparkArea.style.transition = 'none';
-    sparkArea.style.opacity = '0';
+    sparkArea.style.clipPath = 'inset(0 100% 0 0)';
     sparkArea.getBoundingClientRect();
-    sparkArea.style.transition = `opacity ${dur}ms ease-out 250ms`;
-    requestAnimationFrame(()=>{ sparkArea.style.opacity = '.6'; });
+    sparkArea.style.transition = `clip-path ${lineDur}ms cubic-bezier(.4,0,.2,1)`;
+    requestAnimationFrame(()=>{ sparkArea.style.clipPath = 'inset(0 0% 0 0)'; });
   }
-  // Staggered by each point's own x position (not DOM order -- the peak's circle is always
-  // markup-last regardless of which bucket it actually is) so they pop in left-to-right.
+  // Delay is each point's own x position as a fraction of the line's own duration -- not DOM
+  // order (the peak's circle is always markup-last regardless of which bucket it actually is)
+  // and not a fixed per-item stagger -- so a point pops exactly as the drawing line passes it.
   document.querySelectorAll('.dash-chart-pt, .dash-chart-pt-peak').forEach(c=>{
-    const delay = 900 + Math.round((parseFloat(c.getAttribute('cx')) || 0) * 2.2);
+    const delay = Math.round(((parseFloat(c.getAttribute('cx')) || 0)/100) * lineDur);
     c.style.transition = 'none';
     c.style.transform = 'scale(0)';
     c.style.opacity = '0';
     c.getBoundingClientRect();
-    c.style.transition = `transform 350ms cubic-bezier(.2,.9,.3,1.3) ${delay}ms, opacity 350ms ease-out ${delay}ms`;
+    c.style.transition = `transform 320ms cubic-bezier(.2,.9,.3,1.3) ${delay}ms, opacity 320ms ease-out ${delay}ms`;
     requestAnimationFrame(()=>{ c.style.transform = 'scale(1)'; c.style.opacity = '1'; });
   });
+  const peakBg = document.querySelector('.dash-chart-peak-bg');
+  const peakText = document.querySelector('.dash-chart-peak');
+  if(peakBg && peakText){
+    const delay = Math.round(((parseFloat(peakBg.dataset.peakPct) || 0)/100) * lineDur);
+    [peakBg, peakText].forEach(el=>{
+      el.style.transition = 'none';
+      el.style.opacity = '0';
+      el.getBoundingClientRect();
+      el.style.transition = `opacity 260ms ease-out ${delay}ms`;
+      requestAnimationFrame(()=>{ el.style.opacity = '1'; });
+    });
+  }
+  const kpiVal = document.getElementById('dash-chart-kpi-value');
+  if(kpiVal){
+    const target = parseInt(kpiVal.dataset.target, 10) || 0;
+    kpiVal.textContent = '0';
+    const start = performance.now();
+    const tick = now=>{
+      const t = Math.min(1, (now-start)/lineDur);
+      const eased = t<1 ? 1-Math.pow(1-t,3) : 1;
+      kpiVal.textContent = Math.round(target*eased);
+      if(t<1) requestAnimationFrame(tick); else kpiVal.textContent = target;
+    };
+    requestAnimationFrame(tick);
+  }
   const gaugeArc = document.getElementById('month-gauge-arc');
   if(gaugeArc){
     const final = gaugeArc.getAttribute('stroke-dasharray');
@@ -12243,7 +12350,7 @@ function renderDashboard(){
         </div>
       </div>
       <div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 2px;">
-        <div class="analytics-card-value">${ov.total}</div>
+        <div class="analytics-card-value" id="dash-chart-kpi-value" data-target="${ov.total}">${ov.total}</div>
         <div class="analytics-badge ${ov.changePct>=0?'up':'down'}">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
       </div>
       <div class="hint" style="font-size:12px;margin-bottom:6px;">Total Orders</div>
@@ -15437,27 +15544,28 @@ function renderAppearancePanel(){
   </div>`;
 }
 function renderMobileAppearancePanel(){
-  const cfg = mobileUiConfig();
+  const cfg = mobileUiDraft();
   const header = cfg.header || {};
   const bgMode = header.mode || 'default';
   const hero = cfg.hero || {};
   const heroMode = hero.mode || 'default';
   const iconsSide = cfg.iconsSide || 'right';
   const iconsOrder = cfg.iconsOrder || 'bell-avatar';
-  const cardSize = currentMobileCardSize();
-  const roundness = currentMobileRoundness();
+  const cardSize = currentMobileCardSize(cfg);
+  const roundness = currentMobileRoundness(cfg);
   const statCardsCfg = cfg.statCards || {};
   const statsClickable = statCardsCfg.clickable !== false;
   const statsUnified = statCardsCfg.colorMode === 'unified';
   const dashSectionsCfg = cfg.dashboardSections || {};
   const footer = cfg.footer || {};
   const footerItems = (Array.isArray(footer.items) && footer.items.length) ? footer.items : ['dashboard','sections','chat'];
-  const footerHeight = currentMobileFooterHeight();
+  const footerHeight = currentMobileFooterHeight(cfg);
   const footerPlacement = footer.placement === 'edge' ? 'edge' : 'floating';
   const footerMargin = footer.margin || 'medium';
   const footerColorMode = footer.colorMode || 'default';
-  const bgImg = mobileBgImage();
+  const bgImg = mobileUiDraftImage();
   const canEdit = state.session && roleCan(state.session.role, 'branding_manage');
+  const hasPending = mobileUiHasPendingChanges();
   const modeBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${bgMode===id?'selected':''}" data-mobileui-bgmode="${id}">${esc(label)}</button>`;
   const heroBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${heroMode===id?'selected':''}" data-mobileui-heromode="${id}">${esc(label)}</button>`;
   const sideBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${iconsSide===id?'selected':''}" data-mobileui-iconsside="${id}">${esc(label)}</button>`;
@@ -15477,7 +15585,14 @@ function renderMobileAppearancePanel(){
   <div class="panel" id="settings-mobile-appearance">
     <div class="panel-head"><h3>Mobile appearance</h3></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:16px;">Customize how the mobile app looks for everyone. The picker rows below apply the moment you tap one; color/gradient/image pickers save as soon as you pick a color or upload a file.${canEdit?'':' Changing any of this needs the Branding permission — ask an Admin.'}</div>
+      <div class="hint" style="margin-bottom:16px;">Customize how the mobile app looks for everyone. Pick whatever you like below and watch it in the live preview — nothing changes for anyone until you press Save.${canEdit?'':' Changing any of this needs the Branding permission — ask an Admin.'}</div>
+      ${hasPending ? `
+      <div class="mobileui-savebar">
+        <span class="mobileui-savebar-dot"></span>
+        <span class="mobileui-savebar-text">You have unsaved changes</span>
+        <button type="button" class="btn btn-sm" data-mobileui-discard>Discard</button>
+        <button type="button" class="btn btn-sm btn-primary" data-mobileui-save>Save</button>
+      </div>` : ''}
       <div class="mobile-appearance-layout">
       <div class="mobile-appearance-form">
 
@@ -22533,31 +22648,50 @@ function attachShellHandlers(){
     showToast('Color palette updated');
   }));
 
-  // Mobile appearance (Settings > Mobile appearance): the picker rows (background mode, icon
-  // placement, card size) apply the moment they're tapped, same optimistic-then-save pattern as
-  // the theme-palette swatches just above. Free-form fields (color/gradient pickers, text
-  // overrides) wait for their own save step instead, so a color drag or a half-typed label isn't
-  // saving on every intermediate value.
-  async function saveMobileUiField(mutate, toastMsg){
+  // Mobile appearance (Settings > Mobile appearance): every picker row below edits a local draft
+  // (state._mobileUiDraft, via mobileUiDraft()/draftMobileUiField -- see their definitions) and
+  // just re-renders -- nothing here saves, and nothing anyone else sees changes, until the
+  // panel's own Save button (data-mobileui-save, wired below) commits the draft for real.
+  function draftMobileUiField(mutate){
     if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
-    if(!state.branding.mobileUi) state.branding.mobileUi = {};
-    mutate(state.branding.mobileUi);
+    if(!state._mobileUiDraft) state._mobileUiDraft = JSON.parse(JSON.stringify(mobileUiConfig()));
+    mutate(state._mobileUiDraft);
+    render();
+  }
+  document.querySelectorAll('[data-mobileui-save]').forEach(btn=>btn.addEventListener('click', async ()=>{
+    if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
+    if(!mobileUiHasPendingChanges()) return;
+    if(state._mobileUiDraft) state.branding.mobileUi = state._mobileUiDraft;
+    if('_mobileUiPendingImage' in state){
+      const addons = state.branding.addons || (state.branding.addons = []);
+      const idx = addons.findIndex(a=>a.id==='mobileBgImage');
+      if(state._mobileUiPendingImage===null){ if(idx>=0) addons.splice(idx,1); }
+      else if(idx>=0){ addons[idx].image = state._mobileUiPendingImage; addons[idx].updatedAt = new Date().toISOString(); }
+      else addons.push({id:'mobileBgImage', name: BRAND_ADDON_NAMES.mobileBgImage, image: state._mobileUiPendingImage, updatedAt: new Date().toISOString()});
+    }
+    state._mobileUiDraft = null;
+    delete state._mobileUiPendingImage;
     applyMobileUiRuntime();
     render();
     if(!(await save('branding'))) return;
-    if(toastMsg) showToast(toastMsg);
-  }
+    showToast('Mobile appearance updated');
+  }));
+  document.querySelectorAll('[data-mobileui-discard]').forEach(btn=>btn.addEventListener('click', ()=>{
+    state._mobileUiDraft = null;
+    delete state._mobileUiPendingImage;
+    render();
+  }));
   document.querySelectorAll('[data-mobileui-bgmode]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.mode = btn.dataset.mobileuiBgmode; }, 'Header background updated');
+    draftMobileUiField(m=>{ if(!m.header) m.header={}; m.header.mode = btn.dataset.mobileuiBgmode; });
   }));
   document.querySelectorAll('[data-mobileui-iconsside]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ m.iconsSide = btn.dataset.mobileuiIconsside; }, 'Icon placement updated');
+    draftMobileUiField(m=>{ m.iconsSide = btn.dataset.mobileuiIconsside; });
   }));
   document.querySelectorAll('[data-mobileui-iconsorder]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ m.iconsOrder = btn.dataset.mobileuiIconsorder; }, 'Icon placement updated');
+    draftMobileUiField(m=>{ m.iconsOrder = btn.dataset.mobileuiIconsorder; });
   }));
   document.querySelectorAll('[data-mobileui-cardsize]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ m.cardSize = btn.dataset.mobileuiCardsize; }, 'Card size updated');
+    draftMobileUiField(m=>{ m.cardSize = btn.dataset.mobileuiCardsize; });
   }));
   // Preview device size: purely local UI state (state._mobilePreviewDevice), never saved --
   // which iPhone size you're eyeballing the layout against isn't something to sync to every
@@ -22568,44 +22702,44 @@ function attachShellHandlers(){
   }));
   const mobileBgColorInput = document.querySelector('input[name="mobileBgColor"]');
   if(mobileBgColorInput) mobileBgColorInput.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.color = mobileBgColorInput.value; }, 'Header color updated');
+    draftMobileUiField(m=>{ if(!m.header) m.header={}; m.header.color = mobileBgColorInput.value; });
   });
   const mobileBgGradFrom = document.querySelector('input[name="mobileBgGradientFrom"]');
   const mobileBgGradTo = document.querySelector('input[name="mobileBgGradientTo"]');
   if(mobileBgGradFrom) mobileBgGradFrom.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientFrom = mobileBgGradFrom.value; }, 'Header gradient updated');
+    draftMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientFrom = mobileBgGradFrom.value; });
   });
   if(mobileBgGradTo) mobileBgGradTo.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientTo = mobileBgGradTo.value; }, 'Header gradient updated');
+    draftMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientTo = mobileBgGradTo.value; });
   });
   document.querySelectorAll('[data-mobileui-heromode]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.mode = btn.dataset.mobileuiHeromode; }, 'Welcome banner updated');
+    draftMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.mode = btn.dataset.mobileuiHeromode; });
   }));
   const mobileHeroColorInput = document.querySelector('input[name="mobileHeroColor"]');
   if(mobileHeroColorInput) mobileHeroColorInput.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.color = mobileHeroColorInput.value; }, 'Welcome banner color updated');
+    draftMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.color = mobileHeroColorInput.value; });
   });
   const mobileHeroGradFrom = document.querySelector('input[name="mobileHeroGradientFrom"]');
   const mobileHeroGradTo = document.querySelector('input[name="mobileHeroGradientTo"]');
   if(mobileHeroGradFrom) mobileHeroGradFrom.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.gradientFrom = mobileHeroGradFrom.value; }, 'Welcome banner gradient updated');
+    draftMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.gradientFrom = mobileHeroGradFrom.value; });
   });
   if(mobileHeroGradTo) mobileHeroGradTo.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.gradientTo = mobileHeroGradTo.value; }, 'Welcome banner gradient updated');
+    draftMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.gradientTo = mobileHeroGradTo.value; });
   });
   document.querySelectorAll('[data-mobileui-roundness]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ m.cornerRoundness = btn.dataset.mobileuiRoundness; }, 'Corner roundness updated');
+    draftMobileUiField(m=>{ m.cornerRoundness = btn.dataset.mobileuiRoundness; });
   }));
   document.querySelectorAll('[data-mobileui-statsclickable]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.statCards) m.statCards={}; m.statCards.clickable = btn.dataset.mobileuiStatsclickable==='true'; }, 'Stat card setting updated');
+    draftMobileUiField(m=>{ if(!m.statCards) m.statCards={}; m.statCards.clickable = btn.dataset.mobileuiStatsclickable==='true'; });
   }));
   document.querySelectorAll('[data-mobileui-statscolor]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.statCards) m.statCards={}; m.statCards.colorMode = btn.dataset.mobileuiStatscolor; }, 'Stat card color updated');
+    draftMobileUiField(m=>{ if(!m.statCards) m.statCards={}; m.statCards.colorMode = btn.dataset.mobileuiStatscolor; });
   }));
   document.querySelectorAll('[data-mobileui-dashsection]').forEach(btn=>btn.addEventListener('click', ()=>{
     const key = btn.dataset.mobileuiDashsection;
     const nextOn = btn.dataset.mobileuiDashsectionOn === '1';
-    saveMobileUiField(m=>{ if(!m.dashboardSections) m.dashboardSections={}; m.dashboardSections[key] = nextOn; }, 'Dashboard sections updated');
+    draftMobileUiField(m=>{ if(!m.dashboardSections) m.dashboardSections={}; m.dashboardSections[key] = nextOn; });
   }));
   // Footer's own h4 doubles as a collapse/expand toggle -- purely local UI state
   // (state._mobileUiFooterOpen), same reasoning as the preview device picker above: whether this
@@ -22624,38 +22758,38 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-mobileui-footeritem]').forEach(btn=>btn.addEventListener('click', ()=>{
     if(btn.disabled) return;
     const id = btn.dataset.mobileuiFooteritem;
-    saveMobileUiField(m=>{
+    draftMobileUiField(m=>{
       if(!m.footer) m.footer={};
       const items = Array.isArray(m.footer.items) && m.footer.items.length ? [...m.footer.items] : ['dashboard','sections','chat'];
       const idx = items.indexOf(id);
       if(idx!==-1) items.splice(idx,1);
       else if(items.length<5) items.push(id);
       m.footer.items = items;
-    }, 'Footer tabs updated');
+    });
   }));
   document.querySelectorAll('[data-mobileui-footerheight]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.height = btn.dataset.mobileuiFooterheight; }, 'Footer height updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.height = btn.dataset.mobileuiFooterheight; });
   }));
   document.querySelectorAll('[data-mobileui-footerplacement]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.placement = btn.dataset.mobileuiFooterplacement; }, 'Footer placement updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.placement = btn.dataset.mobileuiFooterplacement; });
   }));
   document.querySelectorAll('[data-mobileui-footermargin]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.margin = btn.dataset.mobileuiFootermargin; }, 'Footer margin updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.margin = btn.dataset.mobileuiFootermargin; });
   }));
   document.querySelectorAll('[data-mobileui-footercolor]').forEach(btn=>btn.addEventListener('click', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.colorMode = btn.dataset.mobileuiFootercolor; }, 'Footer color updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.colorMode = btn.dataset.mobileuiFootercolor; });
   }));
   const mobileFooterColorInput = document.querySelector('input[name="mobileFooterColor"]');
   if(mobileFooterColorInput) mobileFooterColorInput.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.color = mobileFooterColorInput.value; }, 'Footer color updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.color = mobileFooterColorInput.value; });
   });
   const mobileFooterGradFrom = document.querySelector('input[name="mobileFooterGradientFrom"]');
   const mobileFooterGradTo = document.querySelector('input[name="mobileFooterGradientTo"]');
   if(mobileFooterGradFrom) mobileFooterGradFrom.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.gradientFrom = mobileFooterGradFrom.value; }, 'Footer gradient updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.gradientFrom = mobileFooterGradFrom.value; });
   });
   if(mobileFooterGradTo) mobileFooterGradTo.addEventListener('change', ()=>{
-    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.gradientTo = mobileFooterGradTo.value; }, 'Footer gradient updated');
+    draftMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.gradientTo = mobileFooterGradTo.value; });
   });
   // Keeps the live preview in sync with every change above -- gated on the iframe actually being
   // in the DOM, so this is a no-op on every render() elsewhere in the app and only does anything

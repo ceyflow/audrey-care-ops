@@ -12169,12 +12169,88 @@ function animateDashboardCharts(){
     el.style.transition = `${isWidth?'width':'height'} ${dur}ms cubic-bezier(.4,0,.2,1)`;
     requestAnimationFrame(()=>{ el.style[isWidth?'width':'height'] = final; });
   });
-  // Orders Overview "Draw & Reveal": the line draws itself in, the fill reveals via clip-path
-  // right behind it (not a flat fade -- it follows the same duration/easing as the line so the
-  // paint and the draw finish together), each point (and the peak's own pill) pops in the
-  // instant the line reaches its x position rather than on a fixed stagger, and the big total
-  // counts up over the same span -- all driven off one shared duration so everything lands in
-  // sync. Chosen over a flat-fade/fixed-stagger version via a side-by-side animation comparison.
+  // Orders Overview: two different entrance treatments, picked separately for each platform via
+  // their own side-by-side animation comparisons -- "Draw & Reveal" on mobile (unchanged below),
+  // "Ripple Highlight" on desktop (window.innerWidth, matching the same >760px breakpoint the
+  // CSS's own mobile media query uses elsewhere in this file).
+  const isDesktopChart = window.innerWidth > 760;
+  const kpiVal = document.getElementById('dash-chart-kpi-value');
+  const kpiBadge = document.getElementById('dash-chart-kpi-badge');
+  if(isDesktopChart){
+    // "Ripple Highlight": no draw-in -- the line and fill just ease in together (opacity only;
+    // a translateY here would distort inside the inner svg's non-uniform preserveAspectRatio=
+    // "none" scale, so that drift lives on the points below instead, which sit in the OUTER
+    // svg's own undistorted pixel coordinates). Points drift upward into place rather than
+    // popping, staggered by x position same as the mobile version. Once everything's settled, a
+    // single ring pings outward from the peak once to draw the eye there.
+    const spark = document.querySelector('.analytics-sparkline-line');
+    const sparkArea = document.querySelector('.dash-chart-area');
+    [spark, sparkArea].forEach(el=>{
+      if(!el) return;
+      el.style.transition = 'none';
+      el.style.opacity = '0';
+      el.getBoundingClientRect();
+      el.style.transition = 'opacity 700ms ease-out';
+      requestAnimationFrame(()=>{ el.style.opacity = el===sparkArea ? '.6' : '1'; });
+    });
+    document.querySelectorAll('.dash-chart-pt, .dash-chart-pt-peak').forEach(c=>{
+      const delay = 300 + Math.round(((parseFloat(c.getAttribute('cx')) || 0)/100) * 500);
+      c.style.transition = 'none';
+      c.style.transform = 'translateY(10px)';
+      c.style.opacity = '0';
+      c.getBoundingClientRect();
+      c.style.transition = `transform 500ms ease-out ${delay}ms, opacity 500ms ease-out ${delay}ms`;
+      requestAnimationFrame(()=>{ c.style.transform = 'translateY(0)'; c.style.opacity = '1'; });
+    });
+    const peakBg = document.querySelector('.dash-chart-peak-bg');
+    const peakText = document.querySelector('.dash-chart-peak');
+    [peakBg, peakText].forEach(el=>{
+      if(!el) return;
+      el.style.transition = 'none';
+      el.style.opacity = '0';
+      el.getBoundingClientRect();
+      el.style.transition = 'opacity 500ms ease-out 300ms';
+      requestAnimationFrame(()=>{ el.style.opacity = '1'; });
+    });
+    if(kpiVal){
+      const target = parseInt(kpiVal.dataset.target, 10) || 0;
+      kpiVal.textContent = '0';
+      const start = performance.now() + 200;
+      const tick = now=>{
+        const t = Math.min(1, Math.max(0, (now-start)/800));
+        const eased = t<1 ? 1-Math.pow(1-t,3) : 1;
+        kpiVal.textContent = Math.round(target*eased);
+        if(t<1) requestAnimationFrame(tick); else kpiVal.textContent = target;
+      };
+      requestAnimationFrame(tick);
+    }
+    if(kpiBadge){
+      kpiBadge.style.transition = 'none';
+      kpiBadge.style.opacity = '0';
+      kpiBadge.getBoundingClientRect();
+      kpiBadge.style.transition = 'opacity 400ms ease-out 900ms';
+      requestAnimationFrame(()=>{ kpiBadge.style.opacity = '1'; });
+    }
+    const ripple = document.querySelector('.dash-chart-ripple');
+    if(ripple){
+      ripple.style.transition = 'none';
+      ripple.setAttribute('r', '4');
+      ripple.style.opacity = '0';
+      ripple.getBoundingClientRect();
+      setTimeout(()=>{
+        ripple.style.transition = 'r 900ms ease-out, opacity 900ms ease-out';
+        ripple.style.opacity = '.9';
+        ripple.setAttribute('r', '22');
+        requestAnimationFrame(()=>{ ripple.style.opacity = '0'; });
+      }, 1050);
+    }
+    return;
+  }
+  // "Draw & Reveal" (mobile): the line draws itself in, the fill reveals via clip-path right
+  // behind it (not a flat fade -- it follows the same duration/easing as the line so the paint
+  // and the draw finish together), each point (and the peak's own pill) pops in the instant the
+  // line reaches its x position rather than on a fixed stagger, and the big total counts up over
+  // the same span -- all driven off one shared duration so everything lands in sync.
   const lineDur = 950;
   const spark = document.querySelector('.analytics-sparkline-line');
   if(spark){
@@ -12217,7 +12293,6 @@ function animateDashboardCharts(){
       requestAnimationFrame(()=>{ el.style.opacity = '1'; });
     });
   }
-  const kpiVal = document.getElementById('dash-chart-kpi-value');
   if(kpiVal){
     const target = parseInt(kpiVal.dataset.target, 10) || 0;
     kpiVal.textContent = '0';
@@ -12444,7 +12519,7 @@ function renderDashboard(){
       </div>
       <div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 2px;">
         <div class="analytics-card-value" id="dash-chart-kpi-value" data-target="${ov.total}">${ov.total}</div>
-        <div class="analytics-badge ${ov.changePct>=0?'up':'down'}">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
+        <div class="analytics-badge ${ov.changePct>=0?'up':'down'}" id="dash-chart-kpi-badge">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
       </div>
       <div class="hint" style="font-size:12px;margin-bottom:6px;">Total Orders</div>
       <svg class="analytics-sparkline" style="height:78px;">
@@ -12475,6 +12550,7 @@ function renderDashboard(){
         <text class="dash-chart-peak" data-peak-pct="${ovPeakPctX}" x="0" y="${Math.max(12,Number(ovPeakY)-8)}" text-anchor="middle">${ov.buckets[ov.peakIdx].count} orders</text>` : ''}
         <rect class="dash-chart-pt-tip-bg" data-pt-tip-bg style="display:none;" x="0" y="0" width="54" height="16" rx="8"/>
         <text class="dash-chart-pt-tip" data-pt-tip style="display:none;" x="0" y="0" text-anchor="middle"></text>
+        ${ov.buckets[ov.peakIdx].count>0 ? `<circle class="dash-chart-ripple" cx="${ovPeakPctX}%" cy="${ovPeakY}" r="4" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>` : ''}
       </svg>
       <div class="analytics-sparkline-days">
         ${ovLabels.map(l=>`<span>${l.show?l.text:''}</span>`).join('')}

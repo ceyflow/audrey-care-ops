@@ -9809,7 +9809,7 @@ function renderInner(){
   if(state.boardMode){ app.innerHTML = renderBoardPage(); attachBoardHandlers(); return; }
   if(state.trackMode){ app.innerHTML = renderTrackPage(); attachTrackHandlers(); return; }
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
-  if(!state.session){ _lastEnterPage = null; app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
+  if(!state.session){ app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
   if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
@@ -9817,7 +9817,20 @@ function renderInner(){
   if(state.modal==='brandcrop' && document.getElementById('crop-frame')) return;
   if(state.modal && state.modal.startsWith('rndcheckin:') && document.getElementById('rnd-checkin-map')) return;
   if(state.modal==='attendancecheckin' && document.getElementById('att-map')) return;
-  const freshPage = state.page !== _lastEnterPage;
+  // Reported live as a glitch: the dashboard's entrance animations (chart draw-in, donuts, stat
+  // cards) played once right on load, then played AGAIN moments later with corrected numbers once
+  // the real data finished syncing in. Root cause was this freshPage check resetting
+  // _lastEnterPage to null on EVERY render that happened to see a momentarily-falsy
+  // state.session (the branch just above, now with that reset removed) -- not just on a real
+  // logout, so any transient session gap during the load sequence made the very next dashboard
+  // render look "fresh" a second time even though the user never actually left the page. A real
+  // fresh login (a different user, or the same one logging back in after an actual logout, maybe
+  // landing on the very same page as before) still needs to animate though, even though
+  // _lastEnterPage would already equal that page from the earlier session -- state._justLoggedIn
+  // is the deliberate, narrow signal for exactly that (set only at the real login-success call
+  // sites, not on every render), read here before renderShell()'s own copy of this same flag
+  // clears it a few lines down.
+  const freshPage = state.page !== _lastEnterPage || !!state._justLoggedIn;
   _lastEnterPage = state.page;
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();

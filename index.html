@@ -1993,6 +1993,40 @@ html{ visibility:hidden; }
          Found via the backdrop's own getBoundingClientRect() coming back 121px instead of 844. */
       backdrop-filter:none;-webkit-backdrop-filter:none;
     }
+    /* "Glass Tilt" header background, Custom image mode only (html.mobile-header-has-image,
+       toggled by applyMobileUiRuntime() off Settings > Mobile appearance's own header.mode --
+       pointless on a solid color/gradient, so it never applies there). Picked from a 5-option
+       "make the static header photo feel alive" comparison. The photo itself moves on a ::before
+       layer (oversized via inset:-16%, since the rock-and-drift transform would otherwise reveal
+       its edges), with a diagonal glass-sheen ::after layer on top of that; the topbar's own real
+       content (logo, title, icons) gets position:relative + a z-index above both so neither layer
+       ever paints over it. overflow:hidden on the topbar itself clips the oversized photo layer
+       back down to the header's real bounds. */
+    html.mobile-header-has-image .topbar{overflow:hidden;}
+    html.mobile-header-has-image .topbar::before{
+      content:'';position:absolute;inset:-16%;z-index:0;pointer-events:none;
+      background:var(--mobile-header-bg);background-size:cover;background-position:center;
+      animation:mobileHeaderGlassTilt 9s ease-in-out infinite;
+    }
+    html.mobile-header-has-image .topbar::after{
+      content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+      mix-blend-mode:screen;
+      background:linear-gradient(118deg, transparent 30%, rgba(255,255,255,.35) 46%, rgba(255,255,255,.08) 54%, transparent 68%);
+      background-size:220% 100%;
+      animation:mobileHeaderGlassSheen 9s ease-in-out infinite;
+    }
+    html.mobile-header-has-image .topbar > *{position:relative;z-index:2;}
+    @keyframes mobileHeaderGlassTilt{
+      0%,100%{transform:scale(1.14) rotate(-0.6deg) translate(0,0);}
+      50%{transform:scale(1.14) rotate(0.6deg) translate(1.5%,0.8%);}
+    }
+    @keyframes mobileHeaderGlassSheen{
+      0%,100%{background-position:0% 0;}
+      50%{background-position:100% 0;}
+    }
+    @media (prefers-reduced-motion: reduce){
+      html.mobile-header-has-image .topbar::before, html.mobile-header-has-image .topbar::after{animation:none;}
+    }
     /* Brand row (2026-11): AUDREY's own logo + a notes bell, in the same top-row spot the
        reference's own logo+bell+avatar row occupies -- sits above the existing page-title row
        rather than replacing it, so every other page keeps its own heading. The bell opens the
@@ -3702,6 +3736,7 @@ function applyMobileUiRuntime(){
   root.classList.toggle('mobile-icons-swapped', cfg.iconsOrder==='avatar-bell');
   const headerMode = (cfg.header && cfg.header.mode) || 'default';
   root.classList.toggle('mobile-header-dark-bg', headerMode==='color' || headerMode==='gradient');
+  root.classList.toggle('mobile-header-has-image', headerMode==='image');
 
   const footerCfg = cfg.footer || {};
   const footerBg = mobileFooterBgCss();

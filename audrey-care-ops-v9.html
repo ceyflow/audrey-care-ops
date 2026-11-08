@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108120032">
+<meta name="app-build" content="20261108121055">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -12125,7 +12125,7 @@ function renderDashboard(){
         <div class="analytics-badge ${ov.changePct>=0?'up':'down'}">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
       </div>
       <div class="hint" style="font-size:12px;margin-bottom:6px;">Total Orders</div>
-      <svg class="analytics-sparkline" viewBox="0 0 300 78" style="height:78px;">
+      <svg class="analytics-sparkline" viewBox="0 0 300 78" preserveAspectRatio="none" style="height:78px;">
         <polygon points="${ovArea}" fill="var(--accent-soft)" opacity=".6"/>
         <polyline class="analytics-sparkline-line" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
         ${ov.buckets.map((b,i)=>{

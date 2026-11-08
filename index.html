@@ -409,6 +409,30 @@ html{ visibility:hidden; }
   .dash-chart-title{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;}
   .dash-chart-peak{font-size:10.5px;font-weight:700;fill:#fff;}
   .dash-chart-peak-bg{fill:var(--ink);}
+  /* Entry animation, replayed on every render() (initial load AND every 7D/30D/90D period
+     switch, since that re-renders this whole SVG fresh): pathLength="1" normalizes the
+     polyline's stroke-dasharray to 1 unit regardless of its real geometry (which varies by
+     bucket count/values), so a plain 1->0 dashoffset tween always draws the full line --
+     no JS length measurement needed. The fill fades in just behind the line's leading edge,
+     and each point pops in with a small stagger (per-circle inline animation-delay, set from
+     its index in the data loop) instead of all appearing at once. */
+  .analytics-sparkline-line{animation:dashChartDraw .9s ease-out forwards;}
+  @keyframes dashChartDraw{from{stroke-dashoffset:1;}to{stroke-dashoffset:0;}}
+  .dash-chart-area{animation:dashChartFade .7s ease-out .25s both;}
+  @keyframes dashChartFade{from{opacity:0;}to{opacity:.6;}}
+  .dash-chart-pt,.dash-chart-pt-peak{animation:dashChartPop .35s cubic-bezier(.2,.9,.3,1.3) both;transform-origin:center;transform-box:fill-box;}
+  @keyframes dashChartPop{from{opacity:0;transform:scale(0);}to{opacity:1;transform:scale(1);}}
+  @media (prefers-reduced-motion: reduce){
+    .analytics-sparkline-line{animation:none;}
+    .dash-chart-area{animation:none;}
+    .dash-chart-pt,.dash-chart-pt-peak{animation:none;}
+  }
+  /* Tap-to-reveal count tooltip, shared by every non-peak point (the peak already has its own
+     always-on pill above). Same pill look as .dash-chart-peak/-bg, kept as separate classes so
+     toggling this one's display never touches the always-visible peak pill. */
+  .dash-chart-pt{cursor:pointer;}
+  .dash-chart-pt-tip-bg{fill:var(--ink);}
+  .dash-chart-pt-tip{font-size:10.5px;font-weight:700;fill:#fff;}
   .dash-donut-wrap{display:flex;align-items:center;gap:18px;}
   .dash-donut-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
   .dash-donut-legend{display:flex;flex-direction:column;gap:8px;font-size:12.5px;flex:1;min-width:0;}
@@ -516,9 +540,10 @@ html{ visibility:hidden; }
        the far end) after the vertical 4-row version came out noticeably taller and the icon
        noticeably smaller than the reference's own card. */
     .dash-stat-card{
-      background:#fff;border:none;border-radius:calc(16px * var(--mobile-card-radius-scale));padding:calc(10px * var(--mobile-card-pad-scale)) calc(12px * var(--mobile-card-pad-scale));
-      box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
-      display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit;cursor:pointer;
+      background:#fff;border:none;border-radius:calc(30px * var(--mobile-card-radius-scale));padding:calc(18px * var(--mobile-card-pad-scale)) calc(16px * var(--mobile-card-pad-scale));
+      box-shadow:0 2px 6px rgba(19,32,30,.04), 0 10px 24px rgba(19,32,30,.07);
+      display:flex;align-items:center;gap:14px;text-align:left;font-family:inherit;cursor:pointer;
+      height:calc(150px * var(--mobile-card-pad-scale));
       /* A grid item's default min-width is auto (shrink no further than its content), so without
          this the icon+text+chevron row's natural width pushed the whole 1fr column wider than
          the card and spilled text/chevrons off the right edge -- confirmed live, "778" and the
@@ -536,15 +561,16 @@ html{ visibility:hidden; }
        on tap -- this just matches the visual affordance to that (no pointer cursor, no chevron,
        which the markup already omits for this state). */
     .dash-stat-card.not-clickable{cursor:default;}
-    .dash-stat-card .stat-icon-badge{width:calc(46px * var(--mobile-card-pad-scale));height:calc(46px * var(--mobile-card-pad-scale));border-radius:calc(14px * var(--mobile-card-radius-scale));flex-shrink:0;}
-    .dash-stat-card .stat-icon-badge svg{width:24px;height:24px;}
-    .dash-stat-text{flex:1;min-width:0;}
+    .dash-stat-card .stat-icon-badge{width:calc(78px * var(--mobile-card-pad-scale));height:calc(78px * var(--mobile-card-pad-scale));border-radius:calc(22px * var(--mobile-card-radius-scale));flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+    .dash-stat-card .stat-icon-badge i{width:34px !important;height:34px !important;}
+    .dash-stat-card .stat-icon-badge svg{width:34px !important;height:34px !important;}
+    .dash-stat-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
     .dash-stat-chevron{display:flex;color:var(--muted);flex-shrink:0;}
     .dash-stat-chevron svg{width:16px;height:16px;}
-    .dash-stat-card .label{font-size:12px;color:#8A93A8;margin:0 0 2px;line-height:1.25;}
-    .dash-stat-value-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-    .dash-stat-card .value{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
-    .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;width:fit-content;flex-shrink:0;}
+    .dash-stat-card .label{font-size:13px;color:#8A93A8;margin:0;line-height:1.25;}
+    .dash-stat-value-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+    .dash-stat-card .value{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
+    .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;width:fit-content;flex-shrink:0;}
     /* Sections grid: 4-per-row on mobile (was 3), matching the reference's Quick Access card
        density -- this is the one place that card style actually lives now that Dashboard's own
        Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
@@ -11804,6 +11830,37 @@ function layoutDashSparklinePeak(){
   rect.setAttribute('x', rectX.toFixed(1));
   text.setAttribute('x', textX.toFixed(1));
 }
+// Tap-to-reveal count for every non-peak point on the Orders Overview sparkline (the peak point
+// already shows its own always-on pill). Same positioning math as layoutDashSparklinePeak above,
+// just driven by whichever point was tapped instead of the fixed peak index.
+function showDashChartPointTip(circle){
+  const svg = document.querySelector('.analytics-sparkline');
+  const bg = document.querySelector('[data-pt-tip-bg]');
+  const text = document.querySelector('[data-pt-tip]');
+  if(!svg || !bg || !text) return;
+  const w = svg.getBoundingClientRect().width;
+  if(!w) return;
+  const pct = parseFloat(circle.dataset.ptPct || '0');
+  const y = parseFloat(circle.dataset.ptY || '0');
+  const count = Number(circle.dataset.ptCount || 0);
+  const centerPx = pct/100*w;
+  const rectW = 54;
+  const rectX = Math.max(0, Math.min(w-rectW, centerPx-rectW/2));
+  const textX = Math.max(27, Math.min(w-27, centerPx));
+  bg.setAttribute('x', rectX.toFixed(1));
+  bg.setAttribute('y', Math.max(0, y-20).toFixed(1));
+  text.setAttribute('x', textX.toFixed(1));
+  text.setAttribute('y', Math.max(12, y-8).toFixed(1));
+  text.textContent = `${count} order${count===1?'':'s'}`;
+  bg.style.display = '';
+  text.style.display = '';
+}
+function hideDashChartPointTip(){
+  const bg = document.querySelector('[data-pt-tip-bg]');
+  const text = document.querySelector('[data-pt-tip]');
+  if(bg) bg.style.display = 'none';
+  if(text) text.style.display = 'none';
+}
 function ordersOverviewSeries(days){
   const orders = state.orders;
   const dayMs = 86400000;
@@ -12173,18 +12230,21 @@ function renderDashboard(){
              "none" attempt, which also stretched these -- circles into ovals, the tooltip pill and
              its text squashed sideways, confirmed ugly via a user screenshot. -->
         <svg x="0" y="0" width="100%" height="100%" viewBox="0 0 300 78" preserveAspectRatio="none">
-          <polygon points="${ovArea}" fill="var(--accent-soft)" opacity=".6"/>
-          <polyline class="analytics-sparkline-line" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon class="dash-chart-area" points="${ovArea}" fill="var(--accent-soft)"/>
+          <polyline class="analytics-sparkline-line" pathLength="1" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
         </svg>
         ${ov.buckets.map((b,i)=>{
           const y = ovY(b.count);
-          return i===ov.peakIdx ? '' : `<circle cx="${ovPctX(i)}%" cy="${y}" r="3" fill="#fff" stroke="var(--accent-dark)" stroke-width="2"/>`;
+          const pct = ovPctX(i);
+          return i===ov.peakIdx ? '' : `<circle class="dash-chart-pt" style="animation-delay:${900+i*35}ms;" data-pt-pct="${pct}" data-pt-y="${y}" data-pt-count="${b.count}" cx="${pct}%" cy="${y}" r="3" fill="#fff" stroke="var(--accent-dark)" stroke-width="2"/>`;
         }).join('')}
         ${ov.buckets[ov.peakIdx].count>0 ? `
         <line x1="${ovPeakPctX}%" y1="${ovPeakY}" x2="${ovPeakPctX}%" y2="66" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3"/>
-        <circle cx="${ovPeakPctX}%" cy="${ovPeakY}" r="3.5" fill="var(--accent-dark)"/>
+        <circle class="dash-chart-pt-peak" style="animation-delay:${900+ov.peakIdx*35}ms;" cx="${ovPeakPctX}%" cy="${ovPeakY}" r="3.5" fill="var(--accent-dark)"/>
         <rect class="dash-chart-peak-bg" data-peak-pct="${ovPeakPctX}" x="0" y="${Math.max(0,Number(ovPeakY)-20)}" width="54" height="16" rx="8"/>
         <text class="dash-chart-peak" data-peak-pct="${ovPeakPctX}" x="0" y="${Math.max(12,Number(ovPeakY)-8)}" text-anchor="middle">${ov.buckets[ov.peakIdx].count} orders</text>` : ''}
+        <rect class="dash-chart-pt-tip-bg" data-pt-tip-bg style="display:none;" x="0" y="0" width="54" height="16" rx="8"/>
+        <text class="dash-chart-pt-tip" data-pt-tip style="display:none;" x="0" y="0" text-anchor="middle"></text>
       </svg>
       <div class="analytics-sparkline-days">
         ${ovLabels.map(l=>`<span>${l.show?l.text:''}</span>`).join('')}
@@ -22833,6 +22893,23 @@ document.addEventListener('click', e=>{
   const input = e.target.closest('input[type="date"]');
   if(input && input.showPicker && !input.disabled && !input.readOnly){
     try{ input.showPicker(); }catch(err){}
+  }
+});
+// Orders Overview sparkline: tap any point to show its count in the same pill style as the
+// always-on peak tooltip. Delegated like the date-input handler above, so it keeps working
+// across every render() (initial load, every 7D/30D/90D period switch) without re-wiring.
+let _activeDashChartPt = null;
+document.addEventListener('click', e=>{
+  const pt = e.target.closest('.dash-chart-pt');
+  if(pt){
+    if(_activeDashChartPt === pt){ hideDashChartPointTip(); _activeDashChartPt = null; return; }
+    showDashChartPointTip(pt);
+    _activeDashChartPt = pt;
+    return;
+  }
+  if(_activeDashChartPt && !e.target.closest('.analytics-sparkline')){
+    hideDashChartPointTip();
+    _activeDashChartPt = null;
   }
 });
 // Fires when the browser's Back/Forward button pops one of the history entries pushed in

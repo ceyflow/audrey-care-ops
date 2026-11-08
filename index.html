@@ -2020,8 +2020,15 @@ html{ visibility:hidden; }
        is enough to out-rank a plain positioned sibling in DOM order without creating a stacking
        context of its own either. */
     .topbar-img-layer{display:none;}
-    html.mobile-header-has-image .topbar-img-layer{
-      display:block;position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none;
+    /* ".topbar > " is deliberate: it makes this rule more specific than the older
+       ".topbar > div:first-child{margin-bottom:3px;position:relative;}" rule further down, which
+       also matches this wrapper (it is .topbar's first child) and, coming later in the file at
+       equal specificity, was overriding position:absolute here. That collapsed the layer to 0px
+       tall, so the tilt/sheen animations ran but were clipped to nothing and the header looked
+       static. margin:0 cancels that same rule's margin-bottom, which would otherwise leave the
+       layer 3px short of the header's bottom edge. */
+    html.mobile-header-has-image .topbar > .topbar-img-layer{
+      display:block;position:absolute;inset:0;margin:0;overflow:hidden;z-index:0;pointer-events:none;
       border-radius:inherit;
     }
     html.mobile-header-has-image .topbar-img-layer::before{

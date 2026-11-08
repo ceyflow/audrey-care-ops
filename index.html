@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108083854">
+<meta name="app-build" content="20261108104029">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1297,6 +1297,28 @@ html{ visibility:hidden; }
   .theme-swatch-btn:hover{border-color:var(--accent);}
   .theme-swatch-btn.selected{border-color:var(--accent);background:var(--accent-soft);}
   .theme-swatch-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);}
+
+  /* Live phone preview (Settings > Mobile appearance) -- desktop only, by request: on an actual
+     phone the settings screen you're already looking at IS the preview, so there's nothing useful
+     to show in a second copy of it. Two-column only above 1100px; below that (a narrower desktop
+     window, or the settings panel itself on a split screen) the preview column drops out rather
+     than squeezing an iPhone-width frame into too little space. */
+  .mobile-appearance-layout{display:flex;gap:28px;align-items:flex-start;}
+  .mobile-appearance-form{flex:1;min-width:0;}
+  .mobile-ui-preview-col{flex-shrink:0;}
+  @media (max-width:1100px){ .mobile-ui-preview-col{display:none;} }
+  @media (max-width:760px){ .mobile-ui-preview-col{display:none;} }
+  .mobile-ui-preview-phone{
+    position:relative;background:#111;border-radius:40px;padding:14px 8px;
+    box-shadow:0 20px 44px rgba(19,32,30,.28), 0 0 0 2px #2a2a2a;
+  }
+  .mobile-ui-preview-notch{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    width:120px;height:22px;background:#111;border-radius:0 0 16px 16px;z-index:2;
+  }
+  .mobile-ui-preview-phone iframe{
+    display:block;border:none;border-radius:28px;background:#fff;
+  }
 
   /* ---------------- Login screen ---------------- */
   /* Full-bleed overlay (picked from 10 desktop mockups): the hero photo now fills the whole
@@ -3506,6 +3528,63 @@ function applyMobileUiRuntime(){
   root.classList.toggle('mobile-icons-swapped', cfg.iconsOrder==='avatar-bell');
   const mode = (cfg.header && cfg.header.mode) || 'default';
   root.classList.toggle('mobile-header-dark-bg', mode==='color' || mode==='gradient');
+}
+// Live phone preview for Settings > Mobile appearance (desktop only -- on an actual phone the
+// editor already IS the preview). The real app's mobile layout lives entirely behind
+// @media(max-width:760px), which responds to actual viewport width, not a shrunk container's
+// width -- so getting the real mobile look inside a small frame on a wide desktop screen needs
+// its own independent viewport. An <iframe> gives exactly that: its contents get their own layout
+// viewport sized to the iframe element's own CSS width, so a 390px-wide iframe triggers the same
+// mobile media query a 390px-wide phone screen would, with zero extra CSS of its own.
+const MOBILE_PREVIEW_DEVICES = {
+  se:  {label:'iPhone SE',        w:375, h:667},
+  std: {label:'iPhone 14',        w:390, h:844},
+  max: {label:'iPhone 14 Pro Max',w:430, h:932},
+};
+function currentMobilePreviewDevice(){
+  const id = state._mobilePreviewDevice;
+  return MOBILE_PREVIEW_DEVICES[id] ? id : 'std';
+}
+// Builds a standalone HTML document: the app's own <style> tags verbatim (so the preview is
+// never a second, hand-maintained copy of the CSS that can drift from the real thing) plus a
+// snapshot of renderShell()'s own markup, forced onto the Dashboard specifically -- that's where
+// the header background, hero text, stat cards and icon placement this panel edits are all
+// visible together, regardless of which page the admin is actually navigated to while editing.
+// renderShell() has a couple of real side effects beyond returning markup (it clears
+// state._justLoggedIn and advances the module-level _lastOpenModal/_lastAdminBroadcastId
+// "did this change since the last real render" trackers, both used to decide whether to play an
+// entrance animation) -- calling it an extra time here for the preview would eat those flags
+// before the real render() ever sees them, so they're snapshotted and restored around the call.
+function mobilePreviewHtml(){
+  const savedPage = state.page;
+  const savedJustLoggedIn = state._justLoggedIn;
+  const savedLastOpenModal = _lastOpenModal;
+  const savedLastBroadcastId = _lastAdminBroadcastId;
+  state.page = 'dashboard';
+  state._justLoggedIn = false;
+  let shellHtml;
+  try{ shellHtml = renderShell(false); }
+  finally{
+    state.page = savedPage;
+    state._justLoggedIn = savedJustLoggedIn;
+    _lastOpenModal = savedLastOpenModal;
+    _lastAdminBroadcastId = savedLastBroadcastId;
+  }
+  const styleTags = [...document.querySelectorAll('style')].map(s=>s.outerHTML).join('');
+  const rootStyle = escAttr(document.documentElement.getAttribute('style') || '');
+  const rootClass = escAttr(document.documentElement.className || '');
+  // pointer-events:none -- this is a snapshot with no app JS loaded alongside it, so any of the
+  // real markup's onclick handlers would just throw "not defined" if actually clickable; it's a
+  // picture of the layout, not a second live app instance.
+  return `<!doctype html><html class="${rootClass}" style="${rootStyle}"><head><meta charset="utf-8">${styleTags}<style>body{pointer-events:none;overflow-x:hidden;}</style></head><body><div id="app">${shellHtml}</div></body></html>`;
+}
+function refreshMobileUiPreview(){
+  const frame = document.getElementById('mobile-ui-preview-frame');
+  if(!frame) return;
+  const dev = MOBILE_PREVIEW_DEVICES[currentMobilePreviewDevice()];
+  frame.style.width = dev.w + 'px';
+  frame.style.height = dev.h + 'px';
+  frame.srcdoc = mobilePreviewHtml();
 }
 // Curated, extensible set of mobile button/label strings the editor exposes -- not literally
 // every string in the app (a file this size has thousands; rewriting every call site to route
@@ -15128,6 +15207,8 @@ function renderMobileAppearancePanel(){
     <div class="panel-head"><h3>Mobile appearance</h3></div>
     <div class="panel-body">
       <div class="hint" style="margin-bottom:16px;">Customize how the mobile app looks for everyone — the header background, where the bell/profile icons sit, how roomy cards feel, and a set of button/label texts. The picker rows below apply the moment you tap one; the color/image and text fields need Save at the bottom.${canEdit?'':' Changing any of this needs the Branding permission — ask an Admin.'}</div>
+      <div class="mobile-appearance-layout">
+      <div class="mobile-appearance-form">
 
       <h4 style="margin:0 0 6px;">Header background</h4>
       <div class="hint" style="margin-bottom:10px;">The colored area behind the logo, page title, and bell/avatar icons at the top of every mobile page. Solid color and Gradient switch the page title to white to stay readable — pick a color dark/saturated enough for white text, and check your logo still reads clearly on it (it isn't recolored automatically).</div>
@@ -15203,6 +15284,22 @@ function renderMobileAppearancePanel(){
           <button type="submit" class="btn btn-primary" ${canEdit?'':'disabled'}>Save mobile appearance</button>
         </div>
       </form>
+
+      </div>
+      <div class="mobile-ui-preview-col">
+        <div style="position:sticky;top:16px;">
+          <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:8px;">Live preview — Dashboard</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+            ${Object.keys(MOBILE_PREVIEW_DEVICES).map(id=>`<button type="button" class="theme-swatch-btn ${currentMobilePreviewDevice()===id?'selected':''}" style="padding:6px 10px;font-size:12px;" data-mobileui-previewdevice="${id}">${esc(MOBILE_PREVIEW_DEVICES[id].label)}</button>`).join('')}
+          </div>
+          <div class="mobile-ui-preview-phone">
+            <div class="mobile-ui-preview-notch"></div>
+            <iframe id="mobile-ui-preview-frame" title="Mobile appearance live preview" scrolling="yes"></iframe>
+          </div>
+          <div class="hint" style="margin-top:10px;">Updates live as you change settings above — save isn't needed just to preview.</div>
+        </div>
+      </div>
+      </div>
     </div>
   </div>`;
 }
@@ -22100,6 +22197,13 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-mobileui-cardsize]').forEach(btn=>btn.addEventListener('click', ()=>{
     saveMobileUiField(m=>{ m.cardSize = btn.dataset.mobileuiCardsize; }, 'Card size updated');
   }));
+  // Preview device size: purely local UI state (state._mobilePreviewDevice), never saved --
+  // which iPhone size you're eyeballing the layout against isn't something to sync to every
+  // other device/session.
+  document.querySelectorAll('[data-mobileui-previewdevice]').forEach(btn=>btn.addEventListener('click', ()=>{
+    state._mobilePreviewDevice = btn.dataset.mobileuiPreviewdevice;
+    render();
+  }));
   const mobileBgColorInput = document.querySelector('input[name="mobileBgColor"]');
   if(mobileBgColorInput) mobileBgColorInput.addEventListener('change', ()=>{
     saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.color = mobileBgColorInput.value; }, 'Header color updated');
@@ -22127,6 +22231,11 @@ function attachShellHandlers(){
     if(!(await save('branding'))) return;
     showToast('Mobile text updated');
   });
+  // Keeps the live preview in sync with every change above -- gated on the iframe actually being
+  // in the DOM, so this is a no-op on every render() elsewhere in the app and only does anything
+  // while Settings > Mobile appearance is the open panel (desktop, where the preview column
+  // exists at all -- see the @media(max-width:1100px) rule hiding it below that width).
+  if(byIdEl('mobile-ui-preview-frame')) refreshMobileUiPreview();
 
   if(byIdEl('form-customer')) byIdEl('form-customer').addEventListener('submit', submitCustomer);
   if(byIdEl('btn-delete-customer')) byIdEl('btn-delete-customer').onclick = ()=>{ const id=byIdEl('form-customer').dataset.editId; deleteCustomer(id); };

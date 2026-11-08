@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108104029">
+<meta name="app-build" content="20261108111448">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -76,6 +76,8 @@ html{ visibility:hidden; }
       #EEF2FE;
     --mobile-card-pad-scale:1;
     --mobile-card-radius-scale:1;
+    --mobile-footer-height-scale:1;
+    --mobile-footer-inset:14px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -491,6 +493,14 @@ html{ visibility:hidden; }
     .stat-row-text .label{font-size:13px;color:#8A9290;margin-bottom:1px;}
     .stat-row-text .value{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;}
     .stat-row-pill{font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;flex-shrink:0;}
+    /* Settings > Mobile appearance hero color/gradient override -- falls back to the theme's own
+       --accent-grad (desktop's .dash-hero, defined outside this media query, is untouched by
+       this setting on purpose: the panel is scoped to mobile). */
+    .dash-hero{background: var(--mobile-hero-bg, var(--accent-grad));}
+    /* Corner roundness applies to every mobile button too, not just cards/footer -- still scoped
+       inside this media query, so desktop's own .btn (border-radius:6px, unconditional) is
+       untouched regardless of this setting. */
+    .btn{border-radius:calc(6px * var(--mobile-card-radius-scale,1));}
     /* Dashboard-only variant: 2-up vertical cards (icon bubble, then label/value/trend stacked),
        matching the reference mock's home-screen stat tiles. Scoped to .dash-stat-grid/-card
        specifically rather than changing .stat-grid/.stat-card everywhere, so every other page's
@@ -517,6 +527,10 @@ html{ visibility:hidden; }
       appearance:none;-webkit-appearance:none;color:var(--ink);
     }
     .dash-stat-card-top{display:none;}
+    /* Settings > Mobile appearance "Clickable" off: no data-nav, so these already don't navigate
+       on tap -- this just matches the visual affordance to that (no pointer cursor, no chevron,
+       which the markup already omits for this state). */
+    .dash-stat-card.not-clickable{cursor:default;}
     .dash-stat-card .stat-icon-badge{width:calc(46px * var(--mobile-card-pad-scale));height:calc(46px * var(--mobile-card-pad-scale));border-radius:calc(14px * var(--mobile-card-radius-scale));flex-shrink:0;}
     .dash-stat-card .stat-icon-badge svg{width:24px;height:24px;}
     .dash-stat-text{flex:1;min-width:0;}
@@ -2040,20 +2054,36 @@ html{ visibility:hidden; }
     /* Floating pill bar (2026-11, reference: Apple Health's bottom nav) — a rounded card with
        margin on every side instead of a flat edge-to-edge strip, and the active tab gets a soft
        capsule highlight behind its icon+label rather than just a color change. */
+    /* Settings > Mobile appearance footer controls: height via --mobile-footer-height-scale
+       (padding + icon size), placement via --mobile-footer-inset (floating margin) or the
+       html.mobile-footer-edge override below (full-width, square corners), color via
+       --mobile-footer-bg. All default to today's exact look when unconfigured. */
     .mobile-tabbar{
-      display:flex;position:fixed;left:14px;right:14px;bottom:calc(10px + env(safe-area-inset-bottom,6px));z-index:25;
-      background:#fff;border:none;border-radius:16px;
-      padding:8px 10px;
+      display:flex;position:fixed;
+      left:var(--mobile-footer-inset,14px);right:var(--mobile-footer-inset,14px);
+      bottom:calc(10px + env(safe-area-inset-bottom,6px));z-index:25;
+      background:var(--mobile-footer-bg,#fff);border:none;border-radius:calc(16px * var(--mobile-card-radius-scale,1));
+      padding:calc(8px * var(--mobile-footer-height-scale,1)) 10px;
       align-items:center;justify-content:space-around;gap:6px;
       box-shadow:0 10px 28px rgba(19,32,30,.12), 0 2px 8px rgba(19,32,30,.06);
     }
+    html.mobile-footer-edge .mobile-tabbar{
+      left:0;right:0;bottom:0;
+      border-radius:0;box-shadow:0 -4px 16px rgba(19,32,30,.08);
+      padding-bottom:calc(8px * var(--mobile-footer-height-scale,1) + env(safe-area-inset-bottom,6px));
+    }
     .mobile-tab{
       flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-      padding:7px 6px;border-radius:16px;color:#9AA3A1;text-decoration:none;
+      padding:calc(7px * var(--mobile-footer-height-scale,1)) 6px;border-radius:16px;color:#9AA3A1;text-decoration:none;
       background:none;border:none;min-width:0;max-width:120px;
       transition:background .15s ease,color .15s ease;
     }
-    .mobile-tab svg{width:24px;height:24px;flex-shrink:0;}
+    /* Colored footer (Solid/Gradient) needs a lighter inactive-tab color than the default gray,
+       same reason the header switches its title to white in dark-bg mode -- #9AA3A1 on a
+       saturated brand color reads as barely-there. The active pill (var(--accent) fill) already
+       carries its own white text regardless, so it's untouched here. */
+    html.mobile-footer-dark-bg .mobile-tab:not(.active){color:rgba(255,255,255,.75);}
+    .mobile-tab svg{width:calc(24px * var(--mobile-footer-height-scale,1));height:calc(24px * var(--mobile-footer-height-scale,1));flex-shrink:0;}
     .mobile-tab-label{font-size:10.5px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     /* Solid-fill active pill, exactly as the reference's own "Home" tab (white icon/label on a
        solid accent-colored capsule), not the light accent-soft pill the rest of the app's own
@@ -3487,14 +3517,27 @@ function mobileBgImage(){
   const found = addons.find(a=>a.id==='mobileBgImage');
   return (found && found.image) || null;
 }
+// Card size (padding/icon size only now) and corner roundness (border-radius) used to be one
+// combined preset -- split apart because they're genuinely different questions ("how roomy" vs
+// "how rounded") and a workspace might want compact-but-very-rounded or spacious-but-sharp, which
+// a single combined scale couldn't express.
 const MOBILE_CARD_SIZES = {
-  compact:     {label:'Compact',     pad:0.8,  radius:0.85},
-  comfortable: {label:'Comfortable', pad:1,    radius:1},
-  large:       {label:'Large',       pad:1.25, radius:1.1},
+  compact:     {label:'Compact',     pad:0.8},
+  comfortable: {label:'Comfortable', pad:1},
+  large:       {label:'Large',       pad:1.25},
 };
 function currentMobileCardSize(){
   const id = mobileUiConfig().cardSize || 'comfortable';
   return MOBILE_CARD_SIZES[id] ? id : 'comfortable';
+}
+const MOBILE_RADIUS_PRESETS = {
+  sharp:       {label:'Sharp',         scale:0.3},
+  rounded:     {label:'Rounded',       scale:1},
+  veryrounded: {label:'Very rounded',  scale:1.6},
+};
+function currentMobileRoundness(){
+  const id = mobileUiConfig().cornerRoundness || 'rounded';
+  return MOBILE_RADIUS_PRESETS[id] ? id : 'rounded';
 }
 // The header background the mobile editor can override -- matches --mobile-header-bg's own
 // :root default exactly (see that rule's comment) so "Default" in the picker and an unconfigured
@@ -3510,24 +3553,96 @@ function mobileHeaderBgCss(){
   }
   return null; // default -- let the :root custom property's own value stand, don't override it
 }
-// Bell/avatar placement and the card-size scale are both applied as runtime CSS -- placement via
-// two <html> classes (see .topbar-brand-row/.topbar-brand-actions in the mobile media query),
-// size via the --mobile-card-*-scale custom properties every scaled card rule reads from. Called
-// everywhere applyTheme() is (same reasons: on login, after the initial sync, and on a realtime
-// 'branding' update from another device) plus right after any save from the editor panel itself.
+// Same pattern as the header, for the "Welcome back" hero card -- its default (null here) means
+// "leave --mobile-hero-bg unset", and .dash-hero's own CSS falls back to var(--accent-grad), i.e.
+// whatever the workspace's theme palette already provides, not a separately hardcoded color.
+function mobileHeroBgCss(){
+  const cfg = mobileUiConfig().hero || {};
+  const mode = cfg.mode || 'default';
+  if(mode==='color') return cfg.color || '#2B5BEB';
+  if(mode==='gradient') return `linear-gradient(135deg, ${cfg.gradientFrom || '#214FA4'}, ${cfg.gradientTo || '#43A2FD'})`;
+  return null;
+}
+const MOBILE_FOOTER_HEIGHTS = {
+  compact:  {label:'Compact',  scale:0.8},
+  standard: {label:'Standard', scale:1},
+  tall:     {label:'Tall',     scale:1.25},
+};
+const MOBILE_FOOTER_MARGINS = { small:10, medium:14, large:22 };
+function currentMobileFooterHeight(){
+  const id = (mobileUiConfig().footer||{}).height || 'standard';
+  return MOBILE_FOOTER_HEIGHTS[id] ? id : 'standard';
+}
+function mobileFooterBgCss(){
+  const cfg = mobileUiConfig().footer || {};
+  const mode = cfg.colorMode || 'default';
+  if(mode==='color') return cfg.color || '#2B5BEB';
+  if(mode==='gradient') return `linear-gradient(135deg, ${cfg.gradientFrom || '#214FA4'}, ${cfg.gradientTo || '#43A2FD'})`;
+  return null;
+}
+// Every page the current viewer could put in the footer: the sidebar's own nav items (same
+// source, same permission filtering already baked into navGroupsFor/mySessionPages -- a footer
+// item list is just "pick a subset of these"), plus a synthetic 'sections' entry for the
+// see-everything grid page, which isn't itself a permission-gated NAV item so it isn't in that
+// list on its own. Labels/icons reuse the exact lookups the old hardcoded tab markup used.
+function mobileFooterAvailableItems(){
+  const allowed = mySessionPages();
+  const navGroups = navGroupsFor(allowed);
+  const real = navGroups.flatMap(g=>g.items).map(it=>({
+    id: it.id,
+    label: MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it),
+    icon: MOBILE_TAB_ICON_OVERRIDE[it.id] || it.icon,
+  }));
+  return [{id:'sections', label:'Sections', icon:'dashboard'}, ...real];
+}
+// The configured footer item ids, filtered to ones this viewer can actually reach (a saved config
+// is shared/global, but two roles can have different allowed pages -- never show a tab that would
+// 404 or get silently redirected for the person looking at it) and capped at 5 for layout. Falls
+// back to today's original three when nothing's configured yet, so an unconfigured workspace's
+// footer is pixel-identical to before this setting existed.
+function mobileFooterItemIds(){
+  const configured = (mobileUiConfig().footer || {}).items;
+  const ids = (Array.isArray(configured) && configured.length) ? configured : ['dashboard','sections','chat'];
+  const availableIds = new Set(mobileFooterAvailableItems().map(it=>it.id));
+  return ids.filter(id=>availableIds.has(id)).slice(0,5);
+}
+// Bell/avatar placement, card padding, corner roundness, and the header/hero/footer backgrounds
+// are all applied as runtime CSS -- placement via two <html> classes (see .topbar-brand-row/
+// .topbar-brand-actions in the mobile media query), the rest via the --mobile-* custom properties
+// every scaled rule reads from. Called everywhere applyTheme() is (same reasons: on login, after
+// the initial sync, and on a realtime 'branding' update from another device) plus right after any
+// save from the editor panel itself.
 function applyMobileUiRuntime(){
   const cfg = mobileUiConfig();
   const root = document.documentElement;
-  const bg = mobileHeaderBgCss();
-  if(bg) root.style.setProperty('--mobile-header-bg', bg);
+  const headerBg = mobileHeaderBgCss();
+  if(headerBg) root.style.setProperty('--mobile-header-bg', headerBg);
   else root.style.removeProperty('--mobile-header-bg'); // falls back to the :root default above
-  const size = MOBILE_CARD_SIZES[currentMobileCardSize()];
-  root.style.setProperty('--mobile-card-pad-scale', size.pad);
-  root.style.setProperty('--mobile-card-radius-scale', size.radius);
+  const heroBg = mobileHeroBgCss();
+  if(heroBg) root.style.setProperty('--mobile-hero-bg', heroBg);
+  else root.style.removeProperty('--mobile-hero-bg'); // falls back to var(--accent-grad)
+  root.style.setProperty('--mobile-card-pad-scale', MOBILE_CARD_SIZES[currentMobileCardSize()].pad);
+  root.style.setProperty('--mobile-card-radius-scale', MOBILE_RADIUS_PRESETS[currentMobileRoundness()].scale);
   root.classList.toggle('mobile-icons-left', cfg.iconsSide==='left');
   root.classList.toggle('mobile-icons-swapped', cfg.iconsOrder==='avatar-bell');
-  const mode = (cfg.header && cfg.header.mode) || 'default';
-  root.classList.toggle('mobile-header-dark-bg', mode==='color' || mode==='gradient');
+  const headerMode = (cfg.header && cfg.header.mode) || 'default';
+  root.classList.toggle('mobile-header-dark-bg', headerMode==='color' || headerMode==='gradient');
+
+  const footerCfg = cfg.footer || {};
+  const footerBg = mobileFooterBgCss();
+  if(footerBg) root.style.setProperty('--mobile-footer-bg', footerBg);
+  else root.style.removeProperty('--mobile-footer-bg');
+  root.style.setProperty('--mobile-footer-height-scale', MOBILE_FOOTER_HEIGHTS[currentMobileFooterHeight()].scale);
+  const edge = footerCfg.placement === 'edge';
+  root.classList.toggle('mobile-footer-edge', edge);
+  if(!edge){
+    const marginPx = MOBILE_FOOTER_MARGINS[footerCfg.margin] || MOBILE_FOOTER_MARGINS.medium;
+    root.style.setProperty('--mobile-footer-inset', marginPx + 'px');
+  } else {
+    root.style.removeProperty('--mobile-footer-inset');
+  }
+  const footerMode = footerCfg.colorMode || 'default';
+  root.classList.toggle('mobile-footer-dark-bg', footerMode==='color' || footerMode==='gradient');
 }
 // Live phone preview for Settings > Mobile appearance (desktop only -- on an actual phone the
 // editor already IS the preview). The real app's mobile layout lives entirely behind
@@ -3585,35 +3700,6 @@ function refreshMobileUiPreview(){
   frame.style.width = dev.w + 'px';
   frame.style.height = dev.h + 'px';
   frame.srcdoc = mobilePreviewHtml();
-}
-// Curated, extensible set of mobile button/label strings the editor exposes -- not literally
-// every string in the app (a file this size has thousands; rewriting every call site to route
-// through an override would be a huge, bug-prone undertaking for what's mostly internal/desktop
-// copy nobody asked to reskin). This starts with the strings a workspace actually sees and wants
-// to put its own words on day-to-day: the dashboard hero, its stat-card labels, and the handful
-// of buttons/captions repeated across the mobile Orders/Sections flow. MOBILE_TEXT_KEYS is the
-// registry the Settings panel lists and edits; mt() is what call sites read through. Adding a new
-// editable string later is one MOBILE_TEXT_KEYS entry plus swapping that call site's literal for
-// mt('key','original text') -- the mechanism scales, this seed list is just a deliberate start.
-const MOBILE_TEXT_KEYS = [
-  {key:'hero.greeting', label:'Dashboard hero — greeting', default:'Welcome back,'},
-  {key:'hero.sub', label:'Dashboard hero — subtitle', default:"Here's what's happening today."},
-  {key:'stat.totalOrders', label:'Stat card — Total Orders label', default:'Total Orders'},
-  {key:'stat.totalCustomers', label:'Stat card — Total Customers label', default:'Total Customers'},
-  {key:'stat.totalProducts', label:'Stat card — Total Products label', default:'Total Products'},
-  {key:'stat.pendingOrders', label:'Stat card — Pending Orders label', default:'Pending Orders'},
-  {key:'btn.newOrder', label:'Button — "+ New order"', default:'+ New order'},
-  {key:'chart.ordersOverview', label:'Chart title — "Orders Overview"', default:'Orders Overview'},
-  {key:'chart.totalOrdersCaption', label:'Chart caption — "Total Orders"', default:'Total Orders'},
-  {key:'monthCompare.title', label:'Comparison card — "This Month vs Last"', default:'This Month vs Last'},
-  {key:'tabbar.home', label:'Tab bar — first tab label (currently "Dashboard")', default:'Dashboard'},
-  {key:'tabbar.sections', label:'Tab bar — "Sections" label', default:'Sections'},
-  {key:'tabbar.chat', label:'Tab bar — "Chat" label', default:'Chat'},
-];
-function mt(key, fallback){
-  const tx = mobileUiConfig().textOverrides || {};
-  const v = tx[key];
-  return (v!=null && v!=='') ? v : fallback;
 }
 // Same RLS problem as the theme above, for the two other things the sign-in screen itself needs
 // to show correctly while logged out: the uploaded logo/hero photo, and the login customization
@@ -11084,15 +11170,6 @@ function deleteAttendanceEntry(id){
 // know or guess which sections any given role has.
 const MOBILE_TAB_LABEL_OVERRIDE = {orders:'Packing'};
 const MOBILE_TAB_ICON_OVERRIDE = {orders:'box', dashboard:'home'};
-function mobileTabItemsFor(navGroups){
-  const all = navGroups.flatMap(g=>g.items);
-  const byId = {}; all.forEach(it=>{ byId[it.id]=it; });
-  const primary = ['dashboard'].map(id=>byId[id]).filter(Boolean);
-  // 'chat' rides alongside the hardcoded Sections tab below (not in primary), so the three real
-  // tabs read in a fixed Home / Sections / Chat order -- matching the reference's 3-item footer.
-  const chat = byId['chat'] || null;
-  return { primary, chat, hasMore: false };
-}
 // Everything NOT already reachable from the six-icon tab bar or the topbar's Team chat icon —
 // shown as a bottom sheet from the tab bar's "Settings" icon on phones (see renderMoreFabMenu)
 // instead of sitting behind the hamburger menu, so there's exactly one place on mobile for "the
@@ -11390,7 +11467,6 @@ function renderShell(freshPage){
   const meta = PAGE_META[state.page];
   const allowed = mySessionPages();
   const navGroups = navGroupsFor(allowed);
-  const mobileTabs = mobileTabItemsFor(navGroups);
   const justLoggedIn = !!state._justLoggedIn;
   state._justLoggedIn = false;
   const freshModal = state.modal !== _lastOpenModal;
@@ -11490,21 +11566,27 @@ function renderShell(freshPage){
     <span class="clock-label">Version 4.0</span>
   </div>
   <nav class="mobile-tabbar">
-    ${mobileTabs.primary.map(it=>{
-      const isActive = state.page===it.id || (it.children && it.children.some(c=>c.id===state.page));
-      // mt('tabbar.home', ...) only overrides the FIRST primary tab's own default label, not
-      // every tab this loop could ever render -- primary is just ['dashboard'] today (see
-      // mobileTabItemsFor), so in practice this is that one tab; falls through to the existing
-      // override/navLabel logic unchanged for the key's own default text.
-      const tabLabel = it.id==='dashboard' ? mt('tabbar.home', MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it)) : (MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it));
-      const tabIcon = MOBILE_TAB_ICON_OVERRIDE[it.id] || it.icon;
-      return `<a href="#${it.id}" class="mobile-tab ${isActive?'active':''}" data-nav="${it.id}" title="${esc(tabLabel)}" aria-label="${esc(tabLabel)}">${gridDuotoneIcon(tabIcon, 21)}<span class="mobile-tab-label">${esc(tabLabel)}</span></a>`;
-    }).join('')}
-    <a href="#sections" class="mobile-tab ${state.page==='sections'?'active':''}" data-nav="sections" title="${esc(mt('tabbar.sections','Sections'))}" aria-label="${esc(mt('tabbar.sections','Sections'))} — everything you have access to">${gridDuotoneIcon('dashboard', 21)}<span class="mobile-tab-label">${esc(mt('tabbar.sections','Sections'))}</span></a>
-    ${mobileTabs.chat ? `<a href="#chat" class="mobile-tab ${state.page==='chat'?'active':''}" data-nav="chat" title="${esc(mt('tabbar.chat','Chat'))}" aria-label="${esc(mt('tabbar.chat','Team chat'))}">
-      <span style="position:relative;display:inline-flex;">${gridDuotoneIcon('chat', 21)}${state.chatUnread?'<span class="mobile-tab-unread-dot"></span>':''}</span>
-      <span class="mobile-tab-label">${esc(mt('tabbar.chat','Chat'))}</span>
-    </a>` : ''}
+    ${(() => {
+      // Settings > Mobile appearance footer items: which pages show as tabs, and in what order,
+      // is now configurable (mobileFooterItemIds()) instead of the old fixed Dashboard/Sections/
+      // Chat -- an unconfigured workspace gets exactly that same fixed set back as the default,
+      // so this is a no-op until someone actually opens that panel and changes it.
+      const navItemsById = {};
+      navGroups.flatMap(g=>g.items).forEach(it=>{ navItemsById[it.id] = it; });
+      const availableById = {};
+      mobileFooterAvailableItems().forEach(it=>{ availableById[it.id] = it; });
+      return mobileFooterItemIds().map(id=>{
+        const it = availableById[id];
+        if(!it) return '';
+        const navIt = navItemsById[id];
+        const isActive = state.page===id || (navIt && navIt.children && navIt.children.some(c=>c.id===state.page));
+        const iconHtml = id==='chat'
+          ? `<span style="position:relative;display:inline-flex;">${gridDuotoneIcon(it.icon, 21)}${state.chatUnread?'<span class="mobile-tab-unread-dot"></span>':''}</span>`
+          : gridDuotoneIcon(it.icon, 21);
+        const ariaLabel = id==='sections' ? it.label+' — everything you have access to' : (id==='chat' ? 'Team chat' : it.label);
+        return `<a href="#${id}" class="mobile-tab ${isActive?'active':''}" data-nav="${id}" title="${esc(it.label)}" aria-label="${esc(ariaLabel)}">${iconHtml}<span class="mobile-tab-label">${esc(it.label)}</span></a>`;
+      }).join('');
+    })()}
   </nav>
   ${renderMoreFabMenu(navGroups)}
   ${renderNotesFab()}
@@ -11870,16 +11952,34 @@ function renderDashboard(){
   // approximated) -- each card's badge/tag below is colored to match its OWN icon family
   // (blue/pink/orange/purple), not a single shared "positive" green or the app's brand blue.
   const totalOrdersTrend = ordersOverviewSeries(30);
+  // Settings > Mobile appearance: "Unified color" replaces each card's own tint family (blue/
+  // pink/orange/purple, sampled from the reference) with one shared accent-based tint across all
+  // four -- a simpler, more uniform look some workspaces prefer over the per-card color coding.
+  // "Clickable" off drops s.nav to null, which the existing `s.nav && sessionPages.includes(...)`
+  // check below already treats as "no data-nav attribute" -- i.e. already inert, no separate
+  // branch needed; only the chevron/cursor affordance needs hiding to match (see the markup below
+  // and .dash-stat-card.not-clickable in the mobile media query).
+  const statCardsCfg = mobileUiConfig().statCards || {};
+  // Mobile-only, like the rest of this settings panel -- without this check, hiding a section
+  // here would also remove it from the shared desktop dashboard (this conditional omits the
+  // markup entirely rather than hiding it with CSS, so it isn't naturally media-query-scoped the
+  // way the panel's other settings are).
+  const isMobileViewport = typeof window!=='undefined' && window.matchMedia && window.matchMedia('(max-width:760px)').matches;
+  const dashSectionsCfg = isMobileViewport ? (mobileUiConfig().dashboardSections || {}) : {};
+  const statsUnified = statCardsCfg.colorMode === 'unified';
+  const statsClickable = statCardsCfg.clickable !== false;
+  const uTint = 'var(--accent-soft)', uIcon = 'var(--accent-dark)';
   const stats = [
-    {label:mt('stat.totalOrders','Total Orders'), value: state.orders.length, icon:'orders', tint:'#DDE9FE', iconColor:'#0F62F8', nav:'orders',
+    {label:'Total Orders', value: state.orders.length, icon:'orders', tint: statsUnified?uTint:'#DDE9FE', iconColor: statsUnified?uIcon:'#0F62F8', nav: statsClickable?'orders':null,
       // Green here specifically, not the card's own blue family -- the one place the reference
       // itself breaks its "badge matches this card's icon color" rule (every other card's badge
-      // does match), so this is copied as-is rather than forced into that pattern.
+      // does match), so this is copied as-is rather than forced into that pattern. Unified mode
+      // still keeps this trend badge green (a real up/down signal, not a brand color) regardless.
       trendBg:'#DCF5EC', trendColor:'#00793C',
       trend: totalOrdersTrend.total>0 || totalOrdersTrend.changePct!==0 ? {pct:totalOrdersTrend.changePct, dir:totalOrdersTrend.changePct>=0?'up':'down'} : null},
-    {label:mt('stat.totalCustomers','Total Customers'), value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FEDBE7', iconColor:'#E54D78', nav:'customers'},
-    {label:mt('stat.totalProducts','Total Products'), value: state.recipes.length, sub:'In catalog', icon:'box', tint:'#FDEBD1', iconColor:'#FA8300', nav:'recipelibrary'},
-    {label:mt('stat.pendingOrders','Pending Orders'), value: pending, icon:'clock', tint:'#E8E0FD', iconColor:'#8643EA', nav:'orders'},
+    {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint: statsUnified?uTint:'#FEDBE7', iconColor: statsUnified?uIcon:'#E54D78', nav: statsClickable?'customers':null},
+    {label:'Total Products', value: state.recipes.length, sub:'In catalog', icon:'box', tint: statsUnified?uTint:'#FDEBD1', iconColor: statsUnified?uIcon:'#FA8300', nav: statsClickable?'recipelibrary':null},
+    {label:'Pending Orders', value: pending, icon:'clock', tint: statsUnified?uTint:'#E8E0FD', iconColor: statsUnified?uIcon:'#8643EA', nav: statsClickable?'orders':null},
   ];
 
   // Pipeline donut: each stage's arc sized to its share of active orders, using the same
@@ -11978,17 +12078,19 @@ function renderDashboard(){
     </svg>
     <div class="dash-hero-row">
       <div>
-        <p class="dash-hero-greet">${esc(mt('hero.greeting','Welcome back,'))}</p>
+        <p class="dash-hero-greet">Welcome back,</p>
         <p class="dash-hero-name">${esc(state.session.name)}!</p>
-        <p class="dash-hero-sub">${esc(mt('hero.sub',"Here's what's happening today."))}</p>
+        <p class="dash-hero-sub">Here's what's happening today.</p>
       </div>
       <div class="dash-hero-trend"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L10 11 L14 15 L20 7"/><path d="M14 7h6v6"/></svg></div>
     </div>
   </div>
 
   <div class="dash-stat-grid stat-grid">
-    ${stats.map(s=>`
-      <button type="button" class="dash-stat-card stat-card" ${s.nav && sessionPages.includes(s.nav) ? `data-nav="${s.nav}"` : ''}>
+    ${stats.map(s=>{
+      const isClickable = !!(s.nav && sessionPages.includes(s.nav));
+      return `
+      <button type="button" class="dash-stat-card stat-card ${isClickable?'':'not-clickable'}" ${isClickable ? `data-nav="${s.nav}"` : 'tabindex="-1" aria-disabled="true"'}>
         <div class="stat-icon-badge" style="background:${s.tint};color:${s.iconColor};">${cardDuotoneIcon(s.icon, 24)}</div>
         <div class="dash-stat-text">
           <div class="label">${s.label}</div>
@@ -11997,16 +12099,17 @@ function renderDashboard(){
             ${s.trend ? `<span class="dash-stat-trend" style="background:${s.trendBg||s.tint};color:${s.trendColor||s.iconColor};">${s.trend.dir==='up'?'↑':'↓'} ${Math.abs(s.trend.pct)}%</span>` : s.sub ? `<span class="dash-stat-trend" style="background:${s.tint};color:${s.iconColor};">${s.sub}</span>` : ''}
           </div>
         </div>
-        <span class="dash-stat-chevron">${icon('chevron')}</span>
-      </button>`).join('')}
+        ${isClickable ? `<span class="dash-stat-chevron">${icon('chevron')}</span>` : ''}
+      </button>`;}).join('')}
   </div>
 
+  ${dashSectionsCfg.ordersOverview===false ? '' : `
   <div class="panel" style="margin-top:20px;">
     <div class="panel-body">
       <div class="dash-chart-head">
         <div class="dash-chart-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V13M12 20V8M20 20V4"/></svg>
-          ${esc(mt('chart.ordersOverview','Orders Overview'))}
+          Orders Overview
         </div>
         <div class="dash-period-toggle" data-dash-period-toggle>
           ${Object.keys(DASH_PERIODS).map(p=>`<button type="button" class="dash-period-btn ${p===dashPeriod?'active':''}" data-dash-period="${p}">${p.toUpperCase()}</button>`).join('')}
@@ -12016,7 +12119,7 @@ function renderDashboard(){
         <div class="analytics-card-value">${ov.total}</div>
         <div class="analytics-badge ${ov.changePct>=0?'up':'down'}">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
       </div>
-      <div class="hint" style="font-size:12px;margin-bottom:6px;">${esc(mt('chart.totalOrdersCaption','Total Orders'))}</div>
+      <div class="hint" style="font-size:12px;margin-bottom:6px;">Total Orders</div>
       <svg class="analytics-sparkline" viewBox="0 0 300 78" style="height:78px;">
         <polygon points="${ovArea}" fill="var(--accent-soft)" opacity=".6"/>
         <polyline class="analytics-sparkline-line" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
@@ -12034,11 +12137,12 @@ function renderDashboard(){
         ${ovLabels.map(l=>`<span>${l.show?l.text:''}</span>`).join('')}
       </div>
     </div>
-  </div>
+  </div>`}
 
+  ${dashSectionsCfg.monthCompare===false ? '' : `
   <div class="panel" style="margin-top:16px;">
     <div class="panel-body">
-      <div class="analytics-card-title" style="margin-bottom:10px;">${esc(mt('monthCompare.title','This Month vs Last'))}</div>
+      <div class="analytics-card-title" style="margin-bottom:10px;">This Month vs Last</div>
       <div class="dash-donut-wrap">
         <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
           <svg viewBox="0 0 96 96" width="96" height="96">
@@ -12058,7 +12162,7 @@ function renderDashboard(){
         </div>
       </div>
     </div>
-  </div>
+  </div>`}
 
   <div class="panel" style="margin-top:16px;">
     <div class="panel-head"><h3>This week's packing output</h3></div>
@@ -12201,7 +12305,7 @@ function renderOrdersPage(){
     <div style="display:flex;align-items:center;gap:14px;">
       <button type="button" class="btn-text" id="btn-box-count" style="font-size:12px;color:var(--muted);">📦 Box Count</button>
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
-      ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">${esc(mt('btn.newOrder','+ New order'))}</button>` : ''}
+      ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
   </div>
   ${active.length===0 && canCreate ? `<div class="hint" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
@@ -12476,7 +12580,7 @@ function renderDeliveryBoardSection(line, active){
   <div class="board-section">
     <div class="board-section-title" style="display:flex;align-items:center;gap:14px;">
       <span>${esc(line.label)}</span>
-      ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">${esc(mt('btn.newOrder','+ New order'))}</button>` : ''}
+      ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">+ New order</button>` : ''}
     </div>
     <div class="board">
       ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, line.key)).join('')}
@@ -15193,20 +15297,44 @@ function renderMobileAppearancePanel(){
   const cfg = mobileUiConfig();
   const header = cfg.header || {};
   const bgMode = header.mode || 'default';
+  const hero = cfg.hero || {};
+  const heroMode = hero.mode || 'default';
   const iconsSide = cfg.iconsSide || 'right';
   const iconsOrder = cfg.iconsOrder || 'bell-avatar';
   const cardSize = currentMobileCardSize();
+  const roundness = currentMobileRoundness();
+  const statCardsCfg = cfg.statCards || {};
+  const statsClickable = statCardsCfg.clickable !== false;
+  const statsUnified = statCardsCfg.colorMode === 'unified';
+  const dashSectionsCfg = cfg.dashboardSections || {};
+  const footer = cfg.footer || {};
+  const footerItems = (Array.isArray(footer.items) && footer.items.length) ? footer.items : ['dashboard','sections','chat'];
+  const footerHeight = currentMobileFooterHeight();
+  const footerPlacement = footer.placement === 'edge' ? 'edge' : 'floating';
+  const footerMargin = footer.margin || 'medium';
+  const footerColorMode = footer.colorMode || 'default';
   const bgImg = mobileBgImage();
   const canEdit = state.session && roleCan(state.session.role, 'branding_manage');
   const modeBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${bgMode===id?'selected':''}" data-mobileui-bgmode="${id}">${esc(label)}</button>`;
+  const heroBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${heroMode===id?'selected':''}" data-mobileui-heromode="${id}">${esc(label)}</button>`;
   const sideBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${iconsSide===id?'selected':''}" data-mobileui-iconsside="${id}">${esc(label)}</button>`;
   const orderBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${iconsOrder===id?'selected':''}" data-mobileui-iconsorder="${id}">${esc(label)}</button>`;
   const sizeBtn = (id) => `<button type="button" class="theme-swatch-btn ${cardSize===id?'selected':''}" data-mobileui-cardsize="${id}">${esc(MOBILE_CARD_SIZES[id].label)}</button>`;
+  const roundBtn = (id) => `<button type="button" class="theme-swatch-btn ${roundness===id?'selected':''}" data-mobileui-roundness="${id}">${esc(MOBILE_RADIUS_PRESETS[id].label)}</button>`;
+  const clickBtn = (val, label) => `<button type="button" class="theme-swatch-btn ${statsClickable===val?'selected':''}" data-mobileui-statsclickable="${val}">${esc(label)}</button>`;
+  const statColorBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${(id==='unified')===statsUnified?'selected':''}" data-mobileui-statscolor="${id}">${esc(label)}</button>`;
+  const sectionToggleBtn = (key, label) => { const on = dashSectionsCfg[key]!==false; return `<button type="button" class="theme-swatch-btn ${on?'selected':''}" data-mobileui-dashsection="${key}" data-mobileui-dashsection-on="${on?'0':'1'}">${esc(label)} — ${on?'Shown':'Hidden'}</button>`; };
+  const footerHeightBtn = (id) => `<button type="button" class="theme-swatch-btn ${footerHeight===id?'selected':''}" data-mobileui-footerheight="${id}">${esc(MOBILE_FOOTER_HEIGHTS[id].label)}</button>`;
+  const footerPlacementBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${footerPlacement===id?'selected':''}" data-mobileui-footerplacement="${id}">${esc(label)}</button>`;
+  const footerMarginBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${footerMargin===id?'selected':''}" data-mobileui-footermargin="${id}">${esc(label)}</button>`;
+  const footerColorBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${footerColorMode===id?'selected':''}" data-mobileui-footercolor="${id}">${esc(label)}</button>`;
+  const footerAvailable = mobileFooterAvailableItems();
+  const footerOpen = !!state._mobileUiFooterOpen;
   return `
   <div class="panel" id="settings-mobile-appearance">
     <div class="panel-head"><h3>Mobile appearance</h3></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:16px;">Customize how the mobile app looks for everyone — the header background, where the bell/profile icons sit, how roomy cards feel, and a set of button/label texts. The picker rows below apply the moment you tap one; the color/image and text fields need Save at the bottom.${canEdit?'':' Changing any of this needs the Branding permission — ask an Admin.'}</div>
+      <div class="hint" style="margin-bottom:16px;">Customize how the mobile app looks for everyone. The picker rows below apply the moment you tap one; color/gradient/image pickers save as soon as you pick a color or upload a file.${canEdit?'':' Changing any of this needs the Branding permission — ask an Admin.'}</div>
       <div class="mobile-appearance-layout">
       <div class="mobile-appearance-form">
 
@@ -15250,6 +15378,30 @@ function renderMobileAppearancePanel(){
         </div>
       </div>` : ''}
 
+      <h4 style="margin:18px 0 6px;">Welcome banner</h4>
+      <div class="hint" style="margin-bottom:10px;">The "Welcome back" card on the Dashboard. Default follows your Appearance theme color automatically.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${heroBtn('default','Default (theme color)')}
+        ${heroBtn('color','Solid color')}
+        ${heroBtn('gradient','Gradient')}
+      </div>
+      ${heroMode==='color' ? `
+      <div class="field" style="max-width:160px;margin-bottom:14px;">
+        <label>Color</label>
+        <input type="color" name="mobileHeroColor" value="${escAttr(hero.color||'#2B5BEB')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+      </div>` : ''}
+      ${heroMode==='gradient' ? `
+      <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <div class="field" style="max-width:160px;">
+          <label>From</label>
+          <input type="color" name="mobileHeroGradientFrom" value="${escAttr(hero.gradientFrom||'#214FA4')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label>To</label>
+          <input type="color" name="mobileHeroGradientTo" value="${escAttr(hero.gradientTo||'#43A2FD')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+        </div>
+      </div>` : ''}
+
       <h4 style="margin:18px 0 6px;">Icon placement</h4>
       <div class="hint" style="margin-bottom:8px;">Which side of the header the bell/avatar pair sits on, and which of the two leads.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
@@ -15262,28 +15414,89 @@ function renderMobileAppearancePanel(){
       </div>
 
       <h4 style="margin:18px 0 6px;">Card size</h4>
-      <div class="hint" style="margin-bottom:8px;">Padding, icon size, and corner roundness for stat cards, section tiles, and content panels on mobile.</div>
+      <div class="hint" style="margin-bottom:8px;">Padding and icon size for stat cards, section tiles, and content panels on mobile.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
         ${sizeBtn('compact')}${sizeBtn('comfortable')}${sizeBtn('large')}
       </div>
 
-      <h4 style="margin:18px 0 6px;">Text &amp; labels</h4>
-      <div class="hint" style="margin-bottom:10px;">Rename the dashboard greeting, stat-card labels, and common buttons shown on mobile. Leave a field blank to use the default text.</div>
-      <form id="form-mobile-ui-text">
-        <table class="data-table">
-          <thead><tr><th>Where</th><th>Text</th></tr></thead>
-          <tbody>
-            ${MOBILE_TEXT_KEYS.map(t=>`
-            <tr>
-              <td>${esc(t.label)}</td>
-              <td><input type="text" name="mt__${esc(t.key)}" placeholder="${escAttr(t.default)}" value="${escAttr((cfg.textOverrides&&cfg.textOverrides[t.key])||'')}" ${canEdit?'':'disabled'}></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-        <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;">
-          <button type="submit" class="btn btn-primary" ${canEdit?'':'disabled'}>Save mobile appearance</button>
+      <h4 style="margin:18px 0 6px;">Corner roundness</h4>
+      <div class="hint" style="margin-bottom:8px;">How rounded cards, buttons, and the footer look — independent of size above.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${roundBtn('sharp')}${roundBtn('rounded')}${roundBtn('veryrounded')}
+      </div>
+
+      <h4 style="margin:18px 0 6px;">Dashboard stat cards</h4>
+      <div class="hint" style="margin-bottom:8px;">Total Orders, Total Customers, Total Products, Pending Orders.</div>
+      <div class="hint" style="margin-bottom:6px;">Tappable (goes to that page)?</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        ${clickBtn(true,'Clickable (default)')}
+        ${clickBtn(false,'Not clickable')}
+      </div>
+      <div class="hint" style="margin-bottom:6px;">Color</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${statColorBtn('default','Each card its own color (default)')}
+        ${statColorBtn('unified','One color for all cards')}
+      </div>
+
+      <h4 style="margin:18px 0 6px;">Dashboard sections</h4>
+      <div class="hint" style="margin-bottom:8px;">Show or hide whole sections on the Dashboard.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${sectionToggleBtn('ordersOverview','Orders Overview chart')}
+        ${sectionToggleBtn('monthCompare','This Month vs Last')}
+      </div>
+
+      <h4 style="margin:18px 0 6px;cursor:pointer;display:flex;align-items:center;gap:6px;" data-mobileui-footer-toggle>
+        <span style="display:inline-block;transition:transform .15s;${footerOpen?'transform:rotate(90deg);':''}">›</span> Footer
+      </h4>
+      <div class="hint" style="margin-bottom:10px;">The bottom tab bar. Tap to ${footerOpen?'collapse':'expand'}.</div>
+      ${footerOpen ? `
+      <div class="hint" style="margin-bottom:6px;">Which pages show as tabs (tap to add/remove, up to 5 — order follows the order you pick them in)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        ${footerAvailable.map(it=>{
+          const idx = footerItems.indexOf(it.id);
+          const on = idx!==-1;
+          const atLimit = !on && footerItems.length>=5;
+          return `<button type="button" class="theme-swatch-btn ${on?'selected':''}" ${atLimit?'disabled title="Footer is full (5 max) — remove one first"':''} data-mobileui-footeritem="${it.id}">${on?`${idx+1}. `:''}${esc(it.label)}</button>`;
+        }).join('')}
+      </div>
+      <div class="hint" style="margin-bottom:6px;">Height</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${footerHeightBtn('compact')}${footerHeightBtn('standard')}${footerHeightBtn('tall')}
+      </div>
+      <div class="hint" style="margin-bottom:6px;">Placement</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        ${footerPlacementBtn('floating','Floating (default)')}
+        ${footerPlacementBtn('edge','Edge-to-edge')}
+      </div>
+      ${footerPlacement==='floating' ? `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${footerMarginBtn('small','Small margin')}
+        ${footerMarginBtn('medium','Medium margin (default)')}
+        ${footerMarginBtn('large','Large margin')}
+      </div>` : ''}
+      <div class="hint" style="margin-bottom:6px;">Color</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${footerColorBtn('default','Default (white)')}
+        ${footerColorBtn('color','Solid color')}
+        ${footerColorBtn('gradient','Gradient')}
+      </div>
+      ${footerColorMode==='color' ? `
+      <div class="field" style="max-width:160px;margin-bottom:14px;">
+        <label>Color</label>
+        <input type="color" name="mobileFooterColor" value="${escAttr(footer.color||'#2B5BEB')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+      </div>` : ''}
+      ${footerColorMode==='gradient' ? `
+      <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <div class="field" style="max-width:160px;">
+          <label>From</label>
+          <input type="color" name="mobileFooterGradientFrom" value="${escAttr(footer.gradientFrom||'#214FA4')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
         </div>
-      </form>
+        <div class="field" style="max-width:160px;">
+          <label>To</label>
+          <input type="color" name="mobileFooterGradientTo" value="${escAttr(footer.gradientTo||'#43A2FD')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+        </div>
+      </div>` : ''}
+      ` : ''}
 
       </div>
       <div class="mobile-ui-preview-col">
@@ -22216,20 +22429,84 @@ function attachShellHandlers(){
   if(mobileBgGradTo) mobileBgGradTo.addEventListener('change', ()=>{
     saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientTo = mobileBgGradTo.value; }, 'Header gradient updated');
   });
-  if(byIdEl('form-mobile-ui-text')) byIdEl('form-mobile-ui-text').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
-    const fd = new FormData(e.target);
-    const overrides = {};
-    MOBILE_TEXT_KEYS.forEach(t=>{
-      const v = (fd.get('mt__'+t.key)||'').toString().trim();
-      if(v) overrides[t.key] = v;
+  document.querySelectorAll('[data-mobileui-heromode]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.mode = btn.dataset.mobileuiHeromode; }, 'Welcome banner updated');
+  }));
+  const mobileHeroColorInput = document.querySelector('input[name="mobileHeroColor"]');
+  if(mobileHeroColorInput) mobileHeroColorInput.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.color = mobileHeroColorInput.value; }, 'Welcome banner color updated');
+  });
+  const mobileHeroGradFrom = document.querySelector('input[name="mobileHeroGradientFrom"]');
+  const mobileHeroGradTo = document.querySelector('input[name="mobileHeroGradientTo"]');
+  if(mobileHeroGradFrom) mobileHeroGradFrom.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.gradientFrom = mobileHeroGradFrom.value; }, 'Welcome banner gradient updated');
+  });
+  if(mobileHeroGradTo) mobileHeroGradTo.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.hero) m.hero={}; m.hero.gradientTo = mobileHeroGradTo.value; }, 'Welcome banner gradient updated');
+  });
+  document.querySelectorAll('[data-mobileui-roundness]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ m.cornerRoundness = btn.dataset.mobileuiRoundness; }, 'Corner roundness updated');
+  }));
+  document.querySelectorAll('[data-mobileui-statsclickable]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.statCards) m.statCards={}; m.statCards.clickable = btn.dataset.mobileuiStatsclickable==='true'; }, 'Stat card setting updated');
+  }));
+  document.querySelectorAll('[data-mobileui-statscolor]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.statCards) m.statCards={}; m.statCards.colorMode = btn.dataset.mobileuiStatscolor; }, 'Stat card color updated');
+  }));
+  document.querySelectorAll('[data-mobileui-dashsection]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const key = btn.dataset.mobileuiDashsection;
+    const nextOn = btn.dataset.mobileuiDashsectionOn === '1';
+    saveMobileUiField(m=>{ if(!m.dashboardSections) m.dashboardSections={}; m.dashboardSections[key] = nextOn; }, 'Dashboard sections updated');
+  }));
+  // Footer's own h4 doubles as a collapse/expand toggle -- purely local UI state
+  // (state._mobileUiFooterOpen), same reasoning as the preview device picker above: whether this
+  // one admin currently has the footer controls expanded isn't something to sync anywhere.
+  if(byIdEl('settings-mobile-appearance')){
+    const footerToggle = document.querySelector('[data-mobileui-footer-toggle]');
+    if(footerToggle) footerToggle.addEventListener('click', ()=>{
+      state._mobileUiFooterOpen = !state._mobileUiFooterOpen;
+      render();
     });
-    if(!state.branding.mobileUi) state.branding.mobileUi = {};
-    state.branding.mobileUi.textOverrides = overrides;
-    render();
-    if(!(await save('branding'))) return;
-    showToast('Mobile text updated');
+  }
+  // Footer item picker: clicking an unselected page appends it to the end of the footer's items
+  // array (so the ORDER tabs appear in the footer is simply the order they were picked in, no
+  // separate drag-to-reorder UI needed); clicking a selected one removes it. Capped at 5 both here
+  // and defensively in mobileFooterItemIds() itself.
+  document.querySelectorAll('[data-mobileui-footeritem]').forEach(btn=>btn.addEventListener('click', ()=>{
+    if(btn.disabled) return;
+    const id = btn.dataset.mobileuiFooteritem;
+    saveMobileUiField(m=>{
+      if(!m.footer) m.footer={};
+      const items = Array.isArray(m.footer.items) && m.footer.items.length ? [...m.footer.items] : ['dashboard','sections','chat'];
+      const idx = items.indexOf(id);
+      if(idx!==-1) items.splice(idx,1);
+      else if(items.length<5) items.push(id);
+      m.footer.items = items;
+    }, 'Footer tabs updated');
+  }));
+  document.querySelectorAll('[data-mobileui-footerheight]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.height = btn.dataset.mobileuiFooterheight; }, 'Footer height updated');
+  }));
+  document.querySelectorAll('[data-mobileui-footerplacement]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.placement = btn.dataset.mobileuiFooterplacement; }, 'Footer placement updated');
+  }));
+  document.querySelectorAll('[data-mobileui-footermargin]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.margin = btn.dataset.mobileuiFootermargin; }, 'Footer margin updated');
+  }));
+  document.querySelectorAll('[data-mobileui-footercolor]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.colorMode = btn.dataset.mobileuiFootercolor; }, 'Footer color updated');
+  }));
+  const mobileFooterColorInput = document.querySelector('input[name="mobileFooterColor"]');
+  if(mobileFooterColorInput) mobileFooterColorInput.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.color = mobileFooterColorInput.value; }, 'Footer color updated');
+  });
+  const mobileFooterGradFrom = document.querySelector('input[name="mobileFooterGradientFrom"]');
+  const mobileFooterGradTo = document.querySelector('input[name="mobileFooterGradientTo"]');
+  if(mobileFooterGradFrom) mobileFooterGradFrom.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.gradientFrom = mobileFooterGradFrom.value; }, 'Footer gradient updated');
+  });
+  if(mobileFooterGradTo) mobileFooterGradTo.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.footer) m.footer={}; m.footer.gradientTo = mobileFooterGradTo.value; }, 'Footer gradient updated');
   });
   // Keeps the live preview in sync with every change above -- gated on the iframe actually being
   // in the DOM, so this is a no-op on every render() elsewhere in the app and only does anything

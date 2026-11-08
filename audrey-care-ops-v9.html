@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108081334">
+<meta name="app-build" content="20261108083854">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -65,6 +65,17 @@ html{ visibility:hidden; }
     --s-rndreview:#B14B3F;   --s-rndreview-soft:#FBEEEC;
     --radius:10px;
     --sidebar-w:240px;
+    /* Mobile UI editor (Settings > Mobile appearance) -- these three are overwritten at runtime
+       by applyMobileUiRuntime() from state.branding.mobileUi, same convention applyTheme() uses
+       for --accent etc. above. The values here are the defaults a workspace sees until it
+       customizes anything: --mobile-header-bg is the traced Ceyflow wave (see .topbar below,
+       kept here too so JS only needs to SET this var, never read it back to restore the default),
+       and the two scale vars are a no-op multiplier (1) until a card-size preset changes them. */
+    --mobile-header-bg:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1179 650' preserveAspectRatio='xMidYMin slice'%3E%3Cdefs%3E%3Cfilter id='b' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeGaussianBlur stdDeviation='6'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='1179' height='650' fill='%23EEF2FE'/%3E%3Cpath d='M820,-10 C900,70 940,140 910,210 C890,255 850,280 870,320 C890,360 950,370 1010,330 C1070,290 1120,220 1179,160 L1179,-10 Z' fill='%23AFCBFC' opacity='.75' filter='url(%23b)'/%3E%3Cpath d='M700,-10 C800,70 860,150 830,230 C800,300 710,340 630,410 C540,490 450,570 390,660 L610,660 C670,580 760,500 850,430 C930,370 1020,320 1050,230 C1075,155 1010,70 910,-10 Z' fill='%239CC2FD' opacity='.85' filter='url(%23b)'/%3E%3Cellipse cx='1140' cy='40' rx='280' ry='220' fill='%2378B4FD' opacity='.5' filter='url(%23b)'/%3E%3C/svg%3E") no-repeat center/cover,
+      #EEF2FE;
+    --mobile-card-pad-scale:1;
+    --mobile-card-radius-scale:1;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -451,8 +462,14 @@ html{ visibility:hidden; }
      Visual only: every data-* attribute, click handler and the cards' underlying content are
      completely unchanged. */
   @media (max-width:760px){
+    /* --mobile-card-pad-scale/--mobile-card-radius-scale (default 1, set by Settings > Mobile
+       appearance's card-size preset via applyMobileUiRuntime()) scale the three card families
+       used across most mobile screens: generic .panel content cards, dashboard stat cards, and
+       section/module tiles. Deliberately NOT font-size -- scaling text would hurt legibility/
+       accessibility in ways padding/radius/icon-size don't, so "card size" here means breathing
+       room and icon prominence, not type scale. */
     .panel{
-      background:#fff;border:none;border-radius:16px;
+      background:#fff;border:none;border-radius:calc(16px * var(--mobile-card-radius-scale));
       box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
     }
     .stat-grid{grid-template-columns:1fr !important;gap:10px;}
@@ -484,7 +501,7 @@ html{ visibility:hidden; }
        the far end) after the vertical 4-row version came out noticeably taller and the icon
        noticeably smaller than the reference's own card. */
     .dash-stat-card{
-      background:#fff;border:none;border-radius:16px;padding:10px 12px;
+      background:#fff;border:none;border-radius:calc(16px * var(--mobile-card-radius-scale));padding:calc(10px * var(--mobile-card-pad-scale)) calc(12px * var(--mobile-card-pad-scale));
       box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
       display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit;cursor:pointer;
       /* A grid item's default min-width is auto (shrink no further than its content), so without
@@ -500,7 +517,7 @@ html{ visibility:hidden; }
       appearance:none;-webkit-appearance:none;color:var(--ink);
     }
     .dash-stat-card-top{display:none;}
-    .dash-stat-card .stat-icon-badge{width:46px;height:46px;border-radius:14px;flex-shrink:0;}
+    .dash-stat-card .stat-icon-badge{width:calc(46px * var(--mobile-card-pad-scale));height:calc(46px * var(--mobile-card-pad-scale));border-radius:calc(14px * var(--mobile-card-radius-scale));flex-shrink:0;}
     .dash-stat-card .stat-icon-badge svg{width:24px;height:24px;}
     .dash-stat-text{flex:1;min-width:0;}
     .dash-stat-chevron{color:var(--muted);flex-shrink:0;}
@@ -513,8 +530,8 @@ html{ visibility:hidden; }
        density -- this is the one place that card style actually lives now that Dashboard's own
        Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
     .sections-grid{grid-template-columns:repeat(4,1fr) !important;}
-    .sections-tile{padding:14px 4px;}
-    .sections-tile-badge{width:38px;height:38px;}
+    .sections-tile{padding:calc(14px * var(--mobile-card-pad-scale)) calc(4px * var(--mobile-card-pad-scale));border-radius:calc(16px * var(--mobile-card-radius-scale));}
+    .sections-tile-badge{width:calc(38px * var(--mobile-card-pad-scale));height:calc(38px * var(--mobile-card-pad-scale));}
     .sections-tile-badge svg{width:20px;height:20px;}
     .sections-tile span:last-child{font-size:10.5px;}
   }
@@ -1863,17 +1880,13 @@ html{ visibility:hidden; }
        slim, unboxed session line (name/role + the three account actions) underneath it. */
     .topbar{
       flex-direction:column;align-items:stretch;gap:2px;
-      /* Soft gradient header (2026-11, replaced with an exact re-trace of a clearer, full-height
-         Ceyflow screenshot -- sampled corner/glow colors directly via PIL (pale base ~#EEF2FE,
-         brightest point top-right ~#78B4FD) and traced the two diagonal "ribbon" bands with a
-         coordinate-grid overlay rather than guessing. Baked as one self-contained SVG (base rect
-         + two blurred bezier bands + a corner glow ellipse) instead of layering a separate CSS
-         radial-gradient, since the band shapes themselves carry the brightness falloff this time.
-         Text/icon colors below flip from white to dark to stay legible against this much lighter
-         background. */
-      background:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1179 650' preserveAspectRatio='xMidYMin slice'%3E%3Cdefs%3E%3Cfilter id='b' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeGaussianBlur stdDeviation='6'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='1179' height='650' fill='%23EEF2FE'/%3E%3Cpath d='M820,-10 C900,70 940,140 910,210 C890,255 850,280 870,320 C890,360 950,370 1010,330 C1070,290 1120,220 1179,160 L1179,-10 Z' fill='%23AFCBFC' opacity='.75' filter='url(%23b)'/%3E%3Cpath d='M700,-10 C800,70 860,150 830,230 C800,300 710,340 630,410 C540,490 450,570 390,660 L610,660 C670,580 760,500 850,430 C930,370 1020,320 1050,230 C1075,155 1010,70 910,-10 Z' fill='%239CC2FD' opacity='.85' filter='url(%23b)'/%3E%3Cellipse cx='1140' cy='40' rx='280' ry='220' fill='%2378B4FD' opacity='.5' filter='url(%23b)'/%3E%3C/svg%3E") no-repeat center/cover,
-        #EEF2FE;
+      /* Soft gradient header (2026-11, exact re-trace of a Ceyflow reference screenshot -- see
+         --mobile-header-bg in :root for the full traced SVG and how it was sampled/measured).
+         Reading it off that custom property, not inlined here, so Settings > Mobile appearance
+         can override it live via applyMobileUiRuntime() (same convention --accent etc. use for
+         the color palette) without touching this rule -- a workspace that hasn't customized
+         anything just gets the :root default. */
+      background: var(--mobile-header-bg);
       border:none;box-shadow:none;
       padding:calc(3px + env(safe-area-inset-top)) 20px 5px;
       /* Sticky, not static: the topbar used to scroll away with the page like any other content,
@@ -1903,8 +1916,14 @@ html{ visibility:hidden; }
     .topbar-brand-mark{display:flex;align-items:center;gap:7px;}
     .topbar-brand-mark img{height:34px;width:auto;object-fit:contain;display:block;}
     /* Bell + avatar grouped together, top-right -- matches ref_header_crop.png, where both
-       icons sit side by side in the same row as the logo, not split across two header rows. */
+       icons sit side by side in the same row as the logo, not split across two header rows.
+       Both the side of the header the group sits on and which icon leads are configurable from
+       Settings > Mobile appearance -- applyMobileUiRuntime() toggles these two classes on <html>
+       (not <body>; the shell wraps body, and <html> is always present regardless of that
+       wrapper's structure) rather than re-rendering the header markup itself. */
     .topbar-brand-actions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+    html.mobile-icons-left .topbar-brand-row{flex-direction:row-reverse;}
+    html.mobile-icons-swapped .topbar-brand-actions{flex-direction:row-reverse;}
     .topbar-bell-btn{position:relative;width:40px;height:40px;border-radius:50%;background:#fff;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.05);color:var(--accent-dark);flex-shrink:0;}
     .topbar-bell-btn svg{width:18px;height:18px;}
     /* Plain dot, not a numbered badge -- matches the reference's own notification indicator
@@ -1919,6 +1938,16 @@ html{ visibility:hidden; }
     .notes-fab-btn{display:none;}
     .topbar .page-title{color:var(--ink);font-size:19px;font-weight:800;letter-spacing:-.3px;position:relative;}
     .topbar .page-sub{display:block;color:var(--muted);font-size:11px;margin-top:1px;}
+    /* Solid-color/gradient header modes (Settings > Mobile appearance) are a deliberately
+       saturated brand color, not the pale default wave -- dark ink/muted text that's legible on
+       the pale default turns near-unreadable on those, confirmed in a local render test. Default
+       and Custom image modes keep dark text (an uploaded photo is the admin's own call on
+       contrast; the wave default is always pale). html.mobile-header-dark-bg is toggled by
+       applyMobileUiRuntime() alongside the background itself, never independently. */
+    html.mobile-header-dark-bg .topbar .page-title,
+    html.mobile-header-dark-bg .topbar .page-sub,
+    html.mobile-header-dark-bg .session-chip{color:#fff;}
+    html.mobile-header-dark-bg .session-chip{opacity:.85;}
     .topbar > div:first-child{margin-bottom:3px;position:relative;}
     .header-right{
       background:none;border:none;box-shadow:none;
@@ -3337,7 +3366,7 @@ function subscribeRealtime(){
         state[k] = reconcileRecordArray(k, incoming);
         snapshotBaseline(k);
         if(k==='theme') applyTheme();
-        if(k==='branding') applyFavicon();
+        if(k==='branding'){ applyFavicon(); applyMobileUiRuntime(); }
         // An Admin's unacknowledged-box-count/edit-request check has to run before the render call
         // just below so that render reflects it immediately, the same reason chat/complaints skip
         // the defer.
@@ -3421,6 +3450,91 @@ function applyTheme(){
   // from Supabase, since RLS requires being logged in — still shows the last theme this browser
   // actually saw, instead of always falling back to green. See _cachedThemeOrDefault() below.
   try{ localStorage.setItem('audreyThemeCache', JSON.stringify({paletteId: p.id})); }catch(e){}
+}
+/* ===================== Mobile UI editor (Settings > Mobile appearance) =====================
+   Everything below drives the mobile-only customization panel: header background, bell/avatar
+   placement, card-size preset, and a curated set of editable button/label strings. Stored under
+   state.branding.mobileUi (branding is already a SYNCED_KEY, already a plain object saved via a
+   raw overwrite rather than record-array merge logic -- see mergeBeforeSave -- so this rides the
+   exact same save('branding') path the logo/addon uploads already use, no new sync plumbing). */
+function mobileUiConfig(){
+  return (state.branding && state.branding.mobileUi) || {};
+}
+function mobileBgImage(){
+  const addons = (state.branding && state.branding.addons) || [];
+  const found = addons.find(a=>a.id==='mobileBgImage');
+  return (found && found.image) || null;
+}
+const MOBILE_CARD_SIZES = {
+  compact:     {label:'Compact',     pad:0.8,  radius:0.85},
+  comfortable: {label:'Comfortable', pad:1,    radius:1},
+  large:       {label:'Large',       pad:1.25, radius:1.1},
+};
+function currentMobileCardSize(){
+  const id = mobileUiConfig().cardSize || 'comfortable';
+  return MOBILE_CARD_SIZES[id] ? id : 'comfortable';
+}
+// The header background the mobile editor can override -- matches --mobile-header-bg's own
+// :root default exactly (see that rule's comment) so "Default" in the picker and an unconfigured
+// workspace render identically; only the three non-default modes compute something different.
+function mobileHeaderBgCss(){
+  const cfg = mobileUiConfig().header || {};
+  const mode = cfg.mode || 'default';
+  if(mode==='color') return cfg.color || '#2B5BEB';
+  if(mode==='gradient') return `linear-gradient(135deg, ${cfg.gradientFrom || '#214FA4'}, ${cfg.gradientTo || '#43A2FD'})`;
+  if(mode==='image'){
+    const img = mobileBgImage();
+    if(img) return `url("${img}") no-repeat center/cover, #EEF2FE`;
+  }
+  return null; // default -- let the :root custom property's own value stand, don't override it
+}
+// Bell/avatar placement and the card-size scale are both applied as runtime CSS -- placement via
+// two <html> classes (see .topbar-brand-row/.topbar-brand-actions in the mobile media query),
+// size via the --mobile-card-*-scale custom properties every scaled card rule reads from. Called
+// everywhere applyTheme() is (same reasons: on login, after the initial sync, and on a realtime
+// 'branding' update from another device) plus right after any save from the editor panel itself.
+function applyMobileUiRuntime(){
+  const cfg = mobileUiConfig();
+  const root = document.documentElement;
+  const bg = mobileHeaderBgCss();
+  if(bg) root.style.setProperty('--mobile-header-bg', bg);
+  else root.style.removeProperty('--mobile-header-bg'); // falls back to the :root default above
+  const size = MOBILE_CARD_SIZES[currentMobileCardSize()];
+  root.style.setProperty('--mobile-card-pad-scale', size.pad);
+  root.style.setProperty('--mobile-card-radius-scale', size.radius);
+  root.classList.toggle('mobile-icons-left', cfg.iconsSide==='left');
+  root.classList.toggle('mobile-icons-swapped', cfg.iconsOrder==='avatar-bell');
+  const mode = (cfg.header && cfg.header.mode) || 'default';
+  root.classList.toggle('mobile-header-dark-bg', mode==='color' || mode==='gradient');
+}
+// Curated, extensible set of mobile button/label strings the editor exposes -- not literally
+// every string in the app (a file this size has thousands; rewriting every call site to route
+// through an override would be a huge, bug-prone undertaking for what's mostly internal/desktop
+// copy nobody asked to reskin). This starts with the strings a workspace actually sees and wants
+// to put its own words on day-to-day: the dashboard hero, its stat-card labels, and the handful
+// of buttons/captions repeated across the mobile Orders/Sections flow. MOBILE_TEXT_KEYS is the
+// registry the Settings panel lists and edits; mt() is what call sites read through. Adding a new
+// editable string later is one MOBILE_TEXT_KEYS entry plus swapping that call site's literal for
+// mt('key','original text') -- the mechanism scales, this seed list is just a deliberate start.
+const MOBILE_TEXT_KEYS = [
+  {key:'hero.greeting', label:'Dashboard hero — greeting', default:'Welcome back,'},
+  {key:'hero.sub', label:'Dashboard hero — subtitle', default:"Here's what's happening today."},
+  {key:'stat.totalOrders', label:'Stat card — Total Orders label', default:'Total Orders'},
+  {key:'stat.totalCustomers', label:'Stat card — Total Customers label', default:'Total Customers'},
+  {key:'stat.totalProducts', label:'Stat card — Total Products label', default:'Total Products'},
+  {key:'stat.pendingOrders', label:'Stat card — Pending Orders label', default:'Pending Orders'},
+  {key:'btn.newOrder', label:'Button — "+ New order"', default:'+ New order'},
+  {key:'chart.ordersOverview', label:'Chart title — "Orders Overview"', default:'Orders Overview'},
+  {key:'chart.totalOrdersCaption', label:'Chart caption — "Total Orders"', default:'Total Orders'},
+  {key:'monthCompare.title', label:'Comparison card — "This Month vs Last"', default:'This Month vs Last'},
+  {key:'tabbar.home', label:'Tab bar — first tab label (currently "Dashboard")', default:'Dashboard'},
+  {key:'tabbar.sections', label:'Tab bar — "Sections" label', default:'Sections'},
+  {key:'tabbar.chat', label:'Tab bar — "Chat" label', default:'Chat'},
+];
+function mt(key, fallback){
+  const tx = mobileUiConfig().textOverrides || {};
+  const v = tx[key];
+  return (v!=null && v!=='') ? v : fallback;
 }
 // Same RLS problem as the theme above, for the two other things the sign-in screen itself needs
 // to show correctly while logged out: the uploaded logo/hero photo, and the login customization
@@ -5736,6 +5850,7 @@ async function loadAll(){
   }
   applyTheme();
   applyFavicon();
+  applyMobileUiRuntime();
   if(sweepCompletedOrders()) save('orders').catch(e=>console.error('archive sweep save failed', e));
   if(sweepClosedComplaints()) save('complaints').catch(e=>console.error('complaint archive sweep save failed', e));
   if(state.session){
@@ -7334,7 +7449,10 @@ function brandCropModal(){
   const pc = state.pendingCrop;
   if(!pc) return '';
   const isLogo = pc.addonId === 'logo' || pc.addonId === 'ordersBoardLogo' || pc.addonId === 'trackPageLogo' || pc.addonId === 'welcomeLogo' || pc.addonId === 'loginHeroLogo' || pc.addonId === 'batchSheetLogo';
-  const isMobileHeroPhoto = pc.addonId === 'loginHeroPhotoMobile';
+  // mobileBgImage rides the same tall-frame/cover-crop/zoom-out-allowed treatment as the mobile
+  // login hero photo -- it's the same kind of asset (a full-bleed photo behind a phone-shaped
+  // viewport), just for the signed-in app header instead of the sign-in screen.
+  const isMobileHeroPhoto = pc.addonId === 'loginHeroPhotoMobile' || pc.addonId === 'mobileBgImage';
   const isHeroPhoto = pc.addonId === 'loginHeroPhoto' || isMobileHeroPhoto;
   // The mobile hero photo gets its own tall, narrow frame (roughly a phone's own proportions)
   // instead of the desktop photo's wide one — composing a crop in a frame shaped like a phone
@@ -7573,7 +7691,7 @@ function initCropModal(){
   const saveBtn = document.getElementById('btn-save-crop');
   if(saveBtn){
     saveBtn.onclick = async ()=>{
-      const isHeroPhoto = state.pendingCrop && (state.pendingCrop.addonId === 'loginHeroPhoto' || state.pendingCrop.addonId === 'loginHeroPhotoMobile');
+      const isHeroPhoto = state.pendingCrop && (state.pendingCrop.addonId === 'loginHeroPhoto' || state.pendingCrop.addonId === 'loginHeroPhotoMobile' || state.pendingCrop.addonId === 'mobileBgImage');
       // Every other addon here is a small logo, shown at a fixed small size — 2x the editing
       // frame (840x480 max) is already sharp at that size. The hero photo is shown full-bleed on
       // a real desktop screen (background-size:cover, often 1920px+ wide) — at 2x it was CSS-
@@ -7607,6 +7725,7 @@ const BRAND_ADDON_NAMES = {
   favicon: 'Favicon (browser tab icon)', batchSheetLogo: 'Batch sheet logo (printed sheet)',
   loginHeroLogo: 'Login hero logo (sign-in screen)', loginHeroPhoto: 'Login hero photo (sign-in screen)',
   loginHeroPhotoMobile: 'Login hero photo — mobile (sign-in screen)',
+  mobileBgImage: 'Mobile app header background image',
 };
 async function finishBrandCrop(dataUrl){
   const pc = state.pendingCrop;
@@ -7616,9 +7735,17 @@ async function finishBrandCrop(dataUrl){
   const label = BRAND_ADDON_NAMES[pc.addonId] || pc.addonId;
   if(existing){ existing.image = dataUrl; existing.updatedAt = new Date().toISOString(); }
   else { addons.push({id:pc.addonId, name: label, image:dataUrl, updatedAt:new Date().toISOString()}); }
+  // Uploading a background photo should just show it, not also require a separate trip to the
+  // mode picker to switch "Default" to "Custom image" -- switching it here is what the Appearance
+  // palette's own swatch click already does (pick = apply), so this matches that convention.
+  if(pc.addonId==='mobileBgImage'){
+    if(!state.branding.mobileUi) state.branding.mobileUi = {};
+    if(!state.branding.mobileUi.header) state.branding.mobileUi.header = {};
+    state.branding.mobileUi.header.mode = 'image';
+  }
   state.pendingCrop = null;
   if(!(await save('branding'))) return;
-  applyFavicon(); closeModal();
+  applyFavicon(); applyMobileUiRuntime(); closeModal();
   showToast(label+' updated');
 }
 async function brandingAddAddon(e){
@@ -7646,7 +7773,7 @@ function brandingDeleteAddon(id){
     message: 'Delete this addon?',
     onConfirm: async ()=>{
       state.branding.addons = (state.branding.addons||[]).filter(a=>a.id!==id);
-      await save('branding'); applyFavicon();
+      await save('branding'); applyFavicon(); applyMobileUiRuntime();
     },
   });
 }
@@ -11286,14 +11413,18 @@ function renderShell(freshPage){
   <nav class="mobile-tabbar">
     ${mobileTabs.primary.map(it=>{
       const isActive = state.page===it.id || (it.children && it.children.some(c=>c.id===state.page));
-      const tabLabel = MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it);
+      // mt('tabbar.home', ...) only overrides the FIRST primary tab's own default label, not
+      // every tab this loop could ever render -- primary is just ['dashboard'] today (see
+      // mobileTabItemsFor), so in practice this is that one tab; falls through to the existing
+      // override/navLabel logic unchanged for the key's own default text.
+      const tabLabel = it.id==='dashboard' ? mt('tabbar.home', MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it)) : (MOBILE_TAB_LABEL_OVERRIDE[it.id] || navLabel(it));
       const tabIcon = MOBILE_TAB_ICON_OVERRIDE[it.id] || it.icon;
       return `<a href="#${it.id}" class="mobile-tab ${isActive?'active':''}" data-nav="${it.id}" title="${esc(tabLabel)}" aria-label="${esc(tabLabel)}">${gridDuotoneIcon(tabIcon, 21)}<span class="mobile-tab-label">${esc(tabLabel)}</span></a>`;
     }).join('')}
-    <a href="#sections" class="mobile-tab ${state.page==='sections'?'active':''}" data-nav="sections" title="Sections" aria-label="Sections — everything you have access to">${gridDuotoneIcon('dashboard', 21)}<span class="mobile-tab-label">Sections</span></a>
-    ${mobileTabs.chat ? `<a href="#chat" class="mobile-tab ${state.page==='chat'?'active':''}" data-nav="chat" title="Team chat" aria-label="Team chat">
+    <a href="#sections" class="mobile-tab ${state.page==='sections'?'active':''}" data-nav="sections" title="${esc(mt('tabbar.sections','Sections'))}" aria-label="${esc(mt('tabbar.sections','Sections'))} — everything you have access to">${gridDuotoneIcon('dashboard', 21)}<span class="mobile-tab-label">${esc(mt('tabbar.sections','Sections'))}</span></a>
+    ${mobileTabs.chat ? `<a href="#chat" class="mobile-tab ${state.page==='chat'?'active':''}" data-nav="chat" title="${esc(mt('tabbar.chat','Chat'))}" aria-label="${esc(mt('tabbar.chat','Team chat'))}">
       <span style="position:relative;display:inline-flex;">${gridDuotoneIcon('chat', 21)}${state.chatUnread?'<span class="mobile-tab-unread-dot"></span>':''}</span>
-      <span class="mobile-tab-label">Chat</span>
+      <span class="mobile-tab-label">${esc(mt('tabbar.chat','Chat'))}</span>
     </a>` : ''}
   </nav>
   ${renderMoreFabMenu(navGroups)}
@@ -11661,15 +11792,15 @@ function renderDashboard(){
   // (blue/pink/orange/purple), not a single shared "positive" green or the app's brand blue.
   const totalOrdersTrend = ordersOverviewSeries(30);
   const stats = [
-    {label:'Total Orders', value: state.orders.length, icon:'orders', tint:'#DDE9FE', iconColor:'#0F62F8', nav:'orders',
+    {label:mt('stat.totalOrders','Total Orders'), value: state.orders.length, icon:'orders', tint:'#DDE9FE', iconColor:'#0F62F8', nav:'orders',
       // Green here specifically, not the card's own blue family -- the one place the reference
       // itself breaks its "badge matches this card's icon color" rule (every other card's badge
       // does match), so this is copied as-is rather than forced into that pattern.
       trendBg:'#DCF5EC', trendColor:'#00793C',
       trend: totalOrdersTrend.total>0 || totalOrdersTrend.changePct!==0 ? {pct:totalOrdersTrend.changePct, dir:totalOrdersTrend.changePct>=0?'up':'down'} : null},
-    {label:'Total Customers', value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FEDBE7', iconColor:'#E54D78', nav:'customers'},
-    {label:'Total Products', value: state.recipes.length, sub:'In catalog', icon:'box', tint:'#FDEBD1', iconColor:'#FA8300', nav:'recipelibrary'},
-    {label:'Pending Orders', value: pending, icon:'clock', tint:'#E8E0FD', iconColor:'#8643EA', nav:'orders'},
+    {label:mt('stat.totalCustomers','Total Customers'), value: state.customers.length, sub:'Registered', icon:'customers', tint:'#FEDBE7', iconColor:'#E54D78', nav:'customers'},
+    {label:mt('stat.totalProducts','Total Products'), value: state.recipes.length, sub:'In catalog', icon:'box', tint:'#FDEBD1', iconColor:'#FA8300', nav:'recipelibrary'},
+    {label:mt('stat.pendingOrders','Pending Orders'), value: pending, icon:'clock', tint:'#E8E0FD', iconColor:'#8643EA', nav:'orders'},
   ];
 
   // Pipeline donut: each stage's arc sized to its share of active orders, using the same
@@ -11768,9 +11899,9 @@ function renderDashboard(){
     </svg>
     <div class="dash-hero-row">
       <div>
-        <p class="dash-hero-greet">Welcome back,</p>
+        <p class="dash-hero-greet">${esc(mt('hero.greeting','Welcome back,'))}</p>
         <p class="dash-hero-name">${esc(state.session.name)}!</p>
-        <p class="dash-hero-sub">Here's what's happening today.</p>
+        <p class="dash-hero-sub">${esc(mt('hero.sub',"Here's what's happening today."))}</p>
       </div>
       <div class="dash-hero-trend"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L10 11 L14 15 L20 7"/><path d="M14 7h6v6"/></svg></div>
     </div>
@@ -11796,7 +11927,7 @@ function renderDashboard(){
       <div class="dash-chart-head">
         <div class="dash-chart-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V13M12 20V8M20 20V4"/></svg>
-          Orders Overview
+          ${esc(mt('chart.ordersOverview','Orders Overview'))}
         </div>
         <div class="dash-period-toggle" data-dash-period-toggle>
           ${Object.keys(DASH_PERIODS).map(p=>`<button type="button" class="dash-period-btn ${p===dashPeriod?'active':''}" data-dash-period="${p}">${p.toUpperCase()}</button>`).join('')}
@@ -11806,7 +11937,7 @@ function renderDashboard(){
         <div class="analytics-card-value">${ov.total}</div>
         <div class="analytics-badge ${ov.changePct>=0?'up':'down'}">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
       </div>
-      <div class="hint" style="font-size:12px;margin-bottom:6px;">Total Orders</div>
+      <div class="hint" style="font-size:12px;margin-bottom:6px;">${esc(mt('chart.totalOrdersCaption','Total Orders'))}</div>
       <svg class="analytics-sparkline" viewBox="0 0 300 78" style="height:78px;">
         <polygon points="${ovArea}" fill="var(--accent-soft)" opacity=".6"/>
         <polyline class="analytics-sparkline-line" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
@@ -11828,7 +11959,7 @@ function renderDashboard(){
 
   <div class="panel" style="margin-top:16px;">
     <div class="panel-body">
-      <div class="analytics-card-title" style="margin-bottom:10px;">This Month vs Last</div>
+      <div class="analytics-card-title" style="margin-bottom:10px;">${esc(mt('monthCompare.title','This Month vs Last'))}</div>
       <div class="dash-donut-wrap">
         <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
           <svg viewBox="0 0 96 96" width="96" height="96">
@@ -11991,7 +12122,7 @@ function renderOrdersPage(){
     <div style="display:flex;align-items:center;gap:14px;">
       <button type="button" class="btn-text" id="btn-box-count" style="font-size:12px;color:var(--muted);">📦 Box Count</button>
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
-      ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
+      ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">${esc(mt('btn.newOrder','+ New order'))}</button>` : ''}
     </div>
   </div>
   ${active.length===0 && canCreate ? `<div class="hint" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
@@ -12266,7 +12397,7 @@ function renderDeliveryBoardSection(line, active){
   <div class="board-section">
     <div class="board-section-title" style="display:flex;align-items:center;gap:14px;">
       <span>${esc(line.label)}</span>
-      ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">+ New order</button>` : ''}
+      ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">${esc(mt('btn.newOrder','+ New order'))}</button>` : ''}
     </div>
     <div class="board">
       ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, line.key)).join('')}
@@ -14547,7 +14678,7 @@ function renderTemplateCustomizationPanel(){
               ${batchSheetLogo() ? `<button class="btn btn-sm btn-danger" data-brand-delete="batchSheetLogo">Remove</button>` : ''}
             </td>
           </tr>
-          ${(state.branding.addons||[]).filter(a=>!['logo','ordersBoardLogo','trackPageLogo','welcomeLogo','favicon','batchSheetLogo'].includes(a.id)).map(a=>`
+          ${(state.branding.addons||[]).filter(a=>!['logo','ordersBoardLogo','trackPageLogo','welcomeLogo','favicon','batchSheetLogo','mobileBgImage'].includes(a.id)).map(a=>`
           <tr>
             <td>${a.image?`<img src="${esc(a.image)}" alt="${escAttr(a.name)}" style="height:34px;width:auto;max-width:120px;object-fit:contain;">`:'<span class="hint">—</span>'}</td>
             <td>${esc(a.name)}</td>
@@ -14979,6 +15110,102 @@ function renderAppearancePanel(){
     </div>
   </div>`;
 }
+function renderMobileAppearancePanel(){
+  const cfg = mobileUiConfig();
+  const header = cfg.header || {};
+  const bgMode = header.mode || 'default';
+  const iconsSide = cfg.iconsSide || 'right';
+  const iconsOrder = cfg.iconsOrder || 'bell-avatar';
+  const cardSize = currentMobileCardSize();
+  const bgImg = mobileBgImage();
+  const canEdit = state.session && roleCan(state.session.role, 'branding_manage');
+  const modeBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${bgMode===id?'selected':''}" data-mobileui-bgmode="${id}">${esc(label)}</button>`;
+  const sideBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${iconsSide===id?'selected':''}" data-mobileui-iconsside="${id}">${esc(label)}</button>`;
+  const orderBtn = (id, label) => `<button type="button" class="theme-swatch-btn ${iconsOrder===id?'selected':''}" data-mobileui-iconsorder="${id}">${esc(label)}</button>`;
+  const sizeBtn = (id) => `<button type="button" class="theme-swatch-btn ${cardSize===id?'selected':''}" data-mobileui-cardsize="${id}">${esc(MOBILE_CARD_SIZES[id].label)}</button>`;
+  return `
+  <div class="panel" id="settings-mobile-appearance">
+    <div class="panel-head"><h3>Mobile appearance</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:16px;">Customize how the mobile app looks for everyone — the header background, where the bell/profile icons sit, how roomy cards feel, and a set of button/label texts. The picker rows below apply the moment you tap one; the color/image and text fields need Save at the bottom.${canEdit?'':' Changing any of this needs the Branding permission — ask an Admin.'}</div>
+
+      <h4 style="margin:0 0 6px;">Header background</h4>
+      <div class="hint" style="margin-bottom:10px;">The colored area behind the logo, page title, and bell/avatar icons at the top of every mobile page. Solid color and Gradient switch the page title to white to stay readable — pick a color dark/saturated enough for white text, and check your logo still reads clearly on it (it isn't recolored automatically).</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${modeBtn('default','Default wave')}
+        ${modeBtn('color','Solid color')}
+        ${modeBtn('gradient','Gradient')}
+        ${modeBtn('image','Custom image')}
+      </div>
+      ${bgMode==='color' ? `
+      <div class="field" style="max-width:160px;margin-bottom:14px;">
+        <label>Color</label>
+        <input type="color" name="mobileBgColor" value="${escAttr(header.color||'#2B5BEB')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+      </div>` : ''}
+      ${bgMode==='gradient' ? `
+      <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <div class="field" style="max-width:160px;">
+          <label>From</label>
+          <input type="color" name="mobileBgGradientFrom" value="${escAttr(header.gradientFrom||'#214FA4')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label>To</label>
+          <input type="color" name="mobileBgGradientTo" value="${escAttr(header.gradientTo||'#43A2FD')}" style="width:52px;height:36px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" ${canEdit?'':'disabled'}>
+        </div>
+      </div>` : ''}
+      ${bgMode==='image' ? `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="width:90px;height:160px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#EEF2FE;flex-shrink:0;">
+          ${bgImg ? `<img src="${escAttr(bgImg)}" alt="Mobile background" style="width:100%;height:100%;object-fit:cover;display:block;">` : ''}
+        </div>
+        <div>
+          ${canEdit ? `
+          <label class="btn btn-sm" style="cursor:pointer;">${bgImg?'Change image':'Upload image'}
+            <input type="file" class="brand-change-input" data-addon="mobileBgImage" style="display:none;" accept="image/*">
+          </label>
+          ${bgImg ? `<button type="button" class="btn btn-sm btn-danger" data-brand-delete="mobileBgImage" style="margin-left:8px;">Remove</button>` : ''}
+          ` : ''}
+          <div class="hint" style="margin-top:6px;">A tall photo works best — it's cropped to fill the header area behind your content.</div>
+        </div>
+      </div>` : ''}
+
+      <h4 style="margin:18px 0 6px;">Icon placement</h4>
+      <div class="hint" style="margin-bottom:8px;">Which side of the header the bell/avatar pair sits on, and which of the two leads.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+        ${sideBtn('right','Icons on right (default)')}
+        ${sideBtn('left','Icons on left')}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${orderBtn('bell-avatar','Bell → Avatar (default)')}
+        ${orderBtn('avatar-bell','Avatar → Bell')}
+      </div>
+
+      <h4 style="margin:18px 0 6px;">Card size</h4>
+      <div class="hint" style="margin-bottom:8px;">Padding, icon size, and corner roundness for stat cards, section tiles, and content panels on mobile.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${sizeBtn('compact')}${sizeBtn('comfortable')}${sizeBtn('large')}
+      </div>
+
+      <h4 style="margin:18px 0 6px;">Text &amp; labels</h4>
+      <div class="hint" style="margin-bottom:10px;">Rename the dashboard greeting, stat-card labels, and common buttons shown on mobile. Leave a field blank to use the default text.</div>
+      <form id="form-mobile-ui-text">
+        <table class="data-table">
+          <thead><tr><th>Where</th><th>Text</th></tr></thead>
+          <tbody>
+            ${MOBILE_TEXT_KEYS.map(t=>`
+            <tr>
+              <td>${esc(t.label)}</td>
+              <td><input type="text" name="mt__${esc(t.key)}" placeholder="${escAttr(t.default)}" value="${escAttr((cfg.textOverrides&&cfg.textOverrides[t.key])||'')}" ${canEdit?'':'disabled'}></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;">
+          <button type="submit" class="btn btn-primary" ${canEdit?'':'disabled'}>Save mobile appearance</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
 function renderTimerAlertSoundPanel(){
   return `
   <div class="panel" id="settings-timer-alert-sound">
@@ -15020,6 +15247,7 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-batch-sheet-template': renderBatchSheetTemplatePanel,
   'settings-login-customization': renderLoginCustomizationPanel,
   'settings-appearance': renderAppearancePanel,
+  'settings-mobile-appearance': renderMobileAppearancePanel,
   'settings-timer-alert-sound': renderTimerAlertSoundPanel,
   'settings-secure-accounts': renderSecureAccountsPanel,
   'settings-user-roles': renderUserRolesPanel,
@@ -15052,6 +15280,7 @@ function renderSettingsPage(){
     {id:'settings-batch-sheet-template', label:'Batch sheet template', icon:'flask', adminOnly:false},
     {id:'settings-login-customization', label:'Login panel customization', icon:'star', adminOnly:false},
     {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false},
+    {id:'settings-mobile-appearance', label:'Mobile appearance', icon:'star', adminOnly:false},
     {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset', adminOnly:false},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers', adminOnly:true},
     {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
@@ -21844,6 +22073,60 @@ function attachShellHandlers(){
     if(!(await save('theme'))) return;
     showToast('Color palette updated');
   }));
+
+  // Mobile appearance (Settings > Mobile appearance): the picker rows (background mode, icon
+  // placement, card size) apply the moment they're tapped, same optimistic-then-save pattern as
+  // the theme-palette swatches just above. Free-form fields (color/gradient pickers, text
+  // overrides) wait for their own save step instead, so a color drag or a half-typed label isn't
+  // saving on every intermediate value.
+  async function saveMobileUiField(mutate, toastMsg){
+    if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
+    if(!state.branding.mobileUi) state.branding.mobileUi = {};
+    mutate(state.branding.mobileUi);
+    applyMobileUiRuntime();
+    render();
+    if(!(await save('branding'))) return;
+    if(toastMsg) showToast(toastMsg);
+  }
+  document.querySelectorAll('[data-mobileui-bgmode]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.mode = btn.dataset.mobileuiBgmode; }, 'Header background updated');
+  }));
+  document.querySelectorAll('[data-mobileui-iconsside]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ m.iconsSide = btn.dataset.mobileuiIconsside; }, 'Icon placement updated');
+  }));
+  document.querySelectorAll('[data-mobileui-iconsorder]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ m.iconsOrder = btn.dataset.mobileuiIconsorder; }, 'Icon placement updated');
+  }));
+  document.querySelectorAll('[data-mobileui-cardsize]').forEach(btn=>btn.addEventListener('click', ()=>{
+    saveMobileUiField(m=>{ m.cardSize = btn.dataset.mobileuiCardsize; }, 'Card size updated');
+  }));
+  const mobileBgColorInput = document.querySelector('input[name="mobileBgColor"]');
+  if(mobileBgColorInput) mobileBgColorInput.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.color = mobileBgColorInput.value; }, 'Header color updated');
+  });
+  const mobileBgGradFrom = document.querySelector('input[name="mobileBgGradientFrom"]');
+  const mobileBgGradTo = document.querySelector('input[name="mobileBgGradientTo"]');
+  if(mobileBgGradFrom) mobileBgGradFrom.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientFrom = mobileBgGradFrom.value; }, 'Header gradient updated');
+  });
+  if(mobileBgGradTo) mobileBgGradTo.addEventListener('change', ()=>{
+    saveMobileUiField(m=>{ if(!m.header) m.header={}; m.header.gradientTo = mobileBgGradTo.value; }, 'Header gradient updated');
+  });
+  if(byIdEl('form-mobile-ui-text')) byIdEl('form-mobile-ui-text').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
+    const fd = new FormData(e.target);
+    const overrides = {};
+    MOBILE_TEXT_KEYS.forEach(t=>{
+      const v = (fd.get('mt__'+t.key)||'').toString().trim();
+      if(v) overrides[t.key] = v;
+    });
+    if(!state.branding.mobileUi) state.branding.mobileUi = {};
+    state.branding.mobileUi.textOverrides = overrides;
+    render();
+    if(!(await save('branding'))) return;
+    showToast('Mobile text updated');
+  });
 
   if(byIdEl('form-customer')) byIdEl('form-customer').addEventListener('submit', submitCustomer);
   if(byIdEl('btn-delete-customer')) byIdEl('btn-delete-customer').onclick = ()=>{ const id=byIdEl('form-customer').dataset.editId; deleteCustomer(id); };

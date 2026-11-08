@@ -409,30 +409,38 @@ html{ visibility:hidden; }
   .dash-chart-title{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;}
   .dash-chart-peak{font-size:10.5px;font-weight:700;fill:#fff;}
   .dash-chart-peak-bg{fill:var(--ink);}
-  /* Entry animation, replayed on every render() (initial load AND every 7D/30D/90D period
-     switch, since that re-renders this whole SVG fresh): pathLength="1" normalizes the
-     polyline's stroke-dasharray to 1 unit regardless of its real geometry (which varies by
-     bucket count/values), so a plain 1->0 dashoffset tween always draws the full line --
-     no JS length measurement needed. The fill fades in just behind the line's leading edge,
-     and each point pops in with a small stagger (per-circle inline animation-delay, set from
-     its index in the data loop) instead of all appearing at once. */
-  .analytics-sparkline-line{animation:dashChartDraw .9s ease-out forwards;}
+  .dash-chart-area{opacity:.6;}
+  /* Entry animation + tap-to-reveal point tooltip, mobile only (matches the same max-width:760px
+     breakpoint every other mobile-only dashboard rule in this file uses) -- desktop's Orders
+     Overview chart keeps rendering exactly as it did before, no animation and no clickable
+     points. The JS click handler itself is also gated to this width (see the delegated
+     document click listener near the bottom of the script). */
+  @media (max-width:760px){
+    /* Replayed on every render() (initial load AND every 7D/30D/90D period switch, since that
+       re-renders this whole SVG fresh): pathLength="1" normalizes the polyline's
+       stroke-dasharray to 1 unit regardless of its real geometry (which varies by bucket
+       count/values), so a plain 1->0 dashoffset tween always draws the full line -- no JS
+       length measurement needed. The fill fades in just behind the line's leading edge, and
+       each point pops in with a small stagger (per-circle inline animation-delay, set from its
+       index in the data loop) instead of all appearing at once. */
+    .analytics-sparkline-line{animation:dashChartDraw .9s ease-out forwards;}
+    .dash-chart-area{animation:dashChartFade .7s ease-out .25s both;}
+    .dash-chart-pt,.dash-chart-pt-peak{animation:dashChartPop .35s cubic-bezier(.2,.9,.3,1.3) both;transform-origin:center;transform-box:fill-box;}
+    /* Tap-to-reveal count tooltip, shared by every non-peak point (the peak already has its own
+       always-on pill above). Same pill look as .dash-chart-peak/-bg, kept as separate classes
+       so toggling this one's display never touches the always-visible peak pill. */
+    .dash-chart-pt{cursor:pointer;}
+    .dash-chart-pt-tip-bg{fill:var(--ink);}
+    .dash-chart-pt-tip{font-size:10.5px;font-weight:700;fill:#fff;}
+  }
   @keyframes dashChartDraw{from{stroke-dashoffset:1;}to{stroke-dashoffset:0;}}
-  .dash-chart-area{animation:dashChartFade .7s ease-out .25s both;}
   @keyframes dashChartFade{from{opacity:0;}to{opacity:.6;}}
-  .dash-chart-pt,.dash-chart-pt-peak{animation:dashChartPop .35s cubic-bezier(.2,.9,.3,1.3) both;transform-origin:center;transform-box:fill-box;}
   @keyframes dashChartPop{from{opacity:0;transform:scale(0);}to{opacity:1;transform:scale(1);}}
-  @media (prefers-reduced-motion: reduce){
+  @media (max-width:760px) and (prefers-reduced-motion: reduce){
     .analytics-sparkline-line{animation:none;}
     .dash-chart-area{animation:none;}
     .dash-chart-pt,.dash-chart-pt-peak{animation:none;}
   }
-  /* Tap-to-reveal count tooltip, shared by every non-peak point (the peak already has its own
-     always-on pill above). Same pill look as .dash-chart-peak/-bg, kept as separate classes so
-     toggling this one's display never touches the always-visible peak pill. */
-  .dash-chart-pt{cursor:pointer;}
-  .dash-chart-pt-tip-bg{fill:var(--ink);}
-  .dash-chart-pt-tip{font-size:10.5px;font-weight:700;fill:#fff;}
   .dash-donut-wrap{display:flex;align-items:center;gap:18px;}
   .dash-donut-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
   .dash-donut-legend{display:flex;flex-direction:column;gap:8px;font-size:12.5px;flex:1;min-width:0;}
@@ -22898,8 +22906,11 @@ document.addEventListener('click', e=>{
 // Orders Overview sparkline: tap any point to show its count in the same pill style as the
 // always-on peak tooltip. Delegated like the date-input handler above, so it keeps working
 // across every render() (initial load, every 7D/30D/90D period switch) without re-wiring.
+// Mobile only (matches the CSS's own max-width:760px gate on .dash-chart-pt's cursor/animation)
+// -- desktop's chart stays exactly as it was, no click behavior added.
 let _activeDashChartPt = null;
 document.addEventListener('click', e=>{
+  if(window.innerWidth > 760) return;
   const pt = e.target.closest('.dash-chart-pt');
   if(pt){
     if(_activeDashChartPt === pt){ hideDashChartPointTip(); _activeDashChartPt = null; return; }

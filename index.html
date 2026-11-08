@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108072300">
+<meta name="app-build" content="20261108073106">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -37,8 +37,11 @@ html{ visibility:hidden; }
     --sidebar-bg:#FFFFFF;
     --border:#DCE6FB;
     --muted:#64719A;
-    --accent:#2F6FED;
-    --accent-rgb:47,111,237;
+    /* #2B5BEB sampled directly off the reference's own active "7D" pill (averaged over 108
+       clean pixels) -- the previous #2F6FED had enough extra green mixed in to read as washed
+       out/dull next to the reference's richer indigo-blue. */
+    --accent:#2B5BEB;
+    --accent-rgb:43,91,235;
     --accent-dark:#1E40AF;
     --accent-soft:#E3EDFF;
     /* Sampled pixel-by-pixel from the reference screenshot's hero card (bottom-left #214FA4 to
@@ -476,10 +479,19 @@ html{ visibility:hidden; }
        specifically rather than changing .stat-grid/.stat-card everywhere, so every other page's
        stat row (Orders, Customers, Staff, ...) keeps today's horizontal layout untouched. */
     .dash-stat-grid{display:grid;grid-template-columns:1fr 1fr !important;gap:10px;}
+    /* Horizontal row, not a vertical stack -- re-measured directly off the reference image
+       (icon ~54x54 CSS px, nearly the card's full height, text stacked to its right, chevron at
+       the far end) after the vertical 4-row version came out noticeably taller and the icon
+       noticeably smaller than the reference's own card. */
     .dash-stat-card{
-      background:#fff;border:none;border-radius:16px;padding:14px;
+      background:#fff;border:none;border-radius:16px;padding:10px 12px;
       box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
-      display:flex;flex-direction:column;gap:8px;text-align:left;font-family:inherit;cursor:pointer;
+      display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit;cursor:pointer;
+      /* A grid item's default min-width is auto (shrink no further than its content), so without
+         this the icon+text+chevron row's natural width pushed the whole 1fr column wider than
+         the card and spilled text/chevrons off the right edge -- confirmed live, "778" and the
+         chevron were cut off past the viewport. */
+      min-width:0;
       /* This is a <button> (so it's tappable/focusable), and Safari's own default button text
          color -- its system accent blue, confirmed live on a real iPhone -- otherwise shows
          through on anything here that doesn't set its own color, since .value below never did.
@@ -487,14 +499,16 @@ html{ visibility:hidden; }
          can't resurface some other default (background, border) the same way later. */
       appearance:none;-webkit-appearance:none;color:var(--ink);
     }
-    .dash-stat-card-top{display:flex;align-items:flex-start;justify-content:space-between;}
-    .dash-stat-card .stat-icon-badge{width:38px;height:38px;border-radius:12px;}
-    .dash-stat-card .stat-icon-badge svg{width:19px;height:19px;}
-    .dash-stat-chevron{color:var(--muted);flex-shrink:0;margin-top:4px;}
+    .dash-stat-card-top{display:none;}
+    .dash-stat-card .stat-icon-badge{width:46px;height:46px;border-radius:14px;flex-shrink:0;}
+    .dash-stat-card .stat-icon-badge svg{width:24px;height:24px;}
+    .dash-stat-text{flex:1;min-width:0;}
+    .dash-stat-chevron{color:var(--muted);flex-shrink:0;}
     .dash-stat-chevron svg{width:16px;height:16px;}
-    .dash-stat-card .label{font-size:12px;color:#8A93A8;margin:0 0 2px;}
-    .dash-stat-card .value{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
-    .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;width:fit-content;}
+    .dash-stat-card .label{font-size:12px;color:#8A93A8;margin:0 0 2px;line-height:1.25;}
+    .dash-stat-value-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .dash-stat-card .value{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
+    .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;width:fit-content;flex-shrink:0;}
     /* Sections grid: 4-per-row on mobile (was 3), matching the reference's Quick Access card
        density -- this is the one place that card style actually lives now that Dashboard's own
        Quick Access panel was removed in favor of it. Desktop keeps the original 3-per-row. */
@@ -11743,13 +11757,15 @@ function renderDashboard(){
   <div class="dash-stat-grid stat-grid">
     ${stats.map(s=>`
       <button type="button" class="dash-stat-card stat-card" ${s.nav && sessionPages.includes(s.nav) ? `data-nav="${s.nav}"` : ''}>
-        <div class="dash-stat-card-top">
-          <div class="stat-icon-badge" style="background:${s.tint};color:${s.iconColor};">${cardDuotoneIcon(s.icon, 20)}</div>
-          <span class="dash-stat-chevron">${icon('chevron')}</span>
+        <div class="stat-icon-badge" style="background:${s.tint};color:${s.iconColor};">${cardDuotoneIcon(s.icon, 24)}</div>
+        <div class="dash-stat-text">
+          <div class="label">${s.label}</div>
+          <div class="dash-stat-value-row">
+            <span class="value"><span class="stat-num" data-target="${s.value}">${s.value}</span></span>
+            ${s.trend ? `<span class="dash-stat-trend" style="background:${s.trendBg||s.tint};color:${s.trendColor||s.iconColor};">${s.trend.dir==='up'?'↑':'↓'} ${Math.abs(s.trend.pct)}%</span>` : s.sub ? `<span class="dash-stat-trend" style="background:${s.tint};color:${s.iconColor};">${s.sub}</span>` : ''}
+          </div>
         </div>
-        <div class="label">${s.label}</div>
-        <div class="value"><span class="stat-num" data-target="${s.value}">${s.value}</span></div>
-        ${s.trend ? `<span class="dash-stat-trend" style="background:${s.trendBg||s.tint};color:${s.trendColor||s.iconColor};">${s.trend.dir==='up'?'↑':'↓'} ${Math.abs(s.trend.pct)}%</span>` : s.sub ? `<span class="dash-stat-trend" style="background:${s.tint};color:${s.iconColor};">${s.sub}</span>` : ''}
+        <span class="dash-stat-chevron">${icon('chevron')}</span>
       </button>`).join('')}
   </div>
 

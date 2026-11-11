@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261111085254">
+<meta name="app-build" content="20261111090738">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -21350,7 +21350,11 @@ function attachShellHandlers(){
     state._notesFabOpen = !state._notesFabOpen;
     render();
   };
-  if(byIdEl('notes-fab-backdrop')) byIdEl('notes-fab-backdrop').onclick = ()=>{ state._notesFabOpen = false; state._noteShareOpen = false; render(); };
+  // Panel closing Rule: this popup holds the note-compose textarea (a form someone may be
+  // mid-way through typing), so the dim backdrop must not throw that away on a stray click —
+  // only the explicit X (notes-fab-close) or re-toggling the bell closes it. The backdrop still
+  // closes the (non-form) share-staff dropdown, same as any other picker.
+  if(byIdEl('notes-fab-backdrop')) byIdEl('notes-fab-backdrop').onclick = ()=>{ captureNoteComposeDraft(); state._noteShareOpen = false; render(); };
   if(byIdEl('notes-fab-close')) byIdEl('notes-fab-close').onclick = ()=>{ state._notesFabOpen = false; state._noteShareOpen = false; render(); };
   document.querySelectorAll('[data-note-color]').forEach(b=>b.addEventListener('click', ()=>{
     captureNoteComposeDraft();

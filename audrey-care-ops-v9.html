@@ -13132,7 +13132,7 @@ function boxCountModal(){
   const selectedCount = (state._boxCountSelected||[]).length;
   const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
   // Phone-only totals strip: what has already gone out today.
-  const bcCustomers = new Set(todays.map(b=>(b.customerName||'').trim().toLowerCase())).size;
+  const bcCustomers = new Set(todays.map(b=>String(b.customerName==null ? '' : b.customerName).trim().toLowerCase())).size;
   const bcBoxes = todays.reduce((s,b)=>s+(Number(b.boxCount)||0), 0);
   const bcKg = Math.round(todays.reduce((s,b)=>s+(Number(b.totalKg)||0), 0)*10)/10;
   return `
@@ -13584,11 +13584,30 @@ function renderOngoingOrdersSection(sec, admin, code){
 // (see ORDER_ARCHIVE_AFTER_MS / archivedOrders()). Names only; click a row for the full,
 // view-only details, or use the review buttons to text the customer a review link.
 const ORDER_INQUIRY_PAGE_SIZE = 60;
+// "Issued on a date" for Order inquiry's From/To date filter: the order's Start date -- a plain
+// YYYY-MM-DD the app stamps when the order is created (every existing order has one, and it equals
+// the day it was created). Falls back to the LOCAL day of createdAt (localDateKey), never
+// iso.slice(0,10), so a late-night order is not filed under the wrong day. Note this is the day the
+// order was entered here, which can differ from an invoice's date in the ERP.
+function orderIssuedDay(o){
+  return (typeof o.startDate==='string' && /^\d{4}-\d{2}-\d{2}$/.test(o.startDate)) ? o.startDate : localDateKey(o.createdAt);
+}
+// 'YYYY-MM-DD' -> 'DD-MM-YYYY' (the ERP's and the footer clock's style) by splitting the text, with no
+// Date parsing, so no timezone can shift it.
+function fmtDayShort(key){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key||'');
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
 function renderOrderInquiryPage(){
   const q = (state.filters.orderInquirySearch||'').toLowerCase();
   const orderNoF = (state.filters.orderInquiryOrderNoFilter||'').toLowerCase();
   const salesmanF = state.filters.orderInquirySalesman||'';
   const deliveryStatusF = state.filters.orderInquiryDeliveryStatus||'';
+  // From / To date range, both optional (same day in both = that one day). YYYY-MM-DD strings sort
+  // correctly as plain text. If someone ends up with From after To, treat them as swapped.
+  let dateFrom = state.filters.orderInquiryDateFrom||'';
+  let dateTo = state.filters.orderInquiryDateTo||'';
+  if(dateFrom && dateTo && dateFrom > dateTo){ const t = dateFrom; dateFrom = dateTo; dateTo = t; }
   // Orders link to a customer by name only (no customerId field), matching how the rest of the
   // app already looks up a customer's salesman — see the same name-normalized pattern in
   // customerFormModal. Indexed once per render rather than a per-row .find() over state.customers.
@@ -13596,7 +13615,7 @@ function renderOrderInquiryPage(){
   const salesmanByCustomerName = {};
   state.customers.forEach(c=>{ if(c.salesman) salesmanByCustomerName[c.name.trim().toLowerCase()] = c.salesman; });
   const allSalesmen = [...new Set(state.customers.map(c=>c.salesman).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const anyFilter = !!(q||orderNoF||salesmanF||deliveryStatusF);
+  const anyFilter = !!(q||orderNoF||salesmanF||deliveryStatusF||dateFrom||dateTo);
   // With years of history, archivedOrders() can hold thousands of rows — rendering all of them
   // unconditionally made this page (and scrolling on it) very slow on weaker machines. A search
   // shows every match (search results are naturally small); otherwise show only the most recent
@@ -13604,6 +13623,10 @@ function renderOrderInquiryPage(){
   const matches = archivedOrders().filter(o=>{
     if(salesmanF && salesmanByCustomerName[(o.customer||'').trim().toLowerCase()]!==salesmanF) return false;
     if(deliveryStatusF && (o.deliveryOutcome||'')!==deliveryStatusF) return false;
+    if(dateFrom || dateTo){
+      const day = orderIssuedDay(o);
+      if(!day || (dateFrom && day < dateFrom) || (dateTo && day > dateTo)) return false;
+    }
     if(orderNoF && !(o.orderNumber||o.id||'').toLowerCase().includes(orderNoF)) return false;
     if(q && !(o.customer||'').toLowerCase().includes(q) && !(o.phone||'').includes(q)) return false;
     return true;
@@ -13611,17 +13634,31 @@ function renderOrderInquiryPage(){
   const limit = anyFilter ? matches.length : (state.filters.orderInquiryLimit || ORDER_INQUIRY_PAGE_SIZE);
   const rows = matches.slice(0, limit);
   const hiddenCount = matches.length - rows.length;
+  // Plain-words summary of the date range, shown above the table while a date filter is active.
+  const dateLabel = dateFrom && dateTo
+    ? (dateFrom===dateTo ? `on ${fmtDayShort(dateFrom)}` : `from ${fmtDayShort(dateFrom)} to ${fmtDayShort(dateTo)}`)
+    : (dateFrom ? `from ${fmtDayShort(dateFrom)} onward` : (dateTo ? `up to ${fmtDayShort(dateTo)}` : ''));
   return `
   ${rows.length===0 && !anyFilter ? `<div class="empty-state">Nothing here yet — orders show up 2 hours after being picked up by delivery.</div>` : `
+  ${dateLabel ? `<div class="hint" id="order-inquiry-date-summary" style="margin:0 2px 8px;font-size:12.5px;">${matches.length} order${matches.length===1?'':'s'} issued ${dateLabel} <span style="opacity:.8;">(completed orders only)</span></div>` : ''}
   <div class="panel" style="padding:0;overflow-x:auto;">
     <table class="data-table">
       <thead>
         <tr>
-          <th>Customer</th><th>Order number</th><th>Sales person</th><th>Delivery status</th><th>Actions</th>
+          <th>Customer</th><th>Order number</th><th>Order date</th><th>Sales person</th><th>Delivery status</th><th>Actions</th>
         </tr>
         <tr class="col-filter-row">
           <th><input class="col-filter-input" id="order-inquiry-filter-customer" placeholder="Search…" value="${escAttr(state.filters.orderInquirySearch||'')}"></th>
           <th><input class="col-filter-input" id="order-inquiry-filter-orderno" placeholder="Search…" value="${escAttr(state.filters.orderInquiryOrderNoFilter||'')}"></th>
+          <th>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:132px;">
+              <label for="order-inquiry-filter-date-from" class="hint" style="margin:0;font-size:10.5px;font-weight:600;">From</label>
+              <input type="date" class="col-filter-input" id="order-inquiry-filter-date-from" value="${escAttr(dateFrom)}" ${dateTo?`max="${escAttr(dateTo)}"`:''}>
+              <label for="order-inquiry-filter-date-to" class="hint" style="margin:2px 0 0;font-size:10.5px;font-weight:600;">To</label>
+              <input type="date" class="col-filter-input" id="order-inquiry-filter-date-to" value="${escAttr(dateTo)}" ${dateFrom?`min="${escAttr(dateFrom)}"`:''}>
+              ${(dateFrom||dateTo) ? `<button type="button" class="btn-text" id="order-inquiry-filter-date-clear" style="font-size:11px;text-align:left;padding:2px 0;">Clear dates</button>` : ''}
+            </div>
+          </th>
           <th><select class="col-filter-select" id="order-inquiry-filter-salesman">
             <option value="">All</option>
             ${allSalesmen.map(s=>`<option value="${escAttr(s)}" ${s===salesmanF?'selected':''}>${esc(s)}</option>`).join('')}
@@ -13635,7 +13672,7 @@ function renderOrderInquiryPage(){
         </tr>
       </thead>
       <tbody>
-        ${rows.length===0 ? `<tr><td colspan="5"><div class="empty-state">No matching orders.</div></td></tr>` : rows.map(o=>{
+        ${rows.length===0 ? `<tr><td colspan="6"><div class="empty-state">No matching orders.</div></td></tr>` : rows.map(o=>{
           const canResend = !!state.session && roleCan(state.session.role, 'orderinquiry_resend_review');
           const fbSent = !!o.reviewSentFbAt, googleSent = !!o.reviewSentGoogleAt;
           const fbLocked = fbSent && !canResend, googleLocked = googleSent && !canResend;
@@ -13653,7 +13690,8 @@ function renderOrderInquiryPage(){
               </span>
             </td>
             <td>${esc(o.orderNumber||o.id)}</td>
-            <td>${salesman ? `<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(salesman)}</span>` : '<span class="hint">—</span>'}</td>
+            <td style="white-space:nowrap;">${fmtDayShort(orderIssuedDay(o)) || '<span class="hint">—</span>'}</td>
+            <td>${salesman ?`<span class="pill" style="${spColor?`background:${spColor};color:${readableTextOn(spColor)};`:'background:var(--accent-soft);color:var(--accent-dark);'}">${esc(salesman)}</span>` : '<span class="hint">—</span>'}</td>
             <td onclick="event.stopPropagation()">
               ${o.deliveryOutcome
                 ? `<span class="pill ${delivered?'pill-active':(onHold?'pill-hold':'pill-high')}" style="cursor:${deliveredLocked?'default':'pointer'};" ${deliveredLocked?'':`data-open-delivery-outcome="${o.id}"`} ${deliveredLocked?'title="Delivered — you don\'t have permission to change this."':'title="Click to change"'}>${esc(o.deliveryOutcome)}</span>`
@@ -22144,6 +22182,10 @@ function attachShellHandlers(){
   if(byIdEl('customer-filter-status')) byIdEl('customer-filter-status').addEventListener('change', e=>{ state.filters.customerStatus = e.target.value; render(); });
   if(byIdEl('order-inquiry-filter-customer')) byIdEl('order-inquiry-filter-customer').addEventListener('input', e=>{ state.filters.orderInquirySearch = e.target.value; render(); });
   if(byIdEl('order-inquiry-filter-orderno')) byIdEl('order-inquiry-filter-orderno').addEventListener('input', e=>{ state.filters.orderInquiryOrderNoFilter = e.target.value; render(); });
+  // From / To date range: 'change' (not 'input') so it applies once a whole valid date is chosen.
+  if(byIdEl('order-inquiry-filter-date-from')) byIdEl('order-inquiry-filter-date-from').addEventListener('change', e=>{ state.filters.orderInquiryDateFrom = e.target.value; render(); });
+  if(byIdEl('order-inquiry-filter-date-to')) byIdEl('order-inquiry-filter-date-to').addEventListener('change', e=>{ state.filters.orderInquiryDateTo = e.target.value; render(); });
+  if(byIdEl('order-inquiry-filter-date-clear')) byIdEl('order-inquiry-filter-date-clear').onclick = ()=>{ state.filters.orderInquiryDateFrom = ''; state.filters.orderInquiryDateTo = ''; render(); };
   if(byIdEl('order-inquiry-filter-salesman')) byIdEl('order-inquiry-filter-salesman').addEventListener('change', e=>{ state.filters.orderInquirySalesman = e.target.value; render(); });
   if(byIdEl('order-inquiry-filter-deliverystatus')) byIdEl('order-inquiry-filter-deliverystatus').addEventListener('change', e=>{ state.filters.orderInquiryDeliveryStatus = e.target.value; render(); });
   if(byIdEl('btn-order-inquiry-more')) byIdEl('btn-order-inquiry-more').onclick = ()=>{

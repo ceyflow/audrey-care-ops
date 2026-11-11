@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261108122629">
+<meta name="app-build" content="20261111090738">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -924,6 +924,7 @@ html{ visibility:hidden; }
   .notes-row-edit svg,.notes-row-del svg{width:12px;height:12px;}
   .notes-row-edit:hover{color:#2F6FE4;background:#fff;}
   .notes-row-del:hover{color:var(--danger);background:#fff;}
+  .notes-row-shared{font-size:10px;color:rgba(32,41,31,.6);margin-top:2px;font-style:italic;}
   .notes-editing-bar{display:flex;align-items:center;justify-content:space-between;background:#EAF1FD;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:11px;font-weight:600;color:#2F6FE4;}
   .notes-editing-bar button{background:none;border:none;color:#2F6FE4;text-decoration:underline;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;padding:0;}
   .notes-compose{border-top:1px solid var(--border);margin-top:4px;padding-top:14px;}
@@ -936,6 +937,19 @@ html{ visibility:hidden; }
   .notes-color-row{display:flex;gap:7px;}
   .notes-color-dot{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
   .notes-color-dot.selected{border-color:var(--ink);}
+  /* ---- Share-with-staff picker on the compose row ---- */
+  .notes-share-wrap{position:relative;}
+  .notes-share-btn{position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0;}
+  .notes-share-btn svg{width:15px;height:15px;}
+  .notes-share-btn.has-value{border-color:#2F6FE4;color:#2F6FE4;background:#EAF1FD;}
+  .notes-share-count{position:absolute;top:-4px;right:-4px;background:#2F6FE4;color:#fff;font-size:9px;font-weight:700;border-radius:50%;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 2px;}
+  .notes-share-dropdown{position:absolute;bottom:calc(100% + 8px);right:0;z-index:50;background:#fff;border-radius:12px;box-shadow:0 12px 28px -8px rgba(20,25,20,.28);padding:8px;min-width:170px;max-height:240px;overflow-y:auto;}
+  .notes-share-dropdown-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:4px 8px 6px;}
+  .notes-share-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:12.5px;cursor:pointer;}
+  .notes-share-row:hover{background:#F4F6F3;}
+  .notes-share-row input{width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+  .notes-share-done{width:100%;margin-top:4px;border:none;background:#F4F6F3;color:var(--ink);font-size:12px;font-weight:600;font-family:inherit;border-radius:8px;padding:7px 0;cursor:pointer;}
+  .notes-share-done:hover{background:#E8EBE6;}
   /* ---- Custom date/time picker (picked to match a reference circular clock-face picker) ---- */
   .notes-dt-overlay{position:fixed;inset:0;z-index:101;background:rgba(20,25,20,.45);display:flex;align-items:center;justify-content:center;padding:20px;}
   .notes-dt-card{background:#fff;border-radius:16px;width:300px;max-width:100%;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.3);}
@@ -5575,7 +5589,8 @@ const ICONS = {
   bell:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
-  fingerprint:'<path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3"/><path d="M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/><path d="M12 11v2a14 14 0 0 0 2.5 8"/><path d="M8 15a18 18 0 0 0 1.8 6"/><path d="M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95"/>'
+  fingerprint:'<path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3"/><path d="M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/><path d="M12 11v2a14 14 0 0 0 2.5 8"/><path d="M8 15a18 18 0 0 0 1.8 6"/><path d="M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95"/>',
+  share:'<circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.6l7.3-4.3"/><path d="M8.3 13.4l7.3 4.3"/>'
 };
 function icon(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`; }
 const TRACK_STAGE_PATHS = [
@@ -5652,6 +5667,7 @@ let state = {
   _dueNoteAlert: null,
   _noteComposeDraft: null,
   _noteDtPicker: null,
+  _noteShareOpen: false,
   auth: null,
   loaded: false,
   backendMissing: false,
@@ -6617,13 +6633,17 @@ function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,7
 // Personal notes & reminders: an ordinary SYNCED_KEY like every other data array in this app
 // (see save()/mergeBeforeSave()) — state.personalNotes holds EVERY logged-in person's notes
 // together, each one tagged with ownerName, the same shape as e.g. state.staff holding everyone's
-// staff records. Scoping a note to "only its owner" is purely a client-side filter (ownNotes()
-// below), not a separate storage key — a per-person key would need its own role_data_access row
-// per person, which that table has no way to express (it grants by role, not by name), and would
-// lose the automatic concurrent-edit-safe merge save() already gives every other synced array.
+// staff records. Scoping a note to "only its owner, plus whoever it's shared with" is purely a
+// client-side filter (ownNotes() below), not a separate storage key — a per-person key would need
+// its own role_data_access row per person, which that table has no way to express (it grants by
+// role, not by name), and would lose the automatic concurrent-edit-safe merge save() already gives
+// every other synced array. Sharing (n.sharedWith, an array of staff names) rides on the same
+// mechanism: every signed-in person's client already syncs the whole array, so adding a name to
+// sharedWith is all it takes for that note to show up in their own ownNotes() too.
 function ownNotes(){
   if(!state.session) return [];
-  return (state.personalNotes||[]).filter(n=>n.ownerName===state.session.name);
+  const me = state.session.name;
+  return (state.personalNotes||[]).filter(n=>n.ownerName===me || (n.sharedWith||[]).includes(me));
 }
 // Reads whatever's currently typed into the note text before a re-render would otherwise wipe
 // it (picking a color, opening the date/time picker) — the DOM nodes get torn down and rebuilt
@@ -6631,7 +6651,7 @@ function ownNotes(){
 // themselves are only ever written by the picker's own OK button (below), never read from a DOM
 // input — there isn't one any more.
 function captureNoteComposeDraft(){
-  if(!state._noteComposeDraft) state._noteComposeDraft = {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:''};
+  if(!state._noteComposeDraft) state._noteComposeDraft = {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:'', sharedWith:[]};
   const textEl = document.getElementById('note-compose-text');
   if(textEl) state._noteComposeDraft.text = textEl.value;
 }
@@ -6658,7 +6678,8 @@ function openNoteDateTimePicker(){
 }
 // Checked on an interval (see its setInterval call) rather than only on page load, so a
 // reminder still pops up even if the person never navigates or re-renders in the meantime. Only
-// ever looks at this person's own notes — never fires on, or even looks at, anyone else's.
+// ever looks at ownNotes() — notes this person owns or a note was shared with them — never
+// anyone else's un-shared notes.
 function checkDueNotes(){
   if(!state.session || state._dueNoteAlert) return;
   const due = ownNotes().find(n=>n.remindAt && !n.fired && new Date(n.remindAt).getTime()<=Date.now());
@@ -11582,6 +11603,32 @@ function formatNoteWhen(iso){
   if(d.toDateString()===tomorrow.toDateString()) return `Tomorrow, ${time}`;
   return `${d.toLocaleDateString([], {day:'numeric', month:'short'})}, ${time}`;
 }
+// Share-with-staff picker for the note compose row: a small icon button that opens a checklist
+// dropdown of other staff (never the current user — sharing with yourself is a no-op). Selections
+// land on the in-progress draft only; they're written onto the note itself by btn-save-note, same
+// as color/remindAt already are.
+function renderNoteShareControl(draft){
+  const me = state.session.name;
+  const staffChoices = (state.staff||[]).filter(s=>s.name && s.name!==me);
+  const picked = Array.isArray(draft.sharedWith) ? draft.sharedWith : [];
+  return `
+  <div class="notes-share-wrap">
+    <button type="button" class="notes-share-btn ${picked.length?'has-value':''}" id="btn-note-share-toggle" title="Share with staff" aria-label="Share with staff">
+      ${icon('share')}
+      ${picked.length ? `<span class="notes-share-count">${picked.length}</span>` : ''}
+    </button>
+    ${state._noteShareOpen ? `
+    <div class="notes-share-dropdown" id="note-share-dropdown">
+      <div class="notes-share-dropdown-title">Share with</div>
+      ${staffChoices.length ? staffChoices.map(s=>`
+      <label class="notes-share-row">
+        <input type="checkbox" data-note-share-staff="${escAttr(s.name)}" ${picked.includes(s.name)?'checked':''}>
+        <span>${esc(s.name)}</span>
+      </label>`).join('') : `<div class="hint" style="padding:6px 2px;">No other staff to share with.</div>`}
+      <button type="button" class="notes-share-done" id="btn-note-share-done">Done</button>
+    </div>` : ''}
+  </div>`;
+}
 // Floating button + popup for personal notes & reminders — picked from 10 icon/popup mockups
 // ("reminder-forward bell"): a gradient "next up" card for the soonest pending reminder, then
 // every other note, then the compose row. Gated by the notes_access permission (Settings → User
@@ -11596,7 +11643,7 @@ function renderNotesFab(){
   });
   const open = !!state._notesFabOpen;
   const next = notes.find(n=>n.remindAt && !n.fired);
-  const draft = state._noteComposeDraft || {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:''};
+  const draft = state._noteComposeDraft || {text:'', color:NOTE_COLOR_PALETTE[0], date:'', time:'', sharedWith:[]};
   return `
   <div class="notes-fab-wrap">
     ${open ? `<div class="notes-fab-backdrop" id="notes-fab-backdrop"></div>` : ''}
@@ -11612,14 +11659,15 @@ function renderNotesFab(){
         <div class="notes-next-text">${esc(unbr(next.text))}</div>
         <div class="notes-next-when">${esc(formatNoteWhen(next.remindAt))}</div>
       </div>` : ''}
-      ${notes.length ? notes.map((n,i)=>{ const c = n.color||NOTE_COLOR_PALETTE[0]; return `
+      ${notes.length ? notes.map((n,i)=>{ const c = n.color||NOTE_COLOR_PALETTE[0]; const mine = n.ownerName===state.session.name; return `
       <div class="notes-row" style="animation-delay:${90+i*55}ms;background:color-mix(in srgb, ${escAttr(c)} 16%, white);border-left:3px solid ${escAttr(c)};">
         <div class="notes-row-text">
           ${esc(unbr(n.text))}
+          ${!mine ? `<div class="notes-row-shared">Shared by ${esc(n.ownerName)}</div>` : ((n.sharedWith||[]).length ? `<div class="notes-row-shared">Shared with ${esc(n.sharedWith.join(', '))}</div>` : '')}
           ${n.remindAt ? `<div class="notes-row-when">${esc(formatNoteWhen(n.remindAt))}</div>` : ''}
         </div>
-        <button type="button" class="notes-row-edit" data-edit-note="${n.id}" title="Edit" aria-label="Edit note">${icon('edit')}</button>
-        <button type="button" class="notes-row-del" data-delete-note="${n.id}" title="Delete" aria-label="Delete note">${icon('close')}</button>
+        ${mine ? `<button type="button" class="notes-row-edit" data-edit-note="${n.id}" title="Edit" aria-label="Edit note">${icon('edit')}</button>` : ''}
+        <button type="button" class="notes-row-del" data-delete-note="${n.id}" title="${mine?'Delete':'Remove from my list'}" aria-label="${mine?'Delete note':'Remove from my list'}">${icon('close')}</button>
       </div>`;}).join('') : `<div class="hint" style="padding:6px 0 10px;">No notes yet — add one below.</div>`}
 
       <div class="notes-compose" style="animation-delay:${90+notes.length*55+30}ms;">
@@ -11633,11 +11681,14 @@ function renderNotesFab(){
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
           <span>${(draft.date && draft.time) ? esc(formatNoteWhen(`${draft.date}T${draft.time}`)) : 'Set a reminder (optional)'}</span>
         </button>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div class="notes-color-row">
             ${NOTE_COLOR_PALETTE.map(c=>`<button type="button" class="notes-color-dot ${draft.color===c?'selected':''}" data-note-color="${c}" style="background:${c}" aria-label="Choose color"></button>`).join('')}
           </div>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-save-note">${draft.editingId ? 'Update' : 'Save'}</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${renderNoteShareControl(draft)}
+            <button type="button" class="btn btn-primary btn-sm" id="btn-save-note">${draft.editingId ? 'Update' : 'Save'}</button>
+          </div>
         </div>
       </div>
     </div>` : ''}
@@ -21299,11 +21350,29 @@ function attachShellHandlers(){
     state._notesFabOpen = !state._notesFabOpen;
     render();
   };
-  if(byIdEl('notes-fab-backdrop')) byIdEl('notes-fab-backdrop').onclick = ()=>{ state._notesFabOpen = false; render(); };
-  if(byIdEl('notes-fab-close')) byIdEl('notes-fab-close').onclick = ()=>{ state._notesFabOpen = false; render(); };
+  // Panel closing Rule: this popup holds the note-compose textarea (a form someone may be
+  // mid-way through typing), so the dim backdrop must not throw that away on a stray click —
+  // only the explicit X (notes-fab-close) or re-toggling the bell closes it. The backdrop still
+  // closes the (non-form) share-staff dropdown, same as any other picker.
+  if(byIdEl('notes-fab-backdrop')) byIdEl('notes-fab-backdrop').onclick = ()=>{ captureNoteComposeDraft(); state._noteShareOpen = false; render(); };
+  if(byIdEl('notes-fab-close')) byIdEl('notes-fab-close').onclick = ()=>{ state._notesFabOpen = false; state._noteShareOpen = false; render(); };
   document.querySelectorAll('[data-note-color]').forEach(b=>b.addEventListener('click', ()=>{
     captureNoteComposeDraft();
     state._noteComposeDraft.color = b.dataset.noteColor;
+    render();
+  }));
+  if(byIdEl('btn-note-share-toggle')) byIdEl('btn-note-share-toggle').onclick = ()=>{
+    captureNoteComposeDraft();
+    state._noteShareOpen = !state._noteShareOpen;
+    render();
+  };
+  if(byIdEl('btn-note-share-done')) byIdEl('btn-note-share-done').onclick = ()=>{ state._noteShareOpen = false; render(); };
+  document.querySelectorAll('[data-note-share-staff]').forEach(b=>b.addEventListener('change', ()=>{
+    captureNoteComposeDraft();
+    const name = b.dataset.noteShareStaff;
+    const draft = state._noteComposeDraft;
+    const cur = Array.isArray(draft.sharedWith) ? draft.sharedWith : [];
+    draft.sharedWith = b.checked ? [...cur, name] : cur.filter(n=>n!==name);
     render();
   }));
   if(byIdEl('btn-save-note')) byIdEl('btn-save-note').onclick = async ()=>{
@@ -21312,9 +21381,10 @@ function attachShellHandlers(){
     const draft = state._noteComposeDraft || {};
     const color = draft.color || NOTE_COLOR_PALETTE[0];
     const remindAt = (draft.date && draft.time) ? new Date(`${draft.date}T${draft.time}`).toISOString() : null;
+    const sharedWith = Array.isArray(draft.sharedWith) ? draft.sharedWith.filter(Boolean) : [];
     const existing = draft.editingId ? (state.personalNotes||[]).find(n=>n.id===draft.editingId) : null;
     if(existing){
-      existing.text = text; existing.color = color;
+      existing.text = text; existing.color = color; existing.sharedWith = sharedWith;
       // Re-arm the reminder if the time actually changed (new, cleared, or moved) — editing a
       // note someone's already been reminded about, to a genuinely different time, should be
       // able to remind them again; editing just the text/color with the same time shouldn't
@@ -21322,13 +21392,14 @@ function attachShellHandlers(){
       if(existing.remindAt !== remindAt) existing.fired = false;
       existing.remindAt = remindAt;
     } else {
-      state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, createdAt: new Date().toISOString()}];
+      state.personalNotes = [...(state.personalNotes||[]), {id: uid('NOTE'), ownerName: state.session.name, text, color, remindAt, fired:false, sharedWith, createdAt: new Date().toISOString()}];
     }
     state._noteComposeDraft = null;
+    state._noteShareOpen = false;
     const ok = await save('personalNotes');
     render();
     if(!ok) return;
-    showToast(existing ? 'Note updated' : 'Note saved');
+    showToast(existing ? 'Note updated' : (sharedWith.length ? `Note saved & shared with ${sharedWith.join(', ')}` : 'Note saved'));
   };
   document.querySelectorAll('[data-edit-note]').forEach(b=>b.addEventListener('click', ()=>{
     const n = (state.personalNotes||[]).find(x=>x.id===b.dataset.editNote);
@@ -21339,14 +21410,24 @@ function attachShellHandlers(){
       text: n.text, color: n.color || NOTE_COLOR_PALETTE[0],
       date: d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '',
       time: d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '',
+      sharedWith: Array.isArray(n.sharedWith) ? [...n.sharedWith] : [],
       editingId: n.id,
     };
+    state._noteShareOpen = false;
     render();
   }));
-  if(byIdEl('btn-cancel-edit-note')) byIdEl('btn-cancel-edit-note').onclick = ()=>{ state._noteComposeDraft = null; render(); };
+  if(byIdEl('btn-cancel-edit-note')) byIdEl('btn-cancel-edit-note').onclick = ()=>{ state._noteComposeDraft = null; state._noteShareOpen = false; render(); };
   document.querySelectorAll('[data-delete-note]').forEach(b=>b.addEventListener('click', async ()=>{
-    state.personalNotes = (state.personalNotes||[]).filter(n=>n.id!==b.dataset.deleteNote);
-    if(state._noteComposeDraft && state._noteComposeDraft.editingId===b.dataset.deleteNote) state._noteComposeDraft = null;
+    const id = b.dataset.deleteNote;
+    const n = (state.personalNotes||[]).find(x=>x.id===id);
+    if(n && n.ownerName!==state.session.name){
+      // Not the owner — this is "shared with me", so only drop my own name off it rather than
+      // deleting the owner's note out from under them.
+      n.sharedWith = (n.sharedWith||[]).filter(nm=>nm!==state.session.name);
+    } else {
+      state.personalNotes = (state.personalNotes||[]).filter(n=>n.id!==id);
+    }
+    if(state._noteComposeDraft && state._noteComposeDraft.editingId===id) state._noteComposeDraft = null;
     await save('personalNotes');
     render();
   }));

@@ -26,6 +26,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | New order | `order:new…` |
 | Mixing Step Templates editor | `mixingtemplatesteps…` |
 | Log a complaint, and Complaint details | `complaint:new` and `complaint:<id>` (matched as `complaint:`) |
+| Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
 Deliberately **not** covered (not forms): `complaintreasons`, `complaintpriorities`,
 `complaintphotos:…`, `complaintcustomerview:…`, Box Count (closes on outside click on desktop; on

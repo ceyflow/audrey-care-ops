@@ -2506,7 +2506,6 @@ html{ visibility:hidden; }
   .lorry-live{margin-top:12px;}
   .lorry-live-top{margin-bottom:6px;}
   .lorry-map{width:100%;height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--border);z-index:0;}
-  .lorry-map-track{height:240px;margin-top:14px;}
   .lorry-pin{background:none;border:none;}
   .lorry-pin-dot{width:40px;height:40px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 4px 10px rgba(0,0,0,.35);}
   .lorry-steps{padding-left:20px;line-height:1.55;font-size:14px;}
@@ -10322,7 +10321,7 @@ function attachTrackHandlers(){
   if(o && o.courierService==='CityPak' && o.courierNumber && o.stage>=3 && CITYPAK_CONFIGURED){
     ensureCitypakTracking(o.courierNumber);
   }
-  if(o && o.courierService==='AC Delivery' && o.stage>=3){ ensureLorryTrack(o.id); lorryRenderMaps(); }
+  if(o && o.courierService==='AC Delivery' && o.stage>=3){ ensureLorryTrack(o.id); }
   document.querySelectorAll('.rate-stars').forEach(wrap=>{
     const stars = [...wrap.querySelectorAll('.rate-star')];
     stars.forEach((star, idx)=>{
@@ -11941,12 +11940,12 @@ function gridDragAfterElement(container, x, y){
 // ALL of this runs through database functions (driver_run, driver_start_run, driver_mark_stop,
 // driver_send_location, driver_finish_run, runs_overview, run_create, run_cancel, driver_device_token,
 // lorry_drivers, track_lorry): a Driver account can see and change nothing else, and the customer page
-// only ever gets state / stops-before / driver first name / lorry position of ITS OWN order.
+// only ever gets state / stops-before / driver first name / delivery time of ITS OWN order (never a map or position).
 const LORRY_TRACKING_URL = SUPABASE_URL + '/functions/v1/lorry-location';
 const LORRY_STALE_MS = 3 * 60 * 1000;     // no point for 3 minutes -> say the signal is lost
 const LORRY_POLL_MS = 10 * 1000;
 const LORRY_STOP_LABEL = {pending:'Waiting', delivered:'Delivered', not_home:'Not at home', returned:'Returned'};
-let _lorryBusy = false, _lorryLastFetch = 0, _lorryMaps = {}, _lorryTrackMap = null, _lorryTrackTimer = null;
+let _lorryBusy = false, _lorryLastFetch = 0, _lorryMaps = {}, _lorryTrackTimer = null;
 let _lorryShareWatch = null, _lorryShareLastSent = 0, _lorryShareWake = null;
 
 async function lorryRpc(name, args){
@@ -12020,7 +12019,6 @@ function lorryPin(){ return L.divIcon({className:'lorry-pin', html:'<div class="
 function lorryDropMaps(){
   Object.keys(_lorryMaps).forEach(k => { try{ _lorryMaps[k].map.remove(); }catch(e){} });
   _lorryMaps = {};
-  if(_lorryTrackMap){ try{ _lorryTrackMap.map.remove(); }catch(e){} _lorryTrackMap = null; }
 }
 function lorryRenderMaps(){
   lorryDropMaps();
@@ -12036,12 +12034,6 @@ function lorryRenderMaps(){
     });
     _lorryMaps[run ? run.id : el.getAttribute('data-run')] = {map, marker};
   });
-  const tEl = document.getElementById('track-lorry-map');
-  const t = state._lorryTrack;
-  if(tEl && t && t.data && t.data.lat != null){
-    const map = lorryMakeMap(tEl, {lat:t.data.lat, lng:t.data.lng});
-    if(map) _lorryTrackMap = {map, marker: L.marker([t.data.lat, t.data.lng], {icon: lorryPin()}).addTo(map)};
-  }
 }
 function lorryUpdateMarkers(){
   (state._runs || []).forEach(run => {
@@ -12375,17 +12367,10 @@ async function lorryTrackFetch(orderId){
     if(error) throw error;
     const prev = state._lorryTrack && state._lorryTrack.orderId === orderId ? state._lorryTrack : null;
     if(data === null && prev && prev.data && prev.data.state === 'on_the_way') return; // keep the last picture if a lookup was limited
-    const sig = d => JSON.stringify(d ? Object.assign({}, d, {lat:null, lng:null, heading:null, positionAt:null, hasPos: d.lat != null}) : null);
-    const changed = !prev || sig(prev.data) !== sig(data);
-    const moved = !prev || !prev.data || !data || prev.data.lat !== data.lat || prev.data.lng !== data.lng;
+    const changed = !prev || JSON.stringify(prev.data) !== JSON.stringify(data);
     state._lorryTrack = {orderId, data, at: Date.now()};
     if(!state.trackMode) return;
     if(changed) render();
-    else if(moved && _lorryTrackMap && data && data.lat != null){
-      _lorryTrackMap.marker.setLatLng([data.lat, data.lng]);
-      if(!_lorryTrackMap.map.getBounds().contains([data.lat, data.lng])) _lorryTrackMap.map.panTo([data.lat, data.lng]);
-      document.querySelectorAll('[data-lorry-ago]').forEach(el => { el.textContent = lorryAgo(el.getAttribute('data-lorry-ago')); });
-    }
   }catch(e){ console.error('track_lorry failed', e); }
 }
 function ensureLorryTrack(orderId){
@@ -12401,17 +12386,12 @@ function renderLorryTrackBlock(o){
   const t = state._lorryTrack;
   if(!t || t.orderId !== o.id || !t.data) return '';
   const d = t.data;
-  let ico = '🚚', head = '', sub = '', map = '';
+  let ico = '🚚', head = '', sub = '';
   if(d.state === 'loading'){ head = 'Loading onto our delivery lorry'; sub = 'Your order is being prepared for today’s delivery run.'; }
   else if(d.state === 'on_the_way'){
     head = 'On the way to you';
     const n = Number(d.stopsBefore) || 0;
     sub = (n === 0 ? 'You are the next stop.' : `${n} stop${n===1?'':'s'} before yours.`) + (d.driverFirstName ? ` Your driver is ${d.driverFirstName}.` : '');
-    if(d.lat != null){
-      const stale = lorryIsStale({updatedAt: d.positionAt});
-      map = `<div id="track-lorry-map" class="lorry-map lorry-map-track"></div>
-        <div class="track-courier-sub" style="text-align:center;margin-top:6px;">${stale ? 'Last location ' : 'Live location · updated '}<span data-lorry-ago="${escAttr(d.positionAt || '')}">${esc(lorryAgo(d.positionAt))}</span></div>`;
-    } else map = `<div class="track-courier-sub" style="text-align:center;margin-top:6px;">The live map will appear as soon as the lorry’s location arrives.</div>`;
   }
   else if(d.state === 'delivered'){ ico = '✅'; head = 'Delivered'; sub = d.doneAt ? 'Delivered at ' + fmtDateTime(d.doneAt) + '.' : 'Your order has been delivered.'; }
   else if(d.state === 'not_home'){ ico = '⏸'; head = 'We could not reach you'; sub = 'Our driver tried to deliver. Our team will contact you shortly. Hotline: 077 697 9959.'; }
@@ -12419,7 +12399,7 @@ function renderLorryTrackBlock(o){
   else return '';
   return `<div class="track-divider"></div>
   <div class="lorry-track"><div class="track-courier-row"><span class="lorry-track-ico">${ico}</span>
-    <div><div class="track-courier-name">${esc(head)}</div><div class="track-courier-sub">${esc(sub)}</div></div></div>${map}</div>`;
+    <div><div class="track-courier-name">${esc(head)}</div><div class="track-courier-sub">${esc(sub)}</div></div></div></div>`;
 }
 
 const PAGE_META = {

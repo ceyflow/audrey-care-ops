@@ -24,7 +24,7 @@ const SEND_LK_ENDPOINT = "https://sms.send.lk/api/v3/sms/send";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-sms-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 
@@ -38,10 +38,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// While every open copy of the page is being updated, the old shared-password header is still accepted as well.
-// Set to false (and redeploy) afterwards: the leaked password is then useless.
-const ALLOW_LEGACY_SECRET = true;
-
 async function memberFromRequest(req: Request): Promise<{ id: string; role: string } | null> {
   const authHeader = req.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return null;
@@ -51,11 +47,6 @@ async function memberFromRequest(req: Request): Promise<{ id: string; role: stri
   const { data: profile } = await caller.from("profiles").select("role, active").eq("id", user.id).maybeSingle();
   if (!profile || profile.active === false) return null;
   return { id: user.id, role: profile.role };
-}
-
-function clientIp(req: Request): string {
-  const raw = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "";
-  return raw.split(",")[0].trim() || "unknown";
 }
 
 // true while `ident` is still under `max` calls per `windowSeconds` for this bucket (counted in the database).
@@ -97,13 +88,11 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
   const member = await memberFromRequest(req);
-  const legacySecret = Deno.env.get("SMS_APP_SECRET") || "";
-  const legacyOk = ALLOW_LEGACY_SECRET && legacySecret !== "" && req.headers.get("x-sms-secret") === legacySecret;
-  if (!member && !legacyOk) {
+  if (!member) {
     return json({ ok: false, error: "unauthorized" }, 401);
   }
   // 1500 messages per hour per person is far above real use (the biggest campaign) and caps a stolen sign-in.
-  if (!(await underLimit("sms", member ? member.id : "legacy:" + clientIp(req), 3600, 1500))) {
+  if (!(await underLimit("sms", member.id, 3600, 1500))) {
     return json({ ok: false, error: "too many messages this hour — try again later" }, 429);
   }
 

@@ -30,7 +30,7 @@ const DEFAULT_MODEL = "gemini-3.8-flash";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-dally-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 
@@ -44,10 +44,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// While every open copy of the page is being updated, the old shared-password header is still accepted as well.
-// Set to false (and redeploy) afterwards: the leaked password is then useless.
-const ALLOW_LEGACY_SECRET = true;
-
 async function memberFromRequest(req: Request): Promise<{ id: string; role: string } | null> {
   const authHeader = req.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return null;
@@ -57,11 +53,6 @@ async function memberFromRequest(req: Request): Promise<{ id: string; role: stri
   const { data: profile } = await caller.from("profiles").select("role, active").eq("id", user.id).maybeSingle();
   if (!profile || profile.active === false) return null;
   return { id: user.id, role: profile.role };
-}
-
-function clientIp(req: Request): string {
-  const raw = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "";
-  return raw.split(",")[0].trim() || "unknown";
 }
 
 // true while `ident` is still under `max` calls per `windowSeconds` for this bucket (counted in the database).
@@ -95,13 +86,11 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
   const member = await memberFromRequest(req);
-  const legacySecret = Deno.env.get("DALLY_APP_SECRET") || "";
-  const legacyOk = ALLOW_LEGACY_SECRET && legacySecret !== "" && req.headers.get("x-dally-secret") === legacySecret;
-  if (!member && !legacyOk) {
+  if (!member) {
     return json({ ok: false, error: "unauthorized" }, 401);
   }
   // protects the free Gemini quota: 120 questions per hour per person
-  if (!(await underLimit("dally", member ? member.id : "legacy:" + clientIp(req), 3600, 120))) {
+  if (!(await underLimit("dally", member.id, 3600, 120))) {
     return json({ ok: false, error: "Dally needs a short rest — too many questions this hour." }, 429);
   }
 

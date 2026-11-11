@@ -27,7 +27,7 @@ const DEFAULT_BASE_URL = "https://falcon.citypak.lk";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-citypak-secret", // x-citypak-secret: only so pages that are still open from before the update do not fail their preflight; the value is ignored
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 

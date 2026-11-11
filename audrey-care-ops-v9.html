@@ -11940,7 +11940,7 @@ function gridDragAfterElement(container, x, y){
 // ALL of this runs through database functions (driver_run, driver_start_run, driver_mark_stop,
 // driver_send_location, driver_finish_run, runs_overview, run_create, run_cancel, driver_device_token,
 // lorry_drivers, track_lorry): a Driver account can see and change nothing else, and the customer page
-// only ever gets state / stops-before / driver first name / delivery time of ITS OWN order (never a map or position).
+// only ever gets state / driver first name / delivery time of ITS OWN order (never a map, a position or a stop count).
 const LORRY_TRACKING_URL = SUPABASE_URL + '/functions/v1/lorry-location';
 const LORRY_STALE_MS = 3 * 60 * 1000;     // no point for 3 minutes -> say the signal is lost
 const LORRY_POLL_MS = 10 * 1000;
@@ -12390,8 +12390,7 @@ function renderLorryTrackBlock(o){
   if(d.state === 'loading'){ head = 'Loading onto our delivery lorry'; sub = 'Your order is being prepared for today’s delivery run.'; }
   else if(d.state === 'on_the_way'){
     head = 'On the way to you';
-    const n = Number(d.stopsBefore) || 0;
-    sub = (n === 0 ? 'You are the next stop.' : `${n} stop${n===1?'':'s'} before yours.`) + (d.driverFirstName ? ` Your driver is ${d.driverFirstName}.` : '');
+    sub = d.driverFirstName ? `Your driver is ${d.driverFirstName}.` : 'Your order is on its way.';
   }
   else if(d.state === 'delivered'){ ico = '✅'; head = 'Delivered'; sub = d.doneAt ? 'Delivered at ' + fmtDateTime(d.doneAt) + '.' : 'Your order has been delivered.'; }
   else if(d.state === 'not_home'){ ico = '⏸'; head = 'We could not reach you'; sub = 'Our driver tried to deliver. Our team will contact you shortly. Hotline: 077 697 9959.'; }

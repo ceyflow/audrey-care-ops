@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261111090738">
+<meta name="app-build" content="20261111111346">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9693,6 +9693,38 @@ function answerAiQuery(raw){
     const outcome = orderMatch.deliveryOutcome ? ` Marked as ${orderMatch.deliveryOutcome}.` : '';
     const rating = orderMatch.customerRating ? ` Customer rated it ${orderMatch.customerRating}/5.` : '';
     return `Order ${orderMatch.orderNumber} — ${orderMatch.customer} — is at "${stageName}".${outcome}${rating}`;
+  }
+
+  // Customer-name order/delivery history lookup, e.g. "need R T Trading (PVT) LTD order
+  // delivery history" — also checked before the generic 'order'/'delivery' keyword branches
+  // below, for the same reason as the order-number match above: a named customer is more
+  // specific and must win, or a question like this one silently falls into "X active orders
+  // right now" (confidently wrong, since it never looked at who was asked about) instead of a
+  // real answer or an honest "I don't know that one". Matches against both state.customers and
+  // any order's own customer field (so it still works for a one-off customer never added to the
+  // customers list), case-insensitive, substring both ways so "R T Trading" matches "R T Trading
+  // (PVT) LTD" and vice versa. Names under 3 characters are skipped to avoid a short name (or an
+  // initial) matching almost any sentence.
+  if(q.includes('order') || q.includes('deliver')){
+    const names = new Set();
+    (state.customers||[]).forEach(c=>{ if(c.name && c.name.length>=3) names.add(c.name); });
+    state.orders.forEach(o=>{ if(o.customer && o.customer.length>=3) names.add(o.customer); });
+    const matchName = Array.from(names).find(n=>{
+      const nl = n.toLowerCase();
+      return q.includes(nl) || nl.includes(q.replace(/^(need|show|get|find|what'?s?|whats)\b/,'').trim());
+    });
+    if(matchName){
+      const custOrders = state.orders.filter(o=>o.customer===matchName);
+      if(custOrders.length===0) return `No orders found for ${matchName}.`;
+      const sorted = custOrders.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+      const lines = sorted.slice(0,8).map(o=>{
+        const stageName = STAGES[o.stage];
+        const outcome = o.deliveryOutcome ? `, ${o.deliveryOutcome}` : '';
+        return `${o.orderNumber||'no #'}: ${stageName}${outcome}`;
+      }).join('; ');
+      const more = custOrders.length>8 ? ` (+${custOrders.length-8} more)` : '';
+      return `${custOrders.length} order${custOrders.length===1?'':'s'} for ${matchName}: ${lines}${more}.`;
+    }
   }
 
   if(qHas(q,'picked up today','delivered today')){

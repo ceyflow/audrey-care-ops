@@ -23199,14 +23199,18 @@ function attachShellHandlers(){
   if(byIdEl('form-admin-broadcast-reply')) byIdEl('form-admin-broadcast-reply').addEventListener('submit', sendAdminBroadcastReply);
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
-  // easy to half-fill and lose with one stray click (New order, and the Mixing Step Templates
-  // editor), which only close via their own Cancel/Create/Save controls.
+  // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
+  // and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
+  // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
+  // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
+  // the normal click-outside-to-close behaviour.
   bindRichTextFields(document);
   bindColorSwatchFields(document);
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

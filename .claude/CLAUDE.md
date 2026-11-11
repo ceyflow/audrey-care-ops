@@ -52,3 +52,29 @@ with `cmp`.
 
 **Applies to every role** (Admin, Sub Admin, Customer care, Packing, and the rest), including roles
 that can only add an update to a complaint: they close it with Close like everyone else.
+
+---
+
+## System notes (written by Claude after the 2026-11-11 security work; not owner rules)
+
+Keep these true when changing the app. Details and the audit are in the owner's private report, not in this repo.
+
+- **Sign-in.** Name -> `resolve_login` (database function, anonymous-callable) -> one `signInWithPassword`. A person's
+  role, name and on/off status come ONLY from the `profiles` row, which only an Admin (or a service-role Edge Function)
+  can change. The browser never writes its own role, and never trusts the saved account list for it.
+- **Accounts** are created, reset and deleted only by the Edge Functions `admin-create-account`,
+  `admin-reset-password`, `admin-delete-account` (sources in `supabase/functions/`; they find accounts by exact
+  profile name, never by matching the end of an address). Do not bring back browser sign-ups or browser-written profiles.
+- **Deactivate** = `profiles.active = false`: the database gives that login no data and the app signs it out.
+- **The account record** (`app_data` key `auth`) is readable by signed-in, switched-on people and writable by Admin only.
+  It holds the roster (names, access levels, Employer codes, extra pages) and never any passwords. Only an Admin's
+  browser writes it back on page load.
+- **Database rules.** Logged-out visitors can only read the login-page branding keys (`theme`, `branding`,
+  `loginCustomization`), call `resolve_login`, and use the order-tracking/rating functions. Private backups of the
+  state before the change are in the database schema `private_backup` (tables `*_20261111`).
+- **Third-party scripts** (supabase-js, lottie, leaflet) are pinned to exact versions with `integrity` hashes. When
+  upgrading, change the version AND the hash together, and test in a real browser.
+- **Service worker** is the real file `sw.js` at the site root (network-first, this site's own files only; it never
+  touches Supabase or CDN requests). Never build it from a `blob:` address: browsers refuse that.
+- **Order Product** is stored as small HTML (bold/italic/underline/line breaks). Always show it through `richText()`
+  and read it as text through `stripTags()`; both are inert/allow-listed. Never insert it raw.

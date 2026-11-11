@@ -26,6 +26,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | New order | `order:new…` |
 | Mixing Step Templates editor | `mixingtemplatesteps…` |
 | Log a complaint, and Complaint details | `complaint:new` and `complaint:<id>` (matched as `complaint:`) |
+| Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
 Deliberately **not** covered (not forms): `complaintreasons`, `complaintpriorities`,
@@ -88,3 +89,21 @@ Keep these true when changing the app. Details and the audit are in the owner's 
 - **Logged-out visitors save nothing** (`kvSet` / `saveQuietly` refuse). Saving "no value" (null) deletes the row.
 - **Install (PWA).** `manifest.webmanifest` + `assets/icons/` are real files linked from the page; do not turn the
   manifest back into a `data:` address (phones cannot fetch that to build the installed app).
+- **AC lorry runs (Delivery runs / My delivery run).** Office page `deliveryruns` (Admin, Sub Admin; the database lets Admin,
+  Sub Admin and Packing manage runs) builds a run: a Driver account + AC Delivery orders at stage 3, in stop order. The driver
+  signs in with a **Driver** account (custom role "Driver", only page `driverrun`; created automatically by an Admin's browser,
+  and the page falls back to `ROLE_PAGES.Driver`), starts the run, and marks each stop Delivered (signed-invoice photo required) /
+  Not at home / Returned. Marking a stop sets the order's `deliveryOutcome` (Delivered / On Hold / Returned) itself.
+  Everything goes through database functions (`runs_overview`, `run_create`, `run_cancel`, `lorry_drivers`, `driver_run`,
+  `driver_start_run`, `driver_mark_stop`, `driver_send_location`, `driver_finish_run`, `driver_device_token`, `lorry_ingest`,
+  `track_lorry`); the tables live in the `private` schema (`delivery_runs`, `delivery_stops`, `lorry_positions`, `driver_devices`)
+  with no direct access for anyone. A Driver account reads no shared data. Cancelling a run only marks it finished (no deletes).
+- **Lorry position.** Comes from the free **Traccar Client** phone app (background, screen off) posting to the Edge Function
+  `lorry-location` (verify_jwt off; the driver's private device token is the "device identifier"; `lorry_ingest` stores a point
+  only while that driver has an ACTIVE run and rate-limits it). The driver page also has a backup "share from this screen" button
+  (`driver_send_location`). A position is shown only while the run is active; the last point per run stays in the private table.
+- **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
+  delivered / not home / returned), how many stops are before theirs, the driver's FIRST name, the delivery time and the lorry
+  position only while on the way. Never other customers' names, phones or addresses. It is rate-limited per visitor. Keep it so.
+- Driver proof photos go to the `order-photos` bucket under `proofs/<run>/`; like all buckets it is public by link (private
+  buckets are still an open optional job).

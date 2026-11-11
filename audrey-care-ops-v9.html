@@ -2473,6 +2473,47 @@ html{ visibility:hidden; }
   .track-courier-icon svg{width:17px;height:17px;}
   .track-courier-name{font-weight:600;font-size:13.5px;color:var(--ink);}
   .track-courier-sub{font-size:11.5px;color:var(--muted);margin-top:1px;letter-spacing:.01em;}
+  /* ---------------- AC lorry runs: driver page, office page, customer tracking block ---------------- */
+  .lorry-run-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .lorry-run-id{font-weight:700;font-size:16px;color:var(--ink);}
+  .lorry-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 2px 8px;}
+  .lorry-big{width:100%;padding:16px;font-size:17px;margin-top:14px;}
+  .lorry-actions-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .lorry-actions-row .btn{flex:1 1 auto;text-align:center;text-decoration:none;}
+  .lorry-act3 .btn{flex:1 1 30%;padding:13px 6px;font-size:14px;}
+  .lorry-stop{margin-top:10px;}
+  .lorry-stop-done{opacity:.8;}
+  .lorry-stop-top{display:flex;align-items:center;gap:12px;}
+  .lorry-stop-main{flex:1;min-width:0;}
+  .lorry-stop-name{font-weight:700;font-size:16px;color:var(--ink);}
+  .lorry-stop-addr{margin-top:8px;font-size:14px;color:var(--ink);line-height:1.4;}
+  .lorry-seq{flex:0 0 auto;min-width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center;}
+  .lorry-empty{text-align:center;padding:36px 20px;}
+  .lorry-empty-ico{width:46px;height:46px;margin:0 auto 10px;color:var(--accent-dark);}
+  .lorry-empty-ico svg{width:100%;height:100%;}
+  .lorry-note{background:var(--accent-soft);color:var(--accent-dark);border-radius:12px;padding:12px 14px;font-size:13.5px;margin:10px 0;}
+  .lorry-note-warn{background:#fff4e0;color:#8a5a00;}
+  .lorry-pick{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;}
+  .lorry-pick-row{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--ink);}
+  .lorry-pick-row.on{border-color:var(--accent);background:var(--accent-soft);}
+  .lorry-pick-main{display:flex;flex-direction:column;min-width:0;}
+  .lorry-pick-row .lorry-seq{background:#fff;border:1.5px solid var(--border);}
+  .lorry-pick-row.on .lorry-seq{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
+  .lorry-run{margin-top:12px;}
+  .lorry-stoplist{margin-top:12px;border-top:1px solid var(--border);}
+  .lorry-stoprow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .lorry-proof{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border);display:block;}
+  .lorry-live{margin-top:12px;}
+  .lorry-live-top{margin-bottom:6px;}
+  .lorry-map{width:100%;height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--border);z-index:0;}
+  .lorry-map-track{height:240px;margin-top:14px;}
+  .lorry-pin{background:none;border:none;}
+  .lorry-pin-dot{width:40px;height:40px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 4px 10px rgba(0,0,0,.35);}
+  .lorry-steps{padding-left:20px;line-height:1.55;font-size:14px;}
+  .lorry-steps li{margin-bottom:8px;}
+  .lorry-copy{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .lorry-copy code{flex:1;min-width:0;word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:12px;}
+  .lorry-track-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px;}
   .track-link-row input:focus{outline:none;}
   /* Scoped to this card, not a global .btn-primary/input change -- every other page's buttons and
      inputs are untouched. */
@@ -4218,8 +4259,9 @@ const DEFAULT_AUTH = {
 };
 const ASSIGNEE_TEAMS = ['Packing','Blending'];
 const ROLE_PAGES = {
-  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'],
-  'Sub Admin': ['orders','blendingdept','blending','customers','customercare','complaints'],
+  Admin: ['dashboard','orders','customercare','orderinquiry','ongoingorders','deliveryruns','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'],
+  'Sub Admin': ['orders','deliveryruns','blendingdept','blending','customers','customercare','complaints'],
+  Driver: ['driverrun'],
   Blending: ['blendingdept','blending','chat','recipes','recipelibrary'],
   Packing: ['orders','chat'],
   'Customer Care': ['customercare','complaints','orderinquiry','chat'],
@@ -4228,7 +4270,7 @@ const ROLE_PAGES = {
   Dashboard: ['dashboard','chat'],
 };
 // Pages an Admin can hand out to a custom role from Settings → User roles.
-const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'];
+const ASSIGNABLE_ROLE_PAGES = ['dashboard','orders','customercare','orderinquiry','ongoingorders','deliveryruns','driverrun','blendingdept','blending','recipes','recipelibrary','costing','customers','suppliers','itemlist','complaints','gmp','rnd','staff','chat','bulksms','ratings','attendance','settings'];
 // A role defined in Settings → User roles (state.userRoles) always wins when one exists for that
 // name — an Inactive one locks the role out entirely. Falls back to the hardcoded ROLE_PAGES
 // above only for a role with no custom record at all (Blending/Packing/Orders Process/R&D, which
@@ -4500,7 +4542,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 18;
+const PAGE_DATA_KEYS_VERSION = 19;
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -4522,6 +4564,10 @@ const PAGE_DATA_KEYS = {
   // section per delivery line (CityPak Deliveries, AC Deliveries, ...); without read access to it
   // a role sees every order dumped into one "Unassigned" section instead of split correctly.
   ongoingorders: ['orders','customers','deliveryLines'],
+  // deliveryruns / driverrun (v19): the lorry pages read their runs only through database functions;
+  // the office page also lists the orders waiting to go on a run. A Driver account reads no shared data.
+  deliveryruns: ['orders'],
+  driverrun: [],
   blendingdept: [],
   blending: ['blendBatches'],
   recipes: ['recipes','activeBatch','mixingStepTemplates'],
@@ -5565,6 +5611,7 @@ async function updateGmpChecklistSignOff(checklistId, year, month, field, day, v
 }
 
 const ICONS = {
+  truck:'<path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
   dashboard:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/>',
   orders:'<rect x="3" y="4" width="5" height="16" rx="1.2"/><rect x="9.5" y="4" width="5" height="10" rx="1.2"/><rect x="16" y="4" width="5" height="13" rx="1.2"/>',
   customers:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/>',
@@ -6223,6 +6270,22 @@ async function loadAll(){
         : r
     );
     saveQuietly('userRoles').catch(()=>{});
+  }
+  // AC lorry runs: the office page ('deliveryruns') goes to the two locked admin roles automatically
+  // (a role's saved `pages` list never picks up a page added later), and a "Driver" role (only the
+  // driver page) is created once so an Admin can pick it when adding the driver's account. Admin only,
+  // and only after the roles really loaded (never on an empty/raced read). Safe to re-check every load.
+  if(isAdmin() && state.userRoles.length){
+    let lorryChanged = false;
+    state.userRoles = state.userRoles.map(r=>{
+      if((r.name==='Admin' || r.name==='Sub Admin') && r.locked && Array.isArray(r.pages) && !r.pages.includes('deliveryruns')){ lorryChanged = true; return {...r, pages:[...r.pages,'deliveryruns']}; }
+      return r;
+    });
+    if(!state.userRoles.some(r=>r.name==='Driver')){
+      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name:'Driver', description:'Delivery lorry driver: sees only his own run.', status:'Active', pages:['driverrun'], permissions:buildRolePermissions([])}];
+      lorryChanged = true;
+    }
+    if(lorryChanged) saveQuietly('userRoles').catch(()=>{});
   }
   // The Inventory (raw material stock) feature was removed entirely, by request — this cleans the
   // page id back out of any role's saved `pages` snapshot it had already been backfilled into
@@ -9967,6 +10030,7 @@ function captureOpenFormFields(container){
     }
     const tag = el.tagName;
     if(tag!=='INPUT' && tag!=='TEXTAREA' && tag!=='SELECT') return;
+    if(tag==='INPUT' && el.type==='file') return; // a chosen file can never be put back by script (setting .value throws); the driver's stop form keeps its photo in state instead
     if(tag==='INPUT' && (el.type==='checkbox' || el.type==='radio')) return; // .value isn't their checked state; rare in these forms and not worth the extra bookkeeping
     let selector = null;
     if(el.id){ selector = '#'+CSS.escape(el.id); }
@@ -10200,6 +10264,7 @@ function renderTrackResult(o){
   </div>` : ''}
   ${stage>=3 ? renderRatingBlock(o) : ''}
   ${o.courierService==='CityPak' && o.courierNumber && stage>=3 ? renderCitypakTrackingBlock(o.courierNumber) : ''}
+  ${o.courierService==='AC Delivery' && stage>=3 ? renderLorryTrackBlock(o) : ''}
   <div class="track-divider"></div>
   <div style="text-align:center;">
     <a href="tel:0776979959" class="btn btn-sm" style="text-decoration:none;display:inline-block;">Hotline: 077 697 9959</a>
@@ -10257,6 +10322,7 @@ function attachTrackHandlers(){
   if(o && o.courierService==='CityPak' && o.courierNumber && o.stage>=3 && CITYPAK_CONFIGURED){
     ensureCitypakTracking(o.courierNumber);
   }
+  if(o && o.courierService==='AC Delivery' && o.stage>=3){ ensureLorryTrack(o.id); lorryRenderMaps(); }
   document.querySelectorAll('.rate-stars').forEach(wrap=>{
     const stars = [...wrap.querySelectorAll('.rate-star')];
     stars.forEach((star, idx)=>{
@@ -10610,6 +10676,10 @@ const NAV = [
     {id:'itemlist', label:'Item List', icon:'box'},
     {id:'ordersprocess', label:'Orders Process', icon:'list'},
   ]},
+  {group:'Delivery', items:[
+    {id:'deliveryruns', label:'Delivery runs', icon:'truck'},
+    {id:'driverrun', label:'My delivery run', icon:'truck'},
+  ]},
   {group:'GMP', items:[
     {id:'gmp', label:'GMP checklists', icon:'gmp'},
   ]},
@@ -10653,7 +10723,7 @@ const GRID_TILE_COLORS = {
   dashboard:'blue', orders:'accent', blendingdept:'orange', customercare:'maroon',
   customers:'blue', suppliers:'orange', itemlist:'purple', ordersprocess:'blue', gmp:'purple',
   rnd:'accent', staff:'blue', chat:'maroon', bulksms:'purple', ratings:'orange', settings:'accent',
-  attendance:'maroon', myattendance:'purple',
+  attendance:'maroon', myattendance:'purple', deliveryruns:'accent', driverrun:'accent',
 };
 function gridTileColor(id){ return GRID_TILE_COLORS[id] || 'blue'; }
 // Icon paths for the Sections grid specifically (Tabler Icons, MIT-licensed, github.com/tabler/
@@ -10677,6 +10747,8 @@ const GRID_ICONS = {
   settings: '<path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />',
 };
 GRID_ICONS.ordersprocess = GRID_ICONS.orders;
+GRID_ICONS.deliveryruns = GRID_ICONS.suppliers; // the truck
+GRID_ICONS.driverrun = GRID_ICONS.suppliers;
 // Bottom tab bar only — 'home' isn't a real NAV page id, so it's never a Sections-grid tile; it
 // exists purely so the Home tab can show a house, distinct from the Sections tab's grid icon
 // (both previously rendered gridDuotoneIcon('dashboard'), the same icon, since the Home tab's
@@ -10764,6 +10836,7 @@ function renderSectionsGridPage(){
 // Desktop keeps the old behavior (straight into the first page), since its sidebar is on screen
 // the whole time there and a separate "home" screen wouldn't add anything.
 function initialPageForLogin(role){
+  if((pagesForRole(role)||[]).includes('driverrun')) return 'driverrun'; // the driver goes straight to his run
   if(window.matchMedia && window.matchMedia('(max-width:760px)').matches) return 'sections';
   return (pagesForRole(role)||['dashboard'])[0] || 'dashboard';
 }
@@ -11858,6 +11931,497 @@ function gridDragAfterElement(container, x, y){
   const box = closest.getBoundingClientRect();
   return (x < box.left + box.width/2) ? closest : closest.nextElementSibling;
 }
+/* ===================== AC lorry delivery runs ===================== */
+// The office builds a RUN (a driver + the AC Delivery orders already at "Picked Up by Delivery", in
+// stop order). The driver signs in with a Driver account, taps Start, and marks each stop Delivered /
+// Not at home / Returned (Delivered needs a photo of the signed invoice). The lorry's position comes
+// from the free Traccar Client phone app (it keeps sending with the screen off) through the
+// `lorry-location` Edge Function; a driver can also share it from this page as a fallback.
+//
+// ALL of this runs through database functions (driver_run, driver_start_run, driver_mark_stop,
+// driver_send_location, driver_finish_run, runs_overview, run_create, run_cancel, driver_device_token,
+// lorry_drivers, track_lorry): a Driver account can see and change nothing else, and the customer page
+// only ever gets state / stops-before / driver first name / lorry position of ITS OWN order.
+const LORRY_TRACKING_URL = SUPABASE_URL + '/functions/v1/lorry-location';
+const LORRY_STALE_MS = 3 * 60 * 1000;     // no point for 3 minutes -> say the signal is lost
+const LORRY_POLL_MS = 10 * 1000;
+const LORRY_STOP_LABEL = {pending:'Waiting', delivered:'Delivered', not_home:'Not at home', returned:'Returned'};
+let _lorryBusy = false, _lorryLastFetch = 0, _lorryMaps = {}, _lorryTrackMap = null, _lorryTrackTimer = null;
+let _lorryShareWatch = null, _lorryShareLastSent = 0, _lorryShareWake = null;
+
+async function lorryRpc(name, args){
+  const { data, error } = await supabaseClient.rpc(name, args || {});
+  if(error) throw error;
+  return data;
+}
+function lorryErr(e){ return (e && (e.message || e.details)) || 'Something went wrong'; }
+// What counts as a CHANGE worth a full re-render: everything except the moving point itself (which only
+// moves the marker) -- but a point going stale / fresh does change what is shown.
+function lorryStrip(data){ return JSON.stringify(data === undefined ? null : data, (k, v) => k === 'position' ? (v ? {stale: lorryIsStale(v)} : null) : v); }
+function lorryPositions(data){ return JSON.stringify((Array.isArray(data) ? data : [data]).map(r => (r && r.position) || null)); }
+function lorryAgo(iso){
+  if(!iso) return '';
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if(s < 10) return 'just now';
+  if(s < 60) return s + ' seconds ago';
+  const m = Math.round(s / 60);
+  if(m < 60) return m + (m === 1 ? ' minute ago' : ' minutes ago');
+  return Math.round(m / 60) + ' h ago';
+}
+function lorryIsStale(pos){ return !pos || !pos.updatedAt || (Date.now() - new Date(pos.updatedAt).getTime()) > LORRY_STALE_MS; }
+function lorryMapsLink(address){ return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address || ''); }
+function lorryIsHttps(u){ return typeof u === 'string' && /^https:\/\//i.test(u); }
+
+// ---- loading (polls only while one of the two lorry pages is open) --------------------------------
+async function lorryRefresh(){
+  if(_lorryBusy || !state.session || !supabaseClient) return;
+  const page = state.page;
+  if(page !== 'driverrun' && page !== 'deliveryruns') return;
+  _lorryBusy = true; _lorryLastFetch = Date.now();
+  state._lorryLoaded = state._lorryLoaded || {};
+  try{
+    const data = page === 'driverrun' ? await lorryRpc('driver_run') : await lorryRpc('runs_overview');
+    if(page === 'deliveryruns' && !state._lorryDrivers){
+      try{ state._lorryDrivers = await lorryRpc('lorry_drivers'); }catch(e){ state._lorryDrivers = []; }
+    }
+    if(state.page !== page) return;
+    const key = page === 'driverrun' ? '_myRun' : '_runs';
+    const changed = !state._lorryLoaded[page] || lorryStrip(data) !== lorryStrip(state[key]) || !!state._lorryErr;
+    const moved = lorryPositions(data) !== lorryPositions(state[key]);
+    state[key] = data; state._lorryLoaded[page] = true; state._lorryErr = null;
+    if(changed){ if(!state.modal) render(); }
+    else if(moved){ lorryUpdateMarkers(); }
+  }catch(e){
+    state._lorryErr = lorryErr(e);
+    if(!state._lorryLoaded[page]){ state._lorryLoaded[page] = true; if(!state.modal) render(); }
+  }finally{ _lorryBusy = false; }
+}
+async function lorryRefreshNow(){ _lorryBusy = false; await lorryRefresh(); }
+function lorryKick(){
+  if(state.page !== 'driverrun' && state.page !== 'deliveryruns') return;
+  if(!state._lorryLoaded || !state._lorryLoaded[state.page]) lorryRefresh();
+  lorryRenderMaps();
+}
+setInterval(() => {
+  if(!state.session){ state._lorryLoaded = {}; state._myRun = null; state._runs = null; state._lorryDrivers = null; state._lorryTrack = state._lorryTrack; if(_lorryShareWatch !== null) lorryShareStop(); return; }
+  document.querySelectorAll('[data-lorry-ago]').forEach(el => { el.textContent = lorryAgo(el.getAttribute('data-lorry-ago')); });
+  if((state.page === 'driverrun' || state.page === 'deliveryruns') && Date.now() - _lorryLastFetch >= LORRY_POLL_MS) lorryRefresh();
+}, 5000);
+
+// ---- maps ---------------------------------------------------------------------------------------
+function lorryMakeMap(el, pos){
+  if(typeof L === 'undefined') return null;
+  const map = L.map(el, {zoomControl:true}).setView(pos ? [pos.lat, pos.lng] : [7.8731, 80.7718], pos ? 15 : 7);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'© Esri'}).addTo(map);
+  setTimeout(() => { if(map._loaded){ try{ map.invalidateSize(); }catch(e){} } }, 0);
+  return map;
+}
+function lorryPin(){ return L.divIcon({className:'lorry-pin', html:'<div class="lorry-pin-dot">🚚</div>', iconSize:[40, 40], iconAnchor:[20, 20]}); }
+function lorryDropMaps(){
+  Object.keys(_lorryMaps).forEach(k => { try{ _lorryMaps[k].map.remove(); }catch(e){} });
+  _lorryMaps = {};
+  if(_lorryTrackMap){ try{ _lorryTrackMap.map.remove(); }catch(e){} _lorryTrackMap = null; }
+}
+function lorryRenderMaps(){
+  lorryDropMaps();
+  if(typeof L === 'undefined') return;
+  document.querySelectorAll('.lorry-map[data-run]').forEach(el => {
+    const run = (state._runs || []).find(r => r.id === el.getAttribute('data-run'));
+    const pos = run && run.position;
+    const map = lorryMakeMap(el, pos);
+    if(!map) return;
+    const marker = pos ? L.marker([pos.lat, pos.lng], {icon: lorryPin()}).addTo(map) : null;
+    ((run && run.stops) || []).forEach(s => {
+      if(s.status === 'delivered' && s.lat != null && s.lng != null) L.circleMarker([s.lat, s.lng], {radius:6, color:'#1a7f4b', fillColor:'#1a7f4b', fillOpacity:.9}).addTo(map);
+    });
+    _lorryMaps[run ? run.id : el.getAttribute('data-run')] = {map, marker};
+  });
+  const tEl = document.getElementById('track-lorry-map');
+  const t = state._lorryTrack;
+  if(tEl && t && t.data && t.data.lat != null){
+    const map = lorryMakeMap(tEl, {lat:t.data.lat, lng:t.data.lng});
+    if(map) _lorryTrackMap = {map, marker: L.marker([t.data.lat, t.data.lng], {icon: lorryPin()}).addTo(map)};
+  }
+}
+function lorryUpdateMarkers(){
+  (state._runs || []).forEach(run => {
+    const m = _lorryMaps[run.id]; const pos = run.position;
+    if(!m || !pos) return;
+    if(m.marker) m.marker.setLatLng([pos.lat, pos.lng]);
+    else m.marker = L.marker([pos.lat, pos.lng], {icon: lorryPin()}).addTo(m.map);
+    if(!m.map.getBounds().contains([pos.lat, pos.lng])) m.map.panTo([pos.lat, pos.lng]);
+  });
+  document.querySelectorAll('[data-lorry-ago]').forEach(el => { el.textContent = lorryAgo(el.getAttribute('data-lorry-ago')); });
+}
+
+// ================= driver page =================
+function renderDriverRunPage(){
+  const loaded = state._lorryLoaded && state._lorryLoaded.driverrun;
+  if(!loaded) return `<div class="card"><div class="hint">Loading your run…</div></div>`;
+  const err = state._lorryErr ? `<div class="lorry-note lorry-note-warn">Could not reach the office just now (${esc(state._lorryErr)}). Retrying…</div>` : '';
+  const r = state._myRun;
+  if(!r){
+    return `${err}<div class="card lorry-empty"><div class="lorry-empty-ico">${icon('truck')}</div>
+      <h3>No delivery run yet</h3><div class="hint">When the office assigns a run to you it shows up here. This page refreshes by itself.</div></div>`;
+  }
+  const stops = r.stops || [];
+  const pending = stops.filter(s => s.status === 'pending');
+  const done = stops.filter(s => s.status !== 'pending');
+  const head = `<div class="card lorry-run-head">
+    <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)}</div><div class="hint">${esc(r.runDate || '')} · ${stops.length} stop${stops.length===1?'':'s'}</div></div>
+    <span class="pill ${r.status==='active'?'pill-active':(r.status==='finished'?'pill-low':'pill-hold')}">${r.status==='active'?'On the road':(r.status==='finished'?'Finished':'Ready to start')}</span></div>
+    ${r.status==='planned' ? `<button class="btn btn-primary lorry-big" id="btn-driver-start">▶ Start run</button>
+      <div class="hint" style="margin-top:8px;">Before you start: open <b>Traccar Client</b> and make sure it says <b>Running</b>, so customers can see the lorry.</div>` : ''}
+    ${r.status==='active' ? `<div class="lorry-actions-row">
+      <button class="btn ${_lorryShareWatch!==null?'btn-success':''}" id="btn-driver-share">${_lorryShareWatch!==null?'📍 Sharing from this screen (tap to stop)':'📍 Share location from this screen'}</button>
+      <button class="btn" id="btn-driver-finish">Finish run</button></div>
+      <div class="hint" style="margin-top:6px;">Location normally goes through <b>Traccar Client</b> (works with the screen off). The button above is only a backup and needs this screen to stay on.</div>` : ''}
+  </div>`;
+  const card = (s, i) => `<div class="card lorry-stop">
+      <div class="lorry-stop-top"><span class="lorry-seq">${s.seq}</span>
+        <div class="lorry-stop-main"><div class="lorry-stop-name">${esc(s.customer || '—')}</div>
+          <div class="hint">${esc(s.orderNumber || s.orderId)}</div></div></div>
+      ${s.address ? `<div class="lorry-stop-addr">${esc(s.address)}</div>` : ''}
+      <div class="lorry-actions-row">
+        ${s.address ? `<a class="btn" target="_blank" rel="noopener" href="${escAttr(lorryMapsLink(s.address))}">🧭 Directions</a>` : ''}
+        ${s.phone ? `<a class="btn" href="tel:${escAttr(String(s.phone).replace(/[^\d+]/g,''))}">📞 Call</a>` : ''}
+      </div>
+      ${r.status==='active' ? `<div class="lorry-actions-row lorry-act3">
+        <button class="btn btn-success" data-driver-stop="delivered:${escAttr(s.orderId)}">✓ Delivered</button>
+        <button class="btn btn-hold" data-driver-stop="not_home:${escAttr(s.orderId)}">⏸ Not at home</button>
+        <button class="btn btn-danger" data-driver-stop="returned:${escAttr(s.orderId)}">✗ Returned</button></div>` : ''}
+    </div>`;
+  const doneRows = done.length ? `<div class="lorry-sec">Done (${done.length})</div>` + done.map(s => `<div class="card lorry-stop lorry-stop-done">
+      <div class="lorry-stop-top"><span class="lorry-seq">${s.seq}</span><div class="lorry-stop-main"><div class="lorry-stop-name">${esc(s.customer || '—')}</div>
+      <div class="hint">${esc(s.orderNumber || s.orderId)}${s.at ? ' · ' + esc(fmtTimeOnly(s.at)) : ''}</div></div>
+      <span class="pill ${s.status==='delivered'?'pill-active':(s.status==='not_home'?'pill-hold':'pill-high')}">${LORRY_STOP_LABEL[s.status]}</span></div>
+      ${s.note ? `<div class="hint" style="margin-top:6px;">${esc(s.note)}</div>` : ''}</div>`).join('') : '';
+  const todo = r.status === 'finished' ? '' :
+    (pending.length ? `<div class="lorry-sec">${r.status==='active' ? 'Next stops' : 'Stops on this run'} (${pending.length})</div>` + pending.map(card).join('') : '');
+  const fin = r.status === 'finished' ? `<div class="card lorry-note"><b>Run finished.</b> Thank you! A new run appears here when the office assigns one.</div>` : '';
+  return err + head + fin + todo + doneRows;
+}
+function driverStopModal(status, orderId){
+  const r = state._myRun; const s = r && (r.stops || []).find(x => x.orderId === orderId);
+  if(!s) return '';
+  const title = status === 'delivered' ? 'Delivered' : (status === 'not_home' ? 'Not at home' : 'Returned');
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:420px;">
+      <h2>${esc(title)}</h2>
+      <div class="sub">${esc(s.orderNumber || s.orderId)} · ${esc(s.customer || '')}</div>
+      <form id="form-driver-stop">
+        ${status === 'delivered' ? `<div class="field"><label>Photo of the signed invoice <span class="hint">(required)</span></label>
+          <input type="file" id="driver-proof" accept="image/*" capture="environment"><div class="hint" id="driver-proof-name">${state._driverFile ? '✓ Photo ready: ' + esc(state._driverFile.name || 'photo') : ''}</div></div>` :
+          `<div class="field"><label>Photo <span class="hint">(optional)</span></label><input type="file" id="driver-proof" accept="image/*" capture="environment"><div class="hint" id="driver-proof-name">${state._driverFile ? '✓ Photo ready: ' + esc(state._driverFile.name || 'photo') : ''}</div></div>`}
+        <div class="field"><label>Note <span class="hint">(optional)</span></label>
+          <textarea id="driver-note" rows="2" maxlength="300" placeholder="${status==='delivered' ? 'e.g. handed to the owner' : (status==='not_home' ? 'e.g. phone not answered, shop closed' : 'e.g. refused the parcel')}"></textarea></div>
+        <div class="hint" id="driver-stop-err" style="color:var(--danger);min-height:18px;"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-driver-stop-save">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function lorryGetPosition(){
+  return new Promise(res => {
+    if(!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res({lat:p.coords.latitude, lng:p.coords.longitude}), () => res(null), {enableHighAccuracy:true, timeout:5000, maximumAge:30000});
+  });
+}
+async function lorryUploadProof(runId, orderId, file){
+  const compressed = await compressImage(file, 1600, 0.72);
+  const safe = String(orderId).replace(/[^\w-]/g, '_');
+  const path = `proofs/${String(runId).replace(/[^\w-]/g, '_')}/${safe}-${Date.now()}.jpg`;
+  const { error } = await supabaseClient.storage.from(ORDER_PHOTOS_BUCKET).upload(path, compressed, {contentType:'image/jpeg'});
+  if(error) throw error;
+  const { data } = supabaseClient.storage.from(ORDER_PHOTOS_BUCKET).getPublicUrl(path);
+  if(!data || !data.publicUrl) throw new Error('No picture link returned');
+  return data.publicUrl;
+}
+async function submitDriverStop(e){
+  e.preventDefault();
+  const parts = (state.modal || '').split(':');
+  const status = parts[1], orderId = parts.slice(2).join(':');
+  const r = state._myRun; if(!r) return;
+  const errEl = document.getElementById('driver-stop-err'), btn = document.getElementById('btn-driver-stop-save');
+  const picked = (document.getElementById('driver-proof') || {}).files ? document.getElementById('driver-proof').files[0] : null;
+  const file = picked || state._driverFile || null;
+  const note = ((document.getElementById('driver-note') || {}).value || '').trim();
+  if(status === 'delivered' && !file){ errEl.textContent = 'Please take a photo of the signed invoice.'; return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  errEl.textContent = '';
+  try{
+    let proof = null;
+    if(file) proof = await lorryUploadProof(r.id, orderId, file);
+    const pos = await lorryGetPosition();
+    await lorryRpc('driver_mark_stop', {p_run_id: r.id, p_order_id: orderId, p_status: status, p_note: note || null, p_proof_path: proof,
+      p_lat: pos ? pos.lat : null, p_lng: pos ? pos.lng : null});
+    state._driverFile = null;
+    closeModal();
+    await lorryRefreshNow();
+    showToast(status === 'delivered' ? 'Saved: delivered' : 'Saved');
+  }catch(err){
+    errEl.textContent = lorryErr(err);
+    if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
+  }
+}
+async function driverStartRun(){
+  const r = state._myRun; if(!r) return;
+  try{ await lorryRpc('driver_start_run', {p_run_id: r.id}); await lorryRefreshNow(); showToast('Run started'); }
+  catch(e){ showToast(lorryErr(e), 3500); }
+}
+function driverFinishRun(){
+  const r = state._myRun; if(!r) return;
+  const left = (r.stops || []).filter(s => s.status === 'pending').length;
+  openConfirmModal({title:'Finish this run?', message: left ? `${left} stop${left===1?' is':'s are'} still not marked. The office will see them as not done.` : 'All stops are marked. Finish the run?',
+    confirmLabel:'Finish run', onConfirm: async () => {
+      try{ await lorryRpc('driver_finish_run', {p_run_id: r.id}); lorryShareStop(); await lorryRefreshNow(); }
+      catch(e){ showToast(lorryErr(e), 3500); }
+    }});
+}
+// Backup location source: this page's own GPS (the screen has to stay on).
+async function lorryShareStart(){
+  const r = state._myRun;
+  if(!r || r.status !== 'active' || !navigator.geolocation){ showToast('Location is not available on this phone', 3000); return; }
+  try{ if(navigator.wakeLock) _lorryShareWake = await navigator.wakeLock.request('screen'); }catch(e){}
+  _lorryShareWatch = navigator.geolocation.watchPosition(p => {
+    if(Date.now() - _lorryShareLastSent < 15000) return;
+    _lorryShareLastSent = Date.now();
+    const rr = state._myRun; if(!rr || rr.status !== 'active') return;
+    lorryRpc('driver_send_location', {p_run_id: rr.id, p_lat: p.coords.latitude, p_lng: p.coords.longitude,
+      p_accuracy: p.coords.accuracy, p_heading: p.coords.heading, p_speed: p.coords.speed}).catch(() => {});
+  }, () => { showToast('Could not read the location. Allow location for this site.', 3500); lorryShareStop(); },
+  {enableHighAccuracy:true, maximumAge:5000, timeout:20000});
+  render();
+}
+function lorryShareStop(){
+  if(_lorryShareWatch !== null){ try{ navigator.geolocation.clearWatch(_lorryShareWatch); }catch(e){} _lorryShareWatch = null; }
+  if(_lorryShareWake){ try{ _lorryShareWake.release(); }catch(e){} _lorryShareWake = null; }
+}
+
+// ================= office page =================
+function lorryEligibleOrders(){
+  const taken = new Set();
+  (state._runs || []).forEach(r => { if(r.status !== 'finished') (r.stops || []).forEach(s => { if(s.status === 'pending') taken.add(s.orderId); }); });
+  return (state.orders || []).filter(o => o.courierService === 'AC Delivery' && String(o.stage) === '3'
+    && o.deliveryOutcome !== 'Delivered' && o.deliveryOutcome !== 'Returned' && !taken.has(o.id));
+}
+function renderDeliveryRunsPage(){
+  const loaded = state._lorryLoaded && state._lorryLoaded.deliveryruns;
+  if(!loaded) return `<div class="card"><div class="hint">Loading delivery runs…</div></div>`;
+  const err = state._lorryErr ? `<div class="lorry-note lorry-note-warn">Could not load runs (${esc(state._lorryErr)}).</div>` : '';
+  const draft = state._runDraft || (state._runDraft = {driverId:'', orderIds:[]});
+  const drivers = state._lorryDrivers || [];
+  const elig = lorryEligibleOrders();
+  draft.orderIds = draft.orderIds.filter(id => elig.some(o => o.id === id));
+  const newRun = `<div class="card">
+    <h3 style="margin-top:0;">New delivery run</h3>
+    ${drivers.length ? `<div class="field"><label>Driver</label><select id="run-driver">
+        <option value="">Choose a driver…</option>
+        ${drivers.map(d => `<option value="${escAttr(d.id)}" ${draft.driverId===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>`
+      : `<div class="lorry-note lorry-note-warn">There is no Driver account yet. Add one in Settings → User account setup with the access level <b>Driver</b>.</div>`}
+    <div class="field"><label>Orders on the lorry <span class="hint">(AC Delivery orders marked “Picked up by delivery”) — tap in the order he will deliver them</span></label>
+      ${elig.length ? `<div class="lorry-pick">${elig.map(o => {
+        const idx = draft.orderIds.indexOf(o.id);
+        return `<button type="button" class="lorry-pick-row ${idx>=0?'on':''}" data-run-pick="${escAttr(o.id)}">
+          <span class="lorry-seq">${idx>=0 ? idx+1 : ''}</span>
+          <span class="lorry-pick-main"><b>${esc(o.customer || '—')}</b><span class="hint">${esc(o.orderNumber || o.id)}${o.address ? ' · ' + esc(o.address) : ''}</span></span></button>`; }).join('')}</div>`
+      : `<div class="hint">No AC Delivery orders are waiting. An order shows here once it is moved to “Picked up by delivery”.</div>`}</div>
+    <div class="modal-actions" style="justify-content:flex-start;gap:10px;">
+      <button class="btn btn-primary" id="btn-run-create" ${draft.driverId && draft.orderIds.length ? '' : 'disabled'}>Create run (${draft.orderIds.length})</button>
+      ${draft.orderIds.length ? `<button class="btn" id="btn-run-clear">Clear</button>` : ''}
+    </div></div>`;
+  const runs = state._runs || [];
+  const runCards = runs.length ? runs.map(renderRunCard).join('') : `<div class="card"><div class="hint">No runs yet.</div></div>`;
+  const setup = drivers.length ? `<div class="card"><h3 style="margin-top:0;">Phone tracking setup</h3>
+    <div class="hint" style="margin-bottom:10px;">Each driver installs the free <b>Traccar Client</b> app once. Open the setup sheet to see what to type into it.</div>
+    <div class="lorry-actions-row">${drivers.map(d => `<button class="btn" data-lorry-setup="${escAttr(d.id)}">📱 ${esc(d.name)}</button>`).join('')}</div></div>` : '';
+  return err + newRun + `<div class="lorry-sec">Runs</div>` + runCards + setup;
+}
+function renderRunCard(r){
+  const stops = r.stops || [];
+  const cancelled = r.status === 'finished' && stops.some(s => s.status === 'pending');
+  const doneN = stops.filter(s => s.status !== 'pending').length;
+  const label = r.status === 'active' ? 'On the road' : (r.status === 'planned' ? 'Not started' : (cancelled ? 'Ended early' : 'Finished'));
+  const pos = r.position;
+  const live = r.status === 'active' ? `<div class="lorry-live">
+      <div class="lorry-live-top">${pos ? (lorryIsStale(pos) ? `<span class="lorry-note lorry-note-warn" style="margin:0;">No signal from the phone — last seen <span data-lorry-ago="${escAttr(pos.updatedAt)}">${esc(lorryAgo(pos.updatedAt))}</span></span>`
+          : `<span class="hint">📍 Updated <span data-lorry-ago="${escAttr(pos.updatedAt)}">${esc(lorryAgo(pos.updatedAt))}</span></span>`)
+        : `<span class="lorry-note lorry-note-warn" style="margin:0;">Waiting for the first position. Check that Traccar Client is running on the lorry phone.</span>`}</div>
+      <div class="lorry-map" data-run="${escAttr(r.id)}"></div></div>` : '';
+  return `<div class="card lorry-run">
+    <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)} · ${esc(r.driverName || '')}</div>
+      <div class="hint">${esc(r.runDate || '')} · ${doneN} of ${stops.length} done${r.startedAt ? ' · started ' + esc(fmtTimeOnly(r.startedAt)) : ''}</div></div>
+      <span class="pill ${r.status==='active'?'pill-active':(r.status==='planned'?'pill-hold':'pill-low')}">${label}</span></div>
+    ${live}
+    <div class="lorry-stoplist">${stops.map(s => `<div class="lorry-stoprow">
+      <span class="lorry-seq">${s.seq}</span>
+      <div class="lorry-stop-main"><div><b>${esc(s.customer || '—')}</b> <span class="hint">${esc(s.orderNumber || s.orderId)}</span></div>
+        ${s.address ? `<div class="hint">${esc(s.address)}</div>` : ''}
+        ${s.note ? `<div class="hint">“${esc(s.note)}”</div>` : ''}
+        ${s.at ? `<div class="hint">${esc(fmtDateTime(s.at))}</div>` : ''}</div>
+      ${lorryIsHttps(s.proofPath) ? `<a href="${escAttr(s.proofPath)}" target="_blank" rel="noopener" title="Signed invoice"><img class="lorry-proof" src="${escAttr(s.proofPath)}" alt="Signed invoice" loading="lazy"></a>` : ''}
+      <span class="pill ${s.status==='delivered'?'pill-active':(s.status==='not_home'?'pill-hold':(s.status==='returned'?'pill-high':'pill-low'))}">${LORRY_STOP_LABEL[s.status] || s.status}</span>
+    </div>`).join('')}</div>
+    ${r.status === 'planned' ? `<div class="modal-actions" style="justify-content:flex-start;"><button class="btn btn-danger" data-run-cancel="${escAttr(r.id)}">Cancel this run</button></div>` : ''}
+    ${r.status === 'active' ? `<div class="modal-actions" style="justify-content:flex-start;"><button class="btn" data-run-end="${escAttr(r.id)}">End run now</button></div>` : ''}
+  </div>`;
+}
+function lorrySetupModal(driverId){
+  const d = (state._lorryDrivers || []).find(x => x.id === driverId);
+  const t = state._lorrySetup && state._lorrySetup.driverId === driverId ? state._lorrySetup.token : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:520px;">
+      <h2>Phone tracking: ${esc(d ? d.name : 'driver')}</h2>
+      <div class="sub">Do this once on the lorry phone (Android or iPhone)</div>
+      <ol class="lorry-steps">
+        <li>Install the free app <b>Traccar Client</b> (Play Store / App Store).</li>
+        <li>In the app set <b>Device identifier</b> to:
+          <div class="lorry-copy"><code id="lorry-token">${t ? esc(t) : 'loading…'}</code><button type="button" class="btn btn-sm" data-lorry-copy="lorry-token">Copy</button></div></li>
+        <li><b>Server URL</b>:
+          <div class="lorry-copy"><code id="lorry-url">${esc(LORRY_TRACKING_URL)}</code><button type="button" class="btn btn-sm" data-lorry-copy="lorry-url">Copy</button></div></li>
+        <li>Location accuracy <b>High</b>, frequency <b>15 seconds</b>, then switch <b>Service status</b> on.</li>
+        <li>Allow location <b>“Always / Allow all the time”</b>. Android: Battery → <b>Unrestricted</b> for this app. iPhone: Location → <b>Always</b>, Precise on.</li>
+        <li>Leave it running. The office only sees the lorry while a run is started.</li>
+      </ol>
+      <div class="hint">Keep this identifier private: anyone with it could send positions for this driver. If it leaks, press “New identifier” and type the new one into the app.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-lorry-rotate">New identifier</button>
+        <button type="button" class="btn btn-primary" id="btn-cancel-modal">Close</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function lorryOpenSetup(driverId){
+  state._lorrySetup = {driverId, token:null};
+  openModal('lorrysetup:' + driverId);
+  try{
+    const token = await lorryRpc('driver_device_token', {p_driver_id: driverId, p_rotate: false});
+    if(state._lorrySetup && state._lorrySetup.driverId === driverId){ state._lorrySetup.token = token; if(state.modal === 'lorrysetup:' + driverId) render(); }
+  }catch(e){ showToast(lorryErr(e), 3500); }
+}
+async function lorryCreateRun(){
+  const draft = state._runDraft; if(!draft || !draft.driverId || !draft.orderIds.length) return;
+  try{
+    await lorryRpc('run_create', {p_driver_id: draft.driverId, p_order_ids: draft.orderIds});
+    state._runDraft = {driverId: draft.driverId, orderIds: []};
+    await lorryRefreshNow();
+    showToast('Run created');
+  }catch(e){ showToast(lorryErr(e), 4500); }
+}
+
+// ================= handlers (called after every render) =================
+function attachLorryHandlers(){
+  if(!state.session) return;
+  const $ = id => document.getElementById(id);
+  if(state.page === 'driverrun'){
+    if($('btn-driver-start')) $('btn-driver-start').onclick = driverStartRun;
+    if($('btn-driver-finish')) $('btn-driver-finish').onclick = driverFinishRun;
+    if($('btn-driver-share')) $('btn-driver-share').onclick = () => { if(_lorryShareWatch !== null){ lorryShareStop(); render(); } else lorryShareStart(); };
+    document.querySelectorAll('[data-driver-stop]').forEach(b => b.onclick = () => { state._driverFile = null; openModal('driverstop:' + b.getAttribute('data-driver-stop')); });
+  }
+  if(state.page === 'deliveryruns'){
+    const draft = state._runDraft || (state._runDraft = {driverId:'', orderIds:[]});
+    if($('run-driver')) $('run-driver').onchange = e => { draft.driverId = e.target.value; render(); };
+    document.querySelectorAll('[data-run-pick]').forEach(b => b.onclick = () => {
+      const id = b.getAttribute('data-run-pick'); const i = draft.orderIds.indexOf(id);
+      if(i >= 0) draft.orderIds.splice(i, 1); else draft.orderIds.push(id);
+      render();
+    });
+    if($('btn-run-clear')) $('btn-run-clear').onclick = () => { draft.orderIds = []; render(); };
+    if($('btn-run-create')) $('btn-run-create').onclick = lorryCreateRun;
+    document.querySelectorAll('[data-run-cancel]').forEach(b => b.onclick = () => {
+      const id = b.getAttribute('data-run-cancel');
+      openConfirmModal({title:'Cancel this run?', message:'The orders go back to the waiting list.', confirmLabel:'Cancel run', danger:true,
+        onConfirm: async () => { try{ await lorryRpc('run_cancel', {p_run_id: id}); await lorryRefreshNow(); }catch(e){ showToast(lorryErr(e), 3500); } }});
+    });
+    document.querySelectorAll('[data-run-end]').forEach(b => b.onclick = () => {
+      const id = b.getAttribute('data-run-end');
+      openConfirmModal({title:'End this run now?', message:'Stops that are not marked stay not done, and customers stop seeing the live lorry.', confirmLabel:'End run', danger:true,
+        onConfirm: async () => { try{ await lorryRpc('driver_finish_run', {p_run_id: id}); await lorryRefreshNow(); }catch(e){ showToast(lorryErr(e), 3500); } }});
+    });
+    document.querySelectorAll('[data-lorry-setup]').forEach(b => b.onclick = () => lorryOpenSetup(b.getAttribute('data-lorry-setup')));
+  }
+  if(state.modal && state.modal.startsWith('driverstop:') && $('form-driver-stop')){
+    $('form-driver-stop').addEventListener('submit', submitDriverStop);
+    if($('driver-proof')) $('driver-proof').addEventListener('change', e => {
+      state._driverFile = (e.target.files && e.target.files[0]) || state._driverFile || null;
+      if($('driver-proof-name') && state._driverFile) $('driver-proof-name').textContent = '✓ Photo ready: ' + (state._driverFile.name || 'photo');
+    });
+  }
+  if(state.modal && state.modal.startsWith('lorrysetup:')){
+    document.querySelectorAll('[data-lorry-copy]').forEach(b => b.onclick = async () => {
+      const el = $(b.getAttribute('data-lorry-copy')); if(!el) return;
+      try{ await navigator.clipboard.writeText(el.textContent); showToast('Copied'); }catch(e){ showToast('Press and hold the text to copy it', 3000); }
+    });
+    if($('btn-lorry-rotate')) $('btn-lorry-rotate').onclick = () => {
+      const driverId = state.modal.split(':')[1];
+      openConfirmModal({title:'Make a new identifier?', message:'The old one stops working at once. Type the new one into Traccar Client on the lorry phone.', confirmLabel:'New identifier', danger:true,
+        onConfirm: async () => { try{ const t = await lorryRpc('driver_device_token', {p_driver_id: driverId, p_rotate: true}); state._lorrySetup = {driverId, token:t}; state.modal = 'lorrysetup:' + driverId; }catch(e){ showToast(lorryErr(e), 3500); } },
+        keepParentModal: true});
+    };
+  }
+  lorryKick();
+}
+
+// ================= customer tracking page =================
+async function lorryTrackFetch(orderId){
+  try{
+    const { data, error } = await supabaseClient.rpc('track_lorry', {p_order_id: orderId});
+    if(error) throw error;
+    const prev = state._lorryTrack && state._lorryTrack.orderId === orderId ? state._lorryTrack : null;
+    if(data === null && prev && prev.data && prev.data.state === 'on_the_way') return; // keep the last picture if a lookup was limited
+    const sig = d => JSON.stringify(d ? Object.assign({}, d, {lat:null, lng:null, heading:null, positionAt:null, hasPos: d.lat != null}) : null);
+    const changed = !prev || sig(prev.data) !== sig(data);
+    const moved = !prev || !prev.data || !data || prev.data.lat !== data.lat || prev.data.lng !== data.lng;
+    state._lorryTrack = {orderId, data, at: Date.now()};
+    if(!state.trackMode) return;
+    if(changed) render();
+    else if(moved && _lorryTrackMap && data && data.lat != null){
+      _lorryTrackMap.marker.setLatLng([data.lat, data.lng]);
+      if(!_lorryTrackMap.map.getBounds().contains([data.lat, data.lng])) _lorryTrackMap.map.panTo([data.lat, data.lng]);
+      document.querySelectorAll('[data-lorry-ago]').forEach(el => { el.textContent = lorryAgo(el.getAttribute('data-lorry-ago')); });
+    }
+  }catch(e){ console.error('track_lorry failed', e); }
+}
+function ensureLorryTrack(orderId){
+  if(!state._lorryTrack || state._lorryTrack.orderId !== orderId) lorryTrackFetch(orderId);
+  if(_lorryTrackTimer) return;
+  _lorryTrackTimer = setInterval(() => {
+    const o = state._publicOrder;
+    if(!state.trackMode || !o || o.courierService !== 'AC Delivery'){ clearInterval(_lorryTrackTimer); _lorryTrackTimer = null; return; }
+    lorryTrackFetch(o.id);
+  }, 15000);
+}
+function renderLorryTrackBlock(o){
+  const t = state._lorryTrack;
+  if(!t || t.orderId !== o.id || !t.data) return '';
+  const d = t.data;
+  let ico = '🚚', head = '', sub = '', map = '';
+  if(d.state === 'loading'){ head = 'Loading onto our delivery lorry'; sub = 'Your order is being prepared for today’s delivery run.'; }
+  else if(d.state === 'on_the_way'){
+    head = 'On the way to you';
+    const n = Number(d.stopsBefore) || 0;
+    sub = (n === 0 ? 'You are the next stop.' : `${n} stop${n===1?'':'s'} before yours.`) + (d.driverFirstName ? ` Your driver is ${d.driverFirstName}.` : '');
+    if(d.lat != null){
+      const stale = lorryIsStale({updatedAt: d.positionAt});
+      map = `<div id="track-lorry-map" class="lorry-map lorry-map-track"></div>
+        <div class="track-courier-sub" style="text-align:center;margin-top:6px;">${stale ? 'Last location ' : 'Live location · updated '}<span data-lorry-ago="${escAttr(d.positionAt || '')}">${esc(lorryAgo(d.positionAt))}</span></div>`;
+    } else map = `<div class="track-courier-sub" style="text-align:center;margin-top:6px;">The live map will appear as soon as the lorry’s location arrives.</div>`;
+  }
+  else if(d.state === 'delivered'){ ico = '✅'; head = 'Delivered'; sub = d.doneAt ? 'Delivered at ' + fmtDateTime(d.doneAt) + '.' : 'Your order has been delivered.'; }
+  else if(d.state === 'not_home'){ ico = '⏸'; head = 'We could not reach you'; sub = 'Our driver tried to deliver. Our team will contact you shortly. Hotline: 077 697 9959.'; }
+  else if(d.state === 'returned'){ ico = '↩'; head = 'Returned to us'; sub = 'Your order came back to us. Please call us on 077 697 9959.'; }
+  else return '';
+  return `<div class="track-divider"></div>
+  <div class="lorry-track"><div class="track-courier-row"><span class="lorry-track-ico">${ico}</span>
+    <div><div class="track-courier-name">${esc(head)}</div><div class="track-courier-sub">${esc(sub)}</div></div></div>${map}</div>`;
+}
+
 const PAGE_META = {
   dashboard:{title:'Dashboard', sub:"Here's what's happening today."},
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
@@ -11873,6 +12437,8 @@ const PAGE_META = {
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
   itemlist:{title:'Item List', sub:'Raw materials and stock on hand.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
+  deliveryruns:{title:'Delivery runs', sub:'Send AC deliveries out with the lorry and watch them live.'},
+  driverrun:{title:'My delivery run', sub:'Your stops for today. Mark each one as you go.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
   rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, chemist attendance, and progress.'},
@@ -12093,6 +12659,8 @@ function renderPage(){
     case 'customercare': return renderCustomerCarePage();
     case 'orderinquiry': return renderOrderInquiryPage();
     case 'ongoingorders': return renderOngoingOrdersPage();
+    case 'deliveryruns': return renderDeliveryRunsPage();
+    case 'driverrun': return renderDriverRunPage();
     case 'ordersprocess': return renderOrdersProcessPage();
     case 'blendingdept': return renderBlendingDeptPage();
     case 'blending': return renderBlendingBoardPage();
@@ -19664,6 +20232,8 @@ function renderModal(){
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
+  if(type==='driverstop') return driverStopModal(parts[1], parts.slice(2).join(':'));
+  if(type==='lorrysetup') return lorrySetupModal(id);
   if(type==='smsconfirm') return smsConfirmModal();
   if(type==='costingbatchsize') return costingAddBatchSizeModal();
   if(type==='costingaddproduct') return costingAddProductModal();
@@ -23318,7 +23888,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
-  // and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -23328,7 +23898,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;
@@ -23779,6 +24349,7 @@ function attachShellHandlers(){
   initChecklistSignCanvas();
   initRndCheckinMap();
   initAttendanceMap();
+  attachLorryHandlers();
 }
 
 document.addEventListener('keydown', e=>{

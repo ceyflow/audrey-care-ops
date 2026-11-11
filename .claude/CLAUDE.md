@@ -89,8 +89,8 @@ Keep these true when changing the app. Details and the audit are in the owner's 
 - **Logged-out visitors save nothing** (`kvSet` / `saveQuietly` refuse). Saving "no value" (null) deletes the row.
 - **Install (PWA).** `manifest.webmanifest` + `assets/icons/` are real files linked from the page; do not turn the
   manifest back into a `data:` address (phones cannot fetch that to build the installed app).
-- **AC lorry runs (Delivery runs / My delivery run).** Office page `deliveryruns` (Admin, Sub Admin; the database lets Admin,
-  Sub Admin and Packing manage runs) builds a run: a Driver account + AC Delivery orders at stage 3, in stop order. The driver
+- **AC lorry runs (Delivery runs / My delivery run).** Office page `deliveryruns` (Admin and Sub Admin ONLY, by the owner's decision: the database
+  function `private.is_run_manager()` allows just those two roles; do not add others) builds a run: a Driver account + AC Delivery orders at stage 3, in stop order. The driver
   signs in with a **Driver** account (custom role "Driver", only page `driverrun`; created automatically by an Admin's browser,
   and the page falls back to `ROLE_PAGES.Driver`), starts the run, and marks each stop Delivered (signed-invoice photo required) /
   Not at home / Returned. Marking a stop sets the order's `deliveryOutcome` (Delivered / On Hold / Returned) itself.

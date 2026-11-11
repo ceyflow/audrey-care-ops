@@ -1011,6 +1011,62 @@ html{ visibility:hidden; }
     .board-stage-tab.active{background:var(--accent-dark);color:#fff !important;box-shadow:none;}
   }
   .board-section-title{font-size:20px;font-weight:600;font-family:'Fraunces',serif;color:var(--ink);margin-bottom:14px;}
+  /* ---- Phone "Clear Queue" Orders board (renderOrdersMobileQueue) ----
+     Everything for it lives in this one block. Hidden above 760px so desktop never sees it; below
+     760px the desktop-only pieces (.orders-d-only: toolbar, per-line boards) hide instead. */
+  .oq{display:none;}
+  @media (max-width:760px){
+    .orders-d-only{display:none !important;}
+    /* The header's tagline and the "Packing · Packing" role/name line pushed the first order
+       ~120px down the screen; both are redundant here (the tab already says where you are). */
+    .shell.page-orders .topbar .page-sub, .shell.page-orders .topbar .session-chip{display:none;}
+    .oq{display:block;}
+    /* One fill colour for the whole phone Packing section (board, order screen, Box Count). */
+    .oq, .drawer.order-drawer, .modal.bc-modal{--oq-fill:var(--accent-dark);}
+    @supports (background: color-mix(in srgb, red, blue)){
+      /* A little darker than the theme's accent so white text on it clears 4.5:1. */
+      .oq, .drawer.order-drawer, .modal.bc-modal{--oq-fill:color-mix(in srgb, var(--accent-dark) 82%, #0b1f12);}
+    }
+    .oq-sub{margin:0 0 12px;font-size:14px;line-height:20px;color:var(--muted);}
+    .oq-actions{display:flex;gap:8px;position:relative;}
+    .oq-btn{flex:1;min-width:0;min-height:48px;border-radius:14px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;}
+    .oq-btn svg{flex:none;}
+    .oq-btn-primary{border-color:var(--oq-fill);color:var(--oq-fill);}
+    .oq-btn-icon{flex:none;width:48px;padding:0;}
+    .oq-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:236px;max-width:calc(100vw - 28px);background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(19,32,30,.18);padding:6px;}
+    .oq-menu-item{display:block;width:100%;text-align:left;min-height:44px;padding:0 12px;border:none;background:none;border-radius:10px;font-size:15px;font-weight:600;color:var(--ink);}
+    .oq-menu-item:active{background:var(--bg);}
+    .oq-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin-top:14px;padding:4px;background:#fff;border-radius:18px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
+    .oq-stage{min-height:62px;border:none;border-radius:14px;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 2px;}
+    .oq-stage-n{font-size:20px;font-weight:700;line-height:24px;color:var(--ink);}
+    .oq-stage-l{font-size:12px;font-weight:600;line-height:16px;white-space:nowrap;}
+    .oq-stage.on{background:var(--oq-fill);color:#fff;}
+    .oq-stage.on .oq-stage-n{color:#fff;}
+    .oq-lines{display:flex;gap:8px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+    .oq-lines::-webkit-scrollbar{display:none;}
+    .oq-chip{flex:none;min-height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:14px;font-weight:600;white-space:nowrap;}
+    .oq-chip.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+    .oq-list{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+    .oq-card{padding:16px;border-radius:20px;}
+    .oq-over{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.3px;color:#55675B;}
+    .oq-dot{flex:none;width:10px;height:10px;border-radius:50%;}
+    .oq-name{margin-top:2px;font-size:17px;line-height:22px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
+    .oq-product{margin-top:10px;display:flex;align-items:center;gap:10px;}
+    .oq-product-icon{flex:none;width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--oq-fill);display:flex;align-items:center;justify-content:center;}
+    .oq-product-icon svg{width:22px;height:22px;}
+    .oq-product-text{flex:1;min-width:0;font-size:15px;line-height:20px;font-weight:500;color:var(--ink);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .oq-pills{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;}
+    .oq-pill{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:600;line-height:16px;}
+    .oq-pill-high{background:#FCEEEB;color:#A33F32;font-weight:700;}
+    .oq-pill-medium{background:#FCEEDA;color:#8A5200;font-weight:700;}
+    .oq-pill-low{background:#E4F8EA;color:#1F5C34;font-weight:700;}
+    .oq-pill-line{background:#E9EEF5;color:#34435F;}
+    .oq-pill-time{background:var(--bg);color:#55675B;}
+    .oq-note{margin-top:12px;padding:10px 12px;border-radius:12px;background:#FCEEDA;color:#6B3F00;font-size:13px;line-height:18px;display:flex;gap:8px;align-items:flex-start;}
+    .oq-note svg{flex:none;margin-top:1px;}
+    .oq-note span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+    .oq-empty{text-align:center;padding:36px 12px;font-size:14px;color:var(--muted);background:#fff;border-radius:20px;}
+  }
   .column{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
   .column-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);}
   .column-head .name{font-weight:600;font-size:13.5px;}
@@ -1876,6 +1932,108 @@ html{ visibility:hidden; }
      guidance) -- top/right pulled in by the same amount the padding adds, so the X itself stays
      visually anchored where it always was; only the invisible tappable area around it grows. */
   .drawer-close{position:absolute;top:8px;right:8px;padding:12px;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer;line-height:1;}
+  /* ---- Phone order screen (A2 of the Packing redesign) ----
+     Scoped to .order-drawer: the Blending / R&D drawers share .drawer and are left exactly as they
+     were. Nothing below applies above 760px. The phone-only pieces of markup (.od-stepper,
+     .od-next-hint, .od-m-only) are display:none by default for the same reason. */
+  .od-stepper, .od-next-hint, .od-m-only{display:none;}
+  @media (max-width:760px){
+    .od-d-only{display:none;}
+    .od-m-only{display:inline;}
+    .drawer.order-drawer{max-width:none;padding:0 16px;background:var(--bg);border-left:none;}
+    .order-drawer .drawer-hero{background:none;color:var(--ink);margin:0 -16px;padding:8px 16px 0;display:block;}
+    .order-drawer .drawer-hero .back{min-height:44px;margin:0 0 2px;padding:0 12px 0 0;color:var(--oq-fill);font-size:15px;font-weight:600;}
+    .order-drawer .drawer-hero h2{color:var(--ink);font-size:24px;line-height:30px;font-weight:700;margin:0 0 4px;padding-right:44px;overflow-wrap:anywhere;}
+    .order-drawer .drawer-hero .sub{color:#55675B;font-size:13px;line-height:18px;}
+    .order-drawer .drawer-hero > div:last-child{margin:12px 0 0 !important;}
+    .order-drawer .drawer-hero .stat-chip{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 12px;text-align:left;}
+    .order-drawer .drawer-hero .stat-chip .k{color:#55675B;}
+    .order-drawer .drawer-hero .stat-chip .v{color:var(--ink);}
+    .order-drawer .drawer-close{color:var(--ink) !important;top:6px;right:6px;}
+    .od-stepper{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:relative;margin:12px 0 14px;padding:14px 4px 12px;background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
+    .od-stepper::before{content:'';position:absolute;left:12.5%;right:12.5%;top:25px;height:2px;background:var(--border);}
+    .od-step{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
+    .od-step-dot{width:24px;height:24px;box-sizing:border-box;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#fff;border:2px solid var(--border);color:#55675B;}
+    .od-step-l{font-size:12px;line-height:16px;font-weight:500;color:#55675B;}
+    .od-step.done .od-step-dot, .od-step.cur .od-step-dot{background:var(--oq-fill);border-color:var(--oq-fill);color:#fff;}
+    .od-step.cur .od-step-dot{box-shadow:0 0 0 4px var(--accent-soft);}
+    .od-step.cur .od-step-l{font-weight:700;color:var(--ink);}
+    /* The stepper already says which stage this is, so the badge goes; the copy-link button stays. */
+    .order-drawer .od-badge-row{margin-bottom:12px;}
+    .order-drawer .od-badge-row .stage-badge{display:none;}
+    .order-drawer .od-badge-row .btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;border-radius:12px;font-size:14px;font-weight:600;}
+    .order-drawer .field{margin-bottom:16px;}
+    .order-drawer .field label{font-size:13px;}
+    /* 16px inputs: anything smaller makes iOS Safari zoom the page when a field is focused. */
+    .order-drawer .field input, .order-drawer .field select, .order-drawer .field textarea{min-height:48px;font-size:16px;border-radius:12px;border:1.5px solid var(--border);background:#fff;padding:10px 14px;}
+    .order-drawer .field textarea{min-height:72px;line-height:1.45;}
+    .order-drawer .richtext-body{font-size:18px;font-weight:600;line-height:1.4;}
+    .order-drawer .richtext-toolbar button{min-width:44px;min-height:44px;}
+    .order-drawer .photo-dropzone{background:#fff;border-radius:14px;}
+    /* Start/Save pinned to the bottom, so the next step is never scrolled out of reach. */
+    /* .modal-actions itself stops being a box (display:contents) so its two groups become direct
+       children of the form: Delete/Archive then sit in normal flow, and ONLY Start/Save is pinned.
+       (Sticky is limited to its parent's box; as a child of the form it can stay pinned for the
+       whole length of the order.) */
+    .order-drawer .modal-actions{display:contents;}
+    .order-drawer .modal-actions > div:first-child{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:8px;}
+    .order-drawer .modal-actions > div:first-child:not(:has(button)){display:none;}
+    .order-drawer .modal-actions > div:first-child .btn{min-height:44px;border-radius:12px;font-size:14px;}
+    .order-drawer .modal-actions > div:last-child{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;margin:20px -16px 0;padding:10px 16px calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);}
+    .od-next-hint{display:block;flex:0 0 100%;text-align:center;font-size:12px;line-height:16px;font-weight:500;color:#55675B;}
+    .order-drawer .modal-actions button[type="submit"], .order-drawer #btn-cancel-modal-2{flex:1 1 auto;min-height:56px;border-radius:16px;font-size:16px;font-weight:700;}
+    .order-drawer #btn-advance{flex:1 1 auto;order:2;min-height:56px;border-radius:16px;border:none;background:var(--oq-fill);color:#fff;font-size:16px;font-weight:700;padding:0 14px;}
+    .order-drawer #btn-advance ~ button[type="submit"]{order:1;flex:0 0 96px;background:#fff;color:var(--oq-fill);border:1.5px solid var(--oq-fill);}
+  }
+  /* ---- Phone Box Count (A3 of the Packing redesign) ----
+     Above 760px the .bc-f / .bc-stepper wrappers are display:contents (invisible) and every
+     phone-only piece is display:none, so desktop keeps its single-row layout untouched. Below it,
+     the window becomes a full-screen page: totals, one roomy card per customer, a pinned Save bar. */
+  .bc-lab, .bc-seg, .bc-step, .bc-back, .bc-totals{display:none;}
+  .bc-f, .bc-stepper{display:contents;}
+  @media (max-width:760px){
+    .overlay.bc-overlay{padding:0;align-items:stretch;justify-content:stretch;overflow:hidden;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;}
+    .modal.bc-modal{max-width:none !important;width:100%;height:100%;max-height:none;margin:0;border:none;border-radius:0;box-shadow:none;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;padding:14px 16px 0;display:flex;flex-direction:column;overflow-y:auto;}
+    .bc-modal form#form-box-count{display:contents;}
+    .bc-head{display:flex;align-items:center;gap:12px;}
+    .bc-back{display:flex;flex:none;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:50%;background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(19,32,30,.08);}
+    .bc-modal .bc-head h2{margin:0;}
+    .bc-modal .bc-head .sub{margin:0;}
+    .bc-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));text-align:center;background:#fff;border-radius:20px;padding:14px 8px;margin:12px 0 0;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
+    .bc-totals div + div{border-left:1px solid var(--border);}
+    .bc-totals b{display:block;font-size:22px;line-height:28px;font-weight:700;color:var(--ink);}
+    .bc-totals span{font-size:12px;line-height:16px;font-weight:500;color:#55675B;}
+    .bc-modal #box-count-tbody{order:2;max-height:none !important;overflow:visible !important;margin-top:12px !important;}
+    .bc-modal .box-count-row{position:relative;display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px !important;align-items:start !important;padding:14px !important;margin-bottom:12px;background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
+    .bc-modal .bc-f{display:block;position:relative;min-width:0;}
+    .bc-modal .bc-f-cust, .bc-modal .bc-f-size{grid-column:1 / -1;}
+    .bc-modal .bc-lab{display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ink);}
+    .bc-modal .bc-f-cust .bc-lab{padding-right:44px;}
+    .bc-modal input[name="customerName"], .bc-modal input[name="totalKg"]{width:100% !important;box-sizing:border-box;min-height:48px;border:1.5px solid var(--border) !important;border-radius:12px !important;padding:0 14px !important;font-size:16px !important;background:var(--bg) !important;}
+    .bc-modal input[name="totalKg"]{text-align:left !important;font-weight:700;font-size:18px !important;}
+    /* The real <select> stays in the form (so "required" still validates and its message can point at
+       it) but is visually replaced by the three buttons below. */
+    .bc-modal select[name="boxType"]{position:absolute;left:0;right:0;bottom:0;width:auto !important;height:48px;opacity:0;pointer-events:none;}
+    .bc-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+    .bc-seg-btn{min-height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--ink);font-size:15px;font-weight:600;}
+    .bc-seg-btn[aria-pressed="true"]{background:var(--oq-fill);border-color:var(--oq-fill);color:#fff;font-weight:700;}
+    .bc-stepper{display:flex;align-items:center;height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;}
+    .bc-step{display:flex;flex:none;align-items:center;justify-content:center;width:44px;height:100%;border:none;background:none;color:var(--ink);}
+    .bc-modal .bc-stepper input[name="boxCount"]{flex:1 1 0 !important;min-width:0;width:0 !important;height:100%;border:none !important;background:transparent !important;padding:0 !important;font-size:20px !important;font-weight:700;text-align:center;-moz-appearance:textfield;}
+    .bc-modal .box-count-remove-row{position:absolute;top:2px;right:2px;width:44px;height:44px;padding:0 !important;font-size:16px !important;}
+    .bc-modal .box-count-row:only-child .box-count-remove-row{display:none;}
+    .bc-modal #btn-box-count-add-row{order:3;display:flex;align-items:center;justify-content:center;min-height:52px;margin:0 0 4px !important;border:1.5px dashed var(--oq-fill);border-radius:16px;color:var(--oq-fill);font-size:15px !important;font-weight:600;text-decoration:none;}
+    .bc-modal .bc-saved{order:4;margin-top:10px !important;padding-top:6px !important;border-top:none !important;margin-bottom:16px;}
+    .bc-modal .bc-saved-list{max-height:none !important;overflow:visible !important;}
+    .bc-modal .bc-saved [data-edit-box-count], .bc-modal .bc-saved [data-delete-box-count]{min-width:44px;min-height:44px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center;}
+    .bc-modal .modal-actions{order:9;position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:nowrap;gap:10px;margin:auto -16px 0;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);}
+    .bc-modal .modal-actions .btn{min-height:56px;border-radius:16px;font-size:16px;font-weight:600;}
+    .bc-modal .modal-actions .btn-primary{flex:1;font-weight:700;background:var(--oq-fill);border-color:var(--oq-fill);}
+    .bc-modal .modal-actions #btn-cancel-modal{flex:0 0 104px;}
+    /* Phone Packing section: tapping a button twice quickly (the -/+ stepper, stage tabs) must count
+       as two taps, not a double-tap-to-zoom gesture that swallows the second one. */
+    .oq button, .order-drawer button, .bc-modal button{touch-action:manipulation;}
+  }
 
   .welcome-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:linear-gradient(135deg,#F2F9F4,#E4F8EA);overflow:hidden;position:relative;}
   .welcome-logo{max-height:90px;max-width:220px;object-fit:contain;opacity:0;transform:scale(.85);animation:welcome-logo-in .55s ease forwards;}
@@ -4657,11 +4815,11 @@ function orderPhotoField(prefix, existingUrl, ro){
   const hasExisting = !!existingUrl;
   return `
   <div class="field">
-    <label>Add a picture <span class="hint">(optional — drag &amp; drop, paste a screenshot, or click to add)</span></label>
+    <label>Add a picture <span class="hint od-d-only">(optional — drag &amp; drop, paste a screenshot, or click to add)</span><span class="hint od-m-only">(optional — tap to add)</span></label>
     <div class="photo-dropzone" id="${prefix}-dropzone" ${ro?'style="cursor:default;"':'tabindex="0"'}>
       <div class="photo-dropzone-empty" id="${prefix}-empty" style="${hasExisting?'display:none;':''}">
         <span class="icon">📷</span>
-        <span>${ro ? 'No picture added.' : 'Drag & drop, paste, or click to add a picture'}</span>
+        ${ro ? '<span>No picture added.</span>' : '<span class="od-d-only">Drag & drop, paste, or click to add a picture</span><span class="od-m-only">Tap to add a picture</span>'}
       </div>
       <div class="photo-dropzone-preview" id="${prefix}-preview" style="${hasExisting?'':'display:none;'}">
         <img id="${prefix}-preview-img" src="${hasExisting?escAttr(existingUrl):''}" alt="Order picture">
@@ -9811,6 +9969,14 @@ function restoreOpenFormFields(snapshots){
       }
     }
   });
+  // Phone Box Count: the Large/Medium/Small buttons only mirror the (hidden) <select>, whose value was
+  // just restored above -- re-derive which button is pressed so a re-render never un-highlights it.
+  document.querySelectorAll('.box-count-row').forEach(syncBoxCountSizeButtons);
+}
+function syncBoxCountSizeButtons(row){
+  const sel = row.querySelector('select[name="boxType"]');
+  if(!sel) return;
+  row.querySelectorAll('.bc-seg-btn').forEach(b=>b.setAttribute('aria-pressed', b.dataset.bcSize===sel.value ? 'true' : 'false'));
 }
 // Tracks which page last had its entrance animation played, so cards/stat boxes only
 // fade+slide in on an actual navigation — not on every re-render a keystroke or realtime
@@ -11680,7 +11846,7 @@ function renderShell(freshPage){
   const freshBroadcast = broadcastId !== _lastAdminBroadcastId;
   _lastAdminBroadcastId = broadcastId;
   return `
-  <div class="shell ${justLoggedIn?'shell-enter':''} ${state.page==='chat'?'page-chat':''} ${state.page==='dashboard'?'page-dashboard':''}">
+  <div class="shell ${justLoggedIn?'shell-enter':''} ${state.page==='chat'?'page-chat':''} ${state.page==='dashboard'?'page-dashboard':''} ${state.page==='orders'?'page-orders':''}">
     ${state.sidebarOpen ? `<div class="sidebar-backdrop" id="sidebar-backdrop"></div>` : ''}
     <aside class="sidebar ${state.sidebarOpen?'open':''}">
       <div class="brand">
@@ -12802,7 +12968,7 @@ function renderOrdersPage(){
   const canManageLists = state.session && roleCan(state.session.role, 'orders_manage_lists');
   const canCreate = state.session && roleCan(state.session.role, 'orders_create');
   return `
-  <div class="toolbar">
+  <div class="toolbar orders-d-only">
     <div class="tabs" style="align-items:center;">
       ${canManageLists ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
@@ -12812,8 +12978,9 @@ function renderOrdersPage(){
       ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
   </div>
-  ${active.length===0 && canCreate ? `<div class="hint" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
+  ${active.length===0 && canCreate ? `<div class="hint orders-d-only" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
   ${state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryBoardSection(line, active)).join('')}
+  ${renderOrdersMobileQueue(active, archived)}
   `;
 }
 /* ===================== Box Count (daily packing log) ===================== */
@@ -12832,18 +12999,44 @@ function renderOrdersPage(){
 // in its own soft card instead of a hairline-divided list — see boxCountSavedRowHtml below.
 const BOX_COUNT_ICON_EDIT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 const BOX_COUNT_ICON_DELETE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>`;
+// Each field sits in a .bc-f wrapper that is display:contents above 760px, so on desktop the four
+// inputs are laid out exactly as before (one flex row). On phones (see .bc-modal in the CSS) the same
+// wrappers become a roomy card: labels, a Large/Medium/Small button group that fills in the hidden
+// <select> below it, and a -/+ stepper around the quantity box. The real inputs (name, required,
+// min/step) are untouched, so submitBoxCount() reads exactly what it always did.
 function boxCountRowHtml(){
   return `
   <div class="box-count-row" style="display:flex;gap:7px;align-items:center;padding:4px 0;">
-    <input name="customerName" required autocomplete="off" placeholder="Customer" style="flex:1;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:13px;">
-    <select name="boxType" required style="width:92px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;border-radius:12px;padding:10px 6px;">
-      <option value="">Select</option>
-      <option value="Large">Large</option>
-      <option value="Medium">Medium</option>
-      <option value="Small">Small</option>
-    </select>
-    <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:52px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;text-align:center;border-radius:12px;padding:10px 4px;">
-    <input name="totalKg" type="number" min="0" step="0.01" autocomplete="off" placeholder="Kg" style="width:52px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;text-align:center;border-radius:12px;padding:10px 4px;">
+    <div class="bc-f bc-f-cust">
+      <span class="bc-lab">Customer</span>
+      <input name="customerName" required autocomplete="off" placeholder="Customer" style="flex:1;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:13px;">
+    </div>
+    <div class="bc-f bc-f-size">
+      <span class="bc-lab">Box size</span>
+      <select name="boxType" required style="width:92px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;border-radius:12px;padding:10px 6px;">
+        <option value="">Select</option>
+        <option value="Large">Large</option>
+        <option value="Medium">Medium</option>
+        <option value="Small">Small</option>
+      </select>
+      <div class="bc-seg" role="group" aria-label="Box size">
+        <button type="button" class="bc-seg-btn" data-bc-size="Large" aria-pressed="false">Large</button>
+        <button type="button" class="bc-seg-btn" data-bc-size="Medium" aria-pressed="false">Medium</button>
+        <button type="button" class="bc-seg-btn" data-bc-size="Small" aria-pressed="false">Small</button>
+      </div>
+    </div>
+    <div class="bc-f bc-f-qty">
+      <span class="bc-lab">Boxes</span>
+      <div class="bc-stepper">
+        <button type="button" class="bc-step" data-bc-step="-1" aria-label="One fewer box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:52px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;text-align:center;border-radius:12px;padding:10px 4px;">
+        <button type="button" class="bc-step" data-bc-step="1" aria-label="One more box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </div>
+    <div class="bc-f bc-f-kg">
+      <span class="bc-lab">Total weight (kg)</span>
+      <input name="totalKg" type="number" min="0" step="0.01" autocomplete="off" placeholder="Kg" style="width:52px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;text-align:center;border-radius:12px;padding:10px 4px;">
+    </div>
     <button type="button" class="box-count-remove-row" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;flex:none;padding:4px;" aria-label="Remove row">✕</button>
   </div>`;
 }
@@ -12938,20 +13131,34 @@ function boxCountModal(){
   const todays = (state.boxCounts||[]).filter(b=>b.date===today).sort((a,b)=>new Date(b.at)-new Date(a.at));
   const selectedCount = (state._boxCountSelected||[]).length;
   const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
+  // Phone-only totals strip: what has already gone out today.
+  const bcCustomers = new Set(todays.map(b=>(b.customerName||'').trim().toLowerCase())).size;
+  const bcBoxes = todays.reduce((s,b)=>s+(Number(b.boxCount)||0), 0);
+  const bcKg = Math.round(todays.reduce((s,b)=>s+(Number(b.totalKg)||0), 0)*10)/10;
   return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:420px;">
-      <h2>Box Count</h2>
-      <div class="sub">Today, ${fmtDate(new Date().toISOString())}</div>
+  <div class="overlay bc-overlay" id="overlay">
+    <div class="modal bc-modal" style="max-width:420px;">
+      <div class="bc-head">
+        <button type="button" class="bc-back" data-bc-close aria-label="Back to board"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div>
+          <h2>Box Count</h2>
+          <div class="sub">Today, ${fmtDate(new Date().toISOString())}</div>
+        </div>
+      </div>
+      <div class="bc-totals" aria-label="Sent out so far today">
+        <div><b>${bcCustomers}</b><span>Customers</span></div>
+        <div><b>${bcBoxes}</b><span>Boxes sent</span></div>
+        <div><b>${bcKg}</b><span>Total kg</span></div>
+      </div>
       <form id="form-box-count">
         <div id="box-count-tbody" style="max-height:360px;overflow-y:auto;margin-top:8px;">${boxCountRowHtml()}</div>
-        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;">+ Add row</button>
+        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;"><span class="od-d-only">+ Add row</span><span class="od-m-only">+ Add another customer</span></button>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save all</button>
         </div>
       </form>
-      <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
+      <div class="bc-saved" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
           <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Saved today ${todays.length?`(${todays.length})`:''}</div>
           ${(isAdminOrSubAdmin() && todays.length>0) ? `
@@ -12964,7 +13171,7 @@ function boxCountModal(){
           </div>` : ''}
         </div>
         ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">Nothing logged yet today.</div>` : `
-        <div style="max-height:260px;overflow-y:auto;">
+        <div class="bc-saved-list" style="max-height:260px;overflow-y:auto;">
           ${todays.map(b=>boxCountSavedRowHtml(b)).join('')}
         </div>`}
       </div>
@@ -13081,7 +13288,7 @@ function renderUnassignedBoardSection(active){
 function renderDeliveryBoardSection(line, active){
   const lineOrders = ordersInLine(active, line.key);
   return `
-  <div class="board-section">
+  <div class="board-section orders-d-only">
     <div class="board-section-title" style="display:flex;align-items:center;gap:14px;">
       <span>${esc(line.label)}</span>
       ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">+ New order</button>` : ''}
@@ -13089,9 +13296,10 @@ function renderDeliveryBoardSection(line, active){
     <div class="board">
       ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, line.key)).join('')}
     </div>
-    ${renderBoardMobile(line.key, lineOrders)}
   </div>`;
 }
+// NOTE: the phone Orders board no longer uses this -- it is renderOrdersMobileQueue() below. Kept, unchanged,
+// only because renderUnassignedBoardSection() (itself currently uncalled, kept on purpose) still references it.
 // Phone-width counterpart to the .board grid above: a tab per stage (with its own count) and
 // just that one stage's cards below, instead of four side-by-side columns you scroll sideways
 // through. state._boardMobileStage remembers which tab per delivery line (keyed by courier key,
@@ -13111,6 +13319,106 @@ function renderBoardMobile(courierKey, lineOrders){
     </div>
     <div class="column-body" data-stage="${activeIdx}" data-courier="${escAttr(courierKey)}">
       ${orders.length===0 ? `<div class="empty-col">Nothing here</div>` : orders.map(o=>renderCard(o)).join('')}
+    </div>
+  </div>`;
+}
+/* ===================== Phone "Clear Queue" view of the Orders board (Packing section) ===================== */
+// Picked from a 3-option design comparison (A · Clear Queue). Replaces the old phone layout, which
+// stacked one 4-tab board PER delivery line (two sets of stage tabs, cards starting far down the
+// screen). On a phone there is now ONE list: a stage control with counts, a delivery-line filter,
+// and cards that lead with what to pack. Phone-only by construction: .oq is display:none above
+// 760px, and the desktop board above (.board / .orders-d-only) is display:none below it, so
+// neither layout can leak into the other. Same data, same click-to-open, same permissions.
+const OQ_SVG = (inner, size=18, solid=false) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${solid?'currentColor':'none'}" stroke="${solid?'none':'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+const OQ_ICON = {
+  box: OQ_SVG('<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>'),
+  archive: OQ_SVG('<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8M10 12h4"/>'),
+  dots: OQ_SVG('<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>', 20, true),
+  truck: OQ_SVG('<path d="M3 6h11v9H3zM14 9h4l3 3v3h-7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>', 14),
+  clock: OQ_SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 14),
+  alert: OQ_SVG('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 16),
+};
+// When the order entered the stage it is in now (falls back to when it was created) -- "how long
+// has this been sitting here", which is what a packer scans for, not "how old is the order".
+function oqStageSince(o){
+  const h = (o.history||[]).filter(x=>x.stage===o.stage);
+  return h.length ? h[h.length-1].at : o.createdAt;
+}
+function oqAgo(iso){
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime())/60000));
+  if(m < 1) return null;
+  if(m < 60) return m + ' min';
+  const h = Math.floor(m/60);
+  if(h < 24) return h + ' h';
+  const d = Math.floor(h/24);
+  return d + (d===1 ? ' day' : ' days');
+}
+function oqWaitLabel(o){
+  const ago = oqAgo(oqStageSince(o));
+  if(o.stage===STAGES.length-1) return ago ? `Picked up ${ago} ago` : 'Picked up just now';
+  if(o.stage===1) return ago ? `In progress ${ago}` : 'Just started';
+  return ago ? `Waiting ${ago}` : 'Just received';
+}
+function renderOqCard(o, showLine){
+  const priority = PRIORITIES.includes(o.priority) ? o.priority : 'Medium';
+  const noteText = stripTags(o.notes||'').trim();
+  const productText = stripTags(o.product||'').trim();
+  const line = state.deliveryLines.find(l=>l.key===(o.courierService||''));
+  const lineLabel = line ? line.label : (o.courierService||'');
+  return `
+  <div class="card oq-card" data-order="${escAttr(o.id)}">
+    <div class="oq-over">${o.color?`<span class="oq-dot" style="background:${escAttr(o.color)};"></span>`:''}<span>${esc(o.orderNumber||o.id)}</span></div>
+    <div class="oq-name">${esc(o.customer)}</div>
+    ${productText ? `<div class="oq-product"><span class="oq-product-icon">${OQ_ICON.box}</span><span class="oq-product-text">${esc(productText)}</span></div>` : ''}
+    <div class="oq-pills">
+      <span class="oq-pill oq-pill-${priority.toLowerCase()}">${esc(priority)} priority</span>
+      ${showLine && lineLabel ? `<span class="oq-pill oq-pill-line">${OQ_ICON.truck}${esc(lineLabel)}</span>` : ''}
+      <span class="oq-pill oq-pill-time">${OQ_ICON.clock}${esc(oqWaitLabel(o))}</span>
+    </div>
+    ${noteText ? `<div class="oq-note"${o.color?` style="background:${escAttr(o.color)}1f;color:${escAttr(o.color)};"`:''}>${OQ_ICON.alert}<span>${esc(noteText)}</span></div>` : ''}
+  </div>`;
+}
+function renderOrdersMobileQueue(active, archived){
+  const lines = state.deliveryLines.filter(l=>!l.hidden);
+  const lineKeys = lines.map(l=>l.key);
+  const lineSel = (state._oqLine && lineKeys.includes(state._oqLine)) ? state._oqLine : 'all';
+  // Same set of orders the desktop board shows: only those sitting in a visible delivery line.
+  const visible = active.filter(o=>lineKeys.includes(o.courierService||''));
+  const scoped = lineSel==='all' ? visible : visible.filter(o=>(o.courierService||'')===lineSel);
+  const stageIdx = Math.min(Math.max(parseInt(state._oqStage,10)||0, 0), STAGES.length-1);
+  const stageOrders = visible.filter(o=>o.stage===stageIdx);
+  const list = scoped.filter(o=>o.stage===stageIdx).sort((a,b)=>boardOrderOf(a)-boardOrderOf(b));
+  const highCount = scoped.filter(o=>o.stage<STAGES.length-1 && (o.priority||'Medium')==='High').length;
+  const canCreate = !!(state.session && roleCan(state.session.role, 'orders_create'));
+  const canManageLists = !!(state.session && roleCan(state.session.role, 'orders_manage_lists'));
+  const hasMore = canCreate || canManageLists;
+  const moreOpen = hasMore && !!state._oqMoreOpen;
+  return `
+  <div class="oq">
+    <p class="oq-sub">${scoped.length} active order${scoped.length===1?'':'s'}${highCount?` · ${highCount} high priority`:''}</p>
+    <div class="oq-actions">
+      <button type="button" class="oq-btn oq-btn-primary" data-oq-boxcount>${OQ_ICON.box}<span>Box Count</span></button>
+      <button type="button" class="oq-btn" data-orders-view="archive">${OQ_ICON.archive}<span>Archive${archived.length?` (${archived.length})`:''}</span></button>
+      ${hasMore ? `<button type="button" class="oq-btn oq-btn-icon" id="btn-oq-more" aria-label="More actions" aria-haspopup="menu" aria-expanded="${moreOpen?'true':'false'}">${OQ_ICON.dots}</button>` : ''}
+      ${moreOpen ? `
+      <div class="oq-menu" role="menu">
+        ${canCreate ? lines.map(l=>`<button type="button" class="oq-menu-item" role="menuitem" data-new-order-courier="${escAttr(l.key)}">+ New order · ${esc(l.label)}</button>`).join('') : ''}
+        ${canManageLists ? `<button type="button" class="oq-menu-item" role="menuitem" data-oq-manage-lines>⚙ Manage lists</button>` : ''}
+      </div>` : ''}
+    </div>
+    <div class="oq-stages" role="group" aria-label="Order stage">
+      ${STAGES.map((_,i)=>{
+        const on = i===stageIdx;
+        return `<button type="button" class="oq-stage${on?' on':''}" data-oq-stage="${i}" aria-pressed="${on?'true':'false'}"><span class="oq-stage-n">${scoped.filter(o=>o.stage===i).length}</span><span class="oq-stage-l">${esc(STAGE_TAB_LABELS[i])}</span></button>`;
+      }).join('')}
+    </div>
+    ${lines.length>1 ? `
+    <div class="oq-lines" role="group" aria-label="Delivery line">
+      <button type="button" class="oq-chip${lineSel==='all'?' on':''}" data-oq-line="all" aria-pressed="${lineSel==='all'?'true':'false'}">All lines · ${stageOrders.length}</button>
+      ${lines.map(l=>`<button type="button" class="oq-chip${lineSel===l.key?' on':''}" data-oq-line="${escAttr(l.key)}" aria-pressed="${lineSel===l.key?'true':'false'}">${esc(l.label)} · ${stageOrders.filter(o=>(o.courierService||'')===l.key).length}</button>`).join('')}
+    </div>` : ''}
+    <div class="oq-list">
+      ${list.length===0 ? `<div class="oq-empty">Nothing in ${esc(STAGE_TAB_LABELS[stageIdx])} right now.</div>` : list.map(o=>renderOqCard(o, lineSel==='all' && lines.length>1)).join('')}
     </div>
   </div>`;
 }
@@ -19954,7 +20262,7 @@ function renderOrderDrawer(id){
   const limited = state.page === 'ongoingorders';
   return `
   <div class="drawer-overlay" id="overlay"></div>
-  <div class="drawer">
+  <div class="drawer order-drawer">
     <button class="drawer-close" id="btn-cancel-modal" aria-label="Close" style="color:#fff;">✕</button>
     <div class="drawer-hero">
       <div>
@@ -19967,7 +20275,12 @@ function renderOrderDrawer(id){
         <div class="stat-chip"><div class="k">Days in pipeline</div><div class="v">${daysAgo(o.createdAt)}</div></div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
+    <!-- Phone-only progress stepper (display:none above 760px, see .od-stepper). The stage badge below
+         is hidden on phones instead, since this says the same thing. -->
+    <div class="od-stepper" role="group" aria-label="Order progress: step ${o.stage+1} of ${STAGES.length}, ${esc(STAGES[o.stage])}">
+      ${STAGE_TAB_LABELS.map((l,i)=>`<div class="od-step ${i<o.stage?'done':(i===o.stage?'cur':'')}"><span class="od-step-dot">${i<o.stage?'✓':(i+1)}</span><span class="od-step-l">${esc(l)}</span></div>`).join('')}
+    </div>
+    <div class="od-badge-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
       <span class="stage-badge" style="background:${style.bg};color:${style.c};">${STAGES[o.stage]}</span>
       <button type="button" class="btn btn-sm" data-copy-order-track-link="${escAttr(o.id)}" title="Copy a link the customer can open to see this order's live status, to send however you like">🔗 Copy tracking link</button>
     </div>
@@ -20022,6 +20335,7 @@ function renderOrderDrawer(id){
           ${role && roleCan(role, 'orders_archive_now') && o.stage===STAGES.length-1 && !o.archived ? `<button type="button" class="btn" id="btn-archive-order-now" title="Move straight to Order Inquiry without waiting for the automatic 2-hour sweep">Archive now</button>` : ''}
         </div>
         <div style="display:flex;gap:8px;">
+          ${canAdv && o.stage<STAGES.length-1 ? `<div class="od-next-hint">Next step: moves this order to ${esc(STAGES[o.stage+1])}</div>` : ''}
           ${canAdv ? `<button type="button" class="btn" id="btn-advance">${NEXT_ACTION_LABEL[o.stage]}</button>` : ''}
           ${(!ro || canEditTrackingOnly) ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>
@@ -21280,6 +21594,33 @@ function attachShellHandlers(){
     state._boardMobileStage[btn.dataset.boardTabCourier] = parseInt(btn.dataset.boardTabStage, 10);
     render();
   }));
+  // Phone "Clear Queue" view of the Orders board (renderOrdersMobileQueue): stage control, delivery
+  // line filter, Box Count shortcut and the "..." menu. Same render()-after-state-change pattern as
+  // every other tab/filter here; nothing is saved, it is view state only.
+  document.querySelectorAll('[data-oq-stage]').forEach(btn=>btn.addEventListener('click', ()=>{
+    state._oqStage = parseInt(btn.dataset.oqStage, 10);
+    render();
+  }));
+  document.querySelectorAll('[data-oq-line]').forEach(btn=>btn.addEventListener('click', ()=>{
+    state._oqLine = btn.dataset.oqLine;
+    render();
+  }));
+  document.querySelectorAll('[data-oq-boxcount]').forEach(btn=>btn.addEventListener('click', ()=>openModal('boxcount')));
+  if(byIdEl('btn-oq-more')) byIdEl('btn-oq-more').onclick = ()=>{ state._oqMoreOpen = !state._oqMoreOpen; render(); };
+  document.querySelectorAll('.oq-menu-item').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqMoreOpen = false; }));
+  document.querySelectorAll('[data-oq-manage-lines]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const desktopBtn = byIdEl('btn-manage-lines'); // the existing Manage Lists button (hidden on phones) owns the real handler
+    if(desktopBtn) desktopBtn.click();
+  }));
+  if(!window.__oqAwayBound){
+    window.__oqAwayBound = true;
+    // Tap anywhere outside the "..." menu to close it (bound once, not per render).
+    document.addEventListener('click', e=>{
+      if(!state._oqMoreOpen) return;
+      if(e.target.closest && (e.target.closest('.oq-menu') || e.target.closest('#btn-oq-more'))) return;
+      state._oqMoreOpen = false; render();
+    });
+  }
   document.querySelectorAll('[data-rnd-mobile-tab-stage]').forEach(btn=>btn.addEventListener('click', ()=>{
     state._rndBoardMobileStage = parseInt(btn.dataset.rndMobileTabStage, 10);
     render();
@@ -21358,7 +21699,23 @@ function attachShellHandlers(){
   };
   // Delegated on the row container (not bound per-row) so a row added later by "+ Add row"
   // already has a working remove button with no extra wiring step.
+  document.querySelectorAll('[data-bc-close]').forEach(b=>b.addEventListener('click', closeModal));
   if(byIdEl('box-count-tbody')) byIdEl('box-count-tbody').addEventListener('click', (e)=>{
+    // Phone-only controls (see boxCountRowHtml): they just fill in the real inputs, nothing else.
+    const stepBtn = e.target.closest('.bc-step');
+    if(stepBtn){
+      const input = stepBtn.closest('.bc-stepper').querySelector('input[name="boxCount"]');
+      const next = Math.max(0, (parseInt(input.value, 10) || 0) + parseInt(stepBtn.dataset.bcStep, 10));
+      input.value = next ? String(next) : '';
+      return;
+    }
+    const segBtn = e.target.closest('.bc-seg-btn');
+    if(segBtn){
+      const row = segBtn.closest('.box-count-row');
+      row.querySelector('select[name="boxType"]').value = segBtn.dataset.bcSize;
+      syncBoxCountSizeButtons(row);
+      return;
+    }
     const btn = e.target.closest('.box-count-remove-row'); if(!btn) return;
     const tbody = byIdEl('box-count-tbody');
     if(tbody.querySelectorAll('.box-count-row').length<=1) return; // always leave at least one row
@@ -23522,6 +23879,10 @@ if('serviceWorker' in navigator){
   document.addEventListener('gesturestart', e => e.preventDefault());
   let lastTouchEnd = 0;
   document.addEventListener('touchend', e => {
+    // The phone Box Count -/+ stepper is meant to be tapped repeatedly and quickly; it opts out of the
+    // double-tap guard (it has touch-action:manipulation, which stops the zoom natively), otherwise
+    // every tap after the first within 300ms is silently dropped.
+    if(e.target && e.target.closest && e.target.closest('.bc-step')) return;
     const now = Date.now();
     if(now - lastTouchEnd <= 300) e.preventDefault();
     lastTouchEnd = now;

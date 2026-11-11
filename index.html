@@ -13132,7 +13132,7 @@ function boxCountModal(){
   const selectedCount = (state._boxCountSelected||[]).length;
   const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
   // Phone-only totals strip: what has already gone out today.
-  const bcCustomers = new Set(todays.map(b=>(b.customerName||'').trim().toLowerCase())).size;
+  const bcCustomers = new Set(todays.map(b=>String(b.customerName==null ? '' : b.customerName).trim().toLowerCase())).size;
   const bcBoxes = todays.reduce((s,b)=>s+(Number(b.boxCount)||0), 0);
   const bcKg = Math.round(todays.reduce((s,b)=>s+(Number(b.totalKg)||0), 0)*10)/10;
   return `

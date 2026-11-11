@@ -23971,42 +23971,20 @@ loadAll();
 </script>
 <script>
 // ===================== PWA: installable app shell + basic offline resilience =====================
-// Lets this run from a home-screen / desktop app icon instead of a browser tab.
-// Data still comes from Supabase live — this only caches the page shell so it opens
-// instantly and survives a flaky connection; it does not work fully offline.
-if('serviceWorker' in navigator){
-  // The fetch handler must force a genuine network round-trip (cache:'reload') — a plain
-  // fetch() here would let the browser's own HTTP cache quietly hand back a stale response,
-  // which this service worker would then re-cache and serve as if it were fresh. That made a
-  // normal hard-refresh (which bypasses the PAGE's cache, but not this worker's own fetch
-  // decision) look like it did nothing: the page reloaded, but this code still handed it
-  // yesterday's app. Also bump CACHE and clear old caches on activate so nothing stale lingers.
-  const swSource = `
-    const CACHE = 'audrey-care-shell-v2';
-    self.addEventListener('install', e => { self.skipWaiting(); });
-    self.addEventListener('activate', e => {
-      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
-      self.clients.claim();
-    });
-    self.addEventListener('fetch', e => {
-      if(e.request.method !== 'GET') return;
-      e.respondWith(
-        fetch(e.request, {cache: 'reload'}).then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
-          return res;
-        }).catch(() => caches.match(e.request))
-      );
-    });
-  `;
-  const swBlobUrl = URL.createObjectURL(new Blob([swSource], {type:'application/javascript'}));
+// Lets this run from a home-screen / desktop app icon instead of a browser tab, and lets the page
+// itself open on a flaky connection. The worker lives in the real file sw.js at the site root and
+// only ever handles this site's own files; data still comes from Supabase live and is never cached.
+// (It used to be built from a blob: address, which browsers refuse for service workers: it never
+// registered at all, and the failure was hidden by the catch.)
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(swBlobUrl).catch(()=>{ /* best-effort */ });
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'})
+      .catch(err => { console.warn('Service worker not registered:', err && err.message); });
   });
 }
 
 // ===================== Update detection: catch browsers stuck on an old deploy =====================
-// The service worker above should already keep this fresh, but different browsers/devices have
+// The service worker above (network-first) should already keep this fresh, but different browsers/devices have
 // been seen showing an old version after a deploy anyway — belt-and-suspenders, independent of
 // whatever the service worker is or isn't doing. Compares the <meta name="app-build"> this page
 // was actually served with against a forced fresh fetch of the same page; a mismatch means a

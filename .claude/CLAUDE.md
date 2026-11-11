@@ -84,7 +84,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   Gemini) live only as Edge Function secrets. Never put a key or shared password in `index.html`.
 - **Public order lookup** (`track_order`, `submit_order_rating`): attempts are limited per visitor (table
   `private.rate_limits`, helper `private.hit`), partial phone numbers do not match (a full number is needed), and the
-  customer name is shortened ("Meera N."). Keep it that way.
+  page shows the customer's FULL name (the owner chose this; do not shorten it). Keep the limits and the full-number rule.
 - **Logged-out visitors save nothing** (`kvSet` / `saveQuietly` refuse). Saving "no value" (null) deletes the row.
 - **Install (PWA).** `manifest.webmanifest` + `assets/icons/` are real files linked from the page; do not turn the
   manifest back into a `data:` address (phones cannot fetch that to build the installed app).

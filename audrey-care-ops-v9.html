@@ -2680,21 +2680,8 @@ const SUPABASE_URL = 'https://mntnobzwbvqpvmaxqcuc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_pY4NxO1s9lbTWzz72OvWqg_0Pzk8FhC';
 const BACKEND_CONFIGURED = !SUPABASE_URL.includes('PASTE_') && !SUPABASE_ANON_KEY.includes('PASTE_');
 const supabaseClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-// A second, independent Supabase client used only by the one-time "Secure accounts" migration
-// (creating real Supabase Auth accounts). Kept separate from supabaseClient so each signUp()
-// call during migration never clobbers the admin's own active login session — but a bare second
-// createClient() call still isn't fully isolated: with no storageKey of its own, supabase-js
-// defaults both clients to the SAME localStorage slot and the SAME cross-instance auth
-// BroadcastChannel, so this client's signUp()+signOut() around each new account still broadcasts
-// SIGNED_IN/SIGNED_OUT to the admin's own supabaseClient too. Root-caused from a real, repeatable
-// case: creating an account always saved fine, but the activityLog entry logged right after it
-// consistently failed to save — the signOut() broadcast was landing in that exact gap, briefly
-// knocking the admin's own client's identity out from under the very next write. storageKey
-// isolates the localStorage slot; persistSession/autoRefreshToken are off because this client only
-// ever needs to exist for the few calls in supabaseSignUpForMigration before signing out again.
-const supabaseAuthMigrationClient = BACKEND_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { storageKey: 'sb-audrey-migration-client', persistSession: false, autoRefreshToken: false }
-}) : null;
+// (There used to be a second Supabase client here that signed new people up from the browser with the public key.
+// New logins are now created by the admin-create-account Edge Function instead; see adminCreateSecureAccount.)
 // Private/incognito-browsing detection was tried here and retired: the storage-quota signal it
 // depended on turned out to be the same on current Chrome whether or not the window was actually
 // incognito (Chrome deliberately unified the two specifically so sites can't tell them apart),
@@ -2711,61 +2698,59 @@ function authEmailFor(name){
   const slug = (name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
   return slug + '@audreyops.internal';
 }
-// The very first version of this scheme baked the role at signup into the email (role+name), so
-// changing someone's access level in User account setup afterward silently locked them out — the
-// stored password still worked, but the email the app now derived for them no longer matched any
-// real account. Kept only so supabaseSignIn below can still find an account created that way.
-function legacyAuthEmailFor(role, name){
-  const slug = (role+'-'+name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
-  return slug + '@audreyops.internal';
-}
 async function supabaseSignIn(role, name, password){
   if(!supabaseClient) return {ok:false, error:'Backend not configured'};
-  // Try the stable, role-independent email first — this is what every account ends up on.
-  const stableEmail = authEmailFor(name);
-  const primary = await supabaseClient.auth.signInWithPassword({email: stableEmail, password});
-  if(!primary.error) return {ok:true, userId: primary.data.user.id};
-  // Not found (or wrong password) on the stable email — fall back through every role this
-  // account could have been originally created under on the old scheme. A match here means this
-  // is a pre-upgrade account whose role has since changed; migrate it to the stable email right
-  // away so every later login goes straight through the fast path above and this never has to
-  // happen again.
-  //
-  // Tried in parallel, not one at a time: this list is every legacy role plus every custom role
-  // Settings -> User roles has ever had (it only grows), so a sequential loop meant a login that
-  // missed the fast path got slower every time someone added another role — a real, measured
-  // cause of "signing in" hanging, not just perceived latency. Only the candidate matching this
-  // account's actual original role can ever succeed, so firing them all at once and taking
-  // whichever one resolves with no error is exactly as safe as trying them one at a time, just
-  // bounded by one round trip instead of up to a dozen.
-  const candidateRoles = [...new Set([role, ...LEGACY_SECURE_ACCOUNT_ROLES, ...(state.userRoles||[]).map(r=>r.name)])];
-  const attempts = await Promise.allSettled(candidateRoles.map(candidateRole =>
-    supabaseClient.auth.signInWithPassword({email: legacyAuthEmailFor(candidateRole, name), password})
-  ));
-  const hit = attempts.find(a => a.status==='fulfilled' && !a.value.error);
-  if(hit){
-    supabaseClient.auth.updateUser({email: stableEmail}).catch(e=>console.error('stable-email migration failed', e));
-    return {ok:true, userId: hit.value.data.user.id};
-  }
-  return {ok:false, error: primary.error.message};
+  // Two calls, always: ask the server which login belongs to the typed name (resolve_login), then sign in
+  // once with it. (The old way read the whole account list in the browser, then tried the standard address
+  // and, on a miss, a dozen role-prefixed ones in parallel: most sign-in calls failed and were noise.)
+  // `role` is no longer used; it is kept in the signature so existing callers (change-password) need no edit.
+  let email = null;
+  try{
+    const { data, error } = await supabaseClient.rpc('resolve_login', {p_name: name});
+    if(!error && typeof data === 'string' && data) email = data;
+  }catch(e){ console.error('resolve_login failed', e); }
+  if(!email) email = authEmailFor(name); // the lookup could not be asked: the standard address
+  const res = await supabaseClient.auth.signInWithPassword({email, password});
+  if(res.error) return {ok:false, error: res.error.message};
+  return {ok:true, userId: res.data.user.id};
 }
 async function supabaseFetchProfile(userId){
   if(!supabaseClient) return null;
-  const {data, error} = await supabaseClient.from('profiles').select('role,staff_name').eq('id', userId).maybeSingle();
+  const {data, error} = await supabaseClient.from('profiles').select('role,staff_name,active').eq('id', userId).maybeSingle();
   if(error || !data) return null;
   return data;
 }
-// Creates one real Supabase Auth account + its profiles row, used only from the migration
-// screen. Runs on the isolated client so it never disturbs whoever is already signed in.
+// Calls the admin-create-account Edge Function (same pattern/reasoning as adminResetSecureAccountPassword:
+// creating a login and its profile row needs the service-role secret, which can only live on a server, and
+// the server re-checks that the caller is really an Admin). Keeps the {ok, error} result shape the callers
+// already expect; a name that is already taken comes back as "User already registered".
 async function supabaseSignUpForMigration(role, name, password){
-  if(!supabaseAuthMigrationClient) return {ok:false, error:'Backend not configured'};
-  const {data, error} = await supabaseAuthMigrationClient.auth.signUp({email: authEmailFor(name), password});
-  if(error) return {ok:false, error: error.message};
-  if(!data.user || !data.session) return {ok:false, error:'No session returned — check that "Confirm email" is turned off in Supabase → Authentication → Providers → Email.'};
-  const {error: profileError} = await supabaseAuthMigrationClient.from('profiles').insert({id: data.user.id, role, staff_name: name});
-  await supabaseAuthMigrationClient.auth.signOut();
-  if(profileError) return {ok:false, error: profileError.message};
-  return {ok:true};
+  if(!supabaseClient) return {ok:false, error:'Backend not configured'};
+  try{
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session) return {ok:false, error:'Your own session has expired — log out and back in, then try again.'};
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-create-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ name, role, password }),
+    });
+    let result = {};
+    try{ result = await res.json(); }catch(e){}
+    if(!res.ok || !result.ok) return {ok:false, error: result.error || `Create failed (${res.status}) — the admin-create-account Edge Function may not be deployed yet.`};
+    return {ok:true};
+  }catch(e){ return {ok:false, error: (e && e.message) || String(e)}; }
+}
+// After sign-in the account list (names, access levels, Employer codes, extra pages) is readable to signed-in
+// people only — it is no longer public — so it is fetched here instead of before the login screen.
+async function loadAuthRecordAfterSignIn(){
+  try{
+    const a = await kvGetAuthWithRetry();
+    if(a){ state.auth = {...DEFAULT_AUTH, ...a, migratedToSupabaseAuth:true}; snapshotAuthBaseline(); }
+  }catch(e){ console.error('account list fetch after sign-in failed', e); }
 }
 // Must match the SMS_APP_SECRET set on the send-sms Edge Function (supabase/functions/send-sms).
 // Leave as 'PASTE_SMS_APP_SECRET' to disable the SMS feature entirely.
@@ -4211,24 +4196,12 @@ function sweepCompletedOrders(){
 }
 const CITYPAK_TRACK_URL = 'https://track.citypak.lk/';
 const DEFAULT_AUTH = {
-  adminPassword:'2118', subAdminPassword:'7915', blendingPassword:'7915', packingPassword:'7915', ordersProcessPassword:'process123', customerCarePassword:'4321',
-  // Roles listed here ask for a name + that person's own password at sign-in, instead of one
-  // shared role password. Roles not listed (Blending, Packing, Orders Process) keep the old
-  // single shared-password login.
-  roleLogins: {
-    Admin: [
-      {name:'Vihanga', password:'7989'},
-      {name:'Madhushanka', password:'7989'}
-    ],
-    'Customer Care': [
-      {name:'Prabhath', password:'7915'},
-      {name:'Vishmika', password:'7915'}
-    ],
-    'Sub Admin': [
-      {name:'Manoj', password:'7915'},
-      {name:'Nelum', password:'7915'}
-    ]
-  },
+  // The old shared role passwords and per-person demo passwords that used to be listed here (and in the
+  // saved account record) are gone: every sign-in goes through the real Supabase login now. Keys kept
+  // empty so older saved copies of this record still merge cleanly.
+  roleLogins: {},
+  // Always on: there is no shared-password login any more.
+  migratedToSupabaseAuth: true,
   // Admin-customized sidebar page lists for Blending/Packing (see pagesForRole()).
   // Unused now that custom roles (state.userRoles) own per-role page access — kept only so an
   // old saved blob with this key doesn't error, never written to again.
@@ -4663,13 +4636,35 @@ async function syncAllRoleDataAccess(){
 // row sharing the same display name, and there's no reliable way from here to tell which one is
 // this person's current login -- updating all of them is harmless and guarantees whichever one
 // IS still in use gets it.
+// Profile rows are matched to an account NAME case-insensitively (the account list says "Sudath" or "sudath"
+// while the profile says the other; matching exactly silently skipped those). Only an Admin session can read all
+// profile rows and change anyone's role/status, which is exactly who calls these.
+async function profileIdsForName(name){
+  const { data: rows, error } = await supabaseClient.from('profiles').select('id, staff_name');
+  if(error) return {error: error.message};
+  const wanted = String(name||'').trim().toLowerCase();
+  return {ids: (rows||[]).filter(r=>String(r.staff_name||'').trim().toLowerCase()===wanted).map(r=>r.id)};
+}
 async function syncProfileRole(name, role){
   if(!supabaseClient || !state.auth.migratedToSupabaseAuth) return {ok:false, error:'Not migrated yet'};
-  const { data: profRows, error: profErr } = await supabaseClient.from('profiles').select('id').eq('staff_name', name);
-  if(profErr) return {ok:false, error: profErr.message};
-  if(!profRows || !profRows.length) return {ok:true}; // never signed in yet — nothing to correct until a profiles row exists
-  for(const row of profRows){
-    const upd = await supabaseClient.from('profiles').update({role}).eq('id', row.id);
+  const found = await profileIdsForName(name);
+  if(found.error) return {ok:false, error: found.error};
+  if(!found.ids.length) return {ok:true}; // no profile row for this name — nothing to correct
+  for(const id of found.ids){
+    const upd = await supabaseClient.from('profiles').update({role}).eq('id', id);
+    if(upd.error) return {ok:false, error: upd.error.message};
+  }
+  return {ok:true};
+}
+// Deactivate / reactivate on the SERVER: a deactivated account can still be typed into the sign-in box, but the
+// database gives it no data and the app signs it straight back out.
+async function syncProfileActive(name, active){
+  if(!supabaseClient) return {ok:false, error:'Backend not configured'};
+  const found = await profileIdsForName(name);
+  if(found.error) return {ok:false, error: found.error};
+  if(!found.ids.length) return {ok:true};
+  for(const id of found.ids){
+    const upd = await supabaseClient.from('profiles').update({active}).eq('id', id);
     if(upd.error) return {ok:false, error: upd.error.message};
   }
   return {ok:true};
@@ -5930,6 +5925,20 @@ async function loadAll(){
       await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', _authSession.user.id);
       _lastServerPingAt = Date.now();
     }catch(e){ console.error('resumed-session last_seen refresh failed', e); }
+    // The saved session in this browser (name, access level) is only a convenience for drawing the screen —
+    // the server's own record of the person is the truth. If they were deactivated, or their access level was
+    // changed by an Admin since last time, follow the server instead of whatever this browser remembered.
+    if(state.session){
+      try{
+        const prof = await supabaseFetchProfile(_authSession.user.id);
+        if(prof && prof.active === false){
+          state.session = null; saveSession();
+          supabaseClient.auth.signOut().catch(()=>{});
+        } else if(prof && prof.role && prof.role !== state.session.role){
+          state.session = {...state.session, role: prof.role}; saveSession();
+        }
+      }catch(e){ console.error('session check against the server failed', e); }
+    }
   }
   // Fired together, not one after the other — 'auth' isn't a SYNCED_KEY (it has its own shape/
   // migration handling below) so it used to be fetched in its own sequential await AFTER this one
@@ -6280,7 +6289,7 @@ async function loadAll(){
   let _rolePagesCleared = false;
   try{
     const a = await authFetchPromise;
-    state.auth = a ? {...DEFAULT_AUTH, ...a} : {...DEFAULT_AUTH};
+    state.auth = a ? {...DEFAULT_AUTH, ...a, migratedToSupabaseAuth:true} : {...DEFAULT_AUTH};
     // Baseline reflects what was actually just fetched, before the local-only rolePages-clearing
     // change below — so saveAuth()'s merge correctly sees that change as local and keeps it,
     // instead of diffing against an already-cleared copy and treating it as "nothing changed".
@@ -6304,9 +6313,11 @@ async function loadAll(){
     // migratedToSupabaseAuth back to unset for everyone, with no merge protection to catch it.
     // Routed through saveAuth() (merge + queue) rather than a raw kvSet — see saveAuth's own
     // comment for why a raw write here was also part of the Employer code data-loss bug.
-    if(a) saveAuth().catch(e=>console.error('auth write-back failed', e));
+    // Admin only: the saved account record can only be changed by an Admin, and nobody else's browser
+    // (nor the logged-out login screen) may rewrite it on every page load.
+    if(a && state.session && state.session.role==='Admin') saveAuth().catch(e=>console.error('auth write-back failed', e));
   }catch(e){ state.auth = {...DEFAULT_AUTH}; }
-  if(_rolePagesCleared && state.auth.migratedToSupabaseAuth){
+  if(_rolePagesCleared && state.auth.migratedToSupabaseAuth && state.session && state.session.role==='Admin'){
     syncAllRoleDataAccess().catch(e=>console.error('role_data_access resync after clearing rolePages failed', e));
   }
   // PAGE_DATA_KEYS sometimes gains a key for an existing page (e.g. rndChemists/rndAttendance
@@ -7103,64 +7114,10 @@ async function logLoginEvent(name, role){
   state.loginHistory = [...(state.loginHistory||[]), entry].sort((a,b)=>new Date(b.at)-new Date(a.at)).slice(0,200);
   save('loginHistory').catch(()=>{});
 }
-async function confirmLogin(){
-  const passInput = document.getElementById('login-password');
-  const errEl = document.getElementById('login-error');
-  const password = (passInput.value||'');
-  const role = state._pendingRole;
-  const logins = state.auth.roleLogins && state.auth.roleLogins[role];
-  let sessionName = role;
-  if(logins && logins.length){
-    const nameInput = document.getElementById('login-name');
-    const typedName = (nameInput ? nameInput.value : '').trim();
-    const match = logins.find(l=>l.name.toLowerCase()===typedName.toLowerCase());
-    const ok = match && await passwordMatches(password, match.password);
-    if(!ok){
-      if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
-      passInput.value = ''; passInput.focus();
-      return;
-    }
-    sessionName = match.name;
-    if(!looksHashed(match.password)){
-      // Rebuilt immutably (not match.password = ... in place) to match how every other state.auth
-      // edit in the file works — snapshotAuthBaseline() deep-clones, so an in-place mutation here
-      // wouldn't actually corrupt that snapshot, but every other write goes through a fresh object
-      // via spread and this one should too rather than being the one silent exception.
-      const hashed = await sha256Hex(password);
-      state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: logins.map(l=>l.name===match.name ? {...l, password:hashed} : l)}};
-      saveAuth().catch(e=>console.error('lazy password hash upgrade failed', e));
-    }
-  } else {
-    const expected = legacySharedPasswordFor(role);
-    if(password !== expected){
-      if(errEl) errEl.textContent = 'Incorrect password — try again.';
-      passInput.value = ''; passInput.focus();
-      return;
-    }
-  }
-  state.session = {name: sessionName, role, staffName: sessionName!==role ? sessionName : null};
-  state.page = initialPageForLogin(role);
-  state._justLoggedIn = true;
-  state.aiChat = [];
-  clearInterval(state._loginClockTimer);
-  await saveSession();
-  logActivity(`Logged in (${role})`);
-  logLoginEvent(sessionName, role);
-  // A fresh browser with no prior session may have had loadAll() run its one-time data fetch
-  // before anyone was signed in — re-fetch now that we actually are, rather than rendering
-  // whatever (possibly empty) snapshot that first unauthenticated fetch happened to see.
-  await refreshAppData(true);
-  // personalNotes is a plain SYNCED_KEY, so the fetch above already loaded this person's notes —
-  // check for anything already overdue now that they're actually signed in.
-  checkDueNotes();
-  checkBoxCountAlert();
-  checkAttEditAlert();
-  checkSystemNotices();
-  await autoAddRndOfficerAsChemist();
-  render();
-}
-// Used once state.auth.migratedToSupabaseAuth is true: the sign-in screen only asks for a name,
-// so the person's access level is looked up from the account roster rather than picked first.
+// (confirmLogin(), the old shared role-password sign-in, used to live here. It checked typed passwords that were
+// stored in plain text in the public account record and in this page's source. It is gone; confirmLoginV2 below is the only sign-in.)
+// The sign-in screen only asks for a name and a password; the person's access level is read from the server's
+// own record of them (profiles) after a successful sign-in, never picked or remembered by the browser.
 // The Orders Process board is a shared-device account like Blending/Packing — signing into it
 // goes straight to the public board display rather than a staff session (matching how "Staff
 // Login" on that board already expects to find nobody signed in and show the login screen).
@@ -7170,81 +7127,50 @@ async function confirmLoginV2(){
   const errEl = document.getElementById('login-error');
   const typedName = (nameInput ? nameInput.value : '').trim();
   const password = (passInput.value||'');
-  const role = roleForLoginName(typedName);
-  if(!role){
-    if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
-    passInput.value = ''; passInput.focus();
+  const fail = (msg)=>{ if(errEl) errEl.textContent = msg; passInput.value = ''; passInput.focus(); };
+  if(!typedName || !password){ fail('Incorrect name or password — try again.'); return; }
+  const res = await supabaseSignIn(null, typedName, password);
+  if(!res.ok){ fail('Incorrect name or password — try again.'); return; }
+  // Refresh profiles.last_seen right now, awaited, before any data fetch below — session_is_active() (the RLS
+  // gate every app_data read/write goes through) checks this timestamp, and for anyone returning after their
+  // configured timeout — the normal case for every first login of the day — it was still sitting at however
+  // long ago they last used the app. Without this, that gap blocked the very first synced-keys fetch of every
+  // fresh login. Runs in parallel with the profile read (they do not depend on each other); a failure here must
+  // never block sign-in itself.
+  const [profile] = await Promise.all([
+    supabaseFetchProfile(res.userId),
+    supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', res.userId)
+      .then(()=>{ _lastServerPingAt = Date.now(); }, e=>{ console.error('last_seen pre-fetch refresh failed', e); }),
+  ]);
+  // Who this person is, and what they may do, comes from the server's own record of them (profiles) — which only
+  // an Admin can change. It is never taken from this browser or from the (public-facing) account list, and this
+  // browser never writes it: the old "fix my own access level after sign-in" step is gone.
+  if(!profile){
+    await supabaseClient.auth.signOut().catch(()=>{});
+    fail('This sign-in is not set up for the app yet — contact your Admin.');
     return;
   }
-  // Deactivated (Settings → User account setup → Status) — block before even attempting
-  // Supabase sign-in, so a right password doesn't get them any further than a wrong one would.
-  const acctEntry = (state.auth.secureAccounts||[]).find(r=>r.name.toLowerCase()===typedName.toLowerCase());
-  if(acctEntry && acctEntry.active===false){
-    if(errEl) errEl.textContent = 'This account has been deactivated — contact your Admin.';
-    passInput.value = ''; passInput.focus();
+  if(profile.active === false){
+    await supabaseClient.auth.signOut().catch(()=>{});
+    fail('This account has been deactivated — contact your Admin.');
     return;
   }
-  const res = await supabaseSignIn(role, typedName, password);
-  if(!res.ok){
-    if(errEl) errEl.textContent = 'Incorrect name or password — try again.';
-    passInput.value = ''; passInput.focus();
-    return;
-  }
-  // Refresh profiles.last_seen right now, awaited, before any data fetch below — session_is_active()
-  // (the RLS gate every app_data read/write now goes through) checks this timestamp, and for anyone
-  // returning after their configured timeout — the normal case, not an edge case, for literally every
-  // first login of the day — it was still sitting at however long ago they last used the app. Without
-  // this, that gap meant every fresh login's very first synced-keys fetch got blocked by the database
-  // (refreshAppData logging "came back empty — retry 1/3", assorted save failures alongside it) until
-  // pingServerLastSeen() finally got a turn later in this same function. Caught live: a real account's
-  // first login after this feature shipped reproduced exactly this. try/catch because a failure here
-  // must never block sign-in itself — worst case this login behaves exactly as it did before this fix.
-  try{
-    await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', res.userId);
-    _lastServerPingAt = Date.now();
-  }catch(e){ console.error('last_seen pre-fetch refresh failed', e); }
-  if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
-  // The role on file in User account setup (secureAccounts, looked up above as `role`) is always
-  // current — it's what Admin actually edits. profiles.role is only ever set once, at signup, and
-  // never updated after, so it goes stale the moment someone's access level changes.
-  //
-  // That staleness isn't harmless: role_data_access is enforced server-side by RLS policies that
-  // have no way to ask the client what role it claims to be — the only role the database can ever
-  // know this user as IS profiles.role. So the moment Admin changes someone's Access level in
-  // Settings, the database silently keeps enforcing their OLD role's data access forever after,
-  // no matter how many times the new role gets re-saved — re-syncing role_data_access for the new
-  // role was never going to help, because this user is never actually recognized as that role in
-  // the first place. Root-caused from the R&D Officer access that never worked no matter what got
-  // re-saved: that account's profiles.role never matched what Settings said it should be.
-  // Self-heal it here, right after sign-in: this request is authenticated as this exact person, so
-  // it can correct its own profile row the same way any ordinary "update your own profile" policy
-  // already allows — no elevated access needed.
-  //
-  // The profile check and the main data fetch below don't actually depend on each other — only on
-  // the fix itself, which is the rare case (once per person, right after Admin changes their
-  // Access level; never again after). So they run in parallel rather than one after the other,
-  // keeping login down to two round trips instead of three whenever the role's already correct —
-  // the data fetch only has to be redone, sequentially, in the rare case it isn't (that fetch ran
-  // under the OLD role's RLS visibility before the fix landed, so it can't be trusted).
+  const role = profile.role;
   const sessionRole = role;
-  const [profile, parallelLoadedValues] = await Promise.all([ supabaseFetchProfile(res.userId), _fetchSyncedKeys() ]);
-  let roleWasStale = false;
-  if(profile && profile.role !== sessionRole){
-    const { error: roleFixError } = await supabaseClient.from('profiles').update({role: sessionRole}).eq('id', res.userId);
-    if(roleFixError) console.error('profiles.role self-heal failed', roleFixError);
-    roleWasStale = true;
-  }
-  // Falls back to acctEntry.name (the canonical, correctly-cased login name from secureAccounts —
-  // already looked up above for the deactivated check) rather than the raw typedName, for the rare
-  // case supabaseFetchProfile comes back empty (a network hiccup, not a real "no profile" case).
-  // Using typedName verbatim used to silently fork one person's identity across sessions whenever
-  // they happened to type their name in different casing — "Vihanga" vs "vihanga", "packing" vs
-  // "Packing" — each variant then showing up as a different Team chat sender forever after, since
-  // sender names are matched by exact string. Confirmed via chat history: real split, same accounts.
-  const sessionName = (profile && profile.staff_name) || (acctEntry && acctEntry.name) || typedName;
-  // Employer code (User account setup) is how Ongoing orders (Customer Care) knows which orders
-  // are "theirs" — acctEntry was already looked up above (for the deactivated check) from the
-  // same secureAccounts roster this field lives on, by this same login name.
+  // The Orders Process board is a shared-device account like Blending/Packing — signing into it goes straight to
+  // the public board display rather than a staff session.
+  if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
+  // The account list (Employer code, extra pages) is readable once signed in, so it is fetched now, together with
+  // the main data. The server already knows this person's real access level, so one data fetch is enough.
+  const [, parallelLoadedValues] = await Promise.all([ loadAuthRecordAfterSignIn(), _fetchSyncedKeys() ]);
+  const acctEntry = (state.auth.secureAccounts||[]).find(r=>r.name.toLowerCase()===String(profile.staff_name||typedName).toLowerCase());
+  const roleWasStale = false;
+  // Falls back to acctEntry.name (the canonical, correctly-cased login name) rather than the raw typedName, for
+  // the rare case the profile has no name. Using typedName verbatim used to silently fork one person's identity
+  // across sessions whenever they typed their name in different casing, each variant showing up as a different
+  // Team chat sender forever after, since sender names are matched by exact string.
+  const sessionName = profile.staff_name || (acctEntry && acctEntry.name) || typedName;
+  // Employer code (User account setup) is how Ongoing orders (Customer Care) knows which orders are "theirs".
   state.session = {name: sessionName, role: sessionRole, staffName: sessionName!==sessionRole ? sessionName : null, employerCode: (acctEntry && acctEntry.fullName) || null};
   state.page = initialPageForLogin(sessionRole);
   state._justLoggedIn = true;
@@ -10490,7 +10416,7 @@ function renderBackendSetupScreen(){
 
 /* ===================== Login ===================== */
 function renderLogin(){
-  const migrated = !!state.auth.migratedToSupabaseAuth;
+  const migrated = true; // the shared-password role grid is gone; everyone signs in with a name and password
   const role = state._pendingRole;
   // Dashboard/R&D/Orders Process only ever exist via the new Supabase-Auth accounts system —
   // they have no legacy shared password, so they're left off this (pre-migration-only) grid
@@ -10587,7 +10513,7 @@ function attachLoginHandlers(){
     // (Supabase Auth, then a full data refresh) — can't make that instant, but the button
     // freezing with no feedback for a second or two makes it FEEL broken, so it flips to a
     // "Signing in…" state the instant Enter is pressed, before any of that starts.
-    const doLogin = state.auth.migratedToSupabaseAuth ? confirmLoginV2 : confirmLogin;
+    const doLogin = confirmLoginV2;
     loginForm.addEventListener('submit', async e=>{
       e.preventDefault();
       const btn = document.getElementById('login-confirm');
@@ -16679,13 +16605,6 @@ function buildMigrationRoster(){
 // The new sign-in screen only asks for a name (no role picker) — this looks up which access
 // level that name was given when the account was created, so the right Supabase Auth email can
 // be derived before signing in. Case-insensitive so "vihanga" and "Vihanga" both match.
-function roleForLoginName(typedName){
-  const lower = (typedName||'').trim().toLowerCase();
-  if(!lower) return null;
-  const roster = state.auth.secureAccounts || [];
-  const match = roster.find(r=>r.name.toLowerCase()===lower);
-  return match ? match.role : null;
-}
 // Most recent loginHistory entry for a name, so the account table can show a real "Last visit"
 // instead of inventing one — there's no separate per-account timestamp stored anywhere else.
 function lastVisitForLoginName(name){
@@ -16749,7 +16668,6 @@ function renderSecureAccountsPanel(){
         </tbody>
       </table>
       ${renderAddSecureAccountForm()}
-      <button type="button" class="btn btn-sm btn-danger" id="btn-secure-accounts-rollback" style="margin-top:14px;">Turn off (revert to the old login)</button>
       ` : `
       <div class="hint" style="margin-bottom:14px;">
         Right now the login screen only guards the app's front door — the database behind it doesn't check who's signed in, so costing and R&amp;D data aren't really protected. Pick a name, an access level and a starting password for each person below, then create the accounts and turn the new login on. Nothing changes for anyone until you do — and once it's live, each person can change their own password from the sidebar.
@@ -16846,9 +16764,8 @@ async function runAddSecureAccount(){
   showToast(f.name.trim()+' can now sign in');
   render();
 }
-// Removing someone from the roster only takes away their ability to sign in (roleForLoginName()
-// won't find them anymore) — it doesn't delete the underlying Supabase Auth account, since that
-// needs admin API access this app doesn't have. Harmless to leave behind: unreachable, unused.
+// (Deleting an account removes its real login and profile via the admin-delete-account Edge Function; the
+// account list entry is removed by removeSecureAccount below.)
 // Setting someone else's password can't be done with the public anon key the browser holds —
 // Supabase's admin API (the only thing that can touch another user's password without knowing
 // their current one) requires the service-role secret, which must never reach client code. This
@@ -16916,7 +16833,7 @@ function openResetSecureAccountPasswordPrompt(name){
     },
   });
 }
-// Deactivating someone blocks their sign-in immediately (see the check in confirmLoginV2) without
+// Deactivating someone blocks their sign-in immediately (profiles.active, checked in confirmLoginV2 and by the database) without
 // touching their underlying login or history — reactivating just flips it back. Unlike Remove,
 // this is meant to be routine and reversible (leave, suspension, re-hire), so only the act of
 // deactivating (the one with real consequences) asks for confirmation; reactivating doesn't.
@@ -16932,6 +16849,8 @@ function toggleSecureAccountActive(name){
     // saveAuth() already shows its own failure toast and retries twice — only claim this
     // succeeded if it actually did.
     if(!(await saveAuth())) return;
+    const sp = await syncProfileActive(name, nowActive);
+    if(!sp.ok){ showToast(`Saved in the account list, but the login itself could not be switched ${nowActive?'on':'off'}: ${sp.error}`, 7000); return; }
     showToast(nowActive ? `${name} reactivated` : `${name} deactivated — they can't sign in until reactivated`);
   };
   if(nowActive){ apply(); return; }
@@ -17172,18 +17091,8 @@ async function activateSecureAccounts(){
   showToast('New login is now active.');
   render();
 }
-function rollbackSecureAccounts(){
-  openConfirmModal({
-    title:'Turn off real logins', danger:true, confirmLabel:'Turn off',
-    message:'Everyone goes back to the old role-password login. Do this only if something looks wrong with the new one.',
-    onConfirm: async ()=>{
-      state.auth = {...state.auth, migratedToSupabaseAuth:false};
-      if(!(await saveAuth())) return;
-      logActivity('Turned off real logins (reverted to the old role-password login)');
-      showToast('Reverted to the old login.');
-    },
-  });
-}
+// (rollbackSecureAccounts used to live here: a button that switched everyone back to the old shared-password
+// login. That login no longer exists, so the button and its handler are gone.)
 /* ===================== Recipes & batch timer ===================== */
 function formatCountdown(totalSeconds){
   const s = Math.max(0, Math.round(totalSeconds));
@@ -21690,7 +21599,7 @@ function attachShellHandlers(){
     const ok = await passwordMatches(f.current.value, entry.password);
     if(!ok){ if(errEl) errEl.textContent = 'Current password is incorrect.'; return; }
     // Rebuilt immutably (not entry.password = ... in place), same reasoning as the lazy
-    // password-hash upgrade in confirmLogin().
+    // password-hash upgrade in the old confirmLogin().
     const hashed = await sha256Hex(f.next.value);
     state.auth = {...state.auth, roleLogins: {...state.auth.roleLogins, [role]: logins.map(l=>l.name===entry.name ? {...l, password:hashed} : l)}};
     // saveAuth() already shows its own failure toast and retries twice — a changed password that
@@ -23623,7 +23532,6 @@ function attachShellHandlers(){
   };
   if(byIdEl('btn-secure-accounts-create')) byIdEl('btn-secure-accounts-create').onclick = runSecureAccountsMigration;
   if(byIdEl('btn-secure-accounts-activate')) byIdEl('btn-secure-accounts-activate').onclick = activateSecureAccounts;
-  if(byIdEl('btn-secure-accounts-rollback')) byIdEl('btn-secure-accounts-rollback').onclick = rollbackSecureAccounts;
   if(byIdEl('add-acct-name')) byIdEl('add-acct-name').addEventListener('input', e=>{ state._addAcctForm.name = e.target.value; });
   if(byIdEl('add-acct-role')) byIdEl('add-acct-role').addEventListener('change', e=>{ state._addAcctForm.role = e.target.value; });
   if(byIdEl('add-acct-password')) byIdEl('add-acct-password').addEventListener('input', e=>{ state._addAcctForm.password = e.target.value; });

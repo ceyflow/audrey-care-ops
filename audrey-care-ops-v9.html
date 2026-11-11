@@ -2479,8 +2479,10 @@ html{ visibility:hidden; }
   .lorry-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 2px 8px;}
   .lorry-big{width:100%;padding:16px;font-size:17px;margin-top:14px;}
   .lorry-actions-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
-  .lorry-actions-row .btn{flex:1 1 auto;text-align:center;text-decoration:none;}
-  .lorry-act3 .btn{flex:1 1 30%;padding:13px 6px;font-size:14px;}
+  .lorry-actions-row .btn{flex:1 1 auto;text-align:center;text-decoration:none;padding:12px 10px;font-size:15px;}
+  .lorry-choices{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px;}
+  .lorry-choice{padding:14px;font-size:15px;opacity:.55;}
+  .lorry-choice-on{opacity:1;box-shadow:0 0 0 3px rgba(var(--accent-rgb),.35);}
   .lorry-stop{margin-top:10px;}
   .lorry-stop-done{opacity:.8;}
   .lorry-stop-top{display:flex;align-items:center;gap:12px;}
@@ -11968,7 +11970,6 @@ function lorryAgo(iso){
   return Math.round(m / 60) + ' h ago';
 }
 function lorryIsStale(pos){ return !pos || !pos.updatedAt || (Date.now() - new Date(pos.updatedAt).getTime()) > LORRY_STALE_MS; }
-function lorryMapsLink(address){ return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address || ''); }
 function lorryIsHttps(u){ return typeof u === 'string' && /^https:\/\//i.test(u); }
 
 // ---- loading (polls only while one of the two lorry pages is open) --------------------------------
@@ -12075,13 +12076,9 @@ function renderDriverRunPage(){
           <div class="hint">${esc(s.orderNumber || s.orderId)}</div></div></div>
       ${s.address ? `<div class="lorry-stop-addr">${esc(s.address)}</div>` : ''}
       <div class="lorry-actions-row">
-        ${s.address ? `<a class="btn" target="_blank" rel="noopener" href="${escAttr(lorryMapsLink(s.address))}">🧭 Directions</a>` : ''}
         ${s.phone ? `<a class="btn" href="tel:${escAttr(String(s.phone).replace(/[^\d+]/g,''))}">📞 Call</a>` : ''}
+        ${r.status==='active' ? `<button class="btn btn-primary" data-driver-update="${escAttr(s.orderId)}">Update</button>` : ''}
       </div>
-      ${r.status==='active' ? `<div class="lorry-actions-row lorry-act3">
-        <button class="btn btn-success" data-driver-stop="delivered:${escAttr(s.orderId)}">✓ Delivered</button>
-        <button class="btn btn-hold" data-driver-stop="not_home:${escAttr(s.orderId)}">⏸ Not at home</button>
-        <button class="btn btn-danger" data-driver-stop="returned:${escAttr(s.orderId)}">✗ Returned</button></div>` : ''}
     </div>`;
   const doneRows = done.length ? `<div class="lorry-sec">Done (${done.length})</div>` + done.map(s => `<div class="card lorry-stop lorry-stop-done">
       <div class="lorry-stop-top"><span class="lorry-seq">${s.seq}</span><div class="lorry-stop-main"><div class="lorry-stop-name">${esc(s.customer || '—')}</div>
@@ -12096,22 +12093,29 @@ function renderDriverRunPage(){
 function driverStopModal(status, orderId){
   const r = state._myRun; const s = r && (r.stops || []).find(x => x.orderId === orderId);
   if(!s) return '';
-  const title = status === 'delivered' ? 'Delivered' : (status === 'not_home' ? 'Not at home' : 'Returned');
+  const chosen = status === 'delivered' || status === 'not_home' || status === 'returned';
+  const opt = (key, label, cls) => `<button type="button" class="btn ${cls} lorry-choice ${status===key?'lorry-choice-on':''}" data-driver-pick="${key}">${label}</button>`;
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:420px;">
-      <h2>${esc(title)}</h2>
+      <h2>Update this stop</h2>
       <div class="sub">${esc(s.orderNumber || s.orderId)} · ${esc(s.customer || '')}</div>
       <form id="form-driver-stop">
-        ${status === 'delivered' ? `<div class="field"><label>Photo of the signed invoice <span class="hint">(required)</span></label>
-          <input type="file" id="driver-proof" accept="image/*" capture="environment"><div class="hint" id="driver-proof-name">${state._driverFile ? '✓ Photo ready: ' + esc(state._driverFile.name || 'photo') : ''}</div></div>` :
-          `<div class="field"><label>Photo <span class="hint">(optional)</span></label><input type="file" id="driver-proof" accept="image/*" capture="environment"><div class="hint" id="driver-proof-name">${state._driverFile ? '✓ Photo ready: ' + esc(state._driverFile.name || 'photo') : ''}</div></div>`}
+        <div class="lorry-choices">
+          ${opt('delivered', '✓ Delivered', 'btn-success')}
+          ${opt('not_home', '⏸ Not at home', 'btn-hold')}
+          ${opt('returned', '✗ Returned', 'btn-danger')}
+        </div>
+        ${chosen ? `
+        <div class="field"><label>Photo of the signed invoice <span class="hint">${status === 'delivered' ? '(required)' : '(optional)'}</span></label>
+          <input type="file" id="driver-proof" accept="image/*" capture="environment"><div class="hint" id="driver-proof-name">${state._driverFile ? '✓ Photo ready: ' + esc(state._driverFile.name || 'photo') : ''}</div></div>
         <div class="field"><label>Note <span class="hint">(optional)</span></label>
-          <textarea id="driver-note" rows="2" maxlength="300" placeholder="${status==='delivered' ? 'e.g. handed to the owner' : (status==='not_home' ? 'e.g. phone not answered, shop closed' : 'e.g. refused the parcel')}"></textarea></div>
-        <div class="hint" id="driver-stop-err" style="color:var(--danger);min-height:18px;"></div>
+          <textarea id="driver-note" rows="2" maxlength="300" placeholder="${status==='delivered' ? 'e.g. handed to the owner' : (status==='not_home' ? 'e.g. phone not answered, shop closed' : 'e.g. refused the parcel')}"></textarea></div>` :
+        `<div class="hint" style="margin:6px 0 4px;">Choose what happened at this stop.</div>`}
+        <div class="hint" id="driver-stop-err" style="color:var(--danger);min-height:18px;">${esc(state._driverStopErr || '')}</div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-driver-stop-save">Save</button>
+          <button type="submit" class="btn btn-primary" id="btn-driver-stop-save" ${chosen ? '' : 'disabled'}>Save</button>
         </div>
       </form>
     </div>
@@ -12139,12 +12143,14 @@ async function submitDriverStop(e){
   const status = parts[1], orderId = parts.slice(2).join(':');
   const r = state._myRun; if(!r) return;
   const errEl = document.getElementById('driver-stop-err'), btn = document.getElementById('btn-driver-stop-save');
+  const setErr = m => { state._driverStopErr = m; if(errEl) errEl.textContent = m; }; // kept in state so a background re-render does not wipe it
   const picked = (document.getElementById('driver-proof') || {}).files ? document.getElementById('driver-proof').files[0] : null;
   const file = picked || state._driverFile || null;
   const note = ((document.getElementById('driver-note') || {}).value || '').trim();
-  if(status === 'delivered' && !file){ errEl.textContent = 'Please take a photo of the signed invoice.'; return; }
+  if(status !== 'delivered' && status !== 'not_home' && status !== 'returned'){ setErr('Choose Delivered, Not at home or Returned.'); return; }
+  if(status === 'delivered' && !file){ setErr('Please take a photo of the signed invoice.'); return; }
   if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
-  errEl.textContent = '';
+  setErr('');
   try{
     let proof = null;
     if(file) proof = await lorryUploadProof(r.id, orderId, file);
@@ -12156,7 +12162,7 @@ async function submitDriverStop(e){
     await lorryRefreshNow();
     showToast(status === 'delivered' ? 'Saved: delivered' : 'Saved');
   }catch(err){
-    errEl.textContent = lorryErr(err);
+    setErr(lorryErr(err));
     if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
   }
 }
@@ -12314,7 +12320,7 @@ function attachLorryHandlers(){
     if($('btn-driver-start')) $('btn-driver-start').onclick = driverStartRun;
     if($('btn-driver-finish')) $('btn-driver-finish').onclick = driverFinishRun;
     if($('btn-driver-share')) $('btn-driver-share').onclick = () => { if(_lorryShareWatch !== null){ lorryShareStop(); render(); } else lorryShareStart(); };
-    document.querySelectorAll('[data-driver-stop]').forEach(b => b.onclick = () => { state._driverFile = null; openModal('driverstop:' + b.getAttribute('data-driver-stop')); });
+    document.querySelectorAll('[data-driver-update]').forEach(b => b.onclick = () => { state._driverFile = null; state._driverStopErr = ''; openModal('driverstop:pick:' + b.getAttribute('data-driver-update')); });
   }
   if(state.page === 'deliveryruns'){
     const draft = state._runDraft || (state._runDraft = {driverId:'', orderIds:[]});
@@ -12340,6 +12346,12 @@ function attachLorryHandlers(){
   }
   if(state.modal && state.modal.startsWith('driverstop:') && $('form-driver-stop')){
     $('form-driver-stop').addEventListener('submit', submitDriverStop);
+    document.querySelectorAll('[data-driver-pick]').forEach(b => b.onclick = () => {
+      const parts = state.modal.split(':');
+      state._driverStopErr = '';
+      state.modal = 'driverstop:' + b.getAttribute('data-driver-pick') + ':' + parts.slice(2).join(':');
+      render();
+    });
     if($('driver-proof')) $('driver-proof').addEventListener('change', e => {
       state._driverFile = (e.target.files && e.target.files[0]) || state._driverFile || null;
       if($('driver-proof-name') && state._driverFile) $('driver-proof-name').textContent = '✓ Photo ready: ' + (state._driverFile.name || 'photo');

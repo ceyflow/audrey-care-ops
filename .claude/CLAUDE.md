@@ -78,3 +78,13 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   touches Supabase or CDN requests). Never build it from a `blob:` address: browsers refuse that.
 - **Order Product** is stored as small HTML (bold/italic/underline/line breaks). Always show it through `richText()`
   and read it as text through `stripTags()`; both are inert/allow-listed. Never insert it raw.
+- **No secrets in the page.** `send-sms` and `ask-dally` accept only a signed-in, switched-on member (the page sends the
+  person's own token via `functionHeaders()`); `track-citypak` serves the public tracking page, so it only answers for
+  a tracking number that belongs to a real CityPak order and limits each visitor. The real keys (send.lk, CityPak,
+  Gemini) live only as Edge Function secrets. Never put a key or shared password in `index.html`.
+- **Public order lookup** (`track_order`, `submit_order_rating`): attempts are limited per visitor (table
+  `private.rate_limits`, helper `private.hit`), partial phone numbers do not match (a full number is needed), and the
+  customer name is shortened ("Meera N."). Keep it that way.
+- **Logged-out visitors save nothing** (`kvSet` / `saveQuietly` refuse). Saving "no value" (null) deletes the row.
+- **Install (PWA).** `manifest.webmanifest` + `assets/icons/` are real files linked from the page; do not turn the
+  manifest back into a `data:` address (phones cannot fetch that to build the installed app).

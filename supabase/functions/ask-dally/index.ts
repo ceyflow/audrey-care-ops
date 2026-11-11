@@ -18,11 +18,9 @@
 //   supabase secrets set DALLY_APP_SECRET=some-long-random-string
 //
 // GEMINI_API_KEY: create a free one at https://aistudio.google.com/apikey (no credit card
-// needed for the free tier). DALLY_APP_SECRET is a shared password between this function and the
-// frontend (see DALLY_APP_SECRET near SMS_APP_SECRET in the HTML file) so random visitors who find
-// the function URL can't burn through your free quota. It is not cryptographically airtight (it
-// still ships inside the page's JS like the Supabase anon key already does), but it stops casual
-// abuse of the endpoint — same tradeoff as SMS_APP_SECRET and CITYPAK_APP_SECRET.
+// needed for the free tier). Only a signed-in, switched-on member of the app can ask (the page sends its
+// own sign-in token); the old shared password DALLY_APP_SECRET sat inside the public page, so it protected
+// nothing and is no longer needed (treat it as leaked).
 //
 // Optional: supabase secrets set GEMINI_MODEL=gemini-3.8-flash to pin a different model if the
 // default below ever gets deprecated — check https://aistudio.google.com for current free-tier
@@ -34,6 +32,50 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-dally-secret",
 };
+
+
+// ---- who is calling? -------------------------------------------------------------------------------
+// This function used to be protected by a shared password (a secret string) that had to be written into the
+// public web page, which made it public. It now checks the caller's own sign-in instead: only a real,
+// switched-on member of the app (a profiles row with active = true) may use it.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+// While every open copy of the page is being updated, the old shared-password header is still accepted as well.
+// Set to false (and redeploy) afterwards: the leaked password is then useless.
+const ALLOW_LEGACY_SECRET = true;
+
+async function memberFromRequest(req: Request): Promise<{ id: string; role: string } | null> {
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const caller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
+  const { data: { user }, error } = await caller.auth.getUser();
+  if (error || !user) return null; // the public (anonymous) key is not a person
+  const { data: profile } = await caller.from("profiles").select("role, active").eq("id", user.id).maybeSingle();
+  if (!profile || profile.active === false) return null;
+  return { id: user.id, role: profile.role };
+}
+
+function clientIp(req: Request): string {
+  const raw = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "";
+  return raw.split(",")[0].trim() || "unknown";
+}
+
+// true while `ident` is still under `max` calls per `windowSeconds` for this bucket (counted in the database).
+async function underLimit(bucket: string, ident: string, windowSeconds: number, max: number): Promise<boolean> {
+  try {
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data, error } = await admin.rpc("bump_rate_limit", { p_bucket: bucket, p_ident: ident, p_window_seconds: windowSeconds, p_max: max });
+    if (error) { console.error("rate limit check failed", error.message); return true; }
+    return data === true;
+  } catch (e) {
+    console.error("rate limit check threw", String(e));
+    return true;
+  }
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -52,9 +94,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
-  const appSecret = Deno.env.get("DALLY_APP_SECRET") || "";
-  if (appSecret && req.headers.get("x-dally-secret") !== appSecret) {
+  const member = await memberFromRequest(req);
+  const legacySecret = Deno.env.get("DALLY_APP_SECRET") || "";
+  const legacyOk = ALLOW_LEGACY_SECRET && legacySecret !== "" && req.headers.get("x-dally-secret") === legacySecret;
+  if (!member && !legacyOk) {
     return json({ ok: false, error: "unauthorized" }, 401);
+  }
+  // protects the free Gemini quota: 120 questions per hour per person
+  if (!(await underLimit("dally", member ? member.id : "legacy:" + clientIp(req), 3600, 120))) {
+    return json({ ok: false, error: "Dally needs a short rest — too many questions this hour." }, 429);
   }
 
   let body: { question?: string; context?: unknown; history?: Array<{ sender?: string; text?: string }> };
@@ -67,6 +115,7 @@ Deno.serve(async (req) => {
   const question = String(body.question || "").trim();
   if (!question) return json({ ok: false, error: "question is required" }, 400);
   if (question.length > 2000) return json({ ok: false, error: "question is too long" }, 400);
+  if (JSON.stringify(body.context ?? {}).length > 600000) return json({ ok: false, error: "context is too large" }, 413);
 
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) {

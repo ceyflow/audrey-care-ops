@@ -110,3 +110,10 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   addresses. It is rate-limited per visitor. Keep it so.
 - Driver proof photos go to the `order-photos` bucket under `proofs/<run>/`; like all buckets it is public by link (private
   buckets are still an open optional job).
+- **Inactivity sign-off (screen off / app closed).** A phone freezes the page while the screen is off, so no timer can sign anyone
+  out then. Three backstops: (1) at boot, BEFORE any data is fetched, `signedOffByTimeLimit()` compares the last real activity
+  (`localStorage audrey_lastActivity`) with the role's limit remembered from the last visit (`audrey_signoff` = {role, mins},
+  written by `scheduleSignOffTimer`) and signs out straight to the sign-in page; (2) a 3-second steady check, plus
+  visibilitychange / pageshow / focus, signs out the moment the page runs again; (3) the older check at the end of `loadAll`.
+  Sign-off always clears the session FIRST and only then shows the toast (`signOffForInactivity`). `saveSession()` restarts the
+  activity clock, so only use it for a real login. Role limits are set per role in Settings -> User roles (0 = Off).

@@ -5940,6 +5940,13 @@ async function loadAll(){
   // even though only the FIRST login's own call site had session set in time for that check).
   try{ const s = localStorage.getItem('audrey_session'); state.session = s ? JSON.parse(s) : null; }
   catch(e){ state.session = null; }
+  // Left alone long enough (phone locked, app closed) -> sign out RIGHT HERE, before anything is fetched or
+  // drawn, so the person lands on the sign-in page and never sees data. The role's time limit is remembered
+  // from the last visit (audrey_signoff); the full check against the role record still runs after loading.
+  if(state.session && signedOffByTimeLimit()){
+    state.session = null; try{ localStorage.setItem('audrey_session', 'null'); }catch(e){}
+    if(supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
+  }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
   // it's created — that restore isn't finished yet the instant the page loads. Without waiting
   // for it here, the very first kvGet() calls below can race ahead of it and go out with no
@@ -5990,7 +5997,9 @@ async function loadAll(){
           state.session = null; saveSession();
           supabaseClient.auth.signOut().catch(()=>{});
         } else if(prof && prof.role && prof.role !== state.session.role){
-          state.session = {...state.session, role: prof.role}; saveSession();
+          // only the saved copy changes: saveSession() would restart the inactivity clock
+          state.session = {...state.session, role: prof.role};
+          try{ localStorage.setItem('audrey_session', JSON.stringify(state.session)); }catch(e){}
         }
       }catch(e){ console.error('session check against the server failed', e); }
     }
@@ -6410,11 +6419,10 @@ async function loadAll(){
     // refused) the page can still look signed in for a moment, and every database call then goes out
     // as the logged-out visitor and is refused ("permission denied for table profiles"), which used
     // to pop up a huge error toast. Without a real session this quietly waits for the next load.
-    supabaseClient.auth.getSession().then(({data})=>{
-      if(!(data && data.session)){ console.warn('role_data_access resync skipped: no live sign-in yet, will retry next load'); return null; }
-      return syncAllRoleDataAccess();
-    }).then(res=>{
-      if(res === null) return;
+    (async ()=>{
+      const { data } = await supabaseClient.auth.getSession();
+      if(!(data && data.session)){ console.warn('role_data_access resync skipped: no live sign-in yet, will retry next load'); return; }
+      const res = await syncAllRoleDataAccess();
       if(res && res.ok){
         state.auth = {...state.auth, roleDataAccessSyncVersion: PAGE_DATA_KEYS_VERSION};
         // Routed through saveAuth() — this resync can take several seconds, plenty of time for an
@@ -6426,7 +6434,7 @@ async function loadAll(){
         console.error('role_data_access version resync did not report ok', res);
         // no toast: it retries by itself on the next load (the owner does not want this message shown)
       }
-    }).catch(e=>{
+    })().catch(e=>{
       console.error('role_data_access version resync failed', e);
     });
   }
@@ -6685,6 +6693,20 @@ function persistLastActivity(){
 }
 function getPersistedLastActivity(){
   try{ const v = localStorage.getItem('audrey_lastActivity'); return v ? Number(v) : null; }catch(e){ return null; }
+}
+// The role's inactivity limit, remembered in this browser so the very first thing a reopened app does is check
+// it (before any data is fetched). { role, mins } -- only trusted for the same role that is saved as signed in.
+function rememberSignOffMins(role, mins){
+  try{ localStorage.setItem('audrey_signoff', JSON.stringify({role, mins: Number(mins)||0})); }catch(e){}
+}
+function signedOffByTimeLimit(){
+  try{
+    if(!state.session) return false;
+    const c = JSON.parse(localStorage.getItem('audrey_signoff') || 'null');
+    const last = getPersistedLastActivity();
+    if(!c || c.role !== state.session.role || !(c.mins > 0) || last == null) return false;
+    return (Date.now() - last) >= c.mins * 60 * 1000;
+  }catch(e){ return false; }
 }
 // Server-side twin of persistLastActivity() above — profiles.last_seen, read by the
 // session_is_active() Postgres function the "authenticated access" RLS policy on app_data now
@@ -24263,12 +24285,20 @@ window.addEventListener('popstate', ()=>{
 // rather than a periodic poll, so sign-off fires the instant it's due instead of up to however
 // long the old poll interval was. Was a 15s setInterval poll; a user could stay "logged in" for
 // nearly 15 extra seconds past their configured timeout — fixed to fire immediately on request.
+// Sign out FIRST (it clears the session straight away), only then say why: the toast redraws the whole screen,
+// and if that drawing ever failed the person would have stayed signed in.
+async function signOffForInactivity(){
+  try{ await logOut(); }
+  catch(e){ console.error('inactivity sign-off failed', e); state.session = null; try{ saveSession(); }catch(e2){} }
+  try{ showToast('Signed off after being inactive'); }catch(e){}
+}
 let _lastActivityAt = Date.now();
 let _signOffTimer = null;
 function scheduleSignOffTimer(){
   if(_signOffTimer){ clearTimeout(_signOffTimer); _signOffTimer = null; }
   if(!state.session) return;
   const mins = roleSignOffMinutes(state.session.role);
+  if(state.loaded && (state.userRoles||[]).length) rememberSignOffMins(state.session.role, mins);
   if(!mins) return;
   const remaining = Math.max(0, mins*60*1000 - (Date.now()-_lastActivityAt));
   _signOffTimer = setTimeout(()=>{
@@ -24276,8 +24306,7 @@ function scheduleSignOffTimer(){
     if(!state.session) return;
     const stillMins = roleSignOffMinutes(state.session.role);
     if(stillMins && Date.now()-_lastActivityAt >= stillMins*60*1000){
-      showToast('Signed off after being inactive');
-      logOut();
+      signOffForInactivity();
     } else {
       // A role-timer edit or late-arriving activity moved the goalposts since this fired —
       // reschedule for whatever's actually left rather than silently giving up.
@@ -24315,8 +24344,7 @@ function checkInactivityOnForeground(){
   const mins = roleSignOffMinutes(state.session.role);
   const lastActivity = getPersistedLastActivity();
   if(mins>0 && lastActivity!=null && (Date.now()-lastActivity) >= mins*60*1000){
-    showToast('Signed off after being inactive');
-    logOut();
+    signOffForInactivity();
   } else {
     if(lastActivity!=null) _lastActivityAt = lastActivity;
     scheduleSignOffTimer();
@@ -24324,7 +24352,17 @@ function checkInactivityOnForeground(){
   }
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkInactivityOnForeground(); });
-window.addEventListener('pageshow', (e)=>{ if(e.persisted) checkInactivityOnForeground(); });
+window.addEventListener('pageshow', ()=>{ checkInactivityOnForeground(); });
+window.addEventListener('focus', ()=>{ checkInactivityOnForeground(); });
+// Phones freeze the page while the screen is off, so no timer can fire then. This steady check is the backstop:
+// the moment the page runs again (even if the browser never sent a visibility/focus event) it compares the clock
+// with the last real activity and signs out if the role's time limit has passed. Only reads two numbers.
+setInterval(()=>{
+  if(!state.session) return;
+  const mins = roleSignOffMinutes(state.session.role);
+  const last = getPersistedLastActivity();
+  if(mins>0 && last!=null && (Date.now()-last) >= mins*60*1000){ signOffForInactivity(); }
+}, 3000);
 // Keeps the Orders Overview sparkline's peak tooltip correctly centered if the browser window is
 // resized without anything else triggering a render() in between (e.g. just dragging a desktop
 // window wider) -- debounced since resize fires continuously while dragging.

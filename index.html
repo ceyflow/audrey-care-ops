@@ -2483,7 +2483,6 @@ html{ visibility:hidden; }
   .lorry-progress span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent-dark),var(--accent));transition:width .4s ease;}
   .lorry-start{width:100%;margin-top:12px;padding:10px 14px;font-size:14px;font-weight:600;}
   .lorry-head-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
-  .lorry-fine{font-size:11.5px;line-height:1.45;color:var(--muted);margin-top:8px;}
   .lorry-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:16px 2px 6px;}
   .lorry-stop-top{display:flex;align-items:center;gap:10px;}
   .lorry-stop-main{flex:1;min-width:0;}
@@ -2511,20 +2510,11 @@ html{ visibility:hidden; }
   .lorry-stoprow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
   .lorry-stoprow:last-child{border-bottom:none;}
   .lorry-proof{width:36px;height:36px;border-radius:7px;object-fit:cover;border:1px solid var(--border);display:block;}
-  .lorry-live{margin-top:10px;}
-  .lorry-live-top{margin-bottom:6px;font-size:12px;}
-  .lorry-map{width:100%;height:230px;border-radius:10px;overflow:hidden;border:1px solid var(--border);z-index:0;}
-  .lorry-pin{background:none;border:none;}
-  .lorry-pin-dot{width:36px;height:36px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 4px 10px rgba(0,0,0,.35);}
   .lorry-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px;}
   .lorry-choice{appearance:none;-webkit-appearance:none;border:1.5px solid var(--border);background:#fff;color:var(--ink);border-radius:9px;padding:9px 4px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.2;transition:background .15s,border-color .15s,color .15s;}
   .lorry-choice-delivered.on{background:#3FA968;border-color:#3FA968;color:#fff;}
   .lorry-choice-not_home.on{background:#F5C84C;border-color:#F5C84C;color:#5b4300;}
   .lorry-choice-returned.on{background:#D9695C;border-color:#D9695C;color:#fff;}
-  .lorry-steps{padding-left:20px;line-height:1.55;font-size:13.5px;}
-  .lorry-steps li{margin-bottom:8px;}
-  .lorry-copy{display:flex;align-items:center;gap:8px;margin-top:4px;}
-  .lorry-copy code{flex:1;min-width:0;word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:12px;}
   .lorry-track-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px;}
   .track-link-row input:focus{outline:none;}
   /* Scoped to this card, not a global .btn-primary/input change -- every other page's buttons and
@@ -11954,12 +11944,9 @@ function gridDragAfterElement(container, x, y){
 // driver_send_location, driver_finish_run, runs_overview, run_create, run_cancel, driver_device_token,
 // lorry_drivers, track_lorry): a Driver account can see and change nothing else, and the customer page
 // only ever gets state / driver first name / delivery time of ITS OWN order (never a map, a position or a stop count).
-const LORRY_TRACKING_URL = SUPABASE_URL + '/functions/v1/lorry-location';
-const LORRY_STALE_MS = 3 * 60 * 1000;     // no point for 3 minutes -> say the signal is lost
 const LORRY_POLL_MS = 10 * 1000;
 const LORRY_STOP_LABEL = {pending:'Waiting', delivered:'Delivered', not_home:'Not at home', returned:'Returned'};
-let _lorryBusy = false, _lorryLastFetch = 0, _lorryMaps = {}, _lorryTrackTimer = null;
-let _lorryShareWatch = null, _lorryShareLastSent = 0, _lorryShareWake = null;
+let _lorryBusy = false, _lorryLastFetch = 0, _lorryTrackTimer = null;
 
 async function lorryRpc(name, args){
   const { data, error } = await supabaseClient.rpc(name, args || {});
@@ -11967,20 +11954,6 @@ async function lorryRpc(name, args){
   return data;
 }
 function lorryErr(e){ return (e && (e.message || e.details)) || 'Something went wrong'; }
-// What counts as a CHANGE worth a full re-render: everything except the moving point itself (which only
-// moves the marker) -- but a point going stale / fresh does change what is shown.
-function lorryStrip(data){ return JSON.stringify(data === undefined ? null : data, (k, v) => k === 'position' ? (v ? {stale: lorryIsStale(v)} : null) : v); }
-function lorryPositions(data){ return JSON.stringify((Array.isArray(data) ? data : [data]).map(r => (r && r.position) || null)); }
-function lorryAgo(iso){
-  if(!iso) return '';
-  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-  if(s < 10) return 'just now';
-  if(s < 60) return s + ' seconds ago';
-  const m = Math.round(s / 60);
-  if(m < 60) return m + (m === 1 ? ' minute ago' : ' minutes ago');
-  return Math.round(m / 60) + ' h ago';
-}
-function lorryIsStale(pos){ return !pos || !pos.updatedAt || (Date.now() - new Date(pos.updatedAt).getTime()) > LORRY_STALE_MS; }
 function lorryIsHttps(u){ return typeof u === 'string' && /^https:\/\//i.test(u); }
 
 // ---- loading (polls only while one of the two lorry pages is open) --------------------------------
@@ -11997,11 +11970,9 @@ async function lorryRefresh(){
     }
     if(state.page !== page) return;
     const key = page === 'driverrun' ? '_myRun' : '_runs';
-    const changed = !state._lorryLoaded[page] || lorryStrip(data) !== lorryStrip(state[key]) || !!state._lorryErr;
-    const moved = lorryPositions(data) !== lorryPositions(state[key]);
+    const changed = !state._lorryLoaded[page] || JSON.stringify(data) !== JSON.stringify(state[key]) || !!state._lorryErr;
     state[key] = data; state._lorryLoaded[page] = true; state._lorryErr = null;
-    if(changed){ if(!state.modal) render(); }
-    else if(moved){ lorryUpdateMarkers(); }
+    if(changed && !state.modal) render();
   }catch(e){
     state._lorryErr = lorryErr(e);
     if(!state._lorryLoaded[page]){ state._lorryLoaded[page] = true; if(!state.modal) render(); }
@@ -12011,52 +11982,11 @@ async function lorryRefreshNow(){ _lorryBusy = false; await lorryRefresh(); }
 function lorryKick(){
   if(state.page !== 'driverrun' && state.page !== 'deliveryruns') return;
   if(!state._lorryLoaded || !state._lorryLoaded[state.page]) lorryRefresh();
-  lorryRenderMaps();
 }
 setInterval(() => {
-  if(!state.session){ state._lorryLoaded = {}; state._myRun = null; state._runs = null; state._lorryDrivers = null; state._lorryTrack = state._lorryTrack; if(_lorryShareWatch !== null) lorryShareStop(); return; }
-  document.querySelectorAll('[data-lorry-ago]').forEach(el => { el.textContent = lorryAgo(el.getAttribute('data-lorry-ago')); });
+  if(!state.session){ state._lorryLoaded = {}; state._myRun = null; state._runs = null; state._lorryDrivers = null; return; }
   if((state.page === 'driverrun' || state.page === 'deliveryruns') && Date.now() - _lorryLastFetch >= LORRY_POLL_MS) lorryRefresh();
 }, 5000);
-
-// ---- maps ---------------------------------------------------------------------------------------
-function lorryMakeMap(el, pos){
-  if(typeof L === 'undefined') return null;
-  const map = L.map(el, {zoomControl:true}).setView(pos ? [pos.lat, pos.lng] : [7.8731, 80.7718], pos ? 15 : 7);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'© Esri'}).addTo(map);
-  setTimeout(() => { if(map._loaded){ try{ map.invalidateSize(); }catch(e){} } }, 0);
-  return map;
-}
-function lorryPin(){ return L.divIcon({className:'lorry-pin', html:'<div class="lorry-pin-dot">🚚</div>', iconSize:[40, 40], iconAnchor:[20, 20]}); }
-function lorryDropMaps(){
-  Object.keys(_lorryMaps).forEach(k => { try{ _lorryMaps[k].map.remove(); }catch(e){} });
-  _lorryMaps = {};
-}
-function lorryRenderMaps(){
-  lorryDropMaps();
-  if(typeof L === 'undefined') return;
-  document.querySelectorAll('.lorry-map[data-run]').forEach(el => {
-    const run = (state._runs || []).find(r => r.id === el.getAttribute('data-run'));
-    const pos = run && run.position;
-    const map = lorryMakeMap(el, pos);
-    if(!map) return;
-    const marker = pos ? L.marker([pos.lat, pos.lng], {icon: lorryPin()}).addTo(map) : null;
-    ((run && run.stops) || []).forEach(s => {
-      if(s.status === 'delivered' && s.lat != null && s.lng != null) L.circleMarker([s.lat, s.lng], {radius:6, color:'#1a7f4b', fillColor:'#1a7f4b', fillOpacity:.9}).addTo(map);
-    });
-    _lorryMaps[run ? run.id : el.getAttribute('data-run')] = {map, marker};
-  });
-}
-function lorryUpdateMarkers(){
-  (state._runs || []).forEach(run => {
-    const m = _lorryMaps[run.id]; const pos = run.position;
-    if(!m || !pos) return;
-    if(m.marker) m.marker.setLatLng([pos.lat, pos.lng]);
-    else m.marker = L.marker([pos.lat, pos.lng], {icon: lorryPin()}).addTo(m.map);
-    if(!m.map.getBounds().contains([pos.lat, pos.lng])) m.map.panTo([pos.lat, pos.lng]);
-  });
-  document.querySelectorAll('[data-lorry-ago]').forEach(el => { el.textContent = lorryAgo(el.getAttribute('data-lorry-ago')); });
-}
 
 // ================= driver page =================
 function lorryPhoneIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>'; }
@@ -12077,12 +12007,8 @@ function renderDriverRunPage(){
     <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)}</div><div class="hint">${esc(r.runDate || '')} · ${done.length} of ${stops.length} done</div></div>
     <span class="pill ${r.status==='active'?'pill-active':(r.status==='finished'?'pill-low':'pill-hold')}">${r.status==='active'?'On the road':(r.status==='finished'?'Finished':'Ready to start')}</span></div>
     <div class="lorry-progress"><span style="width:${pct}%"></span></div>
-    ${r.status==='planned' ? `<button class="btn btn-primary lorry-start" id="btn-driver-start">Start run</button>
-      <div class="lorry-fine">Before you start, open <b>Traccar Client</b> and check it says <b>Running</b>, so the office can see the lorry.</div>` : ''}
-    ${r.status==='active' ? `<div class="lorry-head-actions">
-      <button class="btn btn-sm ${_lorryShareWatch!==null?'btn-success':''}" id="btn-driver-share">${_lorryShareWatch!==null?'Sharing location · tap to stop':'Share location from this screen'}</button>
-      <button class="btn btn-sm" id="btn-driver-finish">Finish run</button></div>
-      <div class="lorry-fine">Location normally goes through <b>Traccar Client</b>, which works with the screen off. The share button is only a backup and needs this screen to stay on.</div>` : ''}
+    ${r.status==='planned' ? `<button class="btn btn-primary lorry-start" id="btn-driver-start">Start run</button>` : ''}
+    ${r.status==='active' ? `<div class="lorry-head-actions"><button class="btn btn-sm" id="btn-driver-finish">Finish run</button></div>` : ''}
   </div>`;
   const card = (s) => `<div class="lorry-card lorry-stop">
       <div class="lorry-stop-top"><span class="lorry-seq">${s.seq}</span>
@@ -12135,12 +12061,6 @@ function driverStopModal(status, orderId){
     </div>
   </div>`;
 }
-function lorryGetPosition(){
-  return new Promise(res => {
-    if(!navigator.geolocation) return res(null);
-    navigator.geolocation.getCurrentPosition(p => res({lat:p.coords.latitude, lng:p.coords.longitude}), () => res(null), {enableHighAccuracy:true, timeout:5000, maximumAge:30000});
-  });
-}
 async function lorryUploadProof(runId, orderId, file){
   const compressed = await compressImage(file, 1600, 0.72);
   const safe = String(orderId).replace(/[^\w-]/g, '_');
@@ -12168,9 +12088,7 @@ async function submitDriverStop(e){
   try{
     let proof = null;
     if(file) proof = await lorryUploadProof(r.id, orderId, file);
-    const pos = await lorryGetPosition();
-    await lorryRpc('driver_mark_stop', {p_run_id: r.id, p_order_id: orderId, p_status: status, p_note: note || null, p_proof_path: proof,
-      p_lat: pos ? pos.lat : null, p_lng: pos ? pos.lng : null});
+    await lorryRpc('driver_mark_stop', {p_run_id: r.id, p_order_id: orderId, p_status: status, p_note: note || null, p_proof_path: proof});
     state._driverFile = null;
     closeModal();
     await lorryRefreshNow();
@@ -12190,30 +12108,10 @@ function driverFinishRun(){
   const left = (r.stops || []).filter(s => s.status === 'pending').length;
   openConfirmModal({title:'Finish this run?', message: left ? `${left} stop${left===1?' is':'s are'} still not marked. The office will see them as not done.` : 'All stops are marked. Finish the run?',
     confirmLabel:'Finish run', onConfirm: async () => {
-      try{ await lorryRpc('driver_finish_run', {p_run_id: r.id}); lorryShareStop(); await lorryRefreshNow(); }
+      try{ await lorryRpc('driver_finish_run', {p_run_id: r.id}); await lorryRefreshNow(); }
       catch(e){ showToast(lorryErr(e), 3500); }
     }});
 }
-// Backup location source: this page's own GPS (the screen has to stay on).
-async function lorryShareStart(){
-  const r = state._myRun;
-  if(!r || r.status !== 'active' || !navigator.geolocation){ showToast('Location is not available on this phone', 3000); return; }
-  try{ if(navigator.wakeLock) _lorryShareWake = await navigator.wakeLock.request('screen'); }catch(e){}
-  _lorryShareWatch = navigator.geolocation.watchPosition(p => {
-    if(Date.now() - _lorryShareLastSent < 15000) return;
-    _lorryShareLastSent = Date.now();
-    const rr = state._myRun; if(!rr || rr.status !== 'active') return;
-    lorryRpc('driver_send_location', {p_run_id: rr.id, p_lat: p.coords.latitude, p_lng: p.coords.longitude,
-      p_accuracy: p.coords.accuracy, p_heading: p.coords.heading, p_speed: p.coords.speed}).catch(() => {});
-  }, () => { showToast('Could not read the location. Allow location for this site.', 3500); lorryShareStop(); },
-  {enableHighAccuracy:true, maximumAge:5000, timeout:20000});
-  render();
-}
-function lorryShareStop(){
-  if(_lorryShareWatch !== null){ try{ navigator.geolocation.clearWatch(_lorryShareWatch); }catch(e){} _lorryShareWatch = null; }
-  if(_lorryShareWake){ try{ _lorryShareWake.release(); }catch(e){} _lorryShareWake = null; }
-}
-
 // ================= office page =================
 function lorryEligibleOrders(){
   const taken = new Set();
@@ -12248,27 +12146,17 @@ function renderDeliveryRunsPage(){
     </div></div>`;
   const runs = state._runs || [];
   const runCards = runs.length ? runs.map(renderRunCard).join('') : `<div class="lorry-card"><div class="hint">No runs yet.</div></div>`;
-  const setup = drivers.length ? `<div class="lorry-card"><div class="lorry-h">Phone tracking setup</div>
-    <div class="hint" style="margin-bottom:8px;">Each driver installs the free <b>Traccar Client</b> app once. Open the setup sheet to see what to type into it.</div>
-    <div class="lorry-head-actions">${drivers.map(d => `<button class="btn btn-sm" data-lorry-setup="${escAttr(d.id)}">${esc(d.name)}</button>`).join('')}</div></div>` : '';
-  return err + newRun + `<div class="lorry-sec">Runs</div>` + runCards + setup;
+  return err + newRun + `<div class="lorry-sec">Runs</div>` + runCards;
 }
 function renderRunCard(r){
   const stops = r.stops || [];
   const cancelled = r.status === 'finished' && stops.some(s => s.status === 'pending');
   const doneN = stops.filter(s => s.status !== 'pending').length;
   const label = r.status === 'active' ? 'On the road' : (r.status === 'planned' ? 'Not started' : (cancelled ? 'Ended early' : 'Finished'));
-  const pos = r.position;
-  const live = r.status === 'active' ? `<div class="lorry-live">
-      <div class="lorry-live-top">${pos ? (lorryIsStale(pos) ? `<span class="lorry-note lorry-note-warn" style="margin:0;">No signal from the phone — last seen <span data-lorry-ago="${escAttr(pos.updatedAt)}">${esc(lorryAgo(pos.updatedAt))}</span></span>`
-          : `<span class="hint">📍 Updated <span data-lorry-ago="${escAttr(pos.updatedAt)}">${esc(lorryAgo(pos.updatedAt))}</span></span>`)
-        : `<span class="lorry-note lorry-note-warn" style="margin:0;">Waiting for the first position. Check that Traccar Client is running on the lorry phone.</span>`}</div>
-      <div class="lorry-map" data-run="${escAttr(r.id)}"></div></div>` : '';
   return `<div class="lorry-card lorry-run">
     <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)} · ${esc(r.driverName || '')}</div>
       <div class="hint">${esc(r.runDate || '')} · ${doneN} of ${stops.length} done${r.startedAt ? ' · started ' + esc(fmtTimeOnly(r.startedAt)) : ''}</div></div>
       <span class="pill ${r.status==='active'?'pill-active':(r.status==='planned'?'pill-hold':'pill-low')}">${label}</span></div>
-    ${live}
     <div class="lorry-stoplist">${stops.map(s => `<div class="lorry-stoprow">
       <span class="lorry-seq">${s.seq}</span>
       <div class="lorry-stop-main"><div><b>${esc(s.customer || '—')}</b> <span class="hint">${esc(s.orderNumber || s.orderId)}</span></div>
@@ -12281,40 +12169,6 @@ function renderRunCard(r){
     ${r.status === 'planned' ? `<div class="lorry-head-actions"><button class="btn btn-sm btn-danger" data-run-cancel="${escAttr(r.id)}">Cancel this run</button></div>` : ''}
     ${r.status === 'active' ? `<div class="lorry-head-actions"><button class="btn btn-sm" data-run-end="${escAttr(r.id)}">End run now</button></div>` : ''}
   </div>`;
-}
-function lorrySetupModal(driverId){
-  const d = (state._lorryDrivers || []).find(x => x.id === driverId);
-  const t = state._lorrySetup && state._lorrySetup.driverId === driverId ? state._lorrySetup.token : null;
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:520px;">
-      <h2>Phone tracking: ${esc(d ? d.name : 'driver')}</h2>
-      <div class="sub">Do this once on the lorry phone (Android or iPhone)</div>
-      <ol class="lorry-steps">
-        <li>Install the free app <b>Traccar Client</b> (Play Store / App Store).</li>
-        <li>In the app set <b>Device identifier</b> to:
-          <div class="lorry-copy"><code id="lorry-token">${t ? esc(t) : 'loading…'}</code><button type="button" class="btn btn-sm" data-lorry-copy="lorry-token">Copy</button></div></li>
-        <li><b>Server URL</b>:
-          <div class="lorry-copy"><code id="lorry-url">${esc(LORRY_TRACKING_URL)}</code><button type="button" class="btn btn-sm" data-lorry-copy="lorry-url">Copy</button></div></li>
-        <li>Location accuracy <b>High</b>, frequency <b>15 seconds</b>, then switch <b>Service status</b> on.</li>
-        <li>Allow location <b>“Always / Allow all the time”</b>. Android: Battery → <b>Unrestricted</b> for this app. iPhone: Location → <b>Always</b>, Precise on.</li>
-        <li>Leave it running. The office only sees the lorry while a run is started.</li>
-      </ol>
-      <div class="hint">Keep this identifier private: anyone with it could send positions for this driver. If it leaks, press “New identifier” and type the new one into the app.</div>
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-lorry-rotate">New identifier</button>
-        <button type="button" class="btn btn-primary" id="btn-cancel-modal">Close</button>
-      </div>
-    </div>
-  </div>`;
-}
-async function lorryOpenSetup(driverId){
-  state._lorrySetup = {driverId, token:null};
-  openModal('lorrysetup:' + driverId);
-  try{
-    const token = await lorryRpc('driver_device_token', {p_driver_id: driverId, p_rotate: false});
-    if(state._lorrySetup && state._lorrySetup.driverId === driverId){ state._lorrySetup.token = token; if(state.modal === 'lorrysetup:' + driverId) render(); }
-  }catch(e){ showToast(lorryErr(e), 3500); }
 }
 async function lorryCreateRun(){
   const draft = state._runDraft; if(!draft || !draft.driverId || !draft.orderIds.length) return;
@@ -12333,7 +12187,6 @@ function attachLorryHandlers(){
   if(state.page === 'driverrun'){
     if($('btn-driver-start')) $('btn-driver-start').onclick = driverStartRun;
     if($('btn-driver-finish')) $('btn-driver-finish').onclick = driverFinishRun;
-    if($('btn-driver-share')) $('btn-driver-share').onclick = () => { if(_lorryShareWatch !== null){ lorryShareStop(); render(); } else lorryShareStart(); };
     document.querySelectorAll('[data-driver-update]').forEach(b => b.onclick = () => { state._driverFile = null; state._driverStopErr = ''; openModal('driverstop:pick:' + b.getAttribute('data-driver-update')); });
   }
   if(state.page === 'deliveryruns'){
@@ -12356,7 +12209,6 @@ function attachLorryHandlers(){
       openConfirmModal({title:'End this run now?', message:'Stops that are not marked stay not done, and customers stop seeing the live lorry.', confirmLabel:'End run', danger:true,
         onConfirm: async () => { try{ await lorryRpc('driver_finish_run', {p_run_id: id}); await lorryRefreshNow(); }catch(e){ showToast(lorryErr(e), 3500); } }});
     });
-    document.querySelectorAll('[data-lorry-setup]').forEach(b => b.onclick = () => lorryOpenSetup(b.getAttribute('data-lorry-setup')));
   }
   if(state.modal && state.modal.startsWith('driverstop:') && $('form-driver-stop')){
     $('form-driver-stop').addEventListener('submit', submitDriverStop);
@@ -12370,18 +12222,6 @@ function attachLorryHandlers(){
       state._driverFile = (e.target.files && e.target.files[0]) || state._driverFile || null;
       if($('driver-proof-name') && state._driverFile) $('driver-proof-name').textContent = '✓ Photo ready: ' + (state._driverFile.name || 'photo');
     });
-  }
-  if(state.modal && state.modal.startsWith('lorrysetup:')){
-    document.querySelectorAll('[data-lorry-copy]').forEach(b => b.onclick = async () => {
-      const el = $(b.getAttribute('data-lorry-copy')); if(!el) return;
-      try{ await navigator.clipboard.writeText(el.textContent); showToast('Copied'); }catch(e){ showToast('Press and hold the text to copy it', 3000); }
-    });
-    if($('btn-lorry-rotate')) $('btn-lorry-rotate').onclick = () => {
-      const driverId = state.modal.split(':')[1];
-      openConfirmModal({title:'Make a new identifier?', message:'The old one stops working at once. Type the new one into Traccar Client on the lorry phone.', confirmLabel:'New identifier', danger:true,
-        onConfirm: async () => { try{ const t = await lorryRpc('driver_device_token', {p_driver_id: driverId, p_rotate: true}); state._lorrySetup = {driverId, token:t}; state.modal = 'lorrysetup:' + driverId; }catch(e){ showToast(lorryErr(e), 3500); } },
-        keepParentModal: true});
-    };
   }
   lorryKick();
 }
@@ -12442,7 +12282,7 @@ const PAGE_META = {
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
   itemlist:{title:'Item List', sub:'Raw materials and stock on hand.'},
   complaints:{title:'Complaints', sub:'Customer issues and their resolution.'},
-  deliveryruns:{title:'Delivery runs', sub:'Send AC deliveries out with the lorry and watch them live.'},
+  deliveryruns:{title:'Delivery runs', sub:'Send AC deliveries out with the lorry and follow every stop.'},
   driverrun:{title:'My delivery run', sub:'Your stops for today. Mark each one as you go.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
   gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
@@ -20238,7 +20078,6 @@ function renderModal(){
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
   if(type==='driverstop') return driverStopModal(parts[1], parts.slice(2).join(':'));
-  if(type==='lorrysetup') return lorrySetupModal(id);
   if(type==='smsconfirm') return smsConfirmModal();
   if(type==='costingbatchsize') return costingAddBatchSizeModal();
   if(type==='costingaddproduct') return costingAddProductModal();

@@ -2474,43 +2474,54 @@ html{ visibility:hidden; }
   .track-courier-name{font-weight:600;font-size:13.5px;color:var(--ink);}
   .track-courier-sub{font-size:11.5px;color:var(--muted);margin-top:1px;letter-spacing:.01em;}
   /* ---------------- AC lorry runs: driver page, office page, customer tracking block ---------------- */
+  .lorry-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:10px;box-shadow:0 1px 2px rgba(20,25,20,.04);}
+  .lorry-card:first-child{margin-top:0;}
+  .lorry-h{font-weight:700;font-size:14px;color:var(--ink);margin-bottom:8px;}
   .lorry-run-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-  .lorry-run-id{font-weight:700;font-size:16px;color:var(--ink);}
-  .lorry-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 2px 8px;}
-  .lorry-big{width:100%;padding:16px;font-size:17px;margin-top:14px;}
-  .lorry-actions-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
-  .lorry-actions-row .btn{flex:1 1 auto;text-align:center;text-decoration:none;padding:12px 10px;font-size:15px;}
-  .lorry-choices{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px;}
-  .lorry-choice{padding:14px;font-size:15px;opacity:.55;}
-  .lorry-choice-on{opacity:1;box-shadow:0 0 0 3px rgba(var(--accent-rgb),.35);}
-  .lorry-stop{margin-top:10px;}
-  .lorry-stop-done{opacity:.8;}
-  .lorry-stop-top{display:flex;align-items:center;gap:12px;}
+  .lorry-run-id{font-weight:700;font-size:14.5px;color:var(--ink);letter-spacing:.01em;}
+  .lorry-progress{height:5px;border-radius:99px;background:var(--accent-soft);margin:10px 0 2px;overflow:hidden;}
+  .lorry-progress span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent-dark),var(--accent));transition:width .4s ease;}
+  .lorry-start{width:100%;margin-top:12px;padding:10px 14px;font-size:14px;font-weight:600;}
+  .lorry-head-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .lorry-fine{font-size:11.5px;line-height:1.45;color:var(--muted);margin-top:8px;}
+  .lorry-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:16px 2px 6px;}
+  .lorry-stop-top{display:flex;align-items:center;gap:10px;}
   .lorry-stop-main{flex:1;min-width:0;}
-  .lorry-stop-name{font-weight:700;font-size:16px;color:var(--ink);}
-  .lorry-stop-addr{margin-top:8px;font-size:14px;color:var(--ink);line-height:1.4;}
-  .lorry-seq{flex:0 0 auto;min-width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center;}
-  .lorry-empty{text-align:center;padding:36px 20px;}
-  .lorry-empty-ico{width:46px;height:46px;margin:0 auto 10px;color:var(--accent-dark);}
+  .lorry-stop-name{font-weight:600;font-size:14.5px;color:var(--ink);line-height:1.3;overflow-wrap:anywhere;}
+  .lorry-stop-meta{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .lorry-stop-addr{margin:8px 0 0 34px;font-size:12.5px;color:var(--muted);line-height:1.45;overflow-wrap:anywhere;}
+  .lorry-stop-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+  .lorry-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:86px;padding:7px 14px;font-size:13px;font-weight:600;text-decoration:none;}
+  .lorry-stop-done{background:var(--bg);box-shadow:none;}
+  .lorry-seq{flex:0 0 auto;min-width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;}
+  .lorry-empty{text-align:center;padding:28px 18px;}
+  .lorry-empty-ico{width:38px;height:38px;margin:0 auto 8px;color:var(--accent-dark);}
   .lorry-empty-ico svg{width:100%;height:100%;}
-  .lorry-note{background:var(--accent-soft);color:var(--accent-dark);border-radius:12px;padding:12px 14px;font-size:13.5px;margin:10px 0;}
+  .lorry-empty-title{font-weight:700;font-size:15px;color:var(--ink);margin-bottom:4px;}
+  .lorry-note{background:var(--accent-soft);color:var(--accent-dark);border-radius:10px;padding:10px 12px;font-size:13px;margin:10px 0;}
   .lorry-note-warn{background:#fff4e0;color:#8a5a00;}
-  .lorry-pick{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;}
-  .lorry-pick-row{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--ink);}
+  .lorry-pick{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow:auto;}
+  .lorry-pick-row{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);background:#fff;border-radius:9px;padding:7px 10px;cursor:pointer;font:inherit;font-size:13px;color:var(--ink);}
   .lorry-pick-row.on{border-color:var(--accent);background:var(--accent-soft);}
-  .lorry-pick-main{display:flex;flex-direction:column;min-width:0;}
+  .lorry-pick-main{display:flex;flex-direction:column;min-width:0;line-height:1.35;}
+  .lorry-pick-main .hint{font-size:11.5px;}
   .lorry-pick-row .lorry-seq{background:#fff;border:1.5px solid var(--border);}
   .lorry-pick-row.on .lorry-seq{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
-  .lorry-run{margin-top:12px;}
-  .lorry-stoplist{margin-top:12px;border-top:1px solid var(--border);}
-  .lorry-stoprow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
-  .lorry-proof{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border);display:block;}
-  .lorry-live{margin-top:12px;}
-  .lorry-live-top{margin-bottom:6px;}
-  .lorry-map{width:100%;height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--border);z-index:0;}
+  .lorry-stoplist{margin-top:10px;border-top:1px solid var(--border);}
+  .lorry-stoprow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .lorry-stoprow:last-child{border-bottom:none;}
+  .lorry-proof{width:36px;height:36px;border-radius:7px;object-fit:cover;border:1px solid var(--border);display:block;}
+  .lorry-live{margin-top:10px;}
+  .lorry-live-top{margin-bottom:6px;font-size:12px;}
+  .lorry-map{width:100%;height:230px;border-radius:10px;overflow:hidden;border:1px solid var(--border);z-index:0;}
   .lorry-pin{background:none;border:none;}
-  .lorry-pin-dot{width:40px;height:40px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 4px 10px rgba(0,0,0,.35);}
-  .lorry-steps{padding-left:20px;line-height:1.55;font-size:14px;}
+  .lorry-pin-dot{width:36px;height:36px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25),0 4px 10px rgba(0,0,0,.35);}
+  .lorry-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px;}
+  .lorry-choice{appearance:none;-webkit-appearance:none;border:1.5px solid var(--border);background:#fff;color:var(--ink);border-radius:9px;padding:9px 4px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.2;transition:background .15s,border-color .15s,color .15s;}
+  .lorry-choice-delivered.on{background:#3FA968;border-color:#3FA968;color:#fff;}
+  .lorry-choice-not_home.on{background:#F5C84C;border-color:#F5C84C;color:#5b4300;}
+  .lorry-choice-returned.on{background:#D9695C;border-color:#D9695C;color:#fff;}
+  .lorry-steps{padding-left:20px;line-height:1.55;font-size:13.5px;}
   .lorry-steps li{margin-bottom:8px;}
   .lorry-copy{display:flex;align-items:center;gap:8px;margin-top:4px;}
   .lorry-copy code{flex:1;min-width:0;word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:12px;}
@@ -12048,53 +12059,56 @@ function lorryUpdateMarkers(){
 }
 
 // ================= driver page =================
+function lorryPhoneIcon(){ return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>'; }
 function renderDriverRunPage(){
   const loaded = state._lorryLoaded && state._lorryLoaded.driverrun;
-  if(!loaded) return `<div class="card"><div class="hint">Loading your run…</div></div>`;
+  if(!loaded) return `<div class="lorry-card"><div class="hint">Loading your run…</div></div>`;
   const err = state._lorryErr ? `<div class="lorry-note lorry-note-warn">Could not reach the office just now (${esc(state._lorryErr)}). Retrying…</div>` : '';
   const r = state._myRun;
   if(!r){
-    return `${err}<div class="card lorry-empty"><div class="lorry-empty-ico">${icon('truck')}</div>
-      <h3>No delivery run yet</h3><div class="hint">When the office assigns a run to you it shows up here. This page refreshes by itself.</div></div>`;
+    return `${err}<div class="lorry-card lorry-empty"><div class="lorry-empty-ico">${icon('truck')}</div>
+      <div class="lorry-empty-title">No delivery run yet</div><div class="hint">When the office assigns a run to you it shows up here. This page refreshes by itself.</div></div>`;
   }
   const stops = r.stops || [];
   const pending = stops.filter(s => s.status === 'pending');
   const done = stops.filter(s => s.status !== 'pending');
-  const head = `<div class="card lorry-run-head">
-    <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)}</div><div class="hint">${esc(r.runDate || '')} · ${stops.length} stop${stops.length===1?'':'s'}</div></div>
+  const pct = stops.length ? Math.round(done.length * 100 / stops.length) : 0;
+  const head = `<div class="lorry-card lorry-run-head">
+    <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)}</div><div class="hint">${esc(r.runDate || '')} · ${done.length} of ${stops.length} done</div></div>
     <span class="pill ${r.status==='active'?'pill-active':(r.status==='finished'?'pill-low':'pill-hold')}">${r.status==='active'?'On the road':(r.status==='finished'?'Finished':'Ready to start')}</span></div>
-    ${r.status==='planned' ? `<button class="btn btn-primary lorry-big" id="btn-driver-start">▶ Start run</button>
-      <div class="hint" style="margin-top:8px;">Before you start: open <b>Traccar Client</b> and make sure it says <b>Running</b>, so customers can see the lorry.</div>` : ''}
-    ${r.status==='active' ? `<div class="lorry-actions-row">
-      <button class="btn ${_lorryShareWatch!==null?'btn-success':''}" id="btn-driver-share">${_lorryShareWatch!==null?'📍 Sharing from this screen (tap to stop)':'📍 Share location from this screen'}</button>
-      <button class="btn" id="btn-driver-finish">Finish run</button></div>
-      <div class="hint" style="margin-top:6px;">Location normally goes through <b>Traccar Client</b> (works with the screen off). The button above is only a backup and needs this screen to stay on.</div>` : ''}
+    <div class="lorry-progress"><span style="width:${pct}%"></span></div>
+    ${r.status==='planned' ? `<button class="btn btn-primary lorry-start" id="btn-driver-start">Start run</button>
+      <div class="lorry-fine">Before you start, open <b>Traccar Client</b> and check it says <b>Running</b>, so the office can see the lorry.</div>` : ''}
+    ${r.status==='active' ? `<div class="lorry-head-actions">
+      <button class="btn btn-sm ${_lorryShareWatch!==null?'btn-success':''}" id="btn-driver-share">${_lorryShareWatch!==null?'Sharing location · tap to stop':'Share location from this screen'}</button>
+      <button class="btn btn-sm" id="btn-driver-finish">Finish run</button></div>
+      <div class="lorry-fine">Location normally goes through <b>Traccar Client</b>, which works with the screen off. The share button is only a backup and needs this screen to stay on.</div>` : ''}
   </div>`;
-  const card = (s, i) => `<div class="card lorry-stop">
+  const card = (s) => `<div class="lorry-card lorry-stop">
       <div class="lorry-stop-top"><span class="lorry-seq">${s.seq}</span>
         <div class="lorry-stop-main"><div class="lorry-stop-name">${esc(s.customer || '—')}</div>
-          <div class="hint">${esc(s.orderNumber || s.orderId)}</div></div></div>
+          <div class="lorry-stop-meta">${esc(s.orderNumber || s.orderId)}</div></div></div>
       ${s.address ? `<div class="lorry-stop-addr">${esc(s.address)}</div>` : ''}
-      <div class="lorry-actions-row">
-        ${s.phone ? `<a class="btn" href="tel:${escAttr(String(s.phone).replace(/[^\d+]/g,''))}">📞 Call</a>` : ''}
-        ${r.status==='active' ? `<button class="btn btn-primary" data-driver-update="${escAttr(s.orderId)}">Update</button>` : ''}
+      <div class="lorry-stop-actions">
+        ${s.phone ? `<a class="btn btn-sm lorry-btn" href="tel:${escAttr(String(s.phone).replace(/[^\d+]/g,''))}">${lorryPhoneIcon()}<span>Call</span></a>` : ''}
+        ${r.status==='active' ? `<button class="btn btn-sm btn-primary lorry-btn" data-driver-update="${escAttr(s.orderId)}">Update</button>` : ''}
       </div>
     </div>`;
-  const doneRows = done.length ? `<div class="lorry-sec">Done (${done.length})</div>` + done.map(s => `<div class="card lorry-stop lorry-stop-done">
+  const doneRows = done.length ? `<div class="lorry-sec">Done (${done.length})</div>` + done.map(s => `<div class="lorry-card lorry-stop lorry-stop-done">
       <div class="lorry-stop-top"><span class="lorry-seq">${s.seq}</span><div class="lorry-stop-main"><div class="lorry-stop-name">${esc(s.customer || '—')}</div>
-      <div class="hint">${esc(s.orderNumber || s.orderId)}${s.at ? ' · ' + esc(fmtTimeOnly(s.at)) : ''}</div></div>
+      <div class="lorry-stop-meta">${esc(s.orderNumber || s.orderId)}${s.at ? ' · ' + esc(fmtTimeOnly(s.at)) : ''}</div></div>
       <span class="pill ${s.status==='delivered'?'pill-active':(s.status==='not_home'?'pill-hold':'pill-high')}">${LORRY_STOP_LABEL[s.status]}</span></div>
-      ${s.note ? `<div class="hint" style="margin-top:6px;">${esc(s.note)}</div>` : ''}</div>`).join('') : '';
+      ${s.note ? `<div class="lorry-stop-addr">${esc(s.note)}</div>` : ''}</div>`).join('') : '';
   const todo = r.status === 'finished' ? '' :
     (pending.length ? `<div class="lorry-sec">${r.status==='active' ? 'Next stops' : 'Stops on this run'} (${pending.length})</div>` + pending.map(card).join('') : '');
-  const fin = r.status === 'finished' ? `<div class="card lorry-note"><b>Run finished.</b> Thank you! A new run appears here when the office assigns one.</div>` : '';
+  const fin = r.status === 'finished' ? `<div class="lorry-note"><b>Run finished.</b> Thank you! A new run appears here when the office assigns one.</div>` : '';
   return err + head + fin + todo + doneRows;
 }
 function driverStopModal(status, orderId){
   const r = state._myRun; const s = r && (r.stops || []).find(x => x.orderId === orderId);
   if(!s) return '';
   const chosen = status === 'delivered' || status === 'not_home' || status === 'returned';
-  const opt = (key, label, cls) => `<button type="button" class="btn ${cls} lorry-choice ${status===key?'lorry-choice-on':''}" data-driver-pick="${key}">${label}</button>`;
+  const opt = (key, label) => `<button type="button" class="lorry-choice lorry-choice-${key} ${status===key?'on':''}" data-driver-pick="${key}">${label}</button>`;
   return `
   <div class="overlay" id="overlay">
     <div class="modal" style="max-width:420px;">
@@ -12102,9 +12116,9 @@ function driverStopModal(status, orderId){
       <div class="sub">${esc(s.orderNumber || s.orderId)} · ${esc(s.customer || '')}</div>
       <form id="form-driver-stop">
         <div class="lorry-choices">
-          ${opt('delivered', '✓ Delivered', 'btn-success')}
-          ${opt('not_home', '⏸ Not at home', 'btn-hold')}
-          ${opt('returned', '✗ Returned', 'btn-danger')}
+          ${opt('delivered', 'Delivered')}
+          ${opt('not_home', 'Not at home')}
+          ${opt('returned', 'Returned')}
         </div>
         ${chosen ? `
         <div class="field"><label>Photo of the signed invoice <span class="hint">${status === 'delivered' ? '(required)' : '(optional)'}</span></label>
@@ -12209,34 +12223,34 @@ function lorryEligibleOrders(){
 }
 function renderDeliveryRunsPage(){
   const loaded = state._lorryLoaded && state._lorryLoaded.deliveryruns;
-  if(!loaded) return `<div class="card"><div class="hint">Loading delivery runs…</div></div>`;
+  if(!loaded) return `<div class="lorry-card"><div class="hint">Loading delivery runs…</div></div>`;
   const err = state._lorryErr ? `<div class="lorry-note lorry-note-warn">Could not load runs (${esc(state._lorryErr)}).</div>` : '';
   const draft = state._runDraft || (state._runDraft = {driverId:'', orderIds:[]});
   const drivers = state._lorryDrivers || [];
   const elig = lorryEligibleOrders();
   draft.orderIds = draft.orderIds.filter(id => elig.some(o => o.id === id));
-  const newRun = `<div class="card">
-    <h3 style="margin-top:0;">New delivery run</h3>
+  const newRun = `<div class="lorry-card">
+    <div class="lorry-h">New delivery run</div>
     ${drivers.length ? `<div class="field"><label>Driver</label><select id="run-driver">
         <option value="">Choose a driver…</option>
         ${drivers.map(d => `<option value="${escAttr(d.id)}" ${draft.driverId===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>`
       : `<div class="lorry-note lorry-note-warn">There is no Driver account yet. Add one in Settings → User account setup with the access level <b>Driver</b>.</div>`}
-    <div class="field"><label>Orders on the lorry <span class="hint">(AC Delivery orders marked “Picked up by delivery”) — tap in the order he will deliver them</span></label>
+    <div class="field"><label>Orders on the lorry <span class="hint">AC Delivery orders marked “Picked up by delivery”. Tap them in the order he will deliver.</span></label>
       ${elig.length ? `<div class="lorry-pick">${elig.map(o => {
         const idx = draft.orderIds.indexOf(o.id);
         return `<button type="button" class="lorry-pick-row ${idx>=0?'on':''}" data-run-pick="${escAttr(o.id)}">
           <span class="lorry-seq">${idx>=0 ? idx+1 : ''}</span>
           <span class="lorry-pick-main"><b>${esc(o.customer || '—')}</b><span class="hint">${esc(o.orderNumber || o.id)}${o.address ? ' · ' + esc(o.address) : ''}</span></span></button>`; }).join('')}</div>`
       : `<div class="hint">No AC Delivery orders are waiting. An order shows here once it is moved to “Picked up by delivery”.</div>`}</div>
-    <div class="modal-actions" style="justify-content:flex-start;gap:10px;">
-      <button class="btn btn-primary" id="btn-run-create" ${draft.driverId && draft.orderIds.length ? '' : 'disabled'}>Create run (${draft.orderIds.length})</button>
-      ${draft.orderIds.length ? `<button class="btn" id="btn-run-clear">Clear</button>` : ''}
+    <div class="lorry-head-actions">
+      <button class="btn btn-primary btn-sm" id="btn-run-create" ${draft.driverId && draft.orderIds.length ? '' : 'disabled'}>Create run (${draft.orderIds.length})</button>
+      ${draft.orderIds.length ? `<button class="btn btn-sm" id="btn-run-clear">Clear</button>` : ''}
     </div></div>`;
   const runs = state._runs || [];
-  const runCards = runs.length ? runs.map(renderRunCard).join('') : `<div class="card"><div class="hint">No runs yet.</div></div>`;
-  const setup = drivers.length ? `<div class="card"><h3 style="margin-top:0;">Phone tracking setup</h3>
-    <div class="hint" style="margin-bottom:10px;">Each driver installs the free <b>Traccar Client</b> app once. Open the setup sheet to see what to type into it.</div>
-    <div class="lorry-actions-row">${drivers.map(d => `<button class="btn" data-lorry-setup="${escAttr(d.id)}">📱 ${esc(d.name)}</button>`).join('')}</div></div>` : '';
+  const runCards = runs.length ? runs.map(renderRunCard).join('') : `<div class="lorry-card"><div class="hint">No runs yet.</div></div>`;
+  const setup = drivers.length ? `<div class="lorry-card"><div class="lorry-h">Phone tracking setup</div>
+    <div class="hint" style="margin-bottom:8px;">Each driver installs the free <b>Traccar Client</b> app once. Open the setup sheet to see what to type into it.</div>
+    <div class="lorry-head-actions">${drivers.map(d => `<button class="btn btn-sm" data-lorry-setup="${escAttr(d.id)}">${esc(d.name)}</button>`).join('')}</div></div>` : '';
   return err + newRun + `<div class="lorry-sec">Runs</div>` + runCards + setup;
 }
 function renderRunCard(r){
@@ -12250,7 +12264,7 @@ function renderRunCard(r){
           : `<span class="hint">📍 Updated <span data-lorry-ago="${escAttr(pos.updatedAt)}">${esc(lorryAgo(pos.updatedAt))}</span></span>`)
         : `<span class="lorry-note lorry-note-warn" style="margin:0;">Waiting for the first position. Check that Traccar Client is running on the lorry phone.</span>`}</div>
       <div class="lorry-map" data-run="${escAttr(r.id)}"></div></div>` : '';
-  return `<div class="card lorry-run">
+  return `<div class="lorry-card lorry-run">
     <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)} · ${esc(r.driverName || '')}</div>
       <div class="hint">${esc(r.runDate || '')} · ${doneN} of ${stops.length} done${r.startedAt ? ' · started ' + esc(fmtTimeOnly(r.startedAt)) : ''}</div></div>
       <span class="pill ${r.status==='active'?'pill-active':(r.status==='planned'?'pill-hold':'pill-low')}">${label}</span></div>
@@ -12264,8 +12278,8 @@ function renderRunCard(r){
       ${lorryIsHttps(s.proofPath) ? `<a href="${escAttr(s.proofPath)}" target="_blank" rel="noopener" title="Signed invoice"><img class="lorry-proof" src="${escAttr(s.proofPath)}" alt="Signed invoice" loading="lazy"></a>` : ''}
       <span class="pill ${s.status==='delivered'?'pill-active':(s.status==='not_home'?'pill-hold':(s.status==='returned'?'pill-high':'pill-low'))}">${LORRY_STOP_LABEL[s.status] || s.status}</span>
     </div>`).join('')}</div>
-    ${r.status === 'planned' ? `<div class="modal-actions" style="justify-content:flex-start;"><button class="btn btn-danger" data-run-cancel="${escAttr(r.id)}">Cancel this run</button></div>` : ''}
-    ${r.status === 'active' ? `<div class="modal-actions" style="justify-content:flex-start;"><button class="btn" data-run-end="${escAttr(r.id)}">End run now</button></div>` : ''}
+    ${r.status === 'planned' ? `<div class="lorry-head-actions"><button class="btn btn-sm btn-danger" data-run-cancel="${escAttr(r.id)}">Cancel this run</button></div>` : ''}
+    ${r.status === 'active' ? `<div class="lorry-head-actions"><button class="btn btn-sm" data-run-end="${escAttr(r.id)}">End run now</button></div>` : ''}
   </div>`;
 }
 function lorrySetupModal(driverId){

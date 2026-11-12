@@ -27,6 +27,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | Mixing Step Templates editor | `mixingtemplatesteps…` |
 | Log a complaint, and Complaint details | `complaint:new` and `complaint:<id>` (matched as `complaint:`) |
 | Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
+| Profile details (full name, mobile) | `profiledetails` |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
 Deliberately **not** covered (not forms): `complaintreasons`, `complaintpriorities`,
@@ -122,3 +123,10 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   this; the logo is still in the side menu and on the sign-in page). Settings -> Mobile appearance options (icons left, dark
   background, header image) still apply. Desktop header: the title sits at the left edge (the phone-only `.topbar-img-layer`
   must stay `display:none` on desktop or it pushes the title to the middle).
+- **Profile drawer + Profile details (owner, 2026-11-12).** On a phone the avatar in the header opens a LEFT slide-in drawer (big photo,
+  name, Profile details, Activity log (Admin), Change password, Log out; slides in/out via the `drawer-in` / `drawer-out` keyframes and
+  `closeHeaderMenuAnimated()`). On desktop the same items stay as plain header links. "Profile details" (`profiledetails`) edits a
+  person's FULL NAME and mobile number, stored on their OWN `profiles` row (`full_name`, `mobile`; the guard trigger only blocks id /
+  role / staff_name / active / created_at, so people may edit these two). The sign-in name (username) stays `profiles.staff_name`
+  and is read-only. The printed attendance sheet shows the full name (falls back to the username): Admin and Sub Admin read everyone's
+  full names through the database function `staff_full_names()` (`ensureFullNames()` / `fullNameFor()`); nobody else can list them.

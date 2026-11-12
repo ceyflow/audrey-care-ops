@@ -2342,26 +2342,38 @@ html{ visibility:hidden; }
        display:contents trick still works there. A fixed offset computed from the topbar's own
        padding/avatar size anchors it under the actual button instead of under its old DOM
        position. */
+    /* Phone: the account menu is a LEFT slide-in drawer (owner, 2026-11-12, from a reference screenshot): big
+       photo + name on top, then Profile details / Change password / Log out. Slides in from the left (the
+       element is created already carrying .open, so the animation is a keyframe, not a transition) and slides
+       back out through .closing (see closeHeaderMenuAnimated). Hidden with visibility, not display, so it
+       can animate. The shell gets .menu-open so the whole header (and this drawer) sits above the tab bar. */
     .header-right-links{
-      display:none;position:fixed;top:calc(55px + env(safe-area-inset-top));right:20px;z-index:40;
-      flex-direction:column;width:250px;
-      background:#fff;border-radius:16px;box-shadow:0 10px 28px rgba(19,32,30,.14);
-      padding:14px;
+      display:flex;visibility:hidden;pointer-events:none;position:fixed;top:0;bottom:0;left:0;right:auto;z-index:40;
+      flex-direction:column;width:min(82vw,330px);transform:translateX(-104%);
+      background:#fff;border-radius:0 24px 24px 0;box-shadow:0 0 44px rgba(19,32,30,.28);
+      padding:calc(34px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));overflow-y:auto;
     }
-    .header-right-links.open{display:flex;}
-    .header-menu-profile{display:flex;align-items:center;gap:12px;padding-bottom:12px;}
+    .header-right-links.open{visibility:visible;pointer-events:auto;transform:none;animation:drawer-in .3s cubic-bezier(.22,.8,.3,1);}
+    .header-right-links.closing{animation:drawer-out .2s ease forwards;}
+    .header-menu-backdrop.closing{animation:overlay-fade-out .2s ease forwards;}
+    .shell.menu-open .topbar{z-index:60;}
+    @keyframes drawer-in{from{transform:translateX(-104%);}to{transform:none;}}
+    @keyframes drawer-out{from{transform:none;}to{transform:translateX(-104%);}}
+    @keyframes overlay-fade-out{from{opacity:1;}to{opacity:0;}}
+    .header-menu-profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:2px 0 18px;margin-bottom:6px;border-bottom:1px solid #EDEFEE;}
     .header-menu-avatar-wrap{position:relative;border:none;background:none;padding:0;flex-shrink:0;border-radius:50%;}
-    .header-menu-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden;}
+    .header-menu-avatar{width:88px;height:88px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;flex-shrink:0;overflow:hidden;}
     .header-menu-avatar img{width:100%;height:100%;object-fit:cover;}
-    .header-menu-avatar-edit{position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;}
-    .header-menu-name{font-size:14px;font-weight:700;color:#13201E;}
-    .header-menu-role{font-size:12px;color:#8A9290;margin-top:1px;}
+    .header-menu-avatar-edit{position:absolute;bottom:0;right:0;width:30px;height:30px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;}
+    .header-menu-name{font-size:17px;font-weight:700;color:#13201E;line-height:1.25;overflow-wrap:anywhere;}
+    .header-menu-role{font-size:12.5px;color:#8A9290;margin-top:2px;}
     .header-menu-group-label{font-size:10.5px;font-weight:700;color:#8A9290;text-transform:uppercase;letter-spacing:.4px;padding:10px 2px 6px;}
-    .header-menu-group{background:#F6F7F8;border-radius:12px;overflow:hidden;}
-    .header-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;font-size:13px;font-weight:600;color:#13201E;text-align:left;border:none;background:none;}
+    .header-menu-group{background:none;border-radius:12px;overflow:hidden;}
+    .header-menu-group:last-child{margin-top:auto;}
+    .header-menu-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 6px;font-size:15px;font-weight:600;color:#13201E;text-align:left;border:none;background:none;}
     .header-menu-item:not(:last-child){border-bottom:1px solid #EDEFEE;}
-    .header-menu-item-icon{width:28px;height:28px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent-dark);}
-    .header-menu-item-icon svg{width:15px;height:15px;}
+    .header-menu-item-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent-dark);}
+    .header-menu-item-icon svg{width:18px;height:18px;}
     .header-menu-item span:nth-child(2){flex:1;}
     .header-menu-chevron{flex-shrink:0;}
     .header-menu-item-danger{color:#B3384A;}
@@ -2539,6 +2551,30 @@ html{ visibility:hidden; }
   .lorry-choice-not_home.on{background:#F5C84C;border-color:#F5C84C;color:#5b4300;}
   .lorry-choice-returned.on{background:#D9695C;border-color:#D9695C;color:#fff;}
   .lorry-track-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px;}
+  /* ---------------- Profile details panel ---------------- */
+  .profile-modal{max-width:440px;}
+  .profile-modal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .profile-modal-top h2{margin:0;font-size:17px;}
+  .profile-back{border:none;background:none;font-size:28px;line-height:1;padding:0 8px 4px 0;color:var(--ink);cursor:pointer;}
+  .profile-hero{display:flex;flex-direction:column;align-items:center;gap:6px;margin:10px 0 14px;text-align:center;}
+  .profile-hero .header-menu-avatar-wrap{position:relative;border:none;background:none;padding:0;border-radius:50%;cursor:pointer;}
+  .profile-hero .header-menu-avatar{width:84px;height:84px;border-radius:50%;background:var(--accent-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;overflow:hidden;}
+  .profile-hero .header-menu-avatar img{width:100%;height:100%;object-fit:cover;}
+  .profile-hero .header-menu-avatar-edit{position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;}
+  .profile-row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:#fff;font:inherit;font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;}
+  .profile-row > span:nth-child(2){flex:1;}
+  .profile-row-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent-dark);}
+  .profile-row-icon svg{width:18px;height:18px;}
+  .profile-hero-name{font-size:17px;font-weight:700;color:var(--ink);}
+  .profile-hero-sub{font-size:12.5px;color:var(--muted);}
+  .profile-tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border-radius:12px;padding:3px;margin-bottom:14px;}
+  .profile-tabs button{border:none;background:none;border-radius:10px;padding:9px 6px;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}
+  .profile-tabs button.on{background:var(--accent-dark);color:#fff;}
+  .profile-modal input[readonly]{background:var(--bg);color:var(--muted);}
+  @media (max-width:760px){
+    .overlay:has(.profile-modal){align-items:stretch;justify-content:stretch;padding:0;}
+    .profile-modal{background:#fff;max-width:none;width:100%;min-height:100%;border-radius:0;padding:calc(14px + env(safe-area-inset-top)) 18px 24px;}
+  }
   .track-link-row input:focus{outline:none;}
   /* Scoped to this card, not a global .btn-primary/input change -- every other page's buttons and
      inputs are untouched. */
@@ -7334,6 +7370,7 @@ async function logOut(){
   // would see whichever account was last on the R&D/Bulk SMS page's stale in-memory data instead
   // of a fresh fetch for themselves.
   state._deferredLoaded = {};
+  state._myProfile = null; state._fullNames = null; state._headerMenuOpen = false; state._profileTab = null;
   await saveSession();
   if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
   render();
@@ -11051,7 +11088,7 @@ function renderAttendanceStaffReport(staffName){
     <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;align-items:center;gap:10px;">
         ${staffAvatarHtml(staffName, 30)}
-        <h3 style="margin:0;">${esc(staffName)}</h3>
+        <h3 style="margin:0;">${esc(staffName)}</h3>${fullNameFor(staffName) ? `<div class="hint">${esc(fullNameFor(staffName))}</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <button type="button" class="btn-text" data-att-month-prev aria-label="Previous month">‹</button>
@@ -11398,7 +11435,8 @@ function fmtOtMinutes(mins){
 // staff member's real check-in/check-out times for whichever month the on-screen report is
 // currently showing, so printing always reflects exactly what's on screen.
 // Reuses #print-area (see its own CSS comment) the same way printBatchSheet does.
-function printAttendanceSheet(staffName){
+async function printAttendanceSheet(staffName){
+  await ensureFullNames();
   const ym = state._attRecordsMonth || todayStr().slice(0,7);
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -11437,7 +11475,7 @@ function printAttendanceSheet(staffName){
     <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;font-family:'Inter',system-ui,sans-serif;">
       <tr>
         <td style="padding:3px 0;width:70px;color:#6B7570;">Name</td>
-        <td style="padding:3px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(staffName)}</td>
+        <td style="padding:3px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(fullNameFor(staffName) || staffName)}</td>
         <td style="padding:3px 24px;width:90px;color:#6B7570;">Employee #</td>
         <td style="padding:3px 0;border-bottom:1px solid #D8DCD4;width:120px;"></td>
       </tr>
@@ -12319,6 +12357,127 @@ function renderLorryTrackBlock(o){
     <div><div class="track-courier-name">${esc(head)}</div><div class="track-courier-sub">${esc(sub)}</div></div></div></div>`;
 }
 
+/* ===================== Profile drawer + Profile details ===================== */
+// On a phone the avatar in the header opens a LEFT slide-in drawer (photo, name, Profile details, Change password, Log
+// out). "Profile details" lets a person edit their FULL NAME and mobile number. The full name is stored on their own
+// profiles row (profiles.full_name; only they or an Admin can change it) and is what the printed attendance sheet shows
+// instead of the short sign-in name (username). Admin / Sub Admin read everyone's full names through the database
+// function staff_full_names() (used by the attendance records and the print).
+function profileIsPhone(){ return !!(window.matchMedia && window.matchMedia('(max-width:760px)').matches); }
+function closeHeaderMenuAnimated(){
+  const panel = document.querySelector('.header-right-links.open');
+  const bd = document.getElementById('header-menu-backdrop');
+  if(!panel || !profileIsPhone()){ state._headerMenuOpen = false; render(); return; }
+  panel.classList.add('closing'); if(bd) bd.classList.add('closing');
+  setTimeout(()=>{ state._headerMenuOpen = false; render(); }, 190);
+}
+function myDisplayName(){ return (state._myProfile && state._myProfile.fullName) || (state.session && state.session.name) || ''; }
+async function loadMyProfile(force){
+  if(!supabaseClient || !state.session) return;
+  if(state._myProfile && state._myProfile.loaded && !force) return;
+  if(state._myProfile && state._myProfile.loading) return;
+  if(state._myProfile && state._myProfile.failedAt && Date.now() - state._myProfile.failedAt < 60000) return; // do not hammer after a failure
+  state._myProfile = Object.assign({fullName:'', mobile:''}, state._myProfile, {loading:true});
+  try{
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user){ state._myProfile = {loaded:false, fullName:'', mobile:'', failedAt: Date.now()}; return; } // no live sign-in yet: try again later, quietly
+    const { data, error } = await supabaseClient.from('profiles').select('full_name, mobile').eq('id', user.id).maybeSingle();
+    if(error) throw error;
+    state._myProfile = {loaded:true, id:user.id, fullName:(data && data.full_name) || '', mobile:(data && data.mobile) || ''};
+    if(!state.modal) render();
+  }catch(e){
+    console.warn('load profile failed', e);
+    state._myProfile = {loaded:false, fullName:'', mobile:'', failedAt: Date.now()};
+  }
+}
+async function ensureFullNames(force){
+  if(state._fullNames && !force) return state._fullNames;
+  try{
+    const { data, error } = await supabaseClient.rpc('staff_full_names');
+    state._fullNames = (!error && data && typeof data === 'object') ? data : {};
+  }catch(e){ state._fullNames = {}; }
+  return state._fullNames;
+}
+function fullNameFor(login){ return (state._fullNames || {})[String(login || '').trim().toLowerCase()] || ''; }
+function profileDetailsModal(){
+  const p = state._myProfile || {fullName:'', mobile:''};
+  const tab = state._profileTab || 'info';
+  const canPw = !!(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role)));
+  const photo = myProfilePhotoUrl();
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal profile-modal">
+      <div class="profile-modal-top"><button type="button" class="profile-back" id="btn-cancel-modal-2" aria-label="Close">‹</button><h2>Profile details</h2><span style="width:30px;"></span></div>
+      <div class="profile-hero">
+        <button type="button" class="header-menu-avatar-wrap" id="btn-profile-modal-photo" aria-label="Change your picture">
+          <span class="header-menu-avatar">${photo ? `<img src="${escAttr(photo)}" alt="">` : initials(myDisplayName())}</span>
+          <span class="header-menu-avatar-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        </button>
+        <div class="profile-hero-name">${esc(myDisplayName())}</div>
+        <div class="profile-hero-sub">${esc(state.session.role)}</div>
+      </div>
+      <div class="profile-tabs"><button type="button" data-profile-tab="info" class="${tab==='info'?'on':''}">Personal info</button><button type="button" data-profile-tab="security" class="${tab==='security'?'on':''}">Security</button></div>
+      ${tab === 'info' ? `
+      <form id="form-profile">
+        <div class="field"><label>Full name <span class="hint">(printed on your attendance sheet)</span></label>
+          <input type="text" id="profile-fullname" name="fullName" maxlength="120" autocomplete="name" placeholder="e.g. Vihanga Sudaraka" value="${escAttr(p.fullName || '')}"></div>
+        <div class="field"><label>Username <span class="hint">(your sign-in name, set by an Admin)</span></label>
+          <input type="text" value="${escAttr(state.session.name)}" readonly></div>
+        <div class="field"><label>Access level</label>
+          <input type="text" value="${escAttr(state.session.role)}" readonly></div>
+        <div class="field"><label>Mobile number <span class="hint">(optional)</span></label>
+          <input type="tel" id="profile-mobile" name="mobile" inputmode="tel" maxlength="25" autocomplete="tel" placeholder="e.g. 0771234567" value="${escAttr(p.mobile || '')}"></div>
+        <div class="hint" id="profile-err" style="color:var(--danger);min-height:18px;">${esc(state._profileErr || '')}</div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+          <button type="submit" class="btn btn-primary" id="btn-profile-save">Save</button>
+        </div>
+      </form>` : `
+      <div>
+        ${canPw ? `<button type="button" class="profile-row" id="btn-profile-password"><span class="profile-row-icon">${icon('fingerprint')}</span><span>Change password</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>`
+          : `<div class="hint" style="padding:6px 2px;">Your password is changed by an Admin.</div>`}
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" id="btn-cancel-modal">Close</button></div>`}
+    </div>
+  </div>`;
+}
+async function submitProfile(e){
+  e.preventDefault();
+  const fullName = ((document.getElementById('profile-fullname') || {}).value || '').replace(/\s+/g, ' ').trim();
+  const mobile = ((document.getElementById('profile-mobile') || {}).value || '').trim();
+  const errEl = document.getElementById('profile-err'), btn = document.getElementById('btn-profile-save');
+  const setErr = m => { state._profileErr = m; if(errEl) errEl.textContent = m; };
+  if(fullName.length > 120){ setErr('The full name is too long.'); return; }
+  if(mobile && !/^[0-9+\-\s()]{5,25}$/.test(mobile)){ setErr('Enter a valid mobile number (digits, + - and spaces only).'); return; }
+  setErr('');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  try{
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user) throw new Error('You are not signed in');
+    const { error } = await supabaseClient.from('profiles').update({full_name: fullName || null, mobile: mobile || null}).eq('id', user.id);
+    if(error) throw error;
+    state._myProfile = {loaded:true, id:user.id, fullName, mobile};
+    state._fullNames = null; // the attendance sheet picks up the new name on its next print
+    closeModal();
+    showToast('Profile saved');
+  }catch(err){
+    setErr((err && err.message) || 'Could not save. Try again.');
+    if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
+  }
+}
+function attachProfileHandlers(){
+  if(!state.session) return;
+  const $ = id => document.getElementById(id);
+  if($('btn-profile-details')) $('btn-profile-details').onclick = () => { state._profileTab = 'info'; state._profileErr = ''; loadMyProfile(); openModal('profiledetails'); };
+  if(state.modal === 'profiledetails'){
+    if($('form-profile')) $('form-profile').addEventListener('submit', submitProfile);
+    document.querySelectorAll('[data-profile-tab]').forEach(b => b.onclick = () => { state._profileTab = b.getAttribute('data-profile-tab'); state._profileErr = ''; render(); });
+    if($('btn-profile-modal-photo')) $('btn-profile-modal-photo').onclick = () => { const i = $('profile-photo-input'); if(i) i.click(); };
+    if($('btn-profile-password')) $('btn-profile-password').onclick = () => openModal('changepassword');
+  }
+  loadMyProfile();
+}
+
 const PAGE_META = {
   dashboard:{title:'Dashboard', sub:"Here's what's happening today."},
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
@@ -12372,7 +12531,7 @@ function renderShell(freshPage){
   const freshBroadcast = broadcastId !== _lastAdminBroadcastId;
   _lastAdminBroadcastId = broadcastId;
   return `
-  <div class="shell ${justLoggedIn?'shell-enter':''} ${state.page==='chat'?'page-chat':''} ${state.page==='dashboard'?'page-dashboard':''} ${state.page==='orders'?'page-orders':''}">
+  <div class="shell ${justLoggedIn?'shell-enter':''} ${state._headerMenuOpen?'menu-open':''} ${state.page==='chat'?'page-chat':''} ${state.page==='dashboard'?'page-dashboard':''} ${state.page==='orders'?'page-orders':''}">
     ${state.sidebarOpen ? `<div class="sidebar-backdrop" id="sidebar-backdrop"></div>` : ''}
     <aside class="sidebar ${state.sidebarOpen?'open':''}">
       <div class="brand">
@@ -12435,16 +12594,16 @@ function renderShell(freshPage){
                 <input type="file" id="profile-photo-input" accept="image/*" style="display:none;">
               </button>
               <div>
-                <div class="header-menu-name">${esc(state.session.name)}</div>
+                <div class="header-menu-name">${esc(myDisplayName())}</div>
                 <div class="header-menu-role">${esc(state.session.role)}</div>
               </div>
             </div>
-            ${(isAdmin() || state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `
             <div class="header-menu-group-label">Account</div>
             <div class="header-menu-group">
+              <button class="header-menu-item" id="btn-profile-details"><span class="header-menu-item-icon">${icon('customers')}</span><span>Profile details</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
               ${isAdmin() ? `<button class="header-menu-item" id="btn-activity-log"><span class="header-menu-item-icon">${icon('clock')}</span><span>Activity log</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
               ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="header-menu-item" id="btn-change-password"><span class="header-menu-item-icon">${icon('fingerprint')}</span><span>Change password</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
-            </div>` : ''}
+            </div>
             <div class="header-menu-group-label">App</div>
             <div class="header-menu-group">
               <button class="header-menu-item header-menu-item-danger" id="btn-switch-role"><span class="header-menu-item-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span><span>Log out</span></button>
@@ -20164,6 +20323,7 @@ function renderModal(){
   if(type==='checklistday') return checklistDayModal(parts.slice(1).join(':'));
   if(type==='aibot') return aiBotModal();
   if(type==='changepassword') return changePasswordModal();
+  if(type==='profiledetails') return profileDetailsModal();
   if(type==='activitylog') return activityLogModal();
   return '';
 }
@@ -22015,7 +22175,7 @@ function attachShellHandlers(){
     state.navExpanded[id] = !state.navExpanded[id];
     render();
   }));
-  if(byIdEl('btn-header-menu-toggle')) byIdEl('btn-header-menu-toggle').onclick = (e)=>{ e.stopPropagation(); state._headerMenuOpen = !state._headerMenuOpen; render(); };
+  if(byIdEl('btn-header-menu-toggle')) byIdEl('btn-header-menu-toggle').onclick = (e)=>{ e.stopPropagation(); if(state._headerMenuOpen){ closeHeaderMenuAnimated(); return; } state._headerMenuOpen = true; loadMyProfile(); render(); };
   // Clicking Activity log / Change password / Log out inside the dropdown should still run that
   // button's own handler (wired separately below) AND close the dropdown — a delegated listener
   // on the shared wrapper does the latter without touching the former.
@@ -22030,7 +22190,7 @@ function attachShellHandlers(){
     // OS file dialog is about to report back to.
     if(headerLinksEl) headerLinksEl.addEventListener('click', (e)=>{ if(e.target.closest('#btn-change-profile-photo')) return; state._headerMenuOpen = false; });
   }
-  if(byIdEl('header-menu-backdrop')) byIdEl('header-menu-backdrop').onclick = ()=>{ state._headerMenuOpen = false; render(); };
+  if(byIdEl('header-menu-backdrop')) byIdEl('header-menu-backdrop').onclick = closeHeaderMenuAnimated;
   if(byIdEl('btn-change-profile-photo')) byIdEl('btn-change-profile-photo').onclick = (e)=>{ e.stopPropagation(); byIdEl('profile-photo-input').click(); };
   if(byIdEl('profile-photo-input')) byIdEl('profile-photo-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];
@@ -22690,7 +22850,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-att-log-time')) byIdEl('btn-att-log-time').onclick = submitAttendanceCapture;
   document.querySelectorAll('[data-delete-att]').forEach(b=>b.addEventListener('click', ()=>deleteAttendanceEntry(b.dataset.deleteAtt)));
   // Attendance admin: Records hub -> staff list -> one staff's monthly report
-  document.querySelectorAll('[data-att-records-open]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = true; render(); }));
+  document.querySelectorAll('[data-att-records-open]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = true; render(); ensureFullNames().then(()=>{ if(!state.modal) render(); }); }));
   document.querySelectorAll('[data-att-records-back]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = false; render(); }));
   document.querySelectorAll('[data-att-staff-row]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = b.dataset.attStaffRow; state._attRecordsMonth = null; render(); }));
   document.querySelectorAll('[data-att-records-back-staff]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = null; render(); }));
@@ -23784,7 +23944,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -23794,7 +23954,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;
@@ -24246,6 +24406,7 @@ function attachShellHandlers(){
   initRndCheckinMap();
   initAttendanceMap();
   attachLorryHandlers();
+  attachProfileHandlers();
 }
 
 document.addEventListener('keydown', e=>{

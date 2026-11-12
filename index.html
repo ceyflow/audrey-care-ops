@@ -6421,14 +6421,13 @@ async function loadAll(){
         // Admin to save an Employer code via Settings while it's still running; a raw kvSet here
         // used to win that race and silently revert it (see saveAuth's own comment).
         saveAuth().catch(e=>console.error('roleDataAccessSyncVersion write-back failed', e));
-        showToast('Synced data permissions for all roles');
+        console.log('role_data_access resynced for all roles');
       } else {
         console.error('role_data_access version resync did not report ok', res);
-        showToast('Could not sync role permissions — will retry next load');
+        // no toast: it retries by itself on the next load (the owner does not want this message shown)
       }
     }).catch(e=>{
       console.error('role_data_access version resync failed', e);
-      showToast('Could not sync role permissions — will retry next load');
     });
   }
   state.loaded = true;

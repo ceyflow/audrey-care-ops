@@ -6406,7 +6406,15 @@ async function loadAll(){
     // per PAGE_DATA_KEYS_VERSION bump (it stops re-attempting the moment it records success), so a
     // toast here can't repeat on every refresh. Worth the visibility — this write silently failing
     // was exactly how a stale role_data_access row went unnoticed in the first place.
-    syncAllRoleDataAccess().then(res=>{
+    // Only with a live sign-in: on a phone whose saved sign-in had just expired (the refresh was
+    // refused) the page can still look signed in for a moment, and every database call then goes out
+    // as the logged-out visitor and is refused ("permission denied for table profiles"), which used
+    // to pop up a huge error toast. Without a real session this quietly waits for the next load.
+    supabaseClient.auth.getSession().then(({data})=>{
+      if(!(data && data.session)){ console.warn('role_data_access resync skipped: no live sign-in yet, will retry next load'); return null; }
+      return syncAllRoleDataAccess();
+    }).then(res=>{
+      if(res === null) return;
       if(res && res.ok){
         state.auth = {...state.auth, roleDataAccessSyncVersion: PAGE_DATA_KEYS_VERSION};
         // Routed through saveAuth() — this resync can take several seconds, plenty of time for an
@@ -6416,11 +6424,11 @@ async function loadAll(){
         showToast('Synced data permissions for all roles');
       } else {
         console.error('role_data_access version resync did not report ok', res);
-        showToast('Could not sync role permissions (' + (res && res.error || 'unknown error') + ') — will retry next load');
+        showToast('Could not sync role permissions — will retry next load');
       }
     }).catch(e=>{
       console.error('role_data_access version resync failed', e);
-      showToast('Could not sync role permissions: ' + (e && e.message || e));
+      showToast('Could not sync role permissions — will retry next load');
     });
   }
   state.loaded = true;

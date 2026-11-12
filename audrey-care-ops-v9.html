@@ -361,6 +361,9 @@ html{ visibility:hidden; }
   .dash-stat-chevron{display:none;}
   .dash-stat-card-top{display:none;}
   .topbar-brand-row{display:none;}
+  /* Phone-only decoration. Without this base rule the empty element stayed a zero-width flex item on desktop, and with
+     justify-content:space-between that pushed the page title to the MIDDLE of the header instead of the left edge. */
+  .topbar-img-layer{display:none;}
 
   .panel{
     background:rgba(255,255,255,.4);

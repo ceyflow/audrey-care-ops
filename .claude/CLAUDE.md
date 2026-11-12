@@ -98,10 +98,12 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   `driver_start_run`, `driver_mark_stop`, `driver_send_location`, `driver_finish_run`, `driver_device_token`, `lorry_ingest`,
   `track_lorry`); the tables live in the `private` schema (`delivery_runs`, `delivery_stops`, `lorry_positions`, `driver_devices`)
   with no direct access for anyone. A Driver account reads no shared data. Cancelling a run only marks it finished (no deletes).
-- **Lorry position.** Comes from the free **Traccar Client** phone app (background, screen off) posting to the Edge Function
-  `lorry-location` (verify_jwt off; the driver's private device token is the "device identifier"; `lorry_ingest` stores a point
-  only while that driver has an ACTIVE run and rate-limits it). The driver page also has a backup "share from this screen" button
-  (`driver_send_location`). A position is shown only while the run is active; the last point per run stays in the private table.
+- **Lorry position (switched OFF for now, by the owner).** No live location or map is used anywhere in the app: the driver page
+  has no sharing button, stop updates send no GPS point, and the office page has no map or phone-tracking setup. The pieces are
+  still in place but unused: the Edge Function `lorry-location` + database function `lorry_ingest` (Traccar Client, a driver's
+  private device token from `driver_device_token`), `driver_send_location`, and the `lorry_positions` table. No device token
+  exists, so nothing can be stored. To turn it on again, bring back the setup sheet, the office map and the driver backup button
+  (see git history, PR #22 and #26).
 - **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
   delivered / not home / returned), the driver's FIRST name and the delivery time. NO map, NO lorry position and NO
   "stops before yours" count, by the owner's decision (the function does not return them). Never other customers' names, phones or

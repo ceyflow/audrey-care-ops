@@ -117,3 +117,8 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   visibilitychange / pageshow / focus, signs out the moment the page runs again; (3) the older check at the end of `loadAll`.
   Sign-off always clears the session FIRST and only then shows the toast (`signOffForInactivity`). `saveSession()` restarts the
   activity clock, so only use it for a real login. Role limits are set per role in Settings -> User roles (0 = Off).
+- **Phone header (owner, 2026-11-12).** One slim row, about 60px tall: page title + subtitle on the left, bell + avatar on the right,
+  built from a reference screenshot. The AUDREY logo and the account line are NOT drawn in the phone header (the owner chose
+  this; the logo is still in the side menu and on the sign-in page). Settings -> Mobile appearance options (icons left, dark
+  background, header image) still apply. Desktop header: the title sits at the left edge (the phone-only `.topbar-img-layer`
+  must stay `display:none` on desktop or it pushes the title to the middle).

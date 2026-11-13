@@ -7466,7 +7466,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -20361,6 +20361,7 @@ function renderModal(){
   if(type==='aibot') return aiBotModal();
   if(type==='changepassword') return changePasswordModal();
   if(type==='profiledetails') return profileDetailsModal();
+  if(type==='lineblocked') return lineBlockedModal();
   if(type==='activitylog') return activityLogModal();
   return '';
 }
@@ -20524,6 +20525,28 @@ function manageDeliveryLinesModal(){
   </div>`;
 }
 
+
+function lineBlockedModal(){
+  const b = state._lineBlock;
+  if(!b) return '';
+  const n = b.orders.length + b.more;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:440px;">
+      <h2>Can't delete this list yet</h2>
+      <p>"${esc(b.label)}" is still the delivery method of ${n} active order${n===1?'':'s'}. Open ${n===1?'it':'each one'}, change the delivery method (or complete the order), then come back and delete the list.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;">
+        ${b.orders.map(o=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;">
+          <span style="min-width:0;"><b>${esc(o.number)}</b>${o.customer?`<span class="hint" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(o.customer)}</span>`:''}</span>
+          <button type="button" class="btn btn-sm btn-primary" data-open-blocked-order="${escAttr(o.id)}">Open order</button>
+        </div>`).join('')}
+        ${b.more ? `<div class="hint">…and ${b.more} more.</div>` : ''}
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" id="btn-line-blocked-back">Back</button></div>
+    </div>
+  </div>`;
+}
 
 function manageStaffCategoriesModal(){
   const cats = state._staffCategoriesDraft || state.staffCategories;
@@ -22569,8 +22592,10 @@ function attachShellHandlers(){
     const usingOrders = activeOrders().filter(o=>(o.courierService||'')===key);
     const inUse = usingOrders.length;
     if(inUse>0){
-      const names = usingOrders.slice(0, 6).map(o=>`${o.orderNumber||o.id}${o.customer?' ('+o.customer+')':''}`).join(', ') + (inUse>6 ? ` and ${inUse-6} more` : '');
-      openAlertModal({title:"Can't delete this list yet", message:`"${line.label}" is still the delivery method of ${inUse} active order${inUse===1?'':'s'}:\n${names}\n\nOpen ${inUse===1?'that order':'those orders'}, change the delivery method (or complete ${inUse===1?'it':'them'}), then delete the list.`, _returnTo:'managelines'});
+      // Orders on a hidden / removed list are not drawn on the boards, so there would be no way to find them: this panel
+      // lists them with an "Open order" button (the order's own panel is where its delivery method is changed).
+      state._lineBlock = {label: line.label, orders: usingOrders.slice(0, 12).map(o=>({id:o.id, number:o.orderNumber||o.id, customer:o.customer||''})), more: Math.max(0, inUse-12)};
+      state.modal = 'lineblocked'; render();
       return;
     }
     openConfirmModal({
@@ -22581,6 +22606,8 @@ function attachShellHandlers(){
       },
     });
   }));
+  if(byIdEl('btn-line-blocked-back')) byIdEl('btn-line-blocked-back').onclick = ()=>{ state.modal = 'managelines'; render(); };
+  document.querySelectorAll('[data-open-blocked-order]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.openBlockedOrder; state._lineBlock = null; openModal('order:'+id); }));
   if(byIdEl('btn-save-delivery-lines')) byIdEl('btn-save-delivery-lines').onclick = async ()=>{
     const list = document.querySelector('.nav-order-list[data-nav-group="deliverylines"]');
     const orderedKeys = list ? [...list.querySelectorAll('.nav-order-row')].map(r=>r.dataset.navItem) : [];

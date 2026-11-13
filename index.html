@@ -1798,7 +1798,8 @@ html{ visibility:hidden; }
   .prep-footer{display:flex;gap:8px;flex-wrap:wrap;}
 
   .batch-focus{
-    position:fixed;inset:0;z-index:400;background:#F6FAF7;
+    position:fixed;inset:0;z-index:400;background:#F6FAF7;box-sizing:border-box;
+    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
     color:#15201A;display:flex;flex-direction:column;
     font-family:'Inter',system-ui,sans-serif;
   }
@@ -1936,7 +1937,8 @@ html{ visibility:hidden; }
     animation:drawer-in .26s cubic-bezier(.2,.8,.3,1);
   }
   .drawer .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-  @media (max-width:760px){ .drawer{left:0;width:auto;padding:22px;} .drawer .field-row-3{grid-template-columns:1fr;} }
+  /* iPhone: full-screen drawers start BELOW the status bar / notch and end above the home bar (env() is 0 everywhere else). */
+  @media (max-width:760px){ .drawer{left:0;width:auto;padding:calc(22px + env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom));} .drawer .drawer-close{top:calc(8px + env(safe-area-inset-top));} .drawer .field-row-3{grid-template-columns:1fr;} }
   .drawer-hero{
     background:var(--accent-grad);color:#fff;
     margin:-28px -34px 20px;padding:20px 34px 22px;
@@ -1962,7 +1964,7 @@ html{ visibility:hidden; }
   @media (max-width:760px){
     .od-d-only{display:none;}
     .od-m-only{display:inline;}
-    .drawer.order-drawer{max-width:none;padding:0 16px;background:var(--bg);border-left:none;}
+    .drawer.order-drawer{max-width:none;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);background:var(--bg);border-left:none;}
     .order-drawer .drawer-hero{background:none;color:var(--ink);margin:0 -16px;padding:8px 16px 0;display:block;}
     .order-drawer .drawer-hero .back{min-height:44px;margin:0 0 2px;padding:0 12px 0 0;color:var(--oq-fill);font-size:15px;font-weight:600;}
     .order-drawer .drawer-hero h2{color:var(--ink);font-size:24px;line-height:30px;font-weight:700;margin:0 0 4px;padding-right:44px;overflow-wrap:anywhere;}
@@ -1971,7 +1973,7 @@ html{ visibility:hidden; }
     .order-drawer .drawer-hero .stat-chip{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 12px;text-align:left;}
     .order-drawer .drawer-hero .stat-chip .k{color:#55675B;}
     .order-drawer .drawer-hero .stat-chip .v{color:var(--ink);}
-    .order-drawer .drawer-close{color:var(--ink) !important;top:6px;right:6px;}
+    .order-drawer .drawer-close{color:var(--ink) !important;top:calc(6px + env(safe-area-inset-top));right:6px;}
     .od-stepper{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:relative;margin:12px 0 14px;padding:14px 4px 12px;background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
     .od-stepper::before{content:'';position:absolute;left:12.5%;right:12.5%;top:25px;height:2px;background:var(--border);}
     .od-step{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
@@ -2015,7 +2017,7 @@ html{ visibility:hidden; }
   .bc-f, .bc-stepper{display:contents;}
   @media (max-width:760px){
     .overlay.bc-overlay{padding:0;align-items:stretch;justify-content:stretch;overflow:hidden;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;}
-    .modal.bc-modal{max-width:none !important;width:100%;height:100%;max-height:none;margin:0;border:none;border-radius:0;box-shadow:none;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;padding:14px 16px 0;display:flex;flex-direction:column;overflow-y:auto;}
+    .modal.bc-modal{max-width:none !important;width:100%;height:100%;max-height:none;margin:0;border:none;border-radius:0;box-shadow:none;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;padding:calc(14px + env(safe-area-inset-top)) 16px 0;display:flex;flex-direction:column;overflow-y:auto;}
     .bc-modal form#form-box-count{display:contents;}
     .bc-head{display:flex;align-items:center;gap:12px;}
     .bc-back{display:flex;flex:none;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:50%;background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(19,32,30,.08);}
@@ -2127,6 +2129,7 @@ html{ visibility:hidden; }
     .oi-row{flex-direction:column;align-items:stretch !important;gap:10px;}
     .oi-row-actions{grid-template-columns:1fr !important;width:100%;}
     .modal{padding:18px;border-radius:12px;}
+    .overlay{padding:max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));}
     .drawer-hero .stat-chip{padding:7px 12px;}
   }
   .chat-mobile-back,.chat-mobile-title{display:none;}
@@ -2353,11 +2356,22 @@ html{ visibility:hidden; }
       background:#fff;border-radius:0 24px 24px 0;box-shadow:0 0 44px rgba(19,32,30,.28);
       padding:calc(34px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));overflow-y:auto;
     }
-    .header-right-links.open{visibility:visible;pointer-events:auto;transform:none;animation:drawer-in .3s cubic-bezier(.22,.8,.3,1);}
-    .header-right-links.closing{animation:drawer-out .2s ease forwards;}
-    .header-menu-backdrop.closing{animation:overlay-fade-out .2s ease forwards;}
+    .header-right-links{will-change:transform;}
+    .header-right-links.open{visibility:visible;pointer-events:auto;transform:none;}
+    /* The slide-in only plays on the opening render (.anim), not when the page re-renders behind an open drawer. */
+    .header-right-links.open.anim{animation:drawer-in .36s cubic-bezier(.16,.84,.3,1) both;}
+    .header-right-links.closing{animation:drawer-out .22s cubic-bezier(.4,0,.8,.4) forwards;}
+    .header-menu-backdrop.anim{animation:overlay-fade .3s ease both;}
+    .header-menu-backdrop.closing{animation:overlay-fade-out .22s ease forwards;}
+    .header-right-links.open.anim .header-menu-profile{animation:drawer-item-in .42s cubic-bezier(.16,.84,.3,1) .08s both;}
+    .header-right-links.open.anim .header-menu-item{animation:drawer-item-in .42s cubic-bezier(.16,.84,.3,1) both;}
+    .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(1){animation-delay:.14s;}
+    .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(2){animation-delay:.19s;}
+    .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(3){animation-delay:.24s;}
+    .header-right-links.open.anim .header-menu-group:not(.acct) .header-menu-item{animation-delay:.3s;}
+    @keyframes drawer-item-in{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:none;}}
     .shell.menu-open .topbar{z-index:60;}
-    @keyframes drawer-in{from{transform:translateX(-104%);}to{transform:none;}}
+    @keyframes drawer-in{from{transform:translateX(-104%);box-shadow:0 0 0 rgba(19,32,30,0);}to{transform:none;box-shadow:0 0 44px rgba(19,32,30,.28);}}
     @keyframes drawer-out{from{transform:none;}to{transform:translateX(-104%);}}
     @keyframes overlay-fade-out{from{opacity:1;}to{opacity:0;}}
     .header-menu-profile{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:2px 0 18px;margin-bottom:6px;border-bottom:1px solid #EDEFEE;}
@@ -2552,7 +2566,17 @@ html{ visibility:hidden; }
   .lorry-choice-returned.on{background:#D9695C;border-color:#D9695C;color:#fff;}
   .lorry-track-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px;}
   /* ---------------- Profile details panel ---------------- */
-  .profile-modal{max-width:440px;}
+  .profile-modal{max-width:440px;will-change:transform,opacity;animation:profile-in .34s cubic-bezier(.16,.84,.3,1) both;}
+  .profile-modal.closing{animation:profile-out .2s cubic-bezier(.4,0,.8,.4) forwards;}
+  .overlay.closing{animation:overlay-fade-out .2s ease forwards;}
+  .profile-modal .profile-hero{animation:profile-item-in .4s cubic-bezier(.16,.84,.3,1) .1s both;}
+  .profile-modal .profile-tabs{animation:profile-item-in .4s cubic-bezier(.16,.84,.3,1) .15s both;}
+  .profile-modal form, .profile-modal .profile-row{animation:profile-item-in .4s cubic-bezier(.16,.84,.3,1) .2s both;}
+  .reopen-noanim .profile-modal, .reopen-noanim .profile-modal *{animation:none !important;}
+  @keyframes profile-in{from{opacity:0;transform:translateY(16px) scale(.985);}to{opacity:1;transform:none;}}
+  @keyframes profile-out{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(10px) scale(.99);}}
+  @keyframes profile-item-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes overlay-fade-out{from{opacity:1;}to{opacity:0;}}
   .profile-modal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
   .profile-modal-top h2{margin:0;font-size:17px;}
   .profile-back{border:none;background:none;font-size:28px;line-height:1;padding:0 8px 4px 0;color:var(--ink);cursor:pointer;}
@@ -2572,6 +2596,10 @@ html{ visibility:hidden; }
   .profile-tabs button.on{background:var(--accent-dark);color:#fff;}
   .profile-modal input[readonly]{background:var(--bg);color:var(--muted);}
   @media (max-width:760px){
+    .profile-modal{animation-name:profile-in-phone;}
+    .profile-modal.closing{animation-name:profile-out-phone;}
+    @keyframes profile-in-phone{from{opacity:0;transform:translateX(34px);}to{opacity:1;transform:none;}}
+    @keyframes profile-out-phone{from{opacity:1;transform:none;}to{opacity:0;transform:translateX(34px);}}
     .overlay:has(.profile-modal){align-items:stretch;justify-content:stretch;padding:0;}
     .profile-modal{background:#fff;max-width:none;width:100%;min-height:100%;border-radius:0;padding:calc(14px + env(safe-area-inset-top)) 18px 24px;}
   }
@@ -5842,7 +5870,7 @@ function showDataLoadWarning(){
   if(document.getElementById('data-load-warning')) return;
   const bar = document.createElement('div');
   bar.id = 'data-load-warning';
-  bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:99999;background:#7f1d1d;color:#fff;padding:10px 12px 10px 18px;border-radius:999px;display:flex;gap:12px;align-items:center;font:14px/1.3 system-ui,-apple-system,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:92vw;';
+  bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top));z-index:99999;background:#7f1d1d;color:#fff;padding:10px 12px 10px 18px;border-radius:999px;display:flex;gap:12px;align-items:center;font:14px/1.3 system-ui,-apple-system,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:92vw;';
   bar.innerHTML = '<span>Couldn\'t load your data just now — this does <strong>not</strong> mean it was deleted. Try again.</span>'
     + '<button type="button" id="data-load-retry" style="background:#fff;color:#7f1d1d;border:none;border-radius:999px;padding:7px 16px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;">Retry</button>';
   document.body.appendChild(bar);
@@ -12364,12 +12392,20 @@ function renderLorryTrackBlock(o){
 // instead of the short sign-in name (username). Admin / Sub Admin read everyone's full names through the database
 // function staff_full_names() (used by the attendance records and the print).
 function profileIsPhone(){ return !!(window.matchMedia && window.matchMedia('(max-width:760px)').matches); }
-function closeHeaderMenuAnimated(){
+function closeHeaderMenuAnimated(afterFn){
+  if(typeof afterFn !== 'function') afterFn = null;
   const panel = document.querySelector('.header-right-links.open');
   const bd = document.getElementById('header-menu-backdrop');
-  if(!panel || !profileIsPhone()){ state._headerMenuOpen = false; render(); return; }
+  if(!panel || !profileIsPhone()){ state._headerMenuOpen = false; if(afterFn) afterFn(); else render(); return; }
   panel.classList.add('closing'); if(bd) bd.classList.add('closing');
-  setTimeout(()=>{ state._headerMenuOpen = false; render(); }, 190);
+  setTimeout(()=>{ state._headerMenuOpen = false; if(afterFn) afterFn(); else render(); }, 220);
+}
+// Closing the Profile details panel slides it out first (Close / back arrow / after Save), then removes it.
+function closeProfileAnimated(afterFn){
+  const m = document.querySelector('.profile-modal'); const o = document.getElementById('overlay');
+  if(!m){ closeModal(); if(afterFn) afterFn(); return; }
+  m.classList.add('closing'); if(o) o.classList.add('closing');
+  setTimeout(()=>{ closeModal(); if(afterFn) afterFn(); }, 200);
 }
 function myDisplayName(){ return (state._myProfile && state._myProfile.fullName) || (state.session && state.session.name) || ''; }
 async function loadMyProfile(force){
@@ -12384,7 +12420,7 @@ async function loadMyProfile(force){
     const { data, error } = await supabaseClient.from('profiles').select('full_name, mobile').eq('id', user.id).maybeSingle();
     if(error) throw error;
     state._myProfile = {loaded:true, id:user.id, fullName:(data && data.full_name) || '', mobile:(data && data.mobile) || ''};
-    if(!state.modal) render();
+    if(!state.modal && !document.querySelector('.header-right-links.closing')) render();
   }catch(e){
     console.warn('load profile failed', e);
     state._myProfile = {loaded:false, fullName:'', mobile:'', failedAt: Date.now()};
@@ -12458,8 +12494,7 @@ async function submitProfile(e){
     if(error) throw error;
     state._myProfile = {loaded:true, id:user.id, fullName, mobile};
     state._fullNames = null; // the attendance sheet picks up the new name on its next print
-    closeModal();
-    showToast('Profile saved');
+    closeProfileAnimated(() => showToast('Profile saved'));
   }catch(err){
     setErr((err && err.message) || 'Could not save. Try again.');
     if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
@@ -12468,12 +12503,13 @@ async function submitProfile(e){
 function attachProfileHandlers(){
   if(!state.session) return;
   const $ = id => document.getElementById(id);
-  if($('btn-profile-details')) $('btn-profile-details').onclick = () => { state._profileTab = 'info'; state._profileErr = ''; loadMyProfile(); openModal('profiledetails'); };
+  if($('btn-profile-details')) $('btn-profile-details').onclick = () => { state._profileTab = 'info'; state._profileErr = ''; loadMyProfile(); closeHeaderMenuAnimated(() => openModal('profiledetails')); };
   if(state.modal === 'profiledetails'){
     if($('form-profile')) $('form-profile').addEventListener('submit', submitProfile);
     document.querySelectorAll('[data-profile-tab]').forEach(b => b.onclick = () => { state._profileTab = b.getAttribute('data-profile-tab'); state._profileErr = ''; render(); });
     if($('btn-profile-modal-photo')) $('btn-profile-modal-photo').onclick = () => { const i = $('profile-photo-input'); if(i) i.click(); };
     if($('btn-profile-password')) $('btn-profile-password').onclick = () => openModal('changepassword');
+    ['btn-cancel-modal', 'btn-cancel-modal-2'].forEach(id => { if($(id)) $(id).onclick = () => closeProfileAnimated(); });
   }
   loadMyProfile();
 }
@@ -12525,6 +12561,7 @@ function renderShell(freshPage){
   const navGroups = navGroupsFor(allowed);
   const justLoggedIn = !!state._justLoggedIn;
   state._justLoggedIn = false;
+  const menuAnim = !!state._headerMenuAnim; state._headerMenuAnim = false; // play the drawer's slide-in only on the render that opens it
   const freshModal = state.modal !== _lastOpenModal;
   _lastOpenModal = state.modal;
   const broadcastId = state.adminBroadcast ? state.adminBroadcast.id : null;
@@ -12585,8 +12622,8 @@ function renderShell(freshPage){
                  below stays nested here (not moved) so desktop's display:contents trick, which
                  inlines it as plain visible links in .header-right's row, still works. -->
           </div>
-          ${state._headerMenuOpen ? `<div class="header-menu-backdrop" id="header-menu-backdrop"></div>` : ''}
-          <div class="header-right-links ${state._headerMenuOpen?'open':''}">
+          ${state._headerMenuOpen ? `<div class="header-menu-backdrop ${menuAnim?'anim':''}" id="header-menu-backdrop"></div>` : ''}
+          <div class="header-right-links ${state._headerMenuOpen?'open':''} ${menuAnim?'anim':''}">
             <div class="header-menu-profile">
               <button type="button" class="header-menu-avatar-wrap" id="btn-change-profile-photo" aria-label="Change your picture">
                 <span class="header-menu-avatar">${myProfilePhotoUrl() ? `<img src="${escAttr(myProfilePhotoUrl())}" alt="">` : initials(state.session.name)}</span>
@@ -12599,7 +12636,7 @@ function renderShell(freshPage){
               </div>
             </div>
             <div class="header-menu-group-label">Account</div>
-            <div class="header-menu-group">
+            <div class="header-menu-group acct">
               <button class="header-menu-item" id="btn-profile-details"><span class="header-menu-item-icon">${icon('customers')}</span><span>Profile details</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
               ${isAdmin() ? `<button class="header-menu-item" id="btn-activity-log"><span class="header-menu-item-icon">${icon('clock')}</span><span>Activity log</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
               ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="header-menu-item" id="btn-change-password"><span class="header-menu-item-icon">${icon('fingerprint')}</span><span>Change password</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
@@ -22175,7 +22212,7 @@ function attachShellHandlers(){
     state.navExpanded[id] = !state.navExpanded[id];
     render();
   }));
-  if(byIdEl('btn-header-menu-toggle')) byIdEl('btn-header-menu-toggle').onclick = (e)=>{ e.stopPropagation(); if(state._headerMenuOpen){ closeHeaderMenuAnimated(); return; } state._headerMenuOpen = true; loadMyProfile(); render(); };
+  if(byIdEl('btn-header-menu-toggle')) byIdEl('btn-header-menu-toggle').onclick = (e)=>{ e.stopPropagation(); if(state._headerMenuOpen){ closeHeaderMenuAnimated(); return; } state._headerMenuOpen = true; state._headerMenuAnim = true; loadMyProfile(); render(); };
   // Clicking Activity log / Change password / Log out inside the dropdown should still run that
   // button's own handler (wired separately below) AND close the dropdown — a delegated listener
   // on the shared wrapper does the latter without touching the former.
@@ -22190,7 +22227,7 @@ function attachShellHandlers(){
     // OS file dialog is about to report back to.
     if(headerLinksEl) headerLinksEl.addEventListener('click', (e)=>{ if(e.target.closest('#btn-change-profile-photo')) return; state._headerMenuOpen = false; });
   }
-  if(byIdEl('header-menu-backdrop')) byIdEl('header-menu-backdrop').onclick = closeHeaderMenuAnimated;
+  if(byIdEl('header-menu-backdrop')) byIdEl('header-menu-backdrop').onclick = () => closeHeaderMenuAnimated();
   if(byIdEl('btn-change-profile-photo')) byIdEl('btn-change-profile-photo').onclick = (e)=>{ e.stopPropagation(); byIdEl('profile-photo-input').click(); };
   if(byIdEl('profile-photo-input')) byIdEl('profile-photo-input').addEventListener('change', async e=>{
     const file = e.target.files && e.target.files[0];

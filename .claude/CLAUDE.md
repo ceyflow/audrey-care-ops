@@ -130,3 +130,13 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   role / staff_name / active / created_at, so people may edit these two). The sign-in name (username) stays `profiles.staff_name`
   and is read-only. The printed attendance sheet shows the full name (falls back to the username): Admin and Sub Admin read everyone's
   full names through the database function `staff_full_names()` (`ensureFullNames()` / `fullNameFor()`); nobody else can list them.
+- **iPhone safe areas (owner, 2026-11-13).** The app runs full-screen (`viewport-fit=cover`, translucent status bar), so anything pinned
+  to the top or bottom of the screen on a phone must be padded with `env(safe-area-inset-top)` / `env(safe-area-inset-bottom)`, or its
+  buttons end up under the status bar / home bar and cannot be tapped (Box Count's back button was exactly this). Already handled:
+  the header, `.overlay` (centred modals), `.drawer` (order / blend / R&D / complaint drawers, incl. their back + close buttons),
+  Box Count (`.bc-modal`), Profile details, the account drawer, `.batch-focus` (Production Guide full screen), chat toolbar, the red
+  error bar. Any NEW full-screen or fixed phone surface must do the same. To check: emulate the notch in Chromium with the CDP call
+  `Emulation.setSafeAreaInsetsOverride` (top 47, bottom 34) and look for buttons whose top is above 47px.
+- **Profile drawer / panel animation.** The drawer's slide-in plays only on the opening render (`state._headerMenuAnim` -> `.anim`),
+  never when the page re-renders behind it; closing slides out first (`closeHeaderMenuAnimated`), and the Profile details panel
+  slides in from the right on phones and slides out (`closeProfileAnimated`) before it is removed.

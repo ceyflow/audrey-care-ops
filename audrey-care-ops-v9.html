@@ -6172,9 +6172,9 @@ async function loadAll(){
   if(isAdmin() && (!Array.isArray(state.deliveryLines) || state.deliveryLines.length===0)){
     state.deliveryLines = JSON.parse(JSON.stringify(DEFAULT_DELIVERY_LINES));
     saveQuietly('deliveryLines').catch(()=>{});
-  } else if(isAdmin() && Array.isArray(state.deliveryLines) && !state.deliveryLines.some(l=>l.key==='CustomerPickup')){
-    state.deliveryLines = [...state.deliveryLines, {key:'CustomerPickup', label:'Customer Pickup', hidden:true}];
-    saveQuietly('deliveryLines').catch(()=>{});
+  // (There used to be a branch here that put "Customer Pickup" back whenever it was missing. It made deleting that list in
+  // Manage Lists impossible: it came straight back on the next Admin load. A deleted list now stays deleted; the defaults are
+  // only used the first time, when the list is empty.)
   } else if(isAdmin() && Array.isArray(state.deliveryLines)){
     // Customer Pickup was added as a visible board section before it was decided to keep it
     // out of the board by default — hide it for anyone who already has it from that rollout.
@@ -22566,8 +22566,13 @@ function attachShellHandlers(){
     // counting those too made this guard impossible to ever clear once a list had been used even
     // once, since a completed order can't be "moved" anywhere. Only active orders actually block
     // deletion; an archived order's history isn't affected by its courier list disappearing.
-    const inUse = activeOrders().filter(o=>(o.courierService||'')===key).length;
-    if(inUse>0){ openAlertModal(`Can't delete "${line.label}" — ${inUse} order(s) still use it. Move or complete them first.`); return; }
+    const usingOrders = activeOrders().filter(o=>(o.courierService||'')===key);
+    const inUse = usingOrders.length;
+    if(inUse>0){
+      const names = usingOrders.slice(0, 6).map(o=>`${o.orderNumber||o.id}${o.customer?' ('+o.customer+')':''}`).join(', ') + (inUse>6 ? ` and ${inUse-6} more` : '');
+      openAlertModal({title:"Can't delete this list yet", message:`"${line.label}" is still the delivery method of ${inUse} active order${inUse===1?'':'s'}:\n${names}\n\nOpen ${inUse===1?'that order':'those orders'}, change the delivery method (or complete ${inUse===1?'it':'them'}), then delete the list.`, _returnTo:'managelines'});
+      return;
+    }
     openConfirmModal({
       title: 'Delete list', danger: true, confirmLabel: 'Delete', keepParentModal: true,
       message: `Delete "${line.label}"? This cannot be undone.`,

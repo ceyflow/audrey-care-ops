@@ -20543,9 +20543,33 @@ function lineBlockedModal(){
         </div>`).join('')}
         ${b.more ? `<div class="hint">…and ${b.more} more.</div>` : ''}
       </div>
-      <div class="modal-actions"><button type="button" class="btn" id="btn-line-blocked-back">Back</button></div>
+      <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;">
+        <button type="button" class="btn" id="btn-line-blocked-back">Back</button>
+        ${b.canDelete ? `<button type="button" class="btn btn-danger" id="btn-line-delete-with-orders">Delete the list and ${n===1?'this order':'these '+n+' orders'}</button>` : ''}
+      </div>
     </div>
   </div>`;
+}
+// Deletes the delivery list AND every active order still set to it (the owner asked for exactly this). Archived orders are left alone.
+function deleteLineWithOrders(){
+  const b = state._lineBlock; if(!b) return;
+  const key = b.key;
+  const victims = activeOrders().filter(o=>(o.courierService||'')===key);
+  const names = victims.slice(0, 6).map(o=>`${o.orderNumber||o.id}${o.customer?' ('+o.customer+')':''}`).join(', ') + (victims.length>6 ? ` and ${victims.length-6} more` : '');
+  openConfirmModal({
+    title: 'Delete the list and its orders?', danger: true, confirmLabel: 'Delete list and orders', _returnTo: null,
+    message: `This permanently deletes "${b.label}" and ${victims.length} active order${victims.length===1?'':'s'}:\n${names}\n\nThis cannot be undone.`,
+    onConfirm: async ()=>{
+      const ids = new Set(victims.map(o=>o.id));
+      state.orders = state.orders.filter(o=>!ids.has(o.id));
+      if(!(await save('orders'))) return;
+      state.deliveryLines = state.deliveryLines.filter(l=>l.key!==key);
+      state._deliveryLinesDraft = null; state._lineBlock = null;
+      await save('deliveryLines');
+      logActivity(`Deleted delivery list "${b.label}" with ${victims.length} order${victims.length===1?'':'s'}: ${names}`);
+      showToast('List and orders deleted');
+    },
+  });
 }
 
 function manageStaffCategoriesModal(){
@@ -22594,7 +22618,7 @@ function attachShellHandlers(){
     if(inUse>0){
       // Orders on a hidden / removed list are not drawn on the boards, so there would be no way to find them: this panel
       // lists them with an "Open order" button (the order's own panel is where its delivery method is changed).
-      state._lineBlock = {label: line.label, orders: usingOrders.slice(0, 12).map(o=>({id:o.id, number:o.orderNumber||o.id, customer:o.customer||''})), more: Math.max(0, inUse-12)};
+      state._lineBlock = {key, label: line.label, canDelete: !!(state.session && roleCan(state.session.role, 'orders_delete')), orders: usingOrders.slice(0, 12).map(o=>({id:o.id, number:o.orderNumber||o.id, customer:o.customer||''})), more: Math.max(0, inUse-12)};
       state.modal = 'lineblocked'; render();
       return;
     }
@@ -22607,6 +22631,7 @@ function attachShellHandlers(){
     });
   }));
   if(byIdEl('btn-line-blocked-back')) byIdEl('btn-line-blocked-back').onclick = ()=>{ state.modal = 'managelines'; render(); };
+  if(byIdEl('btn-line-delete-with-orders')) byIdEl('btn-line-delete-with-orders').onclick = deleteLineWithOrders;
   document.querySelectorAll('[data-open-blocked-order]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.openBlockedOrder; state._lineBlock = null; openModal('order:'+id); }));
   if(byIdEl('btn-save-delivery-lines')) byIdEl('btn-save-delivery-lines').onclick = async ()=>{
     const list = document.querySelector('.nav-order-list[data-nav-group="deliverylines"]');

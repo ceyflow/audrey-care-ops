@@ -108,6 +108,15 @@ html{ visibility:hidden; }
 
   /* ---------------- Shell / Sidebar ---------------- */
   .shell{display:flex;min-height:100vh;}
+  /* Lite mode (owner's older working PC felt slow): no frosted-glass blur anywhere, no fixed-background repaint on scroll, no
+     endless decorative animations; the translucent header/overlay get a more solid fill so text stays readable without the blur. */
+  html.lite *, html.lite *::before, html.lite *::after{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}
+  html.lite body{background-attachment:scroll !important;}
+  html.lite .pulse-dot, html.lite .cob-col-icon{animation:none !important;}
+  html.lite .topbar{background:rgba(255,255,255,.94);}
+  html.lite .sidebar{background:rgba(247,250,248,.97);}
+  html.lite .overlay, html.lite .drawer-overlay, html.lite .notes-due-overlay, html.lite .admin-broadcast-overlay{background:rgba(20,25,20,.55);}
+  html.lite .session-chip{background:rgba(255,255,255,.85);}
   .shell-enter{animation:shell-enter .35s ease-out;}
   @keyframes shell-enter{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   .sidebar{
@@ -2368,7 +2377,8 @@ html{ visibility:hidden; }
     .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(1){animation-delay:.14s;}
     .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(2){animation-delay:.19s;}
     .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(3){animation-delay:.24s;}
-    .header-right-links.open.anim .header-menu-group:not(.acct) .header-menu-item{animation-delay:.3s;}
+    .header-right-links.open.anim .header-menu-group.acct .header-menu-item:nth-child(4){animation-delay:.29s;}
+    .header-right-links.open.anim .header-menu-group:not(.acct) .header-menu-item{animation-delay:.35s;}
     @keyframes drawer-item-in{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:none;}}
     .shell.menu-open .topbar{z-index:60;}
     @keyframes drawer-in{from{transform:translateX(-104%);box-shadow:0 0 0 rgba(19,32,30,0);}to{transform:none;box-shadow:0 0 44px rgba(19,32,30,.28);}}
@@ -6619,6 +6629,7 @@ async function loadAll(){
   if(state.page==='recipes') startBatchTicker();
   subscribeRealtime();
   shrinkOversizedLoginHeroPhotoIfNeeded(); // fire-and-forget, see its own comment
+  setTimeout(shrinkOversizedStaffPhotosIfNeeded, 4000); // fire-and-forget, after the page has settled
   // Customer-facing tracking page: while a CityPak shipment is still in transit, silently
   // re-poll for new tracking events so the page updates live without needing a manual reload.
   // Stops itself once the shipment is marked delivered.
@@ -8088,6 +8099,36 @@ function dataUrlApproxBytes(dataUrl){
 // which is exactly what made the site feel slow after someone uploaded a real phone photo as the
 // login hero background. Runs after the normal render so it never delays the page the user is
 // looking at; only an admin-capable session can write the fix back.
+// Re-draws an image (as a data: address) no bigger than maxDim and returns the smaller JPEG; never returns something bigger than the input.
+async function downscaleDataUrl(dataUrl, maxDim, quality){
+  const img = new Image();
+  await new Promise((resolve, reject)=>{ img.onload = resolve; img.onerror = reject; img.src = dataUrl; });
+  let w = img.naturalWidth, h = img.naturalHeight;
+  if(w > maxDim || h > maxDim){ const k = maxDim/Math.max(w,h); w = Math.max(1, Math.round(w*k)); h = Math.max(1, Math.round(h*k)); }
+  const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  const out = canvas.toDataURL('image/jpeg', quality);
+  return dataUrlApproxBytes(out) < dataUrlApproxBytes(dataUrl) ? out : dataUrl;
+}
+// One-time self-heal (Admin's browser only), same idea as the login hero photo below: staff pictures used to be saved as the full
+// camera photo (60-225 KB each, 1.4 MB for eight people) INSIDE the shared "staff" data, which every sign-in downloads, every live
+// update re-sends, and which gets pasted into the page again on every redraw. That made slower PCs sluggish. Anything over 30 KB is
+// re-drawn at 256px (about 15 KB); smaller ones are left alone.
+async function shrinkOversizedStaffPhotosIfNeeded(){
+  try{
+    if(!isAdmin() || !Array.isArray(state.staff)) return;
+    const big = state.staff.filter(s=>typeof s.photo==='string' && s.photo.startsWith('data:image') && dataUrlApproxBytes(s.photo) > 30*1024);
+    if(!big.length) return;
+    let changed = 0;
+    for(const s of big){
+      try{ const smaller = await downscaleDataUrl(s.photo, 256, 0.82); if(smaller !== s.photo){ s.photo = smaller; changed++; } }catch(e){ /* leave that one as it is */ }
+    }
+    if(!changed) return;
+    await saveQuietly('staff');
+    console.log('Shrank ' + changed + ' oversized staff picture(s) automatically (they made every load and refresh heavy).');
+    render();
+  }catch(e){ console.error('shrinkOversizedStaffPhotosIfNeeded failed', e); }
+}
 async function shrinkOversizedLoginHeroPhotoIfNeeded(){
   try{
     if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
@@ -8576,7 +8617,7 @@ function removeStaffMember(id){
 async function uploadStaffPhoto(staffId, file){
   const s = byId(state.staff, staffId); if(!s || !file) return;
   let dataUrl;
-  try{ dataUrl = await fileToDataUrl(file); }
+  try{ dataUrl = await downscaleDataUrl(await fileToDataUrl(file), 256, 0.82); } // small avatar, not the full camera photo
   catch(e){ showToast('Could not read that file'); return; }
   s.photo = dataUrl;
   if(!(await save('staff'))) return;
@@ -12514,6 +12555,23 @@ function attachProfileHandlers(){
   loadMyProfile();
 }
 
+/* ===================== Lite mode (older PCs) ===================== */
+// Per device, stored in this browser. No saved choice -> switched on automatically only on a weak-looking machine
+// (4 or fewer CPU cores, or 4 GB or less memory); the account menu has a switch to flip it either way.
+function liteModeOn(){
+  try{ const v = localStorage.getItem('audrey_lite'); if(v === '1') return true; if(v === '0') return false; }catch(e){}
+  return !!((navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 4));
+}
+function applyLiteMode(){ document.documentElement.classList.toggle('lite', liteModeOn()); }
+function toggleLiteMode(){
+  const on = !liteModeOn();
+  try{ localStorage.setItem('audrey_lite', on ? '1' : '0'); }catch(e){}
+  applyLiteMode();
+  render();
+  showToast(on ? 'Lite mode is on: lighter look, faster on older PCs' : 'Lite mode is off');
+}
+applyLiteMode();
+
 const PAGE_META = {
   dashboard:{title:'Dashboard', sub:"Here's what's happening today."},
   orders:{title:'Orders board', sub:'Track every order from received to delivered.'},
@@ -12638,6 +12696,7 @@ function renderShell(freshPage){
             <div class="header-menu-group-label">Account</div>
             <div class="header-menu-group acct">
               <button class="header-menu-item" id="btn-profile-details"><span class="header-menu-item-icon">${icon('customers')}</span><span>Profile details</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+              <button class="header-menu-item" id="btn-lite-mode"><span class="header-menu-item-icon">${icon('settings')}</span><span>Lite mode: ${liteModeOn()?'On':'Off'}</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
               ${isAdmin() ? `<button class="header-menu-item" id="btn-activity-log"><span class="header-menu-item-icon">${icon('clock')}</span><span>Activity log</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
               ${(state.session.staffName || (state.auth.migratedToSupabaseAuth && ['Blending','Packing'].includes(state.session.role))) ? `<button class="header-menu-item" id="btn-change-password"><span class="header-menu-item-icon">${icon('fingerprint')}</span><span>Change password</span><svg class="header-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6CBC9" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>` : ''}
             </div>
@@ -21994,6 +22053,7 @@ function attachCostingBatchColorPicker(){
 // (topbar button always; the modal's empty-state or chat-header orb only while Dally is open).
 let _dallyOrbInstances = {};
 function mountDallyOrbs(){
+  if(liteModeOn()){ Object.keys(_dallyOrbInstances).forEach(id=>{ try{ _dallyOrbInstances[id].destroy(); }catch(e){} delete _dallyOrbInstances[id]; }); return; } // Lite mode: the animated orb is a constant CPU cost
   ['dally-orb-topbar','dally-orb-empty','dally-orb-header'].forEach(id=>{
     if(_dallyOrbInstances[id]){ try{ _dallyOrbInstances[id].destroy(); }catch(e){} delete _dallyOrbInstances[id]; }
     const el = document.getElementById(id);
@@ -22303,6 +22363,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-open-aibot')) byIdEl('btn-open-aibot').onclick = ()=>openModal('aibot');
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
   if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
+  if(byIdEl('btn-lite-mode')) byIdEl('btn-lite-mode').onclick = toggleLiteMode;
   document.querySelectorAll('[data-delete-login]').forEach(b=>b.addEventListener('click', ()=>deleteLoginEntry(b.dataset.deleteLogin)));
   if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;

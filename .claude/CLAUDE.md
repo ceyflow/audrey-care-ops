@@ -140,3 +140,12 @@ Keep these true when changing the app. Details and the audit are in the owner's 
 - **Profile drawer / panel animation.** The drawer's slide-in plays only on the opening render (`state._headerMenuAnim` -> `.anim`),
   never when the page re-renders behind it; closing slides out first (`closeHeaderMenuAnimated`), and the Profile details panel
   slides in from the right on phones and slides out (`closeProfileAnimated`) before it is removed.
+- **Speed on older PCs (owner, 2026-11-13).** Two things made the app sluggish on the owner's working PC: (1) staff pictures were saved as the
+  full camera photo (60-225 KB each, 1.4 MB for eight people) INSIDE the shared `staff` data, so every sign-in downloads it, every live
+  update re-sends it and every redraw pastes it into the page again. Staff photos are now stored at 256px (about 15 KB):
+  `uploadStaffPhoto` downscales, and `shrinkOversizedStaffPhotosIfNeeded()` (Admin's browser, once, after load) shrinks old ones.
+  NEVER store a full-size image inside shared `app_data` rows (branding's login hero photo is the other known case). (2) The frosted-glass
+  blur (`backdrop-filter`), the fixed page background and the animated orb are costly on weak graphics. **Lite mode** (`html.lite`,
+  `liteModeOn()` / `toggleLiteMode()`, switch in the account links / drawer, remembered per browser in `localStorage audrey_lite`)
+  removes them; it switches on by itself on machines with 4 or fewer CPU cores or 4 GB or less memory unless the person chose Off.
+  Measured with a slowed CPU and software rendering: scrolling a long page went from about 21 to 60 frames per second.

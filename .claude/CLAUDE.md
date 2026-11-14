@@ -166,5 +166,14 @@ Keep these true when changing the app. Details and the audit are in the owner's 
     click / Close); every other role can reply or press Close. The reply goes into the same chat as a reply to that message. Not shown while the person
     is watching that conversation. The page/menu is named "Chat"; the group conversation inside it is still "Team chat". Old @mentions, pins, chat
     themes and "Delete chat history" were not carried over.
+  * **Phone notifications (owner, 2026-11-14, Web Push).** Each person turns them on once per phone/browser from the banner / bell on the Chat list (the browser
+    asks only after a tap; iPhone needs the app added to the Home Screen first, iOS 16.4+). The device is stored by `push_subscribe` (table
+    `push_subscriptions`, no direct access; `push_unsubscribe` just switches it off). After each message the SENDER's app calls the Edge Function `chat-push`
+    (source `supabase/functions/chat-push/`, JWT verified): it only accepts the sender's own message from the last 10 minutes, once (`chat_messages.pushed_at`),
+    and sends to the chat's members who have chat access (`chat_push_targets`, service role only; Team chat = everyone with chat access except the sender).
+    The signing (VAPID) keys are in `private.push_vapid`, readable only through the service-role function `push_vapid_keys()` (NOT an Edge Function secret,
+    so no one has to type it); the public key is in `index.html` (`PUSH_PUBLIC_KEY`). `sw.js` shows the notification (always, because iPhone requires it; silent
+    + tidied away when the app is open) and a tap opens `?chat=<id>#chat`. Signing out switches this phone off for that person (`pushUnregister`); the next
+    sign-in registers it again. Dead phones (404/410) are switched off automatically. If the keys are ever replaced, everyone has to turn notifications on again.
   * Phone layout is one pane at a time, full screen (header/tab bar hidden on `page-chat`), padded with `env(safe-area-inset-*)`; on a PC the list and the
     conversation sit side by side. No popup notice is shown while the chat page itself is open (the list shows unread badges).

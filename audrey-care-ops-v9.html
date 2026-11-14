@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114103000">
+<meta name="app-build" content="20261114110500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -171,7 +171,6 @@ html{ visibility:hidden; }
   .wa-head-sub.wa-typing{color:#128c4a;font-weight:600;}
   .wa-back{display:none;align-items:center;justify-content:center;width:34px;height:34px;flex-shrink:0;border:none;background:none;color:var(--ink);padding:0;cursor:pointer;margin-left:-6px;}
   .wa-back svg{width:22px;height:22px;transform:rotate(180deg);}
-  .wa-back-always{display:flex !important;}
   .wa-ibtn{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
   .wa-ibtn:hover{background:var(--bg);}
   .wa-search{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -193,14 +192,12 @@ html{ visibility:hidden; }
   .wa-av,.wa-av-wrap{display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;overflow:hidden;}
   .wa-av{font-size:20px;}
   .wa-av-team{background:#dff7e8;}
-  .wa-av-mon{background:#e8eefc;}
   .wa-empty{margin:auto;text-align:center;padding:30px;max-width:340px;color:#54656f;}
   .wa-empty-ico{font-size:46px;}
   .wa-empty-t{font-weight:700;font-size:20px;margin:8px 0 4px;color:#111b21;}
   .wa-empty-s{font-size:14px;line-height:1.5;}
   .wa-scroll{flex:1;overflow-y:auto;min-height:0;padding:12px 6% 8px;display:flex;flex-direction:column;gap:2px;}
   .wa-info{align-self:center;max-width:520px;text-align:center;background:#fff3c4;color:#54482a;border-radius:10px;padding:7px 12px;font-size:12px;line-height:1.45;margin:4px 0 8px;}
-  .wa-info-warn{background:#ffe3df;color:#7a2a20;}
   .wa-loading{align-self:center;color:#54656f;font-size:13px;padding:14px;}
   .wa-earlier{align-self:center;border:none;background:#fff;color:var(--accent-dark);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,.12);}
   .wa-day{align-self:center;margin:10px 0 6px;}
@@ -251,9 +248,6 @@ html{ visibility:hidden; }
   .wa-composer textarea{flex:1;border:none;outline:none;resize:none;border-radius:22px;padding:10px 15px;font:inherit;font-size:15px;line-height:1.35;max-height:130px;background:#fff;color:#111b21;}
   .wa-send{width:44px;height:44px;border-radius:50%;border:none;background:#25d366;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .wa-send svg{width:20px;height:20px;}
-  .wa-mon .wa-row{background:#fff;}
-  .wa-hist{padding:8px 16px;font-size:13px;color:#54656f;background:#fff;border-bottom:1px solid var(--border);}
-  .wa-hist span{display:block;font-size:11.5px;color:#8696a0;}
   .chat-notice{position:fixed;top:calc(20px + env(safe-area-inset-top));right:22px;background:#fff;border:1px solid var(--border);border-left:5px solid var(--accent);color:var(--ink);padding:18px 22px;border-radius:12px;display:flex;align-items:flex-start;gap:14px;max-width:440px;min-width:300px;box-shadow:0 18px 44px rgba(30,60,40,.2);z-index:320;cursor:pointer;animation:toast-in .28s ease;}
   .chat-notice:hover{background:var(--bg);}
   .chat-notice-icon{font-size:26px;line-height:1;margin-top:1px;}
@@ -9522,7 +9516,7 @@ async function addComplaintUpdate(id){
 /* ===================== Chat (WhatsApp-style) =====================
    Team chat + private 1-to-1 chats. Everything lives in database tables (chat_threads / chat_messages /
    chat_reads / chat_reactions) and is reached ONLY through the chat_* functions; the database decides who may
-   read what. Admin can read private chats only through the read-only Monitor, and every opening is logged.
+   read what. Nobody (Admin included) can read a private chat they are not part of.
    Messages older than 90 days are invisible to everyone and removed by the chat-purge function.
    The old Team chat (app_data key 'chat') was copied into the Team thread and is kept untouched as a backup. */
 const C2_TEAM = '00000000-0000-0000-0000-00000000c0de';
@@ -9533,7 +9527,7 @@ function c2(){
   if(!state._c2) state._c2 = {
     booted:false, meId:null, threads:[], people:[], msgs:[], reads:{}, reacts:{}, cur:null, view:'list', contacts:false,
     search:'', draft:{}, replyTo:null, editing:null, menuFor:null, hasMore:false, loading:false, typing:{},
-    mon:{threads:null, history:null, open:null, msgs:null, busy:false}, chan:null, tch:null, tchId:null,
+    chan:null, tch:null, tchId:null,
   };
   return state._c2;
 }
@@ -9801,7 +9795,6 @@ async function c2Enter(){
   s._in = true;
   // arriving from the menu always starts at the chat list (or at the chat a popup pointed to)
   s.view = 'list'; s.cur = null; s.msgs = []; s.contacts = false; s.search = ''; s.menuFor = null; s.replyTo = null; s.editing = null;
-  s.mon.open = null; s.mon.msgs = null;
   c2TypingLeave();
   state.chatUnread = c2TotalUnread() > 0;
   if(!s.booted) await c2Boot(); else c2Resync();
@@ -9906,7 +9899,6 @@ async function c2LoadEarlier(){
 function c2Back(){
   const s = c2();
   s.view = 'list'; s.contacts = false; s.menuFor = null; s.replyTo = null; s.editing = null;
-  s.mon.open = null; s.mon.msgs = null;
   s.cur = null; s.msgs = [];
   c2TypingLeave();
   render();
@@ -10079,40 +10071,6 @@ async function c2StartDm(otherId){
   }catch(e){ showToast(c2Err(e), 4000); }
 }
 
-// ---- Admin monitor (read-only, every opening is logged) -------------------------------------------
-async function c2MonitorOpenList(){
-  const s = c2();
-  s.view = 'monitor'; s.mon.open = null; s.mon.msgs = null; s.mon.busy = true; s.cur = null; s.menuFor = null;
-  render();
-  try{
-    const [t, h] = await Promise.all([c2Rpc('chat_monitor_threads'), c2Rpc('chat_monitor_history')]);
-    s.mon.threads = t || []; s.mon.history = h || [];
-  }catch(e){ showToast(c2Err(e), 4000); s.mon.threads = s.mon.threads || []; s.mon.history = s.mon.history || []; }
-  s.mon.busy = false;
-  render();
-}
-function c2MonitorAsk(id){
-  const s = c2();
-  const th = (s.mon.threads || []).find(x=>x.id === id);
-  if(!th) return;
-  openConfirmModal({
-    title:'Read a private chat', confirmLabel:'Open (logged)',
-    message:'You are about to read the private chat between ' + th.aName + ' and ' + th.bName + '. This is read-only, and the opening is recorded with your name and the time.',
-    onConfirm: ()=>c2MonitorOpen(id),
-  });
-}
-async function c2MonitorOpen(id){
-  const s = c2();
-  s.mon.open = id; s.mon.msgs = null; s.mon.busy = true; render();
-  try{
-    s.mon.msgs = await c2Rpc('chat_monitor_open', {p_thread:id});
-    s.mon.history = await c2Rpc('chat_monitor_history').catch(()=>s.mon.history);
-  }catch(e){ showToast(c2Err(e), 4000); s.mon.open = null; }
-  s.mon.busy = false;
-  render();
-  c2ScrollBottom();
-}
-
 // ---- rendering -----------------------------------------------------------------------------------
 function c2Avatar(t, size){
   if(t && t.kind === 'team') return '<span class="wa-av wa-av-team" style="width:'+size+'px;height:'+size+'px;">\u{1F465}</span>';
@@ -10126,7 +10084,7 @@ function renderChat2Page(){
   return `
   <div class="wa ${open ? 'wa-open' : ''}" id="wa-root">
     <aside class="wa-side">${renderChat2List()}</aside>
-    <section class="wa-main">${s.view === 'monitor' ? renderChat2MonitorMain() : (s.cur ? renderChat2Conversation() : renderChat2Empty())}</section>
+    <section class="wa-main">${s.cur ? renderChat2Conversation() : renderChat2Empty()}</section>
   </div>`;
 }
 function renderChat2Empty(){
@@ -10164,12 +10122,6 @@ function renderChat2List(){
           <span class="wa-row-top"><span class="wa-row-sub ${l && l.removed ? 'wa-removed':''}">${esc(c2Preview(t))}</span>${t.unread ? `<span class="wa-badge">${t.unread > 99 ? '99+' : t.unread}</span>` : ''}</span>
         </span></button>`;
     }).join('') || `<div class="wa-none">No chats found.</div>`;
-    if(isAdmin() && !q){
-      body += `<div class="wa-sec">Admin</div>
-        <button type="button" class="wa-row ${s.view==='monitor'?'wa-row-on':''}" data-wa-monitor="1">
-          <span class="wa-av wa-av-mon" style="width:46px;height:46px;">\u{1F6E1}️</span>
-          <span class="wa-row-main"><span class="wa-row-name">Monitor private chats</span><span class="wa-row-sub">Read-only · every opening is logged</span></span></button>`;
-    }
   }
   return `
     <div class="wa-head wa-head-list">
@@ -10250,7 +10202,7 @@ function renderChat2Conversation(){
   });
   const info = t.kind === 'team'
     ? '\u{1F4C5} Messages older than 90 days are deleted automatically.'
-    : '\u{1F512} Only you two can see this chat. Admins can review private chats for safety — every review is logged. Messages are deleted after 90 days.';
+    : '\u{1F512} Only you two can see this chat. Messages are deleted after 90 days.';
   const draft = s.draft[s.cur] || '';
   const reply = s.replyTo, editing = s.editing && s.msgs.find(x=>x.id === s.editing);
   return `
@@ -10271,46 +10223,6 @@ function renderChat2Conversation(){
       <button type="submit" class="wa-send" aria-label="Send">${icon('send')}</button>
     </form>`;
 }
-function renderChat2MonitorMain(){
-  const s = c2();
-  const mon = s.mon;
-  const th = mon.open ? (mon.threads || []).find(x=>x.id === mon.open) : null;
-  if(!th){
-    const hist = (mon.history || []).slice(0, 12);
-    return `
-    <div class="wa-head"><button type="button" class="wa-back wa-back-always" id="wa-back" aria-label="Back to chats">${icon('chevron')}</button>
-      <span class="wa-av wa-av-mon" style="width:40px;height:40px;">\u{1F6E1}️</span>
-      <div class="wa-head-main"><div class="wa-head-name">Monitor private chats</div><div class="wa-head-sub">Read-only · every opening is logged</div></div></div>
-    <div class="wa-scroll wa-mon">
-      <div class="wa-info">Choose a private chat to read. Staff are told that Admins can review private chats, and each opening is saved below with your name and time.</div>
-      ${mon.busy && !mon.threads ? '<div class="wa-loading">Loading…</div>' : ''}
-      ${(mon.threads || []).map(x=>`<button type="button" class="wa-row" data-wa-mon-open="${x.id}">
-        <span class="wa-av wa-av-mon" style="width:42px;height:42px;">\u{1F4AC}</span>
-        <span class="wa-row-main"><span class="wa-row-top"><span class="wa-row-name">${esc(x.aName)} ↔ ${esc(x.bName)}</span><span class="wa-row-time">${x.lastAt ? esc(c2ListTime(x.lastAt)) : ''}</span></span>
-        <span class="wa-row-sub">${x.count} message${x.count===1?'':'s'} in the last 90 days</span></span></button>`).join('') || (mon.threads ? '<div class="wa-none">No private chats yet.</div>' : '')}
-      <div class="wa-sec">Recent openings</div>
-      ${hist.length ? hist.map(h=>{ const x = (mon.threads||[]).find(z=>z.id===h.thread); return `<div class="wa-hist"><b>${esc(h.admin||'')}</b> opened ${x ? esc(x.aName)+' ↔ '+esc(x.bName) : 'a chat'} <span>${esc(c2DayLabel(h.at))}, ${esc(fmtTimeOnly(h.at))}</span></div>`; }).join('') : '<div class="wa-none">Nothing opened yet.</div>'}
-    </div>`;
-  }
-  let html = '', lastDay = null;
-  (mon.msgs || []).forEach(m=>{
-    const day = c2DayKey(m.at);
-    if(day !== lastDay){ html += `<div class="wa-day"><span>${esc(c2DayLabel(m.at))}</span></div>`; lastDay = day; }
-    const left = m.sender === th.aId;
-    html += `<div class="wa-msg ${left ? 'wa-theirs' : 'wa-mine'}"><div class="wa-bub ${m.removed ? 'wa-bub-removed' : ''}"><div class="wa-sender">${esc(m.senderName||'')}</div>
-      ${m.removed ? '<span class="wa-del-txt">\u{1F6AB} Deleted by sender</span>' : `<span class="wa-txt">${c2LinkText(m.body)}</span>`}
-      <span class="wa-meta">${m.editedAt && !m.removed ? 'edited · ' : ''}${esc(fmtTimeOnly(m.at))}</span></div></div>`;
-  });
-  return `
-    <div class="wa-head"><button type="button" class="wa-back wa-back-always" id="wa-mon-back" aria-label="Back">${icon('chevron')}</button>
-      <span class="wa-av wa-av-mon" style="width:40px;height:40px;">\u{1F6E1}️</span>
-      <div class="wa-head-main"><div class="wa-head-name">${esc(th.aName)} ↔ ${esc(th.bName)}</div><div class="wa-head-sub">Read-only · this opening was logged</div></div></div>
-    <div id="chat-messages" class="wa-scroll wa-mon">
-      <div class="wa-info wa-info-warn">\u{1F441}️ You are reading a private chat as Admin. Nothing here can be changed or replied to.</div>
-      ${mon.busy && !mon.msgs ? '<div class="wa-loading">Loading…</div>' : (html || '<div class="wa-loading">No messages in the last 90 days.</div>')}
-    </div>`;
-}
-
 // ---- event wiring (called from attachShellHandlers after every render) --------------------------------
 function attachChat2Handlers(){
   const byIdEl = id => document.getElementById(id);
@@ -10319,12 +10231,9 @@ function attachChat2Handlers(){
   const on = (sel, ev, fn)=>document.querySelectorAll(sel).forEach(el=>el.addEventListener(ev, fn));
   on('[data-wa-open]', 'click', e=>c2Open(e.currentTarget.dataset.waOpen));
   on('[data-wa-dm]', 'click', e=>c2StartDm(e.currentTarget.dataset.waDm));
-  on('[data-wa-monitor]', 'click', ()=>c2MonitorOpenList());
-  on('[data-wa-mon-open]', 'click', e=>c2MonitorAsk(e.currentTarget.dataset.waMonOpen));
   if(byIdEl('wa-new')) byIdEl('wa-new').onclick = ()=>{ s.contacts = true; s.search = ''; render(); const i = byIdEl('wa-search'); if(i) i.focus(); };
   if(byIdEl('wa-contacts-close')) byIdEl('wa-contacts-close').onclick = ()=>{ s.contacts = false; s.search = ''; render(); };
   if(byIdEl('wa-back')) byIdEl('wa-back').onclick = c2Back;
-  if(byIdEl('wa-mon-back')) byIdEl('wa-mon-back').onclick = ()=>{ s.mon.open = null; s.mon.msgs = null; render(); };
   if(byIdEl('wa-earlier')) byIdEl('wa-earlier').onclick = c2LoadEarlier;
   if(byIdEl('wa-cancel-banner')) byIdEl('wa-cancel-banner').onclick = ()=>{ if(s.editing) c2CancelEdit(); else { s.replyTo = null; render(); } };
   const search = byIdEl('wa-search');

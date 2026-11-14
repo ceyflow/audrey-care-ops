@@ -57,3 +57,43 @@ self.addEventListener('fetch', event => {
     }
   })());
 });
+
+/* ---------- Chat notifications (Web Push) ----------
+   The chat-push function sends { title, body, thread, tag } to every registered phone/browser of the people in a chat.
+   Every push must show a notification (iPhone insists on it); when the app is already open and visible it is shown
+   silently and tidied away after a few seconds. Tapping it opens the chat. */
+self.addEventListener('push', event => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data ? event.data.text() : '' }; }
+  const title = d.title || 'Audrey Care';
+  const tag = d.tag || 'chat';
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const watching = wins.some(w => w.visibilityState === 'visible');
+    const icon = new URL('assets/icons/icon-192.png', self.location).href;
+    await self.registration.showNotification(title, {
+      body: d.body || '', tag, renotify: true, icon, badge: icon, silent: watching,
+      data: { thread: d.thread || null },
+    });
+    if (watching) {
+      await new Promise(r => setTimeout(r, 3500));
+      const shown = await self.registration.getNotifications({ tag });
+      shown.forEach(n => n.close());
+    }
+  })());
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const thread = event.notification.data && event.notification.data.thread;
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const w of wins) {
+      if ('focus' in w) { await w.focus(); w.postMessage({ type: 'open-chat', thread }); return; }
+    }
+    const url = new URL('./', self.location);
+    if (thread) url.searchParams.set('chat', thread);
+    url.hash = 'chat';
+    await self.clients.openWindow(url.href);
+  })());
+});

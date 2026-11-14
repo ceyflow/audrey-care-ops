@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114121500">
+<meta name="app-build" content="20261114133000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -210,6 +210,11 @@ html{ visibility:hidden; }
   .wa-theirs{align-self:flex-start;align-items:flex-start;}
   .wa-bub{position:relative;background:#fff;color:#111b21;border-radius:10px;padding:6px 9px 5px;box-shadow:0 1px 1px rgba(0,0,0,.13);font-size:14.5px;line-height:1.38;word-break:break-word;cursor:pointer;min-width:64px;}
   .wa-mine .wa-bub{background:#d9fdd3;}
+  .wa-push{display:flex;align-items:center;gap:8px;margin:8px 12px 0;padding:9px 10px 9px 12px;background:#e8f7ee;border:1px solid #bfe6cd;border-radius:12px;font-size:13px;line-height:1.4;color:#1d4d33;}
+  .wa-push-t{flex:1;min-width:0;}
+  .wa-push-on{border:none;background:#25d366;color:#fff;font-weight:700;border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;flex-shrink:0;}
+  .wa-push-x{border:none;background:none;color:#1d4d33;font-size:15px;cursor:pointer;width:26px;height:26px;flex-shrink:0;}
+  .wa-bell{margin-right:6px;}
   .wa-bub-removed{background:#f3f3f3 !important;color:#6b7280;}
   .wa-del-txt{font-style:italic;font-size:13.5px;}
   .wa-txt{white-space:pre-wrap;}
@@ -6690,7 +6695,14 @@ async function loadAll(){
   // until something else happened to trigger a re-render.
   if(state.page==='recipes') startBatchTicker();
   subscribeRealtime();
-  if(state.session){ if(state.page==='chat') c2Enter(); else c2Boot(); }
+  if(state.session){
+    // opened from a tapped notification: ?chat=<conversation>#chat
+    try{
+      const want = new URLSearchParams(location.search).get('chat');
+      if(want && /^[0-9a-f-]{36}$/i.test(want)){ c2().openAfter = want; history.replaceState(null, '', location.pathname + '#chat'); }
+    }catch(e){}
+    if(state.page==='chat') c2Enter(); else c2Boot();
+  }
   shrinkOversizedLoginHeroPhotoIfNeeded(); // fire-and-forget, see its own comment
   setTimeout(shrinkOversizedStaffPhotosIfNeeded, 4000); // fire-and-forget, after the page has settled
   // Customer-facing tracking page: while a CityPak shipment is still in transit, silently
@@ -7292,8 +7304,9 @@ async function sendAdminBroadcastReply(e){
   if(!text) return;
   const b = state.adminBroadcast;
   try{
-    await c2Rpc('chat_send', {p_thread: (b && b.thread) || C2_TEAM, p_body: text, p_reply_to: b && /^[0-9a-f-]{36}$/i.test(String(b.id)) ? b.id : null});
+    const sent = await c2Rpc('chat_send', {p_thread: (b && b.thread) || C2_TEAM, p_body: text, p_reply_to: b && /^[0-9a-f-]{36}$/i.test(String(b.id)) ? b.id : null});
     state.adminBroadcast = null;
+    c2PushKick(sent && sent.id);
     render();
   }catch(err){ showToast(c2Err(err), 4000); }
 }
@@ -7457,6 +7470,7 @@ async function confirmLoginV2(){
 }
 async function logOut(){
   state.session = null; state._pendingRole = null;
+  await pushUnregister();
   c2Reset();
   state.aiChat = [];
   state._rndAttCal = null;
@@ -9612,6 +9626,7 @@ async function c2Boot(){
     await c2LoadOverview();
     c2Subscribe();
     c2MaybePurge();
+    pushRefresh();
   }catch(e){ s.booted = false; s.bootErr = c2Err(e); console.error('chat boot failed', e); if(state.page === 'chat') render(); }
 }
 function c2Reset(){
@@ -9961,6 +9976,7 @@ async function c2Send(retryText){
   c2RenderKeep(); c2ScrollBottom();
   try{
     const m = await c2Rpc('chat_send', {p_thread:threadId, p_body:text, p_reply_to: reply ? reply.id : null});
+    c2PushKick(m.id);
     const i = s.msgs.findIndex(x=>x.id === tmp.id);
     const dup = s.msgs.some(x=>x.id === m.id);
     if(i >= 0){ if(dup) s.msgs.splice(i,1); else s.msgs[i] = m; }
@@ -10130,8 +10146,9 @@ function renderChat2List(){
       <div class="wa-head-title">${s.contacts ? 'New chat' : 'Chats'}</div>
       ${s.contacts
         ? `<button type="button" class="wa-ibtn" id="wa-contacts-close" aria-label="Close" title="Close">✕</button>`
-        : `<button type="button" class="wa-ibtn" id="wa-new" aria-label="New chat" title="New chat">✎</button>`}
+        : `${s.pushOn ? `<button type="button" class="wa-ibtn wa-bell" id="wa-push-off" aria-label="Notifications are on" title="Notifications are on for this phone. Tap to turn off">\u{1F514}</button>` : ''}<button type="button" class="wa-ibtn" id="wa-new" aria-label="New chat" title="New chat">✎</button>`}
     </div>
+    ${s.contacts ? '' : c2PushBanner()}
     <div class="wa-search"><input id="wa-search" type="search" placeholder="${s.contacts ? 'Search people' : 'Search chats'}" value="${escAttr(s.search)}" autocomplete="off"></div>
     <div class="wa-list">${body}</div>`;
 }
@@ -10224,6 +10241,99 @@ function renderChat2Conversation(){
       <button type="submit" class="wa-send" aria-label="Send">${icon('send')}</button>
     </form>`;
 }
+// ---- phone notifications (Web Push) ----------------------------------------------------------------
+// The person turns notifications on once per phone/browser (the browser asks permission only after a tap). The device is
+// then registered with the database (push_subscribe) and the sender's app asks the chat-push function to notify the
+// others after each message. The service worker (sw.js) shows the notification. iPhone needs the app added to the Home Screen.
+const PUSH_PUBLIC_KEY = 'BCki9vS85Mh9ZYsVArcYO1NAMCLOc9PXL6E2_Lhq6bk4XJ-7gp6Ru8sBeKAn-Hij2PgRlc7jC_afkZupA7UL0SI';
+function pushB64ToU8(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c=>c.charCodeAt(0));
+}
+function pushIsIos(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function pushIsStandalone(){ return window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); }
+function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:'; }
+function pushDismissed(){ try{ return localStorage.getItem('audrey_push_dismissed') === '1'; }catch(e){ return false; } }
+async function pushSendSubscription(sub){
+  const j = sub.toJSON();
+  await c2Rpc('push_subscribe', {p_endpoint:j.endpoint, p_p256dh:j.keys.p256dh, p_auth:j.keys.auth, p_ua:navigator.userAgent});
+}
+// at sign-in: is this device already registered? Re-register it under the person who is signed in now.
+async function pushRefresh(){
+  const s = c2();
+  s.pushOn = false;
+  if(!pushSupported()) return;
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub && Notification.permission === 'granted'){ await pushSendSubscription(sub); s.pushOn = true; }
+  }catch(e){ console.warn('push refresh failed', e); }
+  if(state.page === 'chat') render();
+}
+async function pushEnable(){
+  const s = c2();
+  try{
+    if(!pushSupported()){ showToast('This phone or browser cannot show app notifications', 5000); return; }
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ s.pushOn = false; render(); showToast(perm === 'denied' ? 'Notifications are blocked. Allow them in your phone settings.' : 'Notifications were not turned on', 5000); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:pushB64ToU8(PUSH_PUBLIC_KEY)});
+    await pushSendSubscription(sub);
+    s.pushOn = true; render(); showToast('Notifications are on for this phone');
+  }catch(e){ showToast('Could not turn on notifications: ' + c2Err(e), 5000); }
+}
+async function pushDisable(){
+  const s = c2();
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){ const ep = sub.endpoint; await c2Rpc('push_unsubscribe', {p_endpoint:ep}).catch(()=>{}); await sub.unsubscribe().catch(()=>{}); }
+  }catch(e){ /* best effort */ }
+  s.pushOn = false; render(); showToast('Notifications are off for this phone');
+}
+// signing out: this phone must stop receiving the previous person's messages (the browser keeps its registration, the
+// database stops using it; the next sign-in registers it again for whoever signs in)
+async function pushUnregister(){
+  try{
+    if(!pushSupported() || !supabaseClient) return;
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, rej)=>setTimeout(()=>rej(new Error('slow')), 1500))]);
+    const sub = await reg.pushManager.getSubscription();
+    if(sub) await Promise.race([c2Rpc('push_unsubscribe', {p_endpoint:sub.endpoint}), new Promise(r=>setTimeout(r, 2500))]);
+  }catch(e){ /* never block signing out */ }
+}
+async function c2PushKick(messageId){
+  try{
+    if(!messageId || !BACKEND_CONFIGURED) return;
+    const h = await functionHeaders(true);
+    if(!h.signedIn) return;
+    fetch(SUPABASE_URL + '/functions/v1/chat-push', {method:'POST', headers:h.headers, body:JSON.stringify({message_id:messageId}), keepalive:true}).catch(()=>{});
+  }catch(e){ /* the message itself is already saved */ }
+}
+function c2PushBanner(){
+  const s = c2();
+  if(s.pushOn || pushDismissed()) return '';
+  let text, btn = '';
+  if(pushIsIos() && !pushIsStandalone()){
+    text = '\u{1F514} To get message notifications on iPhone: tap the Share button, choose <b>Add to Home Screen</b>, then open Audrey Care from the Home Screen and turn notifications on here.';
+  } else if(!pushSupported()){
+    return '';
+  } else if(Notification.permission === 'denied'){
+    text = '\u{1F514} Notifications are blocked for this app. Allow them in your phone settings (Settings \u2192 Notifications \u2192 Audrey Care, or the browser\u2019s site settings).';
+  } else {
+    text = '\u{1F514} Get a notification on this phone when someone messages you.';
+    btn = '<button type="button" class="wa-push-on" id="wa-push-on">Turn on</button>';
+  }
+  return `<div class="wa-push" id="wa-push-banner"><span class="wa-push-t">${text}</span>${btn}<button type="button" class="wa-push-x" id="wa-push-x" aria-label="Dismiss">\u2715</button></div>`;
+}
+// a tapped notification while the app is already open tells the page which chat to show
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', e=>{
+    if(e.data && e.data.type === 'open-chat') c2OpenFromNotice(e.data.thread);
+  });
+}
+
 // ---- event wiring (called from attachShellHandlers after every render) --------------------------------
 function attachChat2Handlers(){
   const byIdEl = id => document.getElementById(id);
@@ -10235,6 +10345,9 @@ function attachChat2Handlers(){
   if(byIdEl('wa-new')) byIdEl('wa-new').onclick = ()=>{ s.contacts = true; s.search = ''; render(); const i = byIdEl('wa-search'); if(i) i.focus(); };
   if(byIdEl('wa-contacts-close')) byIdEl('wa-contacts-close').onclick = ()=>{ s.contacts = false; s.search = ''; render(); };
   if(byIdEl('wa-back')) byIdEl('wa-back').onclick = c2Back;
+  if(byIdEl('wa-push-on')) byIdEl('wa-push-on').onclick = pushEnable;
+  if(byIdEl('wa-push-off')) byIdEl('wa-push-off').onclick = pushDisable;
+  if(byIdEl('wa-push-x')) byIdEl('wa-push-x').onclick = ()=>{ try{ localStorage.setItem('audrey_push_dismissed', '1'); }catch(e){} render(); };
   if(byIdEl('wa-earlier')) byIdEl('wa-earlier').onclick = c2LoadEarlier;
   if(byIdEl('wa-cancel-banner')) byIdEl('wa-cancel-banner').onclick = ()=>{ if(s.editing) c2CancelEdit(); else { s.replyTo = null; render(); } };
   const search = byIdEl('wa-search');

@@ -1,7 +1,8 @@
 // Supabase Edge Function: chat-purge
 //
 // Chats keep 90 days. Older messages are ALREADY invisible to everyone (the database rules hide them), this function
-// physically removes them (and their reactions) to keep the database small. An Admin's browser calls it about once a day
+// physically removes them (and their reactions) to keep the database small. It also removes everything in the Team chat
+// from before the moment an Admin pressed "Clear chat" (already hidden the same way). An Admin's browser calls it about once a day
 // after loading the app; only a signed-in, switched-on Admin is accepted.
 //
 // Deploy: supabase functions deploy chat-purge        (JWT is verified, and the caller must be an Admin)
@@ -49,6 +50,23 @@ Deno.serve(async (req) => {
     if (r2.error) return json({ ok: false, error: r2.error.message, removed }, 500);
     removed += ids.length;
     if (rows.length < 500) break;
+  }
+  // Team chat cleared by an Admin: remove what was hidden by the clearing
+  const TEAM = "00000000-0000-0000-0000-00000000c0de";
+  const { data: team } = await admin.from("chat_threads").select("cleared_at").eq("id", TEAM).maybeSingle();
+  if (team && team.cleared_at) {
+    for (let round = 0; round < 10; round++) {
+      const { data: rows, error } = await admin.from("chat_messages").select("id").eq("thread_id", TEAM).lt("created_at", team.cleared_at).limit(500);
+      if (error) return json({ ok: false, error: error.message, removed }, 500);
+      if (!rows || rows.length === 0) break;
+      const ids = rows.map((r: { id: string }) => r.id);
+      const r1 = await admin.from("chat_reactions").delete().in("message_id", ids);
+      if (r1.error) return json({ ok: false, error: r1.error.message, removed }, 500);
+      const r2 = await admin.from("chat_messages").delete().in("id", ids);
+      if (r2.error) return json({ ok: false, error: r2.error.message, removed }, 500);
+      removed += ids.length;
+      if (rows.length < 500) break;
+    }
   }
   return json({ ok: true, removed, cutoff });
 });

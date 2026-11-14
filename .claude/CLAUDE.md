@@ -155,7 +155,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   is reached through the `chat_*` database functions (`chat_people`, `chat_open_dm`, `chat_threads_overview`, `chat_send`, `chat_edit` (own, 15 min),
   `chat_remove` (own, "deleted for everyone"), `chat_react`, `chat_mark_read`, `chat_mark_delivered`). Realtime uses
   `postgres_changes` on the three message tables (RLS-filtered) + a per-thread broadcast channel for "typing". Client code: `c2*` functions and
-  `renderChat2Page` in `index.html` (search "Chat (WhatsApp-style)"); CSS classes `.wa-*`. The old `app_data` key `chat` is NOT used or fetched any more;
+  `renderChat2Page` in `index.html` (search "Chat (WhatsApp-style)"); CSS classes `.wa-*` (the "Clean" look the owner chose from six designs on 2026-11-14: white, light grey bubbles, blue own bubbles `--wa-blue`, centred conversation header; the other five designs were only mock-ups, not built). The old `app_data` key `chat` is NOT used or fetched any more;
   its 275 messages were copied into the Team thread (`legacy` column keeps the old fields) and the old row is left in place as a backup.
   * **Private chats are private (owner, 2026-11-14).** Nobody, Admin included, can read a private chat they are not part of. There is no Monitor page and
     no logging of Admin openings (the owner called it unnecessary; the `chat_monitor_*` database functions are switched off for everyone and unused).

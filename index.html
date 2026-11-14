@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114190000">
+<meta name="app-build" content="20261114200000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -164,8 +164,8 @@ html{ visibility:hidden; }
   .wa-side{width:340px;flex-shrink:0;border-right:1px solid var(--wa-line);display:flex;flex-direction:column;min-height:0;background:#fff;}
   .wa-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;background:#fff;}
   .wa-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(250,250,252,.96);border-bottom:1px solid var(--wa-line);flex-shrink:0;min-height:60px;}
-  .wa-head-list{justify-content:space-between;}
-  .wa-head-title{font-weight:700;font-size:22px;letter-spacing:-.01em;margin-right:auto;}
+  .wa-head-list{justify-content:space-between;gap:8px;background:#fff;border-bottom:none;padding:14px 16px 4px;}
+  .wa-head-title{font-weight:700;font-size:28px;letter-spacing:-.02em;margin-right:auto;}
   .wa-head-main{min-width:0;flex:1;}
   .wa-head-name{font-weight:650;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .wa-head-sub{font-size:12px;color:var(--wa-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -181,14 +181,17 @@ html{ visibility:hidden; }
   .wa-main .wa-head-main{flex:none;max-width:100%;}
   .wa-head-link{cursor:pointer;border-radius:10px;}
   .wa-head-link:hover .wa-head-name{color:var(--wa-blue);}
-  .wa-ibtn{border:1px solid var(--wa-hair);background:#fff;color:var(--wa-ink);border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .wa-ibtn{border:none;background:#f1f3f8;color:var(--wa-ink);border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
   .wa-ibtn:hover{background:var(--wa-blue-soft);}
-  .wa-search{padding:8px 12px;border-bottom:1px solid var(--wa-line);flex-shrink:0;}
-  .wa-search input{width:100%;border:none;background:#f1f3f8;border-radius:12px;padding:10px 13px;font-size:14px;color:var(--wa-ink);outline:none;}
-  .wa-list{flex:1;overflow-y:auto;min-height:0;}
+  .wa-ibtn-plus{background:var(--wa-blue);color:#fff;}
+  .wa-ibtn-plus:hover{background:var(--wa-blue-d);}
+  .wa-svg{display:block;flex-shrink:0;}
+  .wa-search{padding:8px 16px 10px;flex-shrink:0;}
+  .wa-search input{width:100%;border:none;background:#f1f3f8;border-radius:14px;padding:11px 14px;font-size:15px;color:var(--wa-ink);outline:none;}
+  .wa-list{flex:1;overflow-y:auto;min-height:0;padding:0 8px 12px;}
   .wa-sec{padding:14px 16px 6px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--wa-mute);}
   .wa-none{padding:22px 16px;color:var(--wa-mute);font-size:14px;text-align:center;}
-  .wa-row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:none;background:none;text-align:left;cursor:pointer;color:var(--wa-ink);border-bottom:1px solid #f0f1f6;font:inherit;}
+  .wa-row{display:flex;align-items:center;gap:13px;width:100%;padding:11px 10px;border:none;border-radius:16px;background:none;text-align:left;cursor:pointer;color:var(--wa-ink);font:inherit;}
   .wa-row:hover{background:#f6f8fd;}
   .wa-row-on{background:var(--wa-blue-soft);}
   .wa-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
@@ -201,12 +204,13 @@ html{ visibility:hidden; }
   .wa-badge{background:var(--wa-blue);color:#fff;border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .wa-av,.wa-av-wrap{display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;overflow:hidden;}
   .wa-av{font-size:20px;}
-  .wa-av-team{background:linear-gradient(135deg,#dbe6ff,#c3d5ff);}
+  .wa-av-team{background:#e6edff;color:var(--wa-blue);}
   .wa-empty{margin:auto;text-align:center;padding:30px;max-width:340px;color:var(--wa-mute);}
-  .wa-empty-ico{font-size:46px;}
+  .wa-empty-ico{display:flex;justify-content:center;color:var(--wa-blue);opacity:.85;}
   .wa-empty-t{font-weight:700;font-size:20px;margin:8px 0 4px;color:var(--wa-ink);}
   .wa-empty-s{font-size:14px;line-height:1.5;}
   .wa-scroll{flex:1;overflow-y:auto;min-height:0;padding:12px 6% 8px;display:flex;flex-direction:column;gap:2px;background:#fff;}
+  .wa-info .wa-svg{display:inline-block;vertical-align:-1px;}
   .wa-info{align-self:center;max-width:520px;text-align:center;background:#f3f5fb;color:var(--wa-mute);border-radius:12px;padding:8px 13px;font-size:12px;line-height:1.45;margin:4px 0 8px;}
   .wa-loading{align-self:center;color:var(--wa-mute);font-size:13px;padding:14px;}
   .wa-earlier{align-self:center;border:1px solid var(--wa-hair);background:#fff;color:var(--wa-blue);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:6px;}
@@ -221,7 +225,7 @@ html{ visibility:hidden; }
   .wa-bub{position:relative;background:var(--wa-bub);color:var(--wa-ink);border-radius:19px 19px 19px 6px;padding:8px 13px 7px;font-size:14.5px;line-height:1.4;word-break:break-word;cursor:pointer;min-width:68px;}
   .wa-mine .wa-bub{background:var(--wa-blue);color:#fff;border-radius:19px 19px 6px 19px;}
   .wa-bub-removed,.wa-mine .wa-bub-removed{background:#f3f4f8 !important;color:#8b93a7 !important;}
-  .wa-del-txt{font-style:italic;font-size:13.5px;}
+  .wa-del-txt{font-style:italic;font-size:13.5px;display:inline-flex;align-items:center;gap:5px;}
   .wa-txt{white-space:pre-wrap;}
   .wa-txt a{color:var(--wa-blue);text-decoration:underline;}
   .wa-mine .wa-txt a{color:#fff;}
@@ -271,10 +275,11 @@ html{ visibility:hidden; }
   .wa-send svg{width:19px;height:19px;}
   .wa-push{display:flex;align-items:center;gap:8px;margin:8px 12px 0;padding:9px 10px 9px 12px;background:var(--wa-blue-soft);border:1px solid #d3e0ff;border-radius:14px;font-size:13px;line-height:1.4;color:#1f3a8a;}
   .wa-push-t{flex:1;min-width:0;}
+  .wa-push-t .wa-svg{display:inline-block;vertical-align:-3px;margin-right:2px;color:var(--wa-blue);}
   .wa-push-on{border:none;background:var(--wa-blue);color:#fff;font-weight:700;border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;flex-shrink:0;}
   .wa-push-x{border:none;background:none;color:#1f3a8a;font-size:15px;cursor:pointer;width:26px;height:26px;flex-shrink:0;}
-  .wa-bell{margin-right:6px;}
-  .wa-bell-off{opacity:.75;}
+  .wa-bell-on{color:var(--wa-blue);background:var(--wa-blue-soft);}
+  .wa-bell-off{color:#8b93a7;}
   /* group info panel */
   .wa-gi-overlay{position:fixed;inset:0;z-index:90;background:rgba(20,25,45,.45);display:flex;align-items:center;justify-content:center;padding:20px;color:var(--wa-ink);}
   .wa-gi-card{background:#fff;border-radius:20px;width:100%;max-width:460px;max-height:min(90vh,760px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(20,30,60,.3);}
@@ -284,7 +289,7 @@ html{ visibility:hidden; }
   .wa-gi-scroll{overflow-y:auto;min-height:0;padding-bottom:12px;}
   .wa-gi-hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 16px 10px;text-align:center;}
   .wa-gi-photo{width:120px;height:120px;border-radius:50%;object-fit:cover;}
-  .wa-gi-photo-def{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#dbe6ff,#c3d5ff);font-size:52px;}
+  .wa-gi-photo-def{display:flex;align-items:center;justify-content:center;background:#e6edff;color:var(--wa-blue);}
   .wa-gi-photo-actions{display:flex;gap:8px;}
   .wa-gi-name{font-size:20px;font-weight:700;}
   .wa-gi-sub{font-size:13px;color:var(--wa-mute);}
@@ -301,7 +306,7 @@ html{ visibility:hidden; }
   .wa-none-left{text-align:left;padding:6px 16px;}
   .wa-gi-note{margin:8px 16px 0;padding:9px 12px;background:#f3f5fb;color:var(--wa-mute);border-radius:12px;font-size:12.5px;line-height:1.45;}
   .wa-gi-actions{display:flex;flex-direction:column;gap:2px;margin-top:10px;border-top:1px solid var(--wa-line);padding-top:6px;}
-  .wa-gi-act{border:none;background:none;text-align:left;padding:12px 16px;font-size:15px;cursor:pointer;color:var(--wa-ink);}
+  .wa-gi-act{border:none;background:none;text-align:left;padding:12px 16px;font-size:15px;cursor:pointer;color:var(--wa-ink);display:flex;align-items:center;gap:10px;}
   .wa-gi-act:hover{background:var(--wa-blue-soft);}
   .wa-gi-act-danger{color:#c0392b;}
   .chat-notice{position:fixed;top:calc(20px + env(safe-area-inset-top));right:22px;background:#fff;border:1px solid var(--border);border-left:5px solid var(--accent);color:var(--ink);padding:18px 22px;border-radius:12px;display:flex;align-items:flex-start;gap:14px;max-width:440px;min-width:300px;box-shadow:0 18px 44px rgba(30,60,40,.2);z-index:320;cursor:pointer;animation:toast-in .28s ease;}
@@ -9601,6 +9606,22 @@ function c2(){
   };
   return state._c2;
 }
+// plain single-colour line icons for the chat (no coloured emoji)
+const C2_ICONS = {
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  bellOff:'<path d="M13.7 21a2 2 0 0 1-3.4 0"/><path d="M18.6 13c-.4-1.6-.6-3.2-.6-5a6 6 0 0 0-9.3-5"/><path d="M6 8c0 7-3 9-3 9h13"/><path d="m2 2 20 20"/>',
+  plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  ban:'<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+};
+function c2Svg(name, size){
+  size = size || 18;
+  return '<svg class="wa-svg" viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(C2_ICONS[name]||'')+'</svg>';
+}
 function c2Allowed(){ return !!state.session && !!supabaseClient && (isAdmin() || pageAllowed('chat')); }
 async function c2Rpc(name, args){
   const { data, error } = await supabaseClient.rpc(name, args || {});
@@ -9620,7 +9641,7 @@ function c2ThreadName(t){
 function c2Preview(t){
   const l = t && t.last;
   if(!l) return t && t.kind === 'team' ? 'Say hello to the team' : 'No messages yet';
-  if(l.removed) return '\u{1F6AB} This message was deleted';
+  if(l.removed) return 'This message was deleted';
   const mine = l.sender === c2().meId;
   const who = mine ? 'You: ' : (t.kind === 'team' ? (l.senderName || '') + ': ' : '');
   return who + l.body;
@@ -10193,7 +10214,7 @@ async function c2StartDm(otherId){
 function c2Avatar(t, size){
   if(t && t.kind === 'team'){
     if(t.photo) return '<span class="wa-av-wrap" style="width:'+size+'px;height:'+size+'px;"><img src="'+escAttr(t.photo)+'" alt="" style="width:'+size+'px;height:'+size+'px;border-radius:50%;object-fit:cover;"></span>';
-    return '<span class="wa-av wa-av-team" style="width:'+size+'px;height:'+size+'px;">\u{1F465}</span>';
+    return '<span class="wa-av wa-av-team" style="width:'+size+'px;height:'+size+'px;">'+c2Svg('users', Math.round(size*0.5))+'</span>';
   }
   const p = t ? c2Person(t.otherId) : null;
   return '<span class="wa-av-wrap" style="width:'+size+'px;height:'+size+'px;">'+staffAvatarHtml(p ? p.name : '?', size)+'</span>';
@@ -10209,7 +10230,7 @@ function renderChat2Page(){
   </div>${s.gi && s.gi.open ? renderChat2GroupInfo() : ''}`;
 }
 function renderChat2Empty(){
-  return `<div class="wa-empty"><div class="wa-empty-ico">\u{1F4AC}</div><div class="wa-empty-t">Audrey chat</div>
+  return `<div class="wa-empty"><div class="wa-empty-ico">${c2Svg('chat', 44)}</div><div class="wa-empty-t">Audrey chat</div>
     <div class="wa-empty-s">Pick the Team chat or a person to start. Messages older than 90 days are removed automatically.</div></div>`;
 }
 function c2BackToApp(){ const t = (mySessionPages()||[])[0] || 'dashboard'; return t; }
@@ -10250,7 +10271,7 @@ function renderChat2List(){
       <div class="wa-head-title">${s.contacts ? 'New chat' : 'Chats'}</div>
       ${s.contacts
         ? `<button type="button" class="wa-ibtn" id="wa-contacts-close" aria-label="Close" title="Close">✕</button>`
-        : `${s.pushOn ? `<button type="button" class="wa-ibtn wa-bell" id="wa-push-off" aria-label="Notifications are on" title="Notifications are on for this phone. Tap to turn off">\u{1F514}</button>` : (pushCanOffer() ? `<button type="button" class="wa-ibtn wa-bell wa-bell-off" id="wa-push-bell" aria-label="Turn on notifications" title="Notifications are off. Tap to turn on">\u{1F515}</button>` : '')}<button type="button" class="wa-ibtn" id="wa-new" aria-label="New chat" title="New chat">✎</button>`}
+        : `${s.pushOn ? `<button type="button" class="wa-ibtn wa-bell wa-bell-on" id="wa-push-off" aria-label="Notifications are on" title="Notifications are on for this phone. Tap to turn off">${c2Svg('bell', 20)}</button>` : (pushCanOffer() ? `<button type="button" class="wa-ibtn wa-bell wa-bell-off" id="wa-push-bell" aria-label="Turn on notifications" title="Notifications are off. Tap to turn on">${c2Svg('bellOff', 20)}</button>` : '')}<button type="button" class="wa-ibtn wa-ibtn-plus" id="wa-new" aria-label="New chat" title="New chat">${c2Svg('plus', 20)}</button>`}
     </div>
     ${s.contacts ? '' : c2PushBanner()}
     <div class="wa-search"><input id="wa-search" type="search" placeholder="${s.contacts ? 'Search people' : 'Search chats'}" value="${escAttr(s.search)}" autocomplete="off"></div>
@@ -10296,8 +10317,8 @@ function renderChat2Bubble(m, t, grouped){
   <div class="wa-msg ${mine ? 'wa-mine' : 'wa-theirs'} ${grouped ? 'wa-grp' : ''}" data-wa-msg="${m.id}">
     <div class="wa-bub ${removed ? 'wa-bub-removed' : ''}" data-wa-bub="${m.id}">
       ${showName ? `<div class="wa-sender">${esc(m.sender_name || '')}</div>` : ''}
-      ${rp && !removed ? `<div class="wa-quote" data-wa-jump="${rp.id}"><b>${esc(rp.sender || '')}</b><span>${rp.text ? esc(rp.text) : '\u{1F6AB} Deleted message'}</span></div>` : ''}
-      ${removed ? '<span class="wa-del-txt">\u{1F6AB} This message was deleted</span>' : `<span class="wa-txt">${c2LinkText(m.body)}</span>`}
+      ${rp && !removed ? `<div class="wa-quote" data-wa-jump="${rp.id}"><b>${esc(rp.sender || '')}</b><span>${rp.text ? esc(rp.text) : 'Deleted message'}</span></div>` : ''}
+      ${removed ? '<span class="wa-del-txt">'+c2Svg('ban', 13)+' This message was deleted</span>' : `<span class="wa-txt">${c2LinkText(m.body)}</span>`}
       <span class="wa-meta">${m.edited_at && !removed ? 'edited · ' : ''}${esc(fmtTimeOnly(m.created_at))}${c2Ticks(m, t)}</span>
       ${menu}
     </div>
@@ -10323,8 +10344,8 @@ function renderChat2Conversation(){
     lastSender = m.sender; lastAt = at;
   });
   const info = t.kind === 'team'
-    ? '\u{1F4C5} Messages older than 90 days are deleted automatically.'
-    : '\u{1F512} Only you two can see this chat. Messages are deleted after 90 days.';
+    ? 'Messages older than 90 days are deleted automatically.'
+    : c2Svg('lock', 12) + ' Only you two can see this chat. Messages are deleted after 90 days.';
   const draft = s.draft[s.cur] || '';
   const reply = s.replyTo, editing = s.editing && s.msgs.find(x=>x.id === s.editing);
   return `
@@ -10338,7 +10359,7 @@ function renderChat2Conversation(){
     <div id="chat-messages" class="wa-scroll">
       ${s.hasMore ? '<button type="button" class="wa-earlier" id="wa-earlier">Load earlier messages</button>' : ''}
       <div class="wa-info">${info}</div>
-      ${s.loading ? '<div class="wa-loading">Loading…</div>' : (s.msgs.length ? html : '<div class="wa-loading">No messages yet — say hello \u{1F44B}</div>')}
+      ${s.loading ? '<div class="wa-loading">Loading…</div>' : (s.msgs.length ? html : '<div class="wa-loading">No messages yet. Say hello.</div>')}
     </div>
     ${reply ? `<div class="wa-banner"><div class="wa-banner-main"><b>Replying to ${esc(reply.sender_name || '')}</b><span>${esc(String(reply.body||'').slice(0,120))}</span></div><button type="button" id="wa-cancel-banner" aria-label="Cancel">✕</button></div>` : ''}
     ${editing ? `<div class="wa-banner"><div class="wa-banner-main"><b>Editing message</b><span>${esc(String(editing.body||'').slice(0,120))}</span></div><button type="button" id="wa-cancel-banner" aria-label="Cancel">✕</button></div>` : ''}
@@ -10434,13 +10455,13 @@ function c2PushBanner(){
   if(s.pushOn || pushDismissed()) return '';
   let text, btn = '';
   if(pushIsIos() && !pushIsStandalone()){
-    text = '\u{1F514} To get message notifications on iPhone: tap the Share button, choose <b>Add to Home Screen</b>, then open Audrey Care from the Home Screen and turn notifications on here.';
+    text = c2Svg('bell', 16) + ' To get message notifications on iPhone: tap the Share button, choose <b>Add to Home Screen</b>, then open Audrey Care from the Home Screen and turn notifications on here.';
   } else if(!pushSupported()){
     return '';
   } else if(Notification.permission === 'denied'){
-    text = '\u{1F514} Notifications are blocked for this app. Allow them in your phone settings (Settings \u2192 Notifications \u2192 Audrey Care, or the browser\u2019s site settings).';
+    text = c2Svg('bell', 16) + ' Notifications are blocked for this app. Allow them in your phone settings (Settings \u2192 Notifications \u2192 Audrey Care, or the browser\u2019s site settings).';
   } else {
-    text = '\u{1F514} Get a notification on this phone when someone messages you.';
+    text = c2Svg('bell', 16) + ' Get a notification on this phone when someone messages you.';
     btn = '<button type="button" class="wa-push-on" id="wa-push-on">Turn on</button>';
   }
   return `<div class="wa-push" id="wa-push-banner"><span class="wa-push-t">${text}</span>${btn}<button type="button" class="wa-push-x" id="wa-push-x" aria-label="Dismiss">\u2715</button></div>`;
@@ -10600,7 +10621,7 @@ function renderChat2GroupInfo(){
   const name = (info && info.name) || (t && t.name) || 'Team chat';
   const big = photo
     ? `<img class="wa-gi-photo" src="${escAttr(photo)}" alt="">`
-    : `<span class="wa-gi-photo wa-gi-photo-def">\u{1F465}</span>`;
+    : `<span class="wa-gi-photo wa-gi-photo-def">${c2Svg('users', 52)}</span>`;
   const person = (p, action)=>`<div class="wa-gi-row">
       <span class="wa-av-wrap" style="width:40px;height:40px;">${staffAvatarHtml(p.name, 40)}</span>
       <span class="wa-row-main"><span class="wa-row-name">${esc(p.name)}${p.id === s.meId ? ' <i>(you)</i>' : ''}</span><span class="wa-row-sub">${esc(p.fullName && p.fullName !== p.name ? p.fullName + ' · ' : '')}${esc(p.role || '')}</span></span>
@@ -10636,8 +10657,8 @@ function renderChat2GroupInfo(){
         </div>
         ${body}
         ${admin && info ? `<div class="wa-gi-actions">
-            <button type="button" class="wa-gi-act" id="wa-gi-export" ${g.exporting ? 'disabled' : ''}>⬇️ ${g.exporting ? 'Exporting…' : 'Export chat'}</button>
-            <button type="button" class="wa-gi-act wa-gi-act-danger" id="wa-gi-clear">\u{1F5D1}️ Clear chat</button>
+            <button type="button" class="wa-gi-act" id="wa-gi-export" ${g.exporting ? 'disabled' : ''}>${c2Svg('download', 18)} ${g.exporting ? 'Exporting…' : 'Export chat'}</button>
+            <button type="button" class="wa-gi-act wa-gi-act-danger" id="wa-gi-clear">${c2Svg('trash', 18)} Clear chat</button>
           </div>` : ''}
       </div>
     </div>

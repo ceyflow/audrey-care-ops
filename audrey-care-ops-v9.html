@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114100500">
+<meta name="app-build" content="20261114103000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9729,13 +9729,13 @@ function c2AfterIncoming(m){
     if(mine && tmp >= 0) s.msgs[tmp] = m; else s.msgs.push(m);
   }
   if(!mine){
-    // Admin -> Packing in the Team chat ALWAYS opens the "reply to continue" panel, even if that chat is already open
-    const forced = c2AdminBroadcast(m, t);
+    // Someone who is looking at that chat right now just sees the message; the "reply to continue" panel
+    // (Admin -> Packing in the Team chat) and the popup are only for people who are NOT watching it (owner, 2026-11-14)
     if(viewing){ t.unread = 0; c2MarkReadSoon(m.thread_id); }
     else {
       t.unread = (t.unread || 0) + 1;
       c2DeliveredSoon(m.thread_id);
-      if(!forced) c2Notify(m, t);
+      if(!c2AdminBroadcast(m, t)) c2Notify(m, t);
     }
   }
   c2SyncBadge();

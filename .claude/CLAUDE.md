@@ -28,6 +28,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | Log a complaint, and Complaint details | `complaint:new` and `complaint:<id>` (matched as `complaint:`) |
 | Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
 | Profile details (full name, mobile) | `profiledetails` |
+| Chat -> Group info (Admin edits the group name) | not `state.modal`-based: `state._c2.gi` and its own `#wa-gi` overlay, which has no outside-click handler. Closes only with the X button. |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
 Deliberately **not** covered (not forms): `complaintreasons`, `complaintpriorities`,
@@ -175,5 +176,12 @@ Keep these true when changing the app. Details and the audit are in the owner's 
     so no one has to type it); the public key is in `index.html` (`PUSH_PUBLIC_KEY`). `sw.js` shows the notification (always, because iPhone requires it; silent
     + tidied away when the app is open) and a tap opens `?chat=<id>#chat`. Signing out switches this phone off for that person (`pushUnregister`); the next
     sign-in registers it again. Dead phones (404/410) are switched off automatically. If the keys are ever replaced, everyone has to turn notifications on again.
+  * **Order links, swipe to reply, group profile (owner, 2026-11-14).** Typing `#SO2611100` (an order number; `#2611100` digits-only works when unambiguous) in a
+    message makes a link that opens that order (`c2LinkText` / `c2OpenOrder`; needs the person's account to have orders loaded, otherwise a friendly message).
+    On a phone, swiping a message to the right starts a reply (`c2AttachSwipe`). Tapping the Team chat header opens "Group info" (`renderChat2GroupInfo`): everyone
+    sees the members; ONLY an Admin can change the name / photo (`chat_group_update`, photo shrunk to 256px and stored in `chat_threads.photo`), export the chat
+    to a .txt file (client side, the visible 90 days), clear the chat (`chat_group_clear` sets `chat_threads.cleared_at`; older messages are hidden at once and
+    physically removed by `chat-purge`), and add / remove members (`chat_group_set_member`, table `chat_group_members` lists only the people taken OUT; everyone
+    with chat access is in by default, an Admin cannot be removed, and a person whose access level has no Chat page cannot be added: give the level the Chat page first).
   * Phone layout is one pane at a time, full screen (header/tab bar hidden on `page-chat`), padded with `env(safe-area-inset-*)`; on a PC the list and the
     conversation sit side by side. No popup notice is shown while the chat page itself is open (the list shows unread badges).

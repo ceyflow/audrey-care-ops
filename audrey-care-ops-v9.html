@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114133000">
+<meta name="app-build" content="20261114160000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -210,6 +210,40 @@ html{ visibility:hidden; }
   .wa-theirs{align-self:flex-start;align-items:flex-start;}
   .wa-bub{position:relative;background:#fff;color:#111b21;border-radius:10px;padding:6px 9px 5px;box-shadow:0 1px 1px rgba(0,0,0,.13);font-size:14.5px;line-height:1.38;word-break:break-word;cursor:pointer;min-width:64px;}
   .wa-mine .wa-bub{background:#d9fdd3;}
+  .wa-head-tap{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+  .wa-head-link{cursor:pointer;border-radius:10px;}
+  .wa-head-link:hover .wa-head-name{text-decoration:underline;}
+  .wa-msg{touch-action:pan-y;}
+  .wa-swipe-ico{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:#fff;color:#54656f;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 3px rgba(0,0,0,.18);pointer-events:none;}
+  .wa-swipe-go{background:#25d366;color:#fff;}
+  .wa-order{color:#0b6aa8;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:rgba(11,106,168,.08);border-radius:5px;padding:0 3px;}
+  .wa-order-x{opacity:.85;}
+  .wa-gi-overlay{position:fixed;inset:0;z-index:90;background:rgba(20,25,20,.45);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .wa-gi-card{background:var(--surface);border-radius:16px;width:100%;max-width:460px;max-height:min(90vh,760px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .wa-gi-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .wa-gi-title{font-weight:700;font-size:16px;}
+  .wa-gi-close{border:none;background:none;font-size:18px;cursor:pointer;width:34px;height:34px;color:var(--ink);}
+  .wa-gi-scroll{overflow-y:auto;min-height:0;padding-bottom:12px;}
+  .wa-gi-hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 16px 10px;text-align:center;}
+  .wa-gi-photo{width:120px;height:120px;border-radius:50%;object-fit:cover;}
+  .wa-gi-photo-def{display:flex;align-items:center;justify-content:center;background:#dff7e8;font-size:52px;}
+  .wa-gi-photo-actions{display:flex;gap:8px;}
+  .wa-gi-name{font-size:20px;font-weight:700;}
+  .wa-gi-sub{font-size:13px;color:var(--ink-soft,#6b7280);}
+  .wa-gi-form{display:flex;gap:8px;width:100%;max-width:340px;}
+  .wa-gi-form input{flex:1;min-width:0;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:15px;background:var(--surface);color:var(--ink);}
+  .wa-gi-btn{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;}
+  .wa-gi-btn:hover{background:var(--bg);}
+  .wa-gi-btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .wa-gi-btn-danger{color:#c0392b;border-color:#f0c9c4;}
+  .wa-gi-row{display:flex;align-items:center;gap:12px;padding:8px 16px;}
+  .wa-gi-row i{font-style:normal;color:var(--ink-soft,#6b7280);font-weight:400;}
+  .wa-none-left{text-align:left;padding:6px 16px;}
+  .wa-gi-note{margin:8px 16px 0;padding:9px 12px;background:#fff3c4;color:#54482a;border-radius:10px;font-size:12.5px;line-height:1.45;}
+  .wa-gi-actions{display:flex;flex-direction:column;gap:2px;margin-top:10px;border-top:1px solid var(--border);padding-top:6px;}
+  .wa-gi-act{border:none;background:none;text-align:left;padding:12px 16px;font-size:15px;cursor:pointer;color:var(--ink);}
+  .wa-gi-act:hover{background:var(--bg);}
+  .wa-gi-act-danger{color:#c0392b;}
   .wa-push{display:flex;align-items:center;gap:8px;margin:8px 12px 0;padding:9px 10px 9px 12px;background:#e8f7ee;border:1px solid #bfe6cd;border-radius:12px;font-size:13px;line-height:1.4;color:#1d4d33;}
   .wa-push-t{flex:1;min-width:0;}
   .wa-push-on{border:none;background:#25d366;color:#fff;font-weight:700;border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;flex-shrink:0;}
@@ -2562,6 +2596,10 @@ html{ visibility:hidden; }
     .wa-scroll{padding:10px 10px 8px;}
     .wa-msg{max-width:86%;}
     .wa-list{padding-bottom:env(safe-area-inset-bottom);}
+    .wa-gi-overlay{padding:0;align-items:stretch;}
+    .wa-gi-card{max-width:none;max-height:none;border-radius:0;}
+    .wa-gi-top{padding-top:calc(12px + env(safe-area-inset-top));}
+    .wa-gi-scroll{padding-bottom:calc(16px + env(safe-area-inset-bottom));}
   }
 
   /* ---------------- Customer order tracker ---------------- */
@@ -9557,7 +9595,7 @@ function c2Person(id){ return c2().people.find(p=>p.id===id) || null; }
 function c2Thread(id){ return c2().threads.find(t=>t.id===id) || null; }
 function c2ThreadName(t){
   if(!t) return '';
-  if(t.kind === 'team') return 'Team chat';
+  if(t.kind === 'team') return t.name || 'Team chat';
   const p = c2Person(t.otherId);
   return p ? p.name : 'Chat';
 }
@@ -9606,12 +9644,41 @@ function c2StatusText(t){
   const day = c2DayLabel(p.lastSeen);
   return 'last seen ' + (day === 'Today' ? 'today' : day.toLowerCase()) + ' at ' + fmtTimeOnly(p.lastSeen);
 }
+// Message text -> safe HTML: web links, and "#SO2611100" style order numbers that open that order when tapped
+function c2OrderIndex(){
+  const s = c2(), orders = Array.isArray(state.orders) ? state.orders : [];
+  if(s._oi && s._oiN === orders.length) return s._oi;
+  const full = new Map(), digits = new Map();
+  orders.forEach(o=>{
+    if(!o || !o.orderNumber) return;
+    const k = String(o.orderNumber).toLowerCase();
+    full.set(k, o.id);
+    const d = k.replace(/\D/g, '');
+    if(d.length >= 5) digits.set(d, digits.has(d) ? null : o.id);   // digits only: needs to be unambiguous
+  });
+  s._oi = {full, digits}; s._oiN = orders.length;
+  return s._oi;
+}
 function c2LinkText(text){
-  return escBody(text).replace(/(https?:\/\/[^\s<>"']+)/g, u => {
-    const clean = u.replace(/[.,;:!?)\]]+$/, ''); const tail = u.slice(clean.length);
-    return '<a href="'+clean+'" target="_blank" rel="noopener noreferrer">'+clean+'</a>'+tail;
+  const idx = c2OrderIndex();
+  return escBody(text).replace(/(https?:\/\/[^\s<>"']+)|(^|[\s(])#([A-Za-z0-9][A-Za-z0-9-]{2,24})/g, (m, url, pre, num)=>{
+    if(url){
+      const clean = url.replace(/[.,;:!?)\]]+$/, ''); const tail = url.slice(clean.length);
+      return '<a href="'+clean+'" target="_blank" rel="noopener noreferrer">'+clean+'</a>'+tail;
+    }
+    const k = num.toLowerCase();
+    let id = idx.full.get(k) || (/^\d{5,}$/.test(num) ? idx.digits.get(num) : null);
+    if(id) return pre + '<span class="wa-order" role="link" tabindex="0" data-wa-order="' + escAttr(id) + '">#' + num + '</span>';
+    if(/^[A-Za-z]{1,3}\d{4,}$/.test(num) || /^\d{5,}$/.test(num)) return pre + '<span class="wa-order wa-order-x" role="link" tabindex="0" data-wa-order-num="' + num + '">#' + num + '</span>';
+    return m;
   });
 }
+function c2OpenOrder(id){
+  const o = (state.orders || []).find(x=>x.id === id);
+  if(!o){ showToast('That order is not available to your account', 4000); return; }
+  openModal('order:' + id);
+}
+function c2OrderNotFound(num){ showToast('Order #' + num + ' was not found, or your account cannot open orders', 4500); }
 
 // ---- boot / reset --------------------------------------------------------------------------------
 async function c2Boot(){
@@ -9643,7 +9710,6 @@ async function c2LoadOverview(){
   const [threads, people] = await Promise.all([c2Rpc('chat_threads_overview'), c2Rpc('chat_people')]);
   s.threads = Array.isArray(threads) ? threads : [];
   s.people = Array.isArray(people) ? people : [];
-  if(!c2Thread(C2_TEAM)) s.threads.unshift({id:C2_TEAM, kind:'team', otherId:null, last:null, unread:0});
   c2SortThreads();
   c2SyncBadge();
   if(state.page === 'chat') render(); else if(s.threads.length) render();
@@ -9691,9 +9757,26 @@ function c2Subscribe(){
     .on('postgres_changes', {event:'*', schema:'public', table:'chat_messages'}, p=>c2OnMsg(p))
     .on('postgres_changes', {event:'*', schema:'public', table:'chat_reads'}, p=>c2OnRead(p))
     .on('postgres_changes', {event:'*', schema:'public', table:'chat_reactions'}, p=>c2OnReact(p))
+    .on('postgres_changes', {event:'UPDATE', schema:'public', table:'chat_threads'}, p=>c2OnThread(p))
     .subscribe(status=>{
       if(status === 'SUBSCRIBED'){ if(first) first = false; else c2Resync(); }
     });
+}
+// the group's name / photo changed, or an Admin cleared it
+function c2OnThread(p){
+  const s = c2(), r = p.new;
+  if(!r || !r.id) return;
+  const t = c2Thread(r.id);
+  if(t){ t.name = r.name || null; t.photo = r.photo || null; }
+  const was = s.cleared && s.cleared[r.id];
+  s.cleared = s.cleared || {};
+  s.cleared[r.id] = r.cleared_at || null;
+  if(r.cleared_at && r.cleared_at !== was){
+    c2LoadOverview().then(()=>{
+      if(s.cur === r.id && state.page === 'chat'){ s.msgs = []; c2LoadLatest(r.id, false).then(()=>c2RenderKeep()).catch(()=>{}); }
+    }).catch(()=>{});
+  } else if(state.page === 'chat') render();
+  if(s.gi && s.gi.open) c2GroupLoad();
 }
 function c2RenderKeep(){
   const el = document.getElementById('chat-messages');
@@ -9810,7 +9893,7 @@ async function c2Enter(){
   if(s._in) return;
   s._in = true;
   // arriving from the menu always starts at the chat list (or at the chat a popup pointed to)
-  s.view = 'list'; s.cur = null; s.msgs = []; s.contacts = false; s.search = ''; s.menuFor = null; s.replyTo = null; s.editing = null;
+  s.view = 'list'; s.cur = null; s.msgs = []; s.contacts = false; s.search = ''; s.menuFor = null; s.replyTo = null; s.editing = null; s.gi = null;
   c2TypingLeave();
   state.chatUnread = c2TotalUnread() > 0;
   if(!s.booted) await c2Boot(); else c2Resync();
@@ -10090,7 +10173,10 @@ async function c2StartDm(otherId){
 
 // ---- rendering -----------------------------------------------------------------------------------
 function c2Avatar(t, size){
-  if(t && t.kind === 'team') return '<span class="wa-av wa-av-team" style="width:'+size+'px;height:'+size+'px;">\u{1F465}</span>';
+  if(t && t.kind === 'team'){
+    if(t.photo) return '<span class="wa-av-wrap" style="width:'+size+'px;height:'+size+'px;"><img src="'+escAttr(t.photo)+'" alt="" style="width:'+size+'px;height:'+size+'px;border-radius:50%;object-fit:cover;"></span>';
+    return '<span class="wa-av wa-av-team" style="width:'+size+'px;height:'+size+'px;">\u{1F465}</span>';
+  }
   const p = t ? c2Person(t.otherId) : null;
   return '<span class="wa-av-wrap" style="width:'+size+'px;height:'+size+'px;">'+staffAvatarHtml(p ? p.name : '?', size)+'</span>';
 }
@@ -10102,7 +10188,7 @@ function renderChat2Page(){
   <div class="wa ${open ? 'wa-open' : ''}" id="wa-root">
     <aside class="wa-side">${renderChat2List()}</aside>
     <section class="wa-main">${s.cur ? renderChat2Conversation() : renderChat2Empty()}</section>
-  </div>`;
+  </div>${s.gi && s.gi.open ? renderChat2GroupInfo() : ''}`;
 }
 function renderChat2Empty(){
   return `<div class="wa-empty"><div class="wa-empty-ico">\u{1F4AC}</div><div class="wa-empty-t">Audrey chat</div>
@@ -10226,8 +10312,10 @@ function renderChat2Conversation(){
   return `
     <div class="wa-head">
       <button type="button" class="wa-back" id="wa-back" aria-label="Back to chats">${icon('chevron')}</button>
-      ${c2Avatar(t, 40)}
-      <div class="wa-head-main"><div class="wa-head-name">${esc(c2ThreadName(t))}</div><div class="wa-head-sub ${/typing/.test(c2StatusText(t))?'wa-typing':''}" id="wa-status">${esc(c2StatusText(t))}</div></div>
+      <div class="wa-head-tap ${t.kind === 'team' ? 'wa-head-link' : ''}" ${t.kind === 'team' ? 'data-wa-groupinfo="1" role="button" tabindex="0" aria-label="Group info"' : ''}>
+        ${c2Avatar(t, 40)}
+        <div class="wa-head-main"><div class="wa-head-name">${esc(c2ThreadName(t))}</div><div class="wa-head-sub ${/typing/.test(c2StatusText(t))?'wa-typing':''}" id="wa-status">${esc(c2StatusText(t))}</div></div>
+      </div>
     </div>
     <div id="chat-messages" class="wa-scroll">
       ${s.hasMore ? '<button type="button" class="wa-earlier" id="wa-earlier">Load earlier messages</button>' : ''}
@@ -10334,6 +10422,198 @@ if('serviceWorker' in navigator){
   });
 }
 
+// swipe a message to the right to reply (touch screens)
+function c2AttachSwipe(){
+  const s = c2();
+  document.querySelectorAll('.wa-msg[data-wa-msg]').forEach(row=>{
+    const id = row.dataset.waMsg;
+    const m = s.msgs.find(x=>x.id === id);
+    if(!m || m._pending || m._failed || m.removed_at) return;
+    const bub = row.querySelector('.wa-bub');
+    if(!bub) return;
+    let sx = 0, sy = 0, dx = 0, active = false, locked = false, ico = null;
+    const reset = ()=>{ bub.style.transition = 'transform .18s ease'; bub.style.transform = ''; if(ico){ ico.remove(); ico = null; } active = false; locked = false; dx = 0; };
+    row.addEventListener('touchstart', e=>{
+      if(e.touches.length !== 1) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0; active = true; locked = false; bub.style.transition = 'none';
+    }, {passive:true});
+    row.addEventListener('touchmove', e=>{
+      if(!active) return;
+      const t = e.touches[0]; const ddx = t.clientX - sx, ddy = t.clientY - sy;
+      if(!locked){
+        if(Math.abs(ddy) > 14 && Math.abs(ddy) > Math.abs(ddx)){ active = false; bub.style.transform = ''; return; }   // it is a scroll
+        if(ddx > 10 && ddx > Math.abs(ddy) * 1.4) locked = true; else return;
+      }
+      dx = Math.max(0, Math.min(ddx, 90));
+      bub.style.transform = 'translateX(' + Math.round(dx * 0.7) + 'px)';
+      if(!ico){ ico = document.createElement('span'); ico.className = 'wa-swipe-ico'; ico.textContent = '↩'; row.appendChild(ico); }
+      ico.style.opacity = String(Math.min(1, dx / 60));
+      ico.classList.toggle('wa-swipe-go', dx >= 60);
+    }, {passive:true});
+    const end = ()=>{
+      if(!active) return;
+      const go = locked && dx >= 60;
+      reset();
+      if(go){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} c2StartReply(id); }
+    };
+    row.addEventListener('touchend', end, {passive:true});
+    row.addEventListener('touchcancel', reset, {passive:true});
+  });
+}
+
+// ---- group profile (Team chat): everyone sees the members; only an Admin can change anything ----------------
+async function c2GroupOpen(){
+  const s = c2();
+  s.gi = {open:true, loading:true, info:null, nameDraft:null, busy:false};
+  render();
+  await c2GroupLoad();
+}
+async function c2GroupLoad(){
+  const s = c2();
+  if(!s.gi) return;
+  try{
+    s.gi.info = await c2Rpc('chat_group_info');
+    if(s.gi.nameDraft == null) s.gi.nameDraft = s.gi.info.name || '';
+  }catch(e){ showToast(c2Err(e), 4000); }
+  if(s.gi) s.gi.loading = false;
+  if(state.page === 'chat') render();
+}
+function c2GroupClose(){ const s = c2(); s.gi = null; render(); }
+function c2GroupApply(name, photo){
+  const t = c2Thread(C2_TEAM); if(t){ t.name = name || null; if(photo !== undefined) t.photo = photo || null; }
+}
+async function c2GroupSaveName(){
+  const s = c2(); if(!s.gi || s.gi.busy) return;
+  const inp = document.getElementById('wa-gi-name'); const name = inp ? inp.value.trim() : '';
+  s.gi.busy = true;
+  try{
+    await c2Rpc('chat_group_update', {p_name:name, p_photo:null, p_set_photo:false});
+    c2GroupApply(name); s.gi.nameDraft = name; showToast('Group name saved');
+    await c2GroupLoad();
+  }catch(e){ showToast(c2Err(e), 4000); }
+  if(s.gi) s.gi.busy = false; render();
+}
+async function c2GroupPhoto(file){
+  const s = c2(); if(!s.gi || !file) return;
+  let url;
+  try{ url = await downscaleDataUrl(await fileToDataUrl(file), 256, 0.82); }catch(e){ showToast('Could not read that picture'); return; }
+  try{
+    const name = (s.gi.info && s.gi.info.name) || '';
+    await c2Rpc('chat_group_update', {p_name:name, p_photo:url, p_set_photo:true});
+    c2GroupApply(name, url); showToast('Group photo updated'); await c2GroupLoad();
+  }catch(e){ showToast(c2Err(e), 4000); }
+}
+async function c2GroupPhotoRemove(){
+  const s = c2(); if(!s.gi) return;
+  try{
+    const name = (s.gi.info && s.gi.info.name) || '';
+    await c2Rpc('chat_group_update', {p_name:name, p_photo:'', p_set_photo:true});
+    c2GroupApply(name, null); showToast('Group photo removed'); await c2GroupLoad();
+  }catch(e){ showToast(c2Err(e), 4000); }
+}
+async function c2GroupMember(userId, member){
+  const s = c2();
+  try{
+    await c2Rpc('chat_group_set_member', {p_user:userId, p_member:member});
+    showToast(member ? 'Added to the group' : 'Removed from the group');
+    await c2GroupLoad();
+  }catch(e){ showToast(c2Err(e), 5000); }
+}
+function c2GroupClear(){
+  openConfirmModal({
+    title:'Clear chat', danger:true, confirmLabel:'Clear for everyone',
+    message:'Everything written in this group so far will disappear for everyone. This cannot be undone. Export the chat first if you need a copy.',
+    onConfirm: async ()=>{
+      try{
+        await c2Rpc('chat_group_clear');
+        const s = c2(); s.msgs = []; const t = c2Thread(C2_TEAM); if(t){ t.last = null; t.unread = 0; } c2SyncBadge();
+        showToast('Chat cleared'); render();
+      }catch(e){ showToast(c2Err(e), 4000); }
+    },
+  });
+}
+function c2Pad(n){ return String(n).padStart(2, '0'); }
+async function c2GroupExport(){
+  const s = c2();
+  if(s.gi) { s.gi.exporting = true; render(); }
+  try{
+    const rows = [];
+    for(let from = 0; from < 50000; from += 1000){
+      const { data, error } = await supabaseClient.from('chat_messages').select('sender_name,body,created_at,edited_at,removed_at').eq('thread_id', C2_TEAM).order('created_at', {ascending:true}).range(from, from + 999);
+      if(error) throw error;
+      (data || []).forEach(r=>rows.push(r));
+      if(!data || data.length < 1000) break;
+    }
+    const t = c2Thread(C2_TEAM), gname = c2ThreadName(t);
+    const now = new Date();
+    const lines = [gname + ' — chat export', 'Exported ' + now.toLocaleString() + ' by ' + c2Me() + '. Contains the messages of the last 90 days (' + rows.length + ').', ''];
+    rows.forEach(r=>{
+      const d = new Date(r.created_at);
+      const stamp = c2Pad(d.getDate()) + '/' + c2Pad(d.getMonth() + 1) + '/' + d.getFullYear() + ', ' + c2Pad(d.getHours()) + ':' + c2Pad(d.getMinutes());
+      lines.push(stamp + ' - ' + (r.sender_name || '?') + ': ' + (r.removed_at ? '(message deleted)' : String(r.body || '') + (r.edited_at ? ' (edited)' : '')));
+    });
+    const blob = new Blob(['﻿' + lines.join('\r\n') + '\r\n'], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Audrey-' + gname.replace(/[^A-Za-z0-9]+/g, '-') + '-chat-' + now.getFullYear() + '-' + c2Pad(now.getMonth() + 1) + '-' + c2Pad(now.getDate()) + '.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    showToast('Chat exported (' + rows.length + ' messages)');
+  }catch(e){ showToast('Could not export: ' + c2Err(e), 5000); }
+  if(s.gi){ s.gi.exporting = false; render(); }
+}
+function renderChat2GroupInfo(){
+  const s = c2(), g = s.gi;
+  const admin = isAdmin();
+  const info = g.info, t = c2Thread(C2_TEAM);
+  const photo = (info && info.photo) || (t && t.photo);
+  const name = (info && info.name) || (t && t.name) || 'Team chat';
+  const big = photo
+    ? `<img class="wa-gi-photo" src="${escAttr(photo)}" alt="">`
+    : `<span class="wa-gi-photo wa-gi-photo-def">\u{1F465}</span>`;
+  const person = (p, action)=>`<div class="wa-gi-row">
+      <span class="wa-av-wrap" style="width:40px;height:40px;">${staffAvatarHtml(p.name, 40)}</span>
+      <span class="wa-row-main"><span class="wa-row-name">${esc(p.name)}${p.id === s.meId ? ' <i>(you)</i>' : ''}</span><span class="wa-row-sub">${esc(p.fullName && p.fullName !== p.name ? p.fullName + ' · ' : '')}${esc(p.role || '')}</span></span>
+      ${action || ''}</div>`;
+  let body = '';
+  if(g.loading && !info) body = '<div class="wa-loading">Loading…</div>';
+  else if(info){
+    const members = info.members || [];
+    body += `<div class="wa-sec">${members.length} member${members.length === 1 ? '' : 's'}</div>`;
+    body += members.map(p=>person(p, admin && p.role !== 'Admin' ? `<button type="button" class="wa-gi-btn wa-gi-btn-danger" data-wa-gi-remove="${escAttr(p.id)}">Remove</button>` : '')).join('');
+    if(admin){
+      const removed = info.removed || [];
+      body += `<div class="wa-sec">Add to group</div>`;
+      body += removed.length ? removed.map(p=>person(p, `<button type="button" class="wa-gi-btn" data-wa-gi-add="${escAttr(p.id)}">Add</button>`)).join('')
+        : `<div class="wa-none wa-none-left">Everyone who can use Chat is already in the group.</div>`;
+      const nochat = info.noChat || [];
+      if(nochat.length) body += `<div class="wa-gi-note">Not in Chat yet (their access level has no Chat page): ${nochat.map(p=>esc(p.name)).join(', ')}.</div>`;
+    }
+  }
+  return `
+  <div class="wa-gi-overlay" id="wa-gi">
+    <div class="wa-gi-card" role="dialog" aria-label="Group info">
+      <div class="wa-gi-top"><button type="button" class="wa-gi-close" id="wa-gi-close" aria-label="Close">✕</button><div class="wa-gi-title">Group info</div></div>
+      <div class="wa-gi-scroll">
+        <div class="wa-gi-hero">${big}
+          ${admin ? `<div class="wa-gi-photo-actions">
+              <button type="button" class="wa-gi-btn" id="wa-gi-photo-btn">${photo ? 'Change photo' : 'Add photo'}</button>
+              ${photo ? '<button type="button" class="wa-gi-btn wa-gi-btn-danger" id="wa-gi-photo-rm">Remove</button>' : ''}
+              <input type="file" id="wa-gi-file" accept="image/*" hidden></div>` : ''}
+          ${admin ? `<form id="wa-gi-form" class="wa-gi-form"><input id="wa-gi-name" maxlength="40" placeholder="Team chat" value="${escAttr(g.nameDraft != null ? g.nameDraft : name)}" autocomplete="off"><button type="submit" class="wa-gi-btn wa-gi-btn-primary" ${g.busy ? 'disabled' : ''}>Save</button></form>`
+                   : `<div class="wa-gi-name">${esc(name)}</div>`}
+          <div class="wa-gi-sub">Group · ${info ? (info.members || []).length : ''} members</div>
+        </div>
+        ${body}
+        ${admin && info ? `<div class="wa-gi-actions">
+            <button type="button" class="wa-gi-act" id="wa-gi-export" ${g.exporting ? 'disabled' : ''}>⬇️ ${g.exporting ? 'Exporting…' : 'Export chat'}</button>
+            <button type="button" class="wa-gi-act wa-gi-act-danger" id="wa-gi-clear">\u{1F5D1}️ Clear chat</button>
+          </div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
 // ---- event wiring (called from attachShellHandlers after every render) --------------------------------
 function attachChat2Handlers(){
   const byIdEl = id => document.getElementById(id);
@@ -10345,6 +10625,17 @@ function attachChat2Handlers(){
   if(byIdEl('wa-new')) byIdEl('wa-new').onclick = ()=>{ s.contacts = true; s.search = ''; render(); const i = byIdEl('wa-search'); if(i) i.focus(); };
   if(byIdEl('wa-contacts-close')) byIdEl('wa-contacts-close').onclick = ()=>{ s.contacts = false; s.search = ''; render(); };
   if(byIdEl('wa-back')) byIdEl('wa-back').onclick = c2Back;
+  document.querySelectorAll('[data-wa-groupinfo]').forEach(el=>{ el.addEventListener('click', c2GroupOpen); el.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); c2GroupOpen(); } }); });
+  if(byIdEl('wa-gi-close')) byIdEl('wa-gi-close').onclick = c2GroupClose;
+  if(byIdEl('wa-gi-photo-btn')) byIdEl('wa-gi-photo-btn').onclick = ()=>byIdEl('wa-gi-file').click();
+  if(byIdEl('wa-gi-file')) byIdEl('wa-gi-file').addEventListener('change', e=>{ const f = e.target.files && e.target.files[0]; if(f) c2GroupPhoto(f); });
+  if(byIdEl('wa-gi-photo-rm')) byIdEl('wa-gi-photo-rm').onclick = c2GroupPhotoRemove;
+  if(byIdEl('wa-gi-form')) byIdEl('wa-gi-form').addEventListener('submit', e=>{ e.preventDefault(); c2GroupSaveName(); });
+  if(byIdEl('wa-gi-name')) byIdEl('wa-gi-name').addEventListener('input', e=>{ if(c2().gi) c2().gi.nameDraft = e.target.value; });
+  if(byIdEl('wa-gi-export')) byIdEl('wa-gi-export').onclick = c2GroupExport;
+  if(byIdEl('wa-gi-clear')) byIdEl('wa-gi-clear').onclick = c2GroupClear;
+  document.querySelectorAll('[data-wa-gi-remove]').forEach(b=>b.addEventListener('click', ()=>c2GroupMember(b.dataset.waGiRemove, false)));
+  document.querySelectorAll('[data-wa-gi-add]').forEach(b=>b.addEventListener('click', ()=>c2GroupMember(b.dataset.waGiAdd, true)));
   if(byIdEl('wa-push-on')) byIdEl('wa-push-on').onclick = pushEnable;
   if(byIdEl('wa-push-off')) byIdEl('wa-push-off').onclick = pushDisable;
   if(byIdEl('wa-push-x')) byIdEl('wa-push-x').onclick = ()=>{ try{ localStorage.setItem('audrey_push_dismissed', '1'); }catch(e){} render(); };
@@ -10357,7 +10648,7 @@ function attachChat2Handlers(){
   });
   // message actions: click a bubble to open its menu; clicks inside the menu / links / quotes do their own thing
   on('[data-wa-bub]', 'click', e=>{
-    if(e.target.closest('a,[data-wa-stop],[data-wa-jump],button')) return;
+    if(e.target.closest('a,[data-wa-stop],[data-wa-jump],[data-wa-order],[data-wa-order-num],button')) return;
     const id = e.currentTarget.dataset.waBub;
     const m = s.msgs.find(x=>x.id === id);
     if(!m || m._pending) return;
@@ -10366,6 +10657,10 @@ function attachChat2Handlers(){
     c2RenderKeep();
     if(s.menuFor){ const el = document.querySelector('.wa-menu'); if(el) el.scrollIntoView({block:'nearest'}); }
   });
+  on('[data-wa-order]', 'click', e=>{ e.stopPropagation(); c2OpenOrder(e.currentTarget.dataset.waOrder); });
+  on('[data-wa-order-num]', 'click', e=>{ e.stopPropagation(); c2OrderNotFound(e.currentTarget.dataset.waOrderNum); });
+  on('[data-wa-order],[data-wa-order-num]', 'keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.currentTarget.click(); } });
+  c2AttachSwipe();
   on('[data-wa-react]', 'click', e=>{ e.stopPropagation(); c2React(e.currentTarget.dataset.waReact, e.currentTarget.dataset.waEmoji); });
   on('[data-wa-reply]', 'click', e=>c2StartReply(e.currentTarget.dataset.waReply));
   on('[data-wa-copy]', 'click', e=>c2Copy(e.currentTarget.dataset.waCopy));

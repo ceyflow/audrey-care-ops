@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114160000">
+<meta name="app-build" content="20261114180000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -249,6 +249,7 @@ html{ visibility:hidden; }
   .wa-push-on{border:none;background:#25d366;color:#fff;font-weight:700;border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;flex-shrink:0;}
   .wa-push-x{border:none;background:none;color:#1d4d33;font-size:15px;cursor:pointer;width:26px;height:26px;flex-shrink:0;}
   .wa-bell{margin-right:6px;}
+  .wa-bell-off{opacity:.75;}
   .wa-bub-removed{background:#f3f3f3 !important;color:#6b7280;}
   .wa-del-txt{font-style:italic;font-size:13.5px;}
   .wa-txt{white-space:pre-wrap;}
@@ -10232,7 +10233,7 @@ function renderChat2List(){
       <div class="wa-head-title">${s.contacts ? 'New chat' : 'Chats'}</div>
       ${s.contacts
         ? `<button type="button" class="wa-ibtn" id="wa-contacts-close" aria-label="Close" title="Close">✕</button>`
-        : `${s.pushOn ? `<button type="button" class="wa-ibtn wa-bell" id="wa-push-off" aria-label="Notifications are on" title="Notifications are on for this phone. Tap to turn off">\u{1F514}</button>` : ''}<button type="button" class="wa-ibtn" id="wa-new" aria-label="New chat" title="New chat">✎</button>`}
+        : `${s.pushOn ? `<button type="button" class="wa-ibtn wa-bell" id="wa-push-off" aria-label="Notifications are on" title="Notifications are on for this phone. Tap to turn off">\u{1F514}</button>` : (pushCanOffer() ? `<button type="button" class="wa-ibtn wa-bell wa-bell-off" id="wa-push-bell" aria-label="Turn on notifications" title="Notifications are off. Tap to turn on">\u{1F515}</button>` : '')}<button type="button" class="wa-ibtn" id="wa-new" aria-label="New chat" title="New chat">✎</button>`}
     </div>
     ${s.contacts ? '' : c2PushBanner()}
     <div class="wa-search"><input id="wa-search" type="search" placeholder="${s.contacts ? 'Search people' : 'Search chats'}" value="${escAttr(s.search)}" autocomplete="off"></div>
@@ -10342,7 +10343,19 @@ function pushB64ToU8(b64){
 function pushIsIos(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 function pushIsStandalone(){ return window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); }
 function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:'; }
-function pushDismissed(){ try{ return localStorage.getItem('audrey_push_dismissed') === '1'; }catch(e){ return false; } }
+// The banner's X only hides it for this visit; the bell in the header always stays so notifications can be turned on later.
+function pushDismissed(){
+  try{ localStorage.removeItem('audrey_push_dismissed'); }catch(e){}   // an older version remembered the X forever
+  try{ return sessionStorage.getItem('audrey_push_dismissed') === '1'; }catch(e){ return false; }
+}
+function pushCanOffer(){ return pushSupported() || (pushIsIos() && !pushIsStandalone()); }
+// the bell while notifications are OFF: turn them on, or explain what this phone needs first
+function pushBellOff(){
+  if(pushIsIos() && !pushIsStandalone()){ showToast('On iPhone: tap Share, choose Add to Home Screen, then open Audrey Care from the Home Screen and tap this bell.', 9000); return; }
+  if(!pushSupported()){ showToast('This phone or browser cannot show app notifications', 5000); return; }
+  if(Notification.permission === 'denied'){ showToast('Notifications are blocked. Allow them in your phone settings (Settings, Notifications, Audrey Care), then tap this bell again.', 9000); return; }
+  pushEnable();
+}
 async function pushSendSubscription(sub){
   const j = sub.toJSON();
   await c2Rpc('push_subscribe', {p_endpoint:j.endpoint, p_p256dh:j.keys.p256dh, p_auth:j.keys.auth, p_ua:navigator.userAgent});
@@ -10638,7 +10651,8 @@ function attachChat2Handlers(){
   document.querySelectorAll('[data-wa-gi-add]').forEach(b=>b.addEventListener('click', ()=>c2GroupMember(b.dataset.waGiAdd, true)));
   if(byIdEl('wa-push-on')) byIdEl('wa-push-on').onclick = pushEnable;
   if(byIdEl('wa-push-off')) byIdEl('wa-push-off').onclick = pushDisable;
-  if(byIdEl('wa-push-x')) byIdEl('wa-push-x').onclick = ()=>{ try{ localStorage.setItem('audrey_push_dismissed', '1'); }catch(e){} render(); };
+  if(byIdEl('wa-push-x')) byIdEl('wa-push-x').onclick = ()=>{ try{ sessionStorage.setItem('audrey_push_dismissed', '1'); }catch(e){} render(); };
+  if(byIdEl('wa-push-bell')) byIdEl('wa-push-bell').onclick = pushBellOff;
   if(byIdEl('wa-earlier')) byIdEl('wa-earlier').onclick = c2LoadEarlier;
   if(byIdEl('wa-cancel-banner')) byIdEl('wa-cancel-banner').onclick = ()=>{ if(s.editing) c2CancelEdit(); else { s.replyTo = null; render(); } };
   const search = byIdEl('wa-search');

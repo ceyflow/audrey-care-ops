@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114091731">
+<meta name="app-build" content="20261114100500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -9729,23 +9729,28 @@ function c2AfterIncoming(m){
     if(mine && tmp >= 0) s.msgs[tmp] = m; else s.msgs.push(m);
   }
   if(!mine){
+    // Admin -> Packing in the Team chat ALWAYS opens the "reply to continue" panel, even if that chat is already open
+    const forced = c2AdminBroadcast(m, t);
     if(viewing){ t.unread = 0; c2MarkReadSoon(m.thread_id); }
     else {
       t.unread = (t.unread || 0) + 1;
       c2DeliveredSoon(m.thread_id);
-      c2Notify(m, t);
+      if(!forced) c2Notify(m, t);
     }
   }
   c2SyncBadge();
   if(state.page === 'chat') c2RenderKeep(); else render();
 }
-function c2Notify(m, t){
-  // Admin -> Packing in the Team chat still opens the full-screen "reply to continue" panel, as before.
+// Admin writes in the Team chat and the reader is a Packing session: full-screen "reply to continue" panel, as before.
+function c2AdminBroadcast(m, t){
   const sp = c2Person(m.sender);
   if(t.kind === 'team' && sp && sp.role === 'Admin' && state.session && state.session.role === 'Packing'){
     state.adminBroadcast = {id:m.id, sender:m.sender_name, text:m.body, at:m.created_at};
-    return;
+    return true;
   }
+  return false;
+}
+function c2Notify(m, t){
   // On the chat page the list shows the badge; a popup there would only cover the header buttons.
   if(state.page === 'chat') return;
   const name = t.kind === 'team' ? (m.sender_name + ' · Team chat') : (m.sender_name || 'New message');

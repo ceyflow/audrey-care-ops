@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114110500">
+<meta name="app-build" content="20261114121500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7282,9 +7282,9 @@ function showChatNotice(sender, text, threadId){
     state._chatNoticeTimer = setTimeout(()=>{ state.chatNotice = null; render(); }, 10000);
   }
 }
-// Forces a full-screen panel in front of everything when Admin writes in the Team chat and the reader is a
-// Packing session -- no outside-click, Escape, or Close-button dismissal; the only way out is sending a reply
-// (which goes into the Team chat as a reply to that message).
+// The message panel for an Admin's message (see c2AdminBroadcast). For a Packing session it has no outside-click,
+// Escape or Close dismissal -- the only way out is sending a reply; for everyone else there is also a Close button.
+// The reply goes into the same chat as a reply to that message.
 async function sendAdminBroadcastReply(e){
   e.preventDefault();
   const textarea = e.target.reply;
@@ -7292,7 +7292,7 @@ async function sendAdminBroadcastReply(e){
   if(!text) return;
   const b = state.adminBroadcast;
   try{
-    await c2Rpc('chat_send', {p_thread: C2_TEAM, p_body: text, p_reply_to: b && /^[0-9a-f-]{36}$/i.test(String(b.id)) ? b.id : null});
+    await c2Rpc('chat_send', {p_thread: (b && b.thread) || C2_TEAM, p_body: text, p_reply_to: b && /^[0-9a-f-]{36}$/i.test(String(b.id)) ? b.id : null});
     state.adminBroadcast = null;
     render();
   }catch(err){ showToast(c2Err(err), 4000); }
@@ -9724,7 +9724,7 @@ function c2AfterIncoming(m){
   }
   if(!mine){
     // Someone who is looking at that chat right now just sees the message; the "reply to continue" panel
-    // (Admin -> Packing in the Team chat) and the popup are only for people who are NOT watching it (owner, 2026-11-14)
+    // (an Admin's message) and the popup are only for people who are NOT watching it (owner, 2026-11-14)
     if(viewing){ t.unread = 0; c2MarkReadSoon(m.thread_id); }
     else {
       t.unread = (t.unread || 0) + 1;
@@ -9735,11 +9735,12 @@ function c2AfterIncoming(m){
   c2SyncBadge();
   if(state.page === 'chat') c2RenderKeep(); else render();
 }
-// Admin writes in the Team chat and the reader is a Packing session: full-screen "reply to continue" panel, as before.
+// An Admin writes to someone (Team chat or private) who is not watching that chat: a message panel opens in front of everything.
+// Packing sessions must reply to continue (as before); everyone else can reply or close it (owner, 2026-11-14).
 function c2AdminBroadcast(m, t){
   const sp = c2Person(m.sender);
-  if(t.kind === 'team' && sp && sp.role === 'Admin' && state.session && state.session.role === 'Packing'){
-    state.adminBroadcast = {id:m.id, sender:m.sender_name, text:m.body, at:m.created_at};
+  if(sp && sp.role === 'Admin' && state.session){
+    state.adminBroadcast = {id:m.id, sender:m.sender_name, text:m.body, at:m.created_at, thread:t.id, kind:t.kind, forced: state.session.role === 'Packing'};
     return true;
   }
   return false;
@@ -11350,7 +11351,7 @@ const NAV = [
   ]},
   {group:'Team', items:[
     {id:'staff', label:'Staff', icon:'staff'},
-    {id:'chat', label:'Team chat', icon:'chat'},
+    {id:'chat', label:'Chat', icon:'chat'},
   ]},
   {group:'Attendance', items:[
     {id:'attendance', label:'Attendance', icon:'clock'},
@@ -13078,7 +13079,7 @@ const PAGE_META = {
   gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
   rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, chemist attendance, and progress.'},
   staff:{title:'Staff', sub:'People working across the pipeline.'},
-  chat:{title:'Team chat', sub:'Team chat and private messages.'},
+  chat:{title:'Chat', sub:'Team chat and private messages.'},
   bulksms:{title:'Bulk SMS', sub:'Send one message to a list of customers at once.'},
   ratings:{title:'Customer ratings', sub:'What customers said about their delivery experience.'},
   attendance:{title:'Attendance', sub:'Mark your check-in and check-out, with your location.'},
@@ -13220,7 +13221,7 @@ function renderShell(freshPage){
         const iconHtml = id==='chat'
           ? `<span style="position:relative;display:inline-flex;">${gridDuotoneIcon(it.icon, 21)}${state.chatUnread?'<span class="mobile-tab-unread-dot"></span>':''}</span>`
           : gridDuotoneIcon(it.icon, 21);
-        const ariaLabel = id==='sections' ? it.label+' — everything you have access to' : (id==='chat' ? 'Team chat' : it.label);
+        const ariaLabel = id==='sections' ? it.label+' — everything you have access to' : (id==='chat' ? 'Chat' : it.label);
         return `<a href="#${id}" class="mobile-tab ${isActive?'active':''}" data-nav="${id}" title="${esc(it.label)}" aria-label="${esc(ariaLabel)}">${iconHtml}<span class="mobile-tab-label">${esc(it.label)}</span></a>`;
       }).join('');
     })()}
@@ -13257,15 +13258,16 @@ function renderAdminBroadcastPanel(){
       <div class="admin-broadcast-header">
         <span class="admin-broadcast-icon">📢</span>
         <div>
-          <div class="admin-broadcast-title">Message from ${esc(b.sender)}</div>
+          <div class="admin-broadcast-title">Message from ${esc(b.sender)}${b.kind==='team' ? ' \u00B7 Team chat' : ''}</div>
           <div class="admin-broadcast-time">${fmtDateTime(b.at)}</div>
         </div>
       </div>
       <div class="admin-broadcast-body">${escBody(b.text)}</div>
-      <div class="hint" style="margin:2px 0 10px;">Send a reply to dismiss this message.</div>
+      <div class="hint" style="margin:2px 0 10px;">${b.forced === false ? 'Reply here, or close this message.' : 'Send a reply to dismiss this message.'}</div>
       <form id="form-admin-broadcast-reply">
         <textarea name="reply" class="admin-broadcast-reply-input" placeholder="Type a reply…" rows="3" required></textarea>
         <div class="admin-broadcast-actions">
+          ${b.forced === false ? '<button type="button" class="btn" id="btn-admin-broadcast-close">Close</button>' : ''}
           <button type="submit" class="btn btn-primary">Send reply</button>
         </div>
       </form>
@@ -24287,6 +24289,7 @@ function attachShellHandlers(){
   // Admin broadcast (forced panel for Packing when Admin messages the team chat) — no
   // outside-click close, only its own Close button or sending a reply.
   if(byIdEl('form-admin-broadcast-reply')) byIdEl('form-admin-broadcast-reply').addEventListener('submit', sendAdminBroadcastReply);
+  if(byIdEl('btn-admin-broadcast-close')) byIdEl('btn-admin-broadcast-close').addEventListener('click', ()=>{ state.adminBroadcast = null; render(); });
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,

@@ -161,7 +161,10 @@ Keep these true when changing the app. Details and the audit are in the owner's 
     Do not add an Admin way to read private chats unless the owner asks.
   * **90 days.** Messages older than 90 days are invisible to everyone immediately (RLS) and are physically removed by the Edge Function `chat-purge`
     (source `supabase/functions/chat-purge/`, Admin-only, called about once a day by an Admin's browser after load, `localStorage audrey_chat_purge`).
-  * **Admin -> Packing rule kept:** an Admin's Team chat message still opens the full-screen "reply to continue" panel on a Packing session; the reply goes
-    into the Team chat as a reply to that message. It (and the popup) appears ONLY when the person is not watching that conversation (owner's decision, 2026-11-14). Old @mentions, pins, chat themes and "Delete chat history" were not carried over.
+  * **Admin message panel (owner, 2026-11-14):** when an Admin writes to someone (Team chat OR private) who is not watching that conversation, a message
+    panel (`state.adminBroadcast`, `renderAdminBroadcastPanel`) opens in front of everything. A Packing session must reply to dismiss it (no outside
+    click / Close); every other role can reply or press Close. The reply goes into the same chat as a reply to that message. Not shown while the person
+    is watching that conversation. The page/menu is named "Chat"; the group conversation inside it is still "Team chat". Old @mentions, pins, chat
+    themes and "Delete chat history" were not carried over.
   * Phone layout is one pane at a time, full screen (header/tab bar hidden on `page-chat`), padded with `env(safe-area-inset-*)`; on a PC the list and the
     conversation sit side by side. No popup notice is shown while the chat page itself is open (the list shows unread badges).

@@ -167,7 +167,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
     click / Close); every other role can reply or press Close. The reply goes into the same chat as a reply to that message. Not shown while the person
     is watching that conversation. The page/menu is named "Chat"; the group conversation inside it is still "Team chat". Old @mentions, pins, chat
     themes and "Delete chat history" were not carried over.
-  * **Phone notifications (owner, 2026-11-14, Web Push).** Each person turns them on once per phone/browser from the banner / bell on the Chat list (the browser
+  * **Phone notifications (owner, 2026-11-14, Web Push).** Each person turns them on once per phone/browser from the banner / bell on the Chat list (the banner's X only hides it for that visit; the bell, 🔔 on / 🔕 off, is always in the header so they can be turned on later) (the browser
     asks only after a tap; iPhone needs the app added to the Home Screen first, iOS 16.4+). The device is stored by `push_subscribe` (table
     `push_subscriptions`, no direct access; `push_unsubscribe` just switches it off). After each message the SENDER's app calls the Edge Function `chat-push`
     (source `supabase/functions/chat-push/`, JWT verified): it only accepts the sender's own message from the last 10 minutes, once (`chat_messages.pushed_at`),

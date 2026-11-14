@@ -148,3 +148,21 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   at the owner's request: do not bring it back unless asked.
 - **Profile details is a phone-only feature (owner, 2026-11-13).** The "Profile details" link is hidden on a PC (`@media (min-width:761px)`),
   where the header links stay Activity log / Change password / Log out.
+- **Chat (owner, 2026-11-14): WhatsApp-style Team chat + private 1-to-1 chats.** Staff-only (no customers, no bots). Who can chat = Admin + roles
+  that have the `chat` page (`role_data_access` data_key `chat`; Staff/Driver roles have none). Data lives in tables `chat_threads` (the Team thread has the
+  fixed id `00000000-0000-0000-0000-00000000c0de`), `chat_messages`, `chat_reads`, `chat_reactions`, `chat_monitor_log` (RLS on, no direct writes for anyone) and
+  is reached through the `chat_*` database functions (`chat_people`, `chat_open_dm`, `chat_threads_overview`, `chat_send`, `chat_edit` (own, 15 min),
+  `chat_remove` (own, "deleted for everyone"), `chat_react`, `chat_mark_read`, `chat_mark_delivered`, and Admin-only `chat_monitor_*`). Realtime uses
+  `postgres_changes` on the three message tables (RLS-filtered) + a per-thread broadcast channel for "typing". Client code: `c2*` functions and
+  `renderChat2Page` in `index.html` (search "Chat (WhatsApp-style)"); CSS classes `.wa-*`. The old `app_data` key `chat` is NOT used or fetched any more;
+  its 275 messages were copied into the Team thread (`legacy` column keeps the old fields) and the old row is left in place as a backup.
+  * **Admin and private chats.** An Admin can NOT read private chats through the tables (RLS). The only way is the read-only "Monitor private chats"
+    page (`chat_monitor_open`), which asks for confirmation and writes a row to `chat_monitor_log` (admin, chat, time) on EVERY opening; the page lists
+    the recent openings. Every private chat shows a note saying Admins can review private chats and every review is logged. Keep this: do not add a way to
+    read a private chat without logging it.
+  * **90 days.** Messages older than 90 days are invisible to everyone immediately (RLS) and are physically removed by the Edge Function `chat-purge`
+    (source `supabase/functions/chat-purge/`, Admin-only, called about once a day by an Admin's browser after load, `localStorage audrey_chat_purge`).
+  * **Admin -> Packing rule kept:** an Admin's Team chat message still opens the full-screen "reply to continue" panel on a Packing session; the reply goes
+    into the Team chat as a reply to that message. Old @mentions, pins, chat themes and "Delete chat history" were not carried over.
+  * Phone layout is one pane at a time, full screen (header/tab bar hidden on `page-chat`), padded with `env(safe-area-inset-*)`; on a PC the list and the
+    conversation sit side by side. No popup notice is shown while the chat page itself is open (the list shows unread badges).

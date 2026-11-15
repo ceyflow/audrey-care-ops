@@ -149,6 +149,15 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   at the owner's request: do not bring it back unless asked.
 - **Profile details is a phone-only feature (owner, 2026-11-13).** The "Profile details" link is hidden on a PC (`@media (min-width:761px)`),
   where the header links stay Activity log / Change password / Log out.
+- **iPhone-style motion (owner, 2026-11-15).** CSS block "iPhone-style motion" near the end of the main `<style>` (search that title), phone only
+  (`max-width:760px`; press feedback only on touch screens). Tokens `--ease-ios` (everything that slides) and `--ease-spring` (pops, releases). Modals
+  (`.overlay` > `.modal`) are bottom sheets on phones with a grabber, sliding up (`ios-sheet-up`); Box Count (`.bc-overlay`), the profile panel and
+  the Dally panel keep their own layouts. Screens push in from the right (`ios-push`, same stagger as before), the opened bottom tab pops (`tab-pop`,
+  `ios-pop`), a sent / arriving chat bubble pops (`m._popAt`, `ios-bubble-in`, carries on across quick redraws), and tabs, tiles, chat rows and icon
+  buttons squish when pressed. Rules: entrances play ONLY on a fresh open / fresh page (`freshPage`, `freshModal` / `.reopen-noanim`, `_popAt`),
+  never on a redraw, because `render()` rebuilds the whole page; every moving part is inside `prefers-reduced-motion:no-preference`. Closing a sheet
+  is instant (no slide-out: `closeModal()` is called synchronously all over the app). Remotion was NOT installed: it renders videos, it is not a
+  runtime animation library, and this app has no build step. A bottom sheet must keep its own bottom padding for the home bar.
 - **Chat (owner, 2026-11-14): WhatsApp-style Team chat + private 1-to-1 chats.** Staff-only (no customers, no bots). Who can chat = Admin + roles
   that have the `chat` page (`role_data_access` data_key `chat`; Staff/Driver roles have none). Data lives in tables `chat_threads` (the Team thread has the
   fixed id `00000000-0000-0000-0000-00000000c0de`), `chat_messages`, `chat_reads`, `chat_reactions`, `chat_monitor_log` (unused now; RLS on, no direct writes for anyone) and

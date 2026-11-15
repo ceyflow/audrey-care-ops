@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261115103000">
+<meta name="app-build" content="20261115140000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1852,6 +1852,10 @@ html{ visibility:hidden; }
 
   /* ---------------- Recipes / batch timer ---------------- */
   .recipe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(20,25,20,.06);transition:box-shadow .18s ease,transform .18s ease,border-color .15s;}
+  .recipe-card.cost-selectable{user-select:none;}
+  .recipe-card.cost-selected{outline:2px solid var(--accent);background:var(--accent-soft);}
+  .cost-check{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;}
+  .cost-selected .cost-check{background:var(--accent);border-color:var(--accent);}
   .recipe-card:hover{box-shadow:0 10px 24px rgba(20,25,20,.12);border-color:var(--accent);}
   .recipe-card .rc-title{font-weight:600;font-size:14.5px;}
   .recipe-card .rc-meta{font-size:12px;color:var(--muted);}
@@ -6286,6 +6290,7 @@ async function loadAll(){
   // instead of "was this ever saved before" would silently resurrect it on every later refresh.
   const recipesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('recipes')] == null;
   const mixingStepTemplatesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('mixingStepTemplates')] == null;
+  const costingProductsNeverSaved = loadedValues[SYNCED_KEYS.indexOf('costingProducts')] == null;
   if(!state.branding || !Array.isArray(state.branding.addons)) state.branding = {addons: []};
   if(!state.navOrder || typeof state.navOrder !== 'object' || Array.isArray(state.navOrder)) state.navOrder = {};
   // One-time cleanup: 'blending' used to be the top-level sidebar group id (label "Blending
@@ -6410,15 +6415,7 @@ async function loadAll(){
     saveQuietly('mixingStepTemplates').catch(()=>{});
   }
   if(!Array.isArray(state.costingProducts)) state.costingProducts = [];
-  // Same isAdmin() gating as above — unguarded, this duplicated six named default products into
-  // the real shared Costing list for any session that hit the RLS-read race, same failure shape
-  // as the userRoles duplication incident (and visibly worse here: these are named products a
-  // user would see and have to notice/clean up themselves).
-  if(isAdmin() && state.costingProducts.length===0){
-    const DEFAULT_COSTING_PRODUCTS = ['Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Hand Wash', 'Bubble Bath'];
-    state.costingProducts = DEFAULT_COSTING_PRODUCTS.map(name => ({id:uid('CPROD'), name, versions:[]}));
-    saveQuietly('costingProducts').catch(()=>{});
-  }
+  await seedDefaultCostingProducts(costingProductsNeverSaved);
   // Costing sheets used to store one flat {materials, batchSizes} per product — now each
   // product holds named, dated versions so past formulations stay on record. Wrap any still-flat
   // product into a single "Version 1", and migrate each raw material's old single `supplier`
@@ -7607,6 +7604,7 @@ function performGoTo(page){
   state._costingDraft = null;
   state._costingDirty = false;
   state._costingVersionsView = 'active';
+  state._costSel = null;
   state.filters.gmpSection = null;
   state._attRecordsOpen = false;
   state._attRecordsStaff = null;
@@ -19895,6 +19893,21 @@ function renderCostingPage(){
 // Picks an icon by keyword match on the product name, so the 6 default products each get
 // a distinct, relevant glyph instead of one generic bottle — falls back to a plain bottle for
 // any custom product name that doesn't match a known category.
+// The six starter products are added ONLY to a workspace that has genuinely never saved any: this load found no row, the
+// server STILL has none on a fresh read, and the list is empty. Before this guard, an Admin load that got an empty answer
+// (the read race) added the six again and the save merged them in, five times over (30 empty copies, found 2026-11-15).
+async function seedDefaultCostingProducts(neverSaved){
+  if(!isAdmin() || !neverSaved || (state.costingProducts||[]).length) return false;
+  let serverCount = 0;
+  try{ const v = await kvGet('costingProducts'); serverCount = Array.isArray(v) ? v.length : 0; }
+  catch(e){ return false; }   // cannot confirm the server is empty -> never add anything
+  if(serverCount) return false;
+  ['Shampoo', 'Shower Gel', 'Conditioner', 'Body Lotion', 'Hand Wash', 'Bubble Bath'].forEach(name=>{
+    if(!state.costingProducts.some(p=>(p.name||'').trim().toLowerCase()===name.toLowerCase())) state.costingProducts.push({id:uid('CPROD'), name, versions:[]});
+  });
+  saveQuietly('costingProducts').catch(()=>{});
+  return true;
+}
 function costingProductIcon(name){
   const n = (name||'').toLowerCase();
   if(n.includes('shampoo')) return 'shampoo';
@@ -19907,23 +19920,36 @@ function costingProductIcon(name){
 }
 function renderCostingProductGrid(){
   const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
+  const canDelete = isCostingSuperAdmin();
+  const sel = (canDelete && state._costSel && state._costSel.on) ? state._costSel : null;
   const products = state.costingProducts;
   return `
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Product costing</div>
-    ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    ${sel ? `
+      <span class="hint" style="margin:0;">${sel.ids.length} selected</span>
+      <button type="button" class="btn btn-sm" id="btn-cost-select-all">Select all</button>
+      <button type="button" class="btn btn-sm" id="btn-cost-select-dups" title="Selects empty copies of a product that appears more than once; the copy with saved versions is kept">Select duplicates</button>
+      <button type="button" class="btn btn-sm btn-danger" id="btn-cost-delete-selected" ${sel.ids.length ? '' : 'disabled'}>Delete selected (${sel.ids.length})</button>
+      <button type="button" class="btn btn-sm" id="btn-cost-select-cancel">Cancel</button>` : `
+      ${canDelete && products.length ? `<button type="button" class="btn btn-sm" id="btn-cost-select-mode">Select</button>` : ''}
+      ${admin ? `<button class="btn btn-primary btn-sm" id="btn-add-costing-product">+ Add Product Costing</button>` : ''}`}
+    </div>
   </div>
   ${products.length===0 ? `<div class="empty-state">No products yet. ${admin?'Add one to start costing it.':''}</div>` : `
   <div class="recipe-grid">
     ${products.map(p=>{
       const verCount = activeCostingVersions(p).length;
+      const picked = !!sel && sel.ids.includes(p.id);
       return `
-      <div class="recipe-card clickable-card" data-open-costing-product="${p.id}" style="cursor:pointer;">
+      <div class="recipe-card clickable-card ${sel ? 'cost-selectable' : ''} ${picked ? 'cost-selected' : ''}" ${sel ? `data-cost-pick="${p.id}" role="checkbox" aria-checked="${picked}"` : `data-open-costing-product="${p.id}"`} style="cursor:pointer;position:relative;">
+        ${sel ? `<span class="cost-check">${picked ? '\u2713' : ''}</span>` : ''}
         <div class="rc-icon-badge">${icon(costingProductIcon(p.name))}</div>
         <div class="rc-title">${esc(p.name)}</div>
         ${p.productId ? `<div class="rc-meta">ID: ${esc(p.productId)}</div>` : ''}
         <div class="rc-meta">${verCount} version${verCount===1?'':'s'}</div>
-        ${admin ? `<div style="margin-top:8px;display:flex;gap:8px;">
+        ${(admin && !sel) ? `<div style="margin-top:8px;display:flex;gap:8px;">
           <button type="button" class="btn btn-sm" data-edit-costing-product="${p.id}" onclick="event.stopPropagation()">Edit</button>
           ${isCostingSuperAdmin() ? `<button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button>` : ''}
         </div>` : ''}
@@ -19931,6 +19957,45 @@ function renderCostingProductGrid(){
     }).join('')}
   </div>`}
   `;
+}
+// ---- select several products and delete them together (Costing & recipe) ----
+function costingDuplicateIds(){
+  const groups = new Map();
+  state.costingProducts.forEach(p=>{
+    const k = (p.name||'').trim().toLowerCase() + '|' + (p.productId||'').trim().toLowerCase();
+    if(!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(p);
+  });
+  const ids = [];
+  groups.forEach(list=>{
+    if(list.length < 2) return;
+    // keep the copy that has the most saved versions (the first one on a tie); only EMPTY copies are ever selected
+    const keep = list.slice().sort((a,b)=>(b.versions||[]).length - (a.versions||[]).length)[0];
+    list.forEach(p=>{ if(p !== keep && (p.versions||[]).length === 0) ids.push(p.id); });
+  });
+  return ids;
+}
+function costingDeleteSelected(){
+  const sel = state._costSel;
+  if(!sel || !sel.ids.length || !isCostingSuperAdmin()) return;
+  const items = sel.ids.map(id=>byId(state.costingProducts, id)).filter(Boolean);
+  if(!items.length) return;
+  const withVersions = items.filter(p=>(p.versions||[]).length > 0);
+  openConfirmModal({
+    title: 'Delete ' + items.length + ' product' + (items.length === 1 ? '' : 's'), danger: true, confirmLabel: 'Delete', requirePassword: true,
+    message: 'Delete ' + items.length + ' product costing sheet' + (items.length === 1 ? '' : 's') + '? ' +
+      (withVersions.length ? 'Careful: ' + withVersions.map(p=>p.name + ' (' + (p.versions||[]).length + ' saved version' + ((p.versions||[]).length === 1 ? '' : 's') + ')').join(', ') + ' will lose their saved versions too. ' : 'None of them has a saved version. ') +
+      'This cannot be undone.',
+    onConfirm: async ()=>{
+      const gone = new Set(items.map(p=>p.id));
+      state.costingProducts = state.costingProducts.filter(p=>!gone.has(p.id));
+      if(!(await save('costingProducts'))) return;
+      logActivity('Deleted ' + items.length + ' product costing sheet' + (items.length === 1 ? '' : 's') + ': ' + items.map(p=>p.name).join(', '));
+      state._costSel = null;
+      showToast(items.length + ' product' + (items.length === 1 ? '' : 's') + ' deleted');
+      render();
+    },
+  });
 }
 function activeCostingVersions(product){ return (product.versions||[]).filter(v=>!v.archived); }
 function archivedCostingVersions(product){ return (product.versions||[]).filter(v=>v.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0)); }
@@ -24261,6 +24326,22 @@ function attachShellHandlers(){
     logActivity(`Created product costing "${name}"`);
     closeModal();
   });
+  if(byIdEl('btn-cost-select-mode')) byIdEl('btn-cost-select-mode').onclick = ()=>{ state._costSel = {on:true, ids:[]}; render(); };
+  if(byIdEl('btn-cost-select-cancel')) byIdEl('btn-cost-select-cancel').onclick = ()=>{ state._costSel = null; render(); };
+  if(byIdEl('btn-cost-select-all')) byIdEl('btn-cost-select-all').onclick = ()=>{ if(state._costSel){ state._costSel.ids = state.costingProducts.map(p=>p.id); render(); } };
+  if(byIdEl('btn-cost-select-dups')) byIdEl('btn-cost-select-dups').onclick = ()=>{
+    if(!state._costSel) return;
+    const ids = costingDuplicateIds();
+    state._costSel.ids = ids; render();
+    showToast(ids.length ? ids.length + ' empty duplicate' + (ids.length === 1 ? '' : 's') + ' selected' : 'No empty duplicates found');
+  };
+  if(byIdEl('btn-cost-delete-selected')) byIdEl('btn-cost-delete-selected').onclick = costingDeleteSelected;
+  document.querySelectorAll('[data-cost-pick]').forEach(el=>el.addEventListener('click', ()=>{
+    const sel = state._costSel; if(!sel) return;
+    const id = el.dataset.costPick;
+    sel.ids = sel.ids.includes(id) ? sel.ids.filter(x=>x !== id) : sel.ids.concat(id);
+    render();
+  }));
   document.querySelectorAll('[data-delete-costing-product]').forEach(b=>b.addEventListener('click', ()=>{
     const product = byId(state.costingProducts, b.dataset.deleteCostingProduct);
     openConfirmModal({

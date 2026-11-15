@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261114200000">
+<meta name="app-build" content="20261115103000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2812,6 +2812,41 @@ html{ visibility:hidden; }
      plain block sitting outside the overlay entirely (a direct child of body), and print media
      hides everything else. */
   #print-area{ display:none; }
+  /* ---------------- iPhone-style motion (phone only; owner request 2026-11-15) ----------------
+     One easing for everything that slides (the iOS "ease-out-expo"-like curve) and one springy curve for pops and releases.
+     Layout changes (sheet) are always on for phones; every MOVING part is inside prefers-reduced-motion:no-preference.
+     Entrances only ever play on a fresh open / fresh page (freshPage, freshModal, m._popAt), never on a redraw. */
+  :root{--ease-ios:cubic-bezier(.32,.72,0,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);}
+  @keyframes ios-sheet-up{from{transform:translateY(100%);}to{transform:none;}}
+  @keyframes ios-push{from{opacity:0;transform:translateX(22px);}to{opacity:1;transform:none;}}
+  @keyframes ios-pop{0%{transform:scale(.78);}55%{transform:scale(1.16);}100%{transform:scale(1);}}
+  @keyframes ios-bubble-in{from{opacity:0;transform:translateY(10px) scale(.86);}to{opacity:1;transform:none;}}
+  @media (max-width:760px){
+    /* modals become bottom sheets, like iOS */
+    .overlay:not(.bc-overlay){align-items:flex-end;padding:0;}
+    .overlay:not(.bc-overlay) .modal:not(.profile-modal):not(.bc-modal){max-width:none !important;width:100%;margin:0;max-height:calc(100dvh - env(safe-area-inset-top) - 10px);border-radius:22px 22px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+    .dally-modal #form-aichat{padding-bottom:calc(16px + env(safe-area-inset-bottom)) !important;}
+    .overlay:not(.bc-overlay) .modal:not(.profile-modal):not(.bc-modal):not(.dally-modal)::before{content:"";display:block;width:38px;height:5px;border-radius:3px;background:rgba(19,32,30,.16);margin:-8px auto 12px;}
+  }
+  @media (max-width:760px) and (prefers-reduced-motion:no-preference){
+    .overlay:not(.bc-overlay){animation-duration:.32s;}
+    .overlay:not(.bc-overlay) .modal:not(.profile-modal):not(.bc-modal){animation:ios-sheet-up .5s var(--ease-ios) both;}
+    /* screens push in from the right, parts staggered as before */
+    .page-enter > *, .page-enter .stat-grid > .stat-card, .page-enter .board > .column, .page-enter .column-body > .card{animation-name:ios-push;animation-timing-function:var(--ease-ios);animation-duration:.46s;}
+    .drawer{animation-duration:.42s;animation-timing-function:var(--ease-ios);}
+    /* the tab you just opened gives a small spring pop */
+    .mobile-tab.tab-pop svg{animation:ios-pop .55s var(--ease-spring) both;}
+    /* a message you send, or one that arrives while you watch, pops in */
+    .wa-pop .wa-bub{animation:ios-bubble-in .4s var(--ease-spring) both;transform-origin:bottom left;}
+    .wa-pop.wa-mine .wa-bub{transform-origin:bottom right;}
+  }
+  @media (hover:none) and (pointer:coarse) and (prefers-reduced-motion:no-preference){
+    /* press = quick squish, release = springy return */
+    .btn{transition:background .15s,border-color .15s,transform .34s var(--ease-spring),box-shadow .15s ease;}
+    .mobile-tab{transition:background .15s ease,color .15s ease,transform .34s var(--ease-spring);}
+    .mobile-tab:active,.sections-tile:active,.wa-row:active,.wa-ibtn:active,.wa-send:active,.header-menu-item:active{transform:scale(.94);transition-duration:.08s;}
+    .sections-tile,.wa-row,.wa-ibtn,.wa-send,.header-menu-item{transition:transform .34s var(--ease-spring),background .15s ease;}
+  }
   @media print{
     body > *:not(#print-area){ display:none!important; }
     #print-area{ display:block!important; }
@@ -9857,7 +9892,7 @@ function c2AfterIncoming(m){
   if(s.cur === m.thread_id && !s.msgs.some(x=>x.id===m.id)){
     // replace my own optimistic copy if the server echo beats the send response
     const tmp = s.msgs.findIndex(x=>x._pending && x.sender===s.meId && x.body===m.body);
-    if(mine && tmp >= 0) s.msgs[tmp] = m; else s.msgs.push(m);
+    if(mine && tmp >= 0){ m._popAt = s.msgs[tmp]._popAt; s.msgs[tmp] = m; } else { if(viewing) m._popAt = Date.now(); s.msgs.push(m); }
   }
   if(!mine){
     // Someone who is looking at that chat right now just sees the message; the "reply to continue" panel
@@ -10091,6 +10126,7 @@ async function c2Send(retryText){
   const reply = s.replyTo;
   const tmp = {id:'tmp-' + Math.random().toString(36).slice(2), thread_id:s.cur, sender:s.meId, sender_name:c2Me(), body:text,
                reply_to: reply ? reply.id : null, reply_preview: reply ? c2PreviewOf(reply) : null, created_at:new Date().toISOString(), _pending:true};
+  tmp._popAt = Date.now();
   s.msgs.push(tmp);
   s.draft[s.cur] = ''; s.replyTo = null;
   if(ta){ ta.value = ''; }
@@ -10101,7 +10137,7 @@ async function c2Send(retryText){
     c2PushKick(m.id);
     const i = s.msgs.findIndex(x=>x.id === tmp.id);
     const dup = s.msgs.some(x=>x.id === m.id);
-    if(i >= 0){ if(dup) s.msgs.splice(i,1); else s.msgs[i] = m; }
+    if(i >= 0){ if(dup) s.msgs.splice(i,1); else { m._popAt = s.msgs[i]._popAt; s.msgs[i] = m; } }
     const t = c2Thread(threadId);
     if(t){ t.last = {id:m.id, body:m.body.slice(0,140), removed:false, sender:m.sender, senderName:m.sender_name, at:m.created_at}; t.unread = 0; c2SortThreads(); c2SyncBadge(); }
   }catch(e){
@@ -10301,6 +10337,8 @@ function renderChat2Bubble(m, t, grouped){
   const s = c2();
   const mine = m.sender === s.meId;
   const removed = !!m.removed_at;
+  // the pop-in plays once; a redraw within its 0.4 s carries on from where it was instead of restarting or jumping
+  const popMs = m._popAt ? Date.now() - m._popAt : 99999;
   const showName = !mine && t.kind === 'team' && !grouped;
   const rp = m.reply_preview;
   const menu = s.menuFor === m.id && !m._pending ? `
@@ -10314,8 +10352,8 @@ function renderChat2Bubble(m, t, grouped){
       </div>
     </div>` : '';
   return `
-  <div class="wa-msg ${mine ? 'wa-mine' : 'wa-theirs'} ${grouped ? 'wa-grp' : ''}" data-wa-msg="${m.id}">
-    <div class="wa-bub ${removed ? 'wa-bub-removed' : ''}" data-wa-bub="${m.id}">
+  <div class="wa-msg ${mine ? 'wa-mine' : 'wa-theirs'} ${grouped ? 'wa-grp' : ''} ${popMs < 420 ? 'wa-pop' : ''}" data-wa-msg="${m.id}">
+    <div class="wa-bub ${removed ? 'wa-bub-removed' : ''}" data-wa-bub="${m.id}"${popMs < 420 ? ' style="animation-delay:-' + popMs + 'ms"' : ''}>
       ${showName ? `<div class="wa-sender">${esc(m.sender_name || '')}</div>` : ''}
       ${rp && !removed ? `<div class="wa-quote" data-wa-jump="${rp.id}"><b>${esc(rp.sender || '')}</b><span>${rp.text ? esc(rp.text) : 'Deleted message'}</span></div>` : ''}
       ${removed ? '<span class="wa-del-txt">'+c2Svg('ban', 13)+' This message was deleted</span>' : `<span class="wa-txt">${c2LinkText(m.body)}</span>`}
@@ -13682,7 +13720,7 @@ function renderShell(freshPage){
           ? `<span style="position:relative;display:inline-flex;">${gridDuotoneIcon(it.icon, 21)}${state.chatUnread?'<span class="mobile-tab-unread-dot"></span>':''}</span>`
           : gridDuotoneIcon(it.icon, 21);
         const ariaLabel = id==='sections' ? it.label+' — everything you have access to' : (id==='chat' ? 'Chat' : it.label);
-        return `<a href="#${id}" class="mobile-tab ${isActive?'active':''}" data-nav="${id}" title="${esc(it.label)}" aria-label="${esc(ariaLabel)}">${iconHtml}<span class="mobile-tab-label">${esc(it.label)}</span></a>`;
+        return `<a href="#${id}" class="mobile-tab ${isActive?'active':''} ${(isActive && freshPage)?'tab-pop':''}" data-nav="${id}" title="${esc(it.label)}" aria-label="${esc(ariaLabel)}">${iconHtml}<span class="mobile-tab-label">${esc(it.label)}</span></a>`;
       }).join('');
     })()}
   </nav>

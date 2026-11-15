@@ -149,6 +149,12 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   at the owner's request: do not bring it back unless asked.
 - **Profile details is a phone-only feature (owner, 2026-11-13).** The "Profile details" link is hidden on a PC (`@media (min-width:761px)`),
   where the header links stay Activity log / Change password / Log out.
+- **Costing products: select + delete, and the duplicate bug (owner, 2026-11-15).** On Costing & recipe, Vihanga and Rumesh (`isCostingSuperAdmin()`) have a
+  "Select" button: tick products, "Select all", "Select extras" (only EMPTY extra copies of a name; the copy with saved versions is always kept; the owner does not want the word "duplicates" in the screen text),
+  then "Delete selected (n)" with a password confirm that names any product that has saved versions (`state._costSel`, `costingDeleteSelected`).
+  Root cause of the 30 empty copies of the six starter products: the starter seeding ran for an Admin whose load got an empty answer and the merging save
+  added them again each time. `seedDefaultCostingProducts()` now adds them ONLY when this load found no row AND a fresh read confirms the server has none
+  AND the list is empty (and never when it cannot confirm). Do not reintroduce seeding keyed only on "the local list is empty".
 - **iPhone-style motion (owner, 2026-11-15).** CSS block "iPhone-style motion" near the end of the main `<style>` (search that title), phone only
   (`max-width:760px`; press feedback only on touch screens). Tokens `--ease-ios` (everything that slides) and `--ease-spring` (pops, releases). Modals
   (`.overlay` > `.modal`) are bottom sheets on phones with a grabber, sliding up (`ios-sheet-up`); Box Count (`.bc-overlay`), the profile panel and

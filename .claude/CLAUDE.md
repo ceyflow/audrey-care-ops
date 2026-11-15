@@ -150,7 +150,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
 - **Profile details is a phone-only feature (owner, 2026-11-13).** The "Profile details" link is hidden on a PC (`@media (min-width:761px)`),
   where the header links stay Activity log / Change password / Log out.
 - **Costing products: select + delete, and the duplicate bug (owner, 2026-11-15).** On Costing & recipe, Vihanga and Rumesh (`isCostingSuperAdmin()`) have a
-  "Select" button: tick products, "Select all", "Select duplicates" (only EMPTY extra copies of a name; the copy with saved versions is always kept),
+  "Select" button: tick products, "Select all", "Select extras" (only EMPTY extra copies of a name; the copy with saved versions is always kept; the owner does not want the word "duplicates" in the screen text),
   then "Delete selected (n)" with a password confirm that names any product that has saved versions (`state._costSel`, `costingDeleteSelected`).
   Root cause of the 30 empty copies of the six starter products: the starter seeding ran for an Admin whose load got an empty answer and the merging save
   added them again each time. `seedDefaultCostingProducts()` now adds them ONLY when this load found no row AND a fresh read confirms the server has none

@@ -19930,7 +19930,7 @@ function renderCostingProductGrid(){
     ${sel ? `
       <span class="hint" style="margin:0;">${sel.ids.length} selected</span>
       <button type="button" class="btn btn-sm" id="btn-cost-select-all">Select all</button>
-      <button type="button" class="btn btn-sm" id="btn-cost-select-dups" title="Selects empty copies of a product that appears more than once; the copy with saved versions is kept">Select duplicates</button>
+      <button type="button" class="btn btn-sm" id="btn-cost-select-dups" title="Selects the empty extra copies of a product that is listed more than once. The one with saved versions is always kept.">Select extras</button>
       <button type="button" class="btn btn-sm btn-danger" id="btn-cost-delete-selected" ${sel.ids.length ? '' : 'disabled'}>Delete selected (${sel.ids.length})</button>
       <button type="button" class="btn btn-sm" id="btn-cost-select-cancel">Cancel</button>` : `
       ${canDelete && products.length ? `<button type="button" class="btn btn-sm" id="btn-cost-select-mode">Select</button>` : ''}
@@ -24333,7 +24333,7 @@ function attachShellHandlers(){
     if(!state._costSel) return;
     const ids = costingDuplicateIds();
     state._costSel.ids = ids; render();
-    showToast(ids.length ? ids.length + ' empty duplicate' + (ids.length === 1 ? '' : 's') + ' selected' : 'No empty duplicates found');
+    showToast(ids.length ? ids.length + ' extra empty product' + (ids.length === 1 ? '' : 's') + ' selected' : 'No extra empty products found');
   };
   if(byIdEl('btn-cost-delete-selected')) byIdEl('btn-cost-delete-selected').onclick = costingDeleteSelected;
   document.querySelectorAll('[data-cost-pick]').forEach(el=>el.addEventListener('click', ()=>{

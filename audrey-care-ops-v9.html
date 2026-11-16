@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261116130000">
+<meta name="app-build" content="20261116160000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8698,41 +8698,6 @@ function brandingDeleteAddon(id){
     },
   });
 }
-async function loadSampleData(){
-  const now = Date.now();
-  const mk = (offsetDays, stage, customer, product, qty, assignee) => ({
-    id: uid('AC'), orderNumber: uid('AC'), customer, phone:'98765 4'+Math.floor(10000+Math.random()*89999).toString().slice(0,5),
-    address:'', product, qty, notes:'', stage, priority: ['Low','Medium','High'][Math.floor(Math.random()*3)],
-    assignee: assignee||null, startDate:localDateKey(new Date(now - offsetDays*86400000)), dueDate:'',
-    courierService:'', courierNumber:'',
-    createdAt: new Date(now - offsetDays*86400000).toISOString(),
-    history:[{stage:0, at:new Date(now-offsetDays*86400000).toISOString(), by:'Admin'}]
-  });
-  state.staff = [
-    {id:uid('STF'), name:'Ritu'}, {id:uid('STF'), name:'Farah'},
-    {id:uid('STF'), name:'Sanjay'}, {id:uid('STF'), name:'Devika'},
-  ];
-  state.orders = [
-    mk(3,0,'Meera Nair','Herbal Hair Oil — 200ml',2,null), mk(2,1,'Kabir Singh','Face Balm — 50g',1,'Ritu'),
-    mk(4,2,'Ayesha Khan','Body Butter — 150g',3,'Sanjay'), mk(1,2,'Rahul Verma','Herbal Hair Oil — 200ml',1,'Devika'),
-  ];
-  state.customers = [
-    {id:uid('CUS'), name:'Meera Nair', phone:'9876540001', email:'meera@example.com', address:'Kochi', type:'Individual', status:'Active', createdAt:new Date(now-20*86400000).toISOString()},
-    {id:uid('CUS'), name:'Black Eagle Holdings (Pvt) Ltd.', phone:'0775098783', email:'', address:'Handala, Wattala', type:'Business', status:'Active', createdAt:new Date(now-40*86400000).toISOString()},
-  ];
-  state.suppliers = [
-    {id:uid('SUP'), name:'4Ever Skin Naturals Pvt Ltd.', contact:'', phone:'771396517', email:'', address:'', status:'Active', createdAt:new Date(now-90*86400000).toISOString()},
-    {id:uid('SUP'), name:'Bio Care Consumers', contact:'', phone:'', email:'', address:'', status:'Active', createdAt:new Date(now-60*86400000).toISOString()},
-  ];
-  state.complaints = [
-    {id:uid('CMP'), customer:'Meera Nair', headline:'Leaking bottle on arrival', category:'Quality', priority:'High', status:'Open', assignedTo:'', description:'Customer reported the hair oil bottle arrived leaking.', createdAt:new Date(now-2*86400000).toISOString()},
-    {id:uid('CMP'), customer:'Kabir Singh', headline:'Delivery delayed by 3 days', category:'Delivery', priority:'Medium', status:'Resolved', assignedTo:'Devika', description:'', createdAt:new Date(now-9*86400000).toISOString()},
-  ];
-  for(const k of ['orders','staff','customers','suppliers','complaints']){
-    await save(k);
-  }
-  render();
-}
 
 /* ===================== Staff ===================== */
 // Categories group the team roster (Operation, Sales, ...). Admin-editable via "Manage
@@ -14847,7 +14812,6 @@ function renderOrdersPage(){
       ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
   </div>
-  ${active.length===0 && canCreate ? `<div class="hint orders-d-only" style="text-align:center;margin:10px 0 16px;"><button type="button" class="btn-text" id="btn-sample">Load sample data</button> to see the board in action.</div>` : ''}
   ${state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryBoardSection(line, active)).join('')}
   ${renderOrdersMobileQueue(active, archived)}
   `;
@@ -23345,7 +23309,6 @@ function attachShellHandlers(){
   // Orders
   if(byIdEl('btn-new-order')) byIdEl('btn-new-order').onclick = ()=>openModal('order:new');
   document.querySelectorAll('[data-new-order-courier]').forEach(b=>b.addEventListener('click', ()=>openModal('order:new:'+b.dataset.newOrderCourier)));
-  if(byIdEl('btn-sample')) byIdEl('btn-sample').onclick = loadSampleData;
   document.querySelectorAll('[data-orders-view]').forEach(b=>b.addEventListener('click', ()=>{ state.ordersView = b.dataset.ordersView; render(); }));
   document.querySelectorAll('[data-restore-order]').forEach(b=>b.addEventListener('click', ()=>restoreOrder(b.dataset.restoreOrder)));
   document.querySelectorAll('.order-select-row').forEach(cb=>cb.addEventListener('change', ()=>{

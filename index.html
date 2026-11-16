@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261115140000">
+<meta name="app-build" content="20261116130000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -194,6 +194,16 @@ html{ visibility:hidden; }
   .wa-row{display:flex;align-items:center;gap:13px;width:100%;padding:11px 10px;border:none;border-radius:16px;background:none;text-align:left;cursor:pointer;color:var(--wa-ink);font:inherit;}
   .wa-row:hover{background:#f6f8fd;}
   .wa-row-on{background:var(--wa-blue-soft);}
+  .wa-rowwrap{position:relative;}
+  .wa-row-dm{padding-right:46px;}
+  .wa-row-dots{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;background:none;border-radius:50%;color:#8b93a7;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .wa-row-dots:hover,.wa-rowwrap-open .wa-row-dots{background:#eef0f6;color:var(--wa-ink);}
+  @media (hover:hover) and (pointer:fine){ .wa-row-dots{opacity:0;} .wa-rowwrap:hover .wa-row-dots,.wa-rowwrap-open .wa-row-dots,.wa-row-dots:focus-visible{opacity:1;} }
+  .wa-pinned{display:inline-flex;color:#8b93a7;margin-left:6px;transform:rotate(35deg);flex-shrink:0;}
+  .wa-rowmenu{position:absolute;right:12px;top:calc(50% + 20px);z-index:40;background:#fff;border:1px solid var(--wa-line);border-radius:14px;box-shadow:0 12px 34px rgba(20,30,60,.22);min-width:190px;overflow:hidden;}
+  .wa-rowmenu button{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;text-align:left;padding:12px 14px;font-size:14px;color:var(--wa-ink);cursor:pointer;}
+  .wa-rowmenu button:hover{background:var(--wa-blue-soft);}
+  .wa-rowmenu .wa-menu-danger{color:#c0392b;}
   .wa-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
   .wa-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
   .wa-row-name{font-weight:650;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -9650,6 +9660,9 @@ const C2_ICONS = {
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   trash:'<path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
   chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  dots:'<circle cx="12" cy="5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="19" r="1.3"/>',
+  pin:'<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+  eraser:'<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
 };
 function c2Svg(name, size){
   size = size || 18;
@@ -9791,6 +9804,8 @@ function c2SortThreads(){
   s.threads.sort((a,b)=>{
     if(a.kind === 'team' && b.kind !== 'team') return -1;
     if(b.kind === 'team' && a.kind !== 'team') return 1;
+    const pa = a.pinnedAt ? new Date(a.pinnedAt).getTime() : 0, pb = b.pinnedAt ? new Date(b.pinnedAt).getTime() : 0;
+    if(pa || pb) return pb - pa;                                    // pinned chats first, the one pinned last on top
     const ta = a.last ? new Date(a.last.at).getTime() : 0, tb = b.last ? new Date(b.last.at).getTime() : 0;
     return tb - ta;
   });
@@ -9975,6 +9990,8 @@ async function c2Enter(){
     c2Rpc('chat_people').then(p=>{ if(Array.isArray(p)){ s.people = p; c2UpdateStatus(); } }).catch(()=>{});
   }, 60000);
   if(s.openAfter && c2Thread(s.openAfter)){ const id = s.openAfter; s.openAfter = null; c2Open(id); }
+  // Opening Chat shows the Team chat straight away (owner, 2026-11-16); on a phone the back arrow goes to the list
+  else if(c2Thread(C2_TEAM) && !s.cur) c2Open(C2_TEAM);
 }
 function c2Leave(){
   const s = state._c2;
@@ -10231,6 +10248,82 @@ function c2Jump(id){
 }
 function c2Grow(ta){ ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 130) + 'px'; }
 
+// Delete a private chat from MY list and history only; the other person keeps their copy, and it comes back if they write again
+function c2DeleteChat(threadId){
+  const s = c2(), t = c2Thread(threadId);
+  s.rowMenu = null;
+  if(!t || t.kind !== 'dm') return;
+  const name = c2ThreadName(t);
+  openConfirmModal({
+    title:'Delete chat', danger:true, confirmLabel:'Delete',
+    message:'Delete your chat with ' + name + '? It disappears from your list and your history with them is cleared. ' + name + ' keeps their copy, and the chat comes back if they write to you again.',
+    onConfirm: async ()=>{
+      try{
+        await c2Rpc('chat_hide_for_me', {p_thread:threadId});
+        s.threads = s.threads.filter(x=>x.id !== threadId);
+        c2SyncBadge();
+        if(s.cur === threadId){
+          const desktop = window.matchMedia && window.matchMedia('(min-width:761px)').matches;
+          if(desktop && c2Thread(C2_TEAM)) c2Open(C2_TEAM); else c2Back();
+        }
+        showToast('Chat deleted');
+        render();
+      }catch(e){ showToast(c2Err(e), 4000); }
+    },
+  });
+}
+async function c2PinChat(threadId){
+  const s = c2(), t = c2Thread(threadId);
+  s.rowMenu = null;
+  if(!t || t.kind !== 'dm'){ render(); return; }
+  const pin = !t.pinnedAt;
+  try{
+    await c2Rpc('chat_pin_for_me', {p_thread:threadId, p_pinned:pin});
+    t.pinnedAt = pin ? new Date().toISOString() : null;
+    c2SortThreads();
+    showToast(pin ? 'Chat pinned' : 'Chat unpinned');
+  }catch(e){ showToast(c2Err(e), 4000); }
+  render();
+}
+// Clear MY history of a chat; the chat stays in my list and the other people keep theirs
+function c2ClearChat(threadId){
+  const s = c2(), t = c2Thread(threadId);
+  s.rowMenu = null;
+  if(!t){ render(); return; }
+  const name = c2ThreadName(t);
+  openConfirmModal({
+    title:'Clear chat', danger:true, confirmLabel:'Clear',
+    message: t.kind === 'team'
+      ? 'Clear the ' + name + ' for you? Only your own view is cleared. Everyone else still sees every message.'
+      : 'Clear your chat with ' + name + '? Your history with them is cleared from your view and the chat stays in your list. ' + name + ' keeps theirs.',
+    onConfirm: async ()=>{
+      try{
+        await c2Rpc('chat_clear_for_me', {p_thread:threadId});
+        t.last = null; t.unread = 0;
+        if(s.cur === threadId) s.msgs = [];
+        c2SyncBadge();
+        showToast('Chat cleared');
+        render();
+      }catch(e){ showToast(c2Err(e), 4000); }
+    },
+  });
+}
+function c2ToggleRowMenu(threadId){
+  const s = c2();
+  s.rowMenu = s.rowMenu === threadId ? null : threadId;
+  render();
+}
+// close the row menu on any click outside it, or Escape
+document.addEventListener('click', e=>{
+  const s = state._c2;
+  if(!s || !s.rowMenu) return;
+  if(e.target.closest && e.target.closest('.wa-rowmenu,[data-wa-rowmenu]')) return;
+  s.rowMenu = null; render();
+});
+document.addEventListener('keydown', e=>{
+  const s = state._c2;
+  if(e.key === 'Escape' && s && s.rowMenu){ s.rowMenu = null; render(); }
+});
 // ---- new chat / contacts -------------------------------------------------------------------------
 async function c2StartDm(otherId){
   const s = c2();
@@ -10291,12 +10384,19 @@ function renderChat2List(){
     });
     body = rows.map(t=>{
       const l = t.last;
-      return `<button type="button" class="wa-row ${s.cur===t.id && s.view==='chat' ? 'wa-row-on' : ''}" data-wa-open="${t.id}">
+      const open = s.rowMenu === t.id;
+      return `<div class="wa-rowwrap ${open ? 'wa-rowwrap-open' : ''}"><button type="button" class="wa-row wa-row-dm ${s.cur===t.id && s.view==='chat' ? 'wa-row-on' : ''}" data-wa-open="${t.id}">
         ${c2Avatar(t, 46)}
         <span class="wa-row-main">
           <span class="wa-row-top"><span class="wa-row-name">${esc(c2ThreadName(t))}</span><span class="wa-row-time ${t.unread?'wa-unread-t':''}">${l ? esc(c2ListTime(l.at)) : ''}</span></span>
-          <span class="wa-row-top"><span class="wa-row-sub ${l && l.removed ? 'wa-removed':''}">${esc(c2Preview(t))}</span>${t.unread ? `<span class="wa-badge">${t.unread > 99 ? '99+' : t.unread}</span>` : ''}</span>
-        </span></button>`;
+          <span class="wa-row-top"><span class="wa-row-sub ${l && l.removed ? 'wa-removed':''}">${esc(c2Preview(t))}</span>${t.pinnedAt ? `<span class="wa-pinned" title="Pinned">${c2Svg('pin', 13)}</span>` : ''}${t.unread ? `<span class="wa-badge">${t.unread > 99 ? '99+' : t.unread}</span>` : ''}</span>
+        </span></button>
+        <button type="button" class="wa-row-dots" data-wa-rowmenu="${t.id}" aria-label="Chat options for ${escAttr(c2ThreadName(t))}" aria-haspopup="menu" aria-expanded="${open}" title="More">${c2Svg('dots', 20)}</button>
+        ${open ? `<div class="wa-rowmenu" role="menu">
+          ${t.kind === 'dm' ? `<button type="button" role="menuitem" data-wa-menu-pin="${t.id}">${c2Svg('pin', 17)} ${t.pinnedAt ? 'Unpin chat' : 'Pin chat'}</button>` : ''}
+          <button type="button" role="menuitem" data-wa-menu-clear="${t.id}">${c2Svg('eraser', 17)} ${t.kind === 'team' ? 'Clear chat for me' : 'Clear chat'}</button>
+          ${t.kind === 'dm' ? `<button type="button" role="menuitem" class="wa-menu-danger" data-wa-menu-del="${t.id}">${c2Svg('trash', 17)} Delete chat</button>` : ''}
+        </div>` : ''}</div>`;
     }).join('') || `<div class="wa-none">No chats found.</div>`;
   }
   return `
@@ -10709,6 +10809,10 @@ function attachChat2Handlers(){
   const on = (sel, ev, fn)=>document.querySelectorAll(sel).forEach(el=>el.addEventListener(ev, fn));
   on('[data-wa-open]', 'click', e=>c2Open(e.currentTarget.dataset.waOpen));
   on('[data-wa-dm]', 'click', e=>c2StartDm(e.currentTarget.dataset.waDm));
+  on('[data-wa-rowmenu]', 'click', e=>{ e.stopPropagation(); c2ToggleRowMenu(e.currentTarget.dataset.waRowmenu); });
+  on('[data-wa-menu-pin]', 'click', e=>{ e.stopPropagation(); c2PinChat(e.currentTarget.dataset.waMenuPin); });
+  on('[data-wa-menu-clear]', 'click', e=>{ e.stopPropagation(); c2ClearChat(e.currentTarget.dataset.waMenuClear); });
+  on('[data-wa-menu-del]', 'click', e=>{ e.stopPropagation(); c2DeleteChat(e.currentTarget.dataset.waMenuDel); });
   if(byIdEl('wa-new')) byIdEl('wa-new').onclick = ()=>{ s.contacts = true; s.search = ''; render(); const i = byIdEl('wa-search'); if(i) i.focus(); };
   if(byIdEl('wa-contacts-close')) byIdEl('wa-contacts-close').onclick = ()=>{ s.contacts = false; s.search = ''; render(); };
   if(byIdEl('wa-back')) byIdEl('wa-back').onclick = c2Back;

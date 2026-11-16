@@ -200,7 +200,10 @@ Keep these true when changing the app. Details and the audit are in the owner's 
     with chat access is in by default, an Admin cannot be removed, and a person whose access level has no Chat page cannot be added: give the level the Chat page first).
   * Phone layout is one pane at a time, full screen (header/tab bar hidden on `page-chat`), padded with `env(safe-area-inset-*)`; on a PC the list and the
     conversation sit side by side. No popup notice is shown while the chat page itself is open (the list shows unread badges).
-  * **Delete a private chat (owner, 2026-11-16).** Each private chat in the left list has a trash button (always visible on a phone, on hover on a PC); the Team chat has none
-    (Admin clears it from Group info). It clears the chat from MY list and history only (`chat_hide_for_me` sets `chat_reads.cleared_at`; the messages policy and
-    `chat_threads_overview` honour it); the other person keeps their copy, and the chat returns when a message newer than that arrives.
+  * **Chat row menu (owner, 2026-11-16).** Each chat in the left list has a three-dot button (always visible on a phone, on hover on a PC) with: **Pin chat / Unpin chat**
+    (private chats; pinned ones sit under the Team chat, newest pin first, with a small pin icon; `chat_pin_for_me`, `chat_reads.pinned_at`), **Clear chat**
+    (clears MY history, the chat stays in my list; `chat_clear_for_me`; on the Team chat it is "Clear chat for me" and affects only the person who pressed it, the Admin's
+    clear-for-everyone is in Group info) and **Delete chat** (private chats; removes it from MY list and history, `chat_hide_for_me` sets `hidden_at`; it comes back with
+    the next newer message). The other person always keeps their copy. All marks are per person in `chat_reads` (`cleared_at`, `hidden_at`, `pinned_at`); the messages policy and
+    `chat_threads_overview` honour them.
   * **Opening Chat opens the Team chat by default** (owner, 2026-11-16; `c2Enter`), unless a tapped notification points at another conversation. On a phone the back arrow shows the list.

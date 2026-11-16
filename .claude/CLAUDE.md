@@ -200,3 +200,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
     with chat access is in by default, an Admin cannot be removed, and a person whose access level has no Chat page cannot be added: give the level the Chat page first).
   * Phone layout is one pane at a time, full screen (header/tab bar hidden on `page-chat`), padded with `env(safe-area-inset-*)`; on a PC the list and the
     conversation sit side by side. No popup notice is shown while the chat page itself is open (the list shows unread badges).
+  * **Delete a private chat (owner, 2026-11-16).** Each private chat in the left list has a trash button (always visible on a phone, on hover on a PC); the Team chat has none
+    (Admin clears it from Group info). It clears the chat from MY list and history only (`chat_hide_for_me` sets `chat_reads.cleared_at`; the messages policy and
+    `chat_threads_overview` honour it); the other person keeps their copy, and the chat returns when a message newer than that arrives.
+  * **Opening Chat opens the Team chat by default** (owner, 2026-11-16; `c2Enter`), unless a tapped notification points at another conversation. On a phone the back arrow shows the list.

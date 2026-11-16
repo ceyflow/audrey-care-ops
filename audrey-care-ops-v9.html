@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261115140000">
+<meta name="app-build" content="20261116113000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -194,6 +194,11 @@ html{ visibility:hidden; }
   .wa-row{display:flex;align-items:center;gap:13px;width:100%;padding:11px 10px;border:none;border-radius:16px;background:none;text-align:left;cursor:pointer;color:var(--wa-ink);font:inherit;}
   .wa-row:hover{background:#f6f8fd;}
   .wa-row-on{background:var(--wa-blue-soft);}
+  .wa-rowwrap{position:relative;}
+  .wa-row-dm{padding-right:46px;}
+  .wa-row-del{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;background:none;border-radius:50%;color:#8b93a7;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .wa-row-del:hover{background:#fdecea;color:#c0392b;}
+  @media (hover:hover) and (pointer:fine){ .wa-row-del{opacity:0;} .wa-rowwrap:hover .wa-row-del,.wa-row-del:focus-visible{opacity:1;} }
   .wa-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
   .wa-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
   .wa-row-name{font-weight:650;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -9975,6 +9980,8 @@ async function c2Enter(){
     c2Rpc('chat_people').then(p=>{ if(Array.isArray(p)){ s.people = p; c2UpdateStatus(); } }).catch(()=>{});
   }, 60000);
   if(s.openAfter && c2Thread(s.openAfter)){ const id = s.openAfter; s.openAfter = null; c2Open(id); }
+  // Opening Chat shows the Team chat straight away (owner, 2026-11-16); on a phone the back arrow goes to the list
+  else if(c2Thread(C2_TEAM) && !s.cur) c2Open(C2_TEAM);
 }
 function c2Leave(){
   const s = state._c2;
@@ -10231,6 +10238,29 @@ function c2Jump(id){
 }
 function c2Grow(ta){ ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 130) + 'px'; }
 
+// Delete a private chat from MY list and history only; the other person keeps their copy, and it comes back if they write again
+function c2DeleteChat(threadId){
+  const s = c2(), t = c2Thread(threadId);
+  if(!t || t.kind !== 'dm') return;
+  const name = c2ThreadName(t);
+  openConfirmModal({
+    title:'Delete chat', danger:true, confirmLabel:'Delete',
+    message:'Delete your chat with ' + name + '? It disappears from your list and your history with them is cleared. ' + name + ' keeps their copy, and the chat comes back if they write to you again.',
+    onConfirm: async ()=>{
+      try{
+        await c2Rpc('chat_hide_for_me', {p_thread:threadId});
+        s.threads = s.threads.filter(x=>x.id !== threadId);
+        c2SyncBadge();
+        if(s.cur === threadId){
+          const desktop = window.matchMedia && window.matchMedia('(min-width:761px)').matches;
+          if(desktop && c2Thread(C2_TEAM)) c2Open(C2_TEAM); else c2Back();
+        }
+        showToast('Chat deleted');
+        render();
+      }catch(e){ showToast(c2Err(e), 4000); }
+    },
+  });
+}
 // ---- new chat / contacts -------------------------------------------------------------------------
 async function c2StartDm(otherId){
   const s = c2();
@@ -10291,12 +10321,12 @@ function renderChat2List(){
     });
     body = rows.map(t=>{
       const l = t.last;
-      return `<button type="button" class="wa-row ${s.cur===t.id && s.view==='chat' ? 'wa-row-on' : ''}" data-wa-open="${t.id}">
+      return `<div class="wa-rowwrap"><button type="button" class="wa-row ${t.kind === 'dm' ? 'wa-row-dm' : ''} ${s.cur===t.id && s.view==='chat' ? 'wa-row-on' : ''}" data-wa-open="${t.id}">
         ${c2Avatar(t, 46)}
         <span class="wa-row-main">
           <span class="wa-row-top"><span class="wa-row-name">${esc(c2ThreadName(t))}</span><span class="wa-row-time ${t.unread?'wa-unread-t':''}">${l ? esc(c2ListTime(l.at)) : ''}</span></span>
           <span class="wa-row-top"><span class="wa-row-sub ${l && l.removed ? 'wa-removed':''}">${esc(c2Preview(t))}</span>${t.unread ? `<span class="wa-badge">${t.unread > 99 ? '99+' : t.unread}</span>` : ''}</span>
-        </span></button>`;
+        </span></button>${t.kind === 'dm' ? `<button type="button" class="wa-row-del" data-wa-del-chat="${t.id}" aria-label="Delete chat with ${escAttr(c2ThreadName(t))}" title="Delete chat">${c2Svg('trash', 17)}</button>` : ''}</div>`;
     }).join('') || `<div class="wa-none">No chats found.</div>`;
   }
   return `
@@ -10709,6 +10739,7 @@ function attachChat2Handlers(){
   const on = (sel, ev, fn)=>document.querySelectorAll(sel).forEach(el=>el.addEventListener(ev, fn));
   on('[data-wa-open]', 'click', e=>c2Open(e.currentTarget.dataset.waOpen));
   on('[data-wa-dm]', 'click', e=>c2StartDm(e.currentTarget.dataset.waDm));
+  on('[data-wa-del-chat]', 'click', e=>{ e.stopPropagation(); c2DeleteChat(e.currentTarget.dataset.waDelChat); });
   if(byIdEl('wa-new')) byIdEl('wa-new').onclick = ()=>{ s.contacts = true; s.search = ''; render(); const i = byIdEl('wa-search'); if(i) i.focus(); };
   if(byIdEl('wa-contacts-close')) byIdEl('wa-contacts-close').onclick = ()=>{ s.contacts = false; s.search = ''; render(); };
   if(byIdEl('wa-back')) byIdEl('wa-back').onclick = c2Back;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261116160000">
+<meta name="app-build" content="20261116173000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -24968,9 +24968,10 @@ function attachShellHandlers(){
   if(byIdEl('btn-advance')) byIdEl('btn-advance').onclick = ()=>{
     const id=state.modal.split(':')[1];
     const o = byId(state.orders, id);
-    // AC Deliveries is our own in-house delivery line, not CityPak, so there's no CityPak tag to
-    // ask for — skip straight to Picked Up by Delivery. Every other line still gets prompted.
-    if(o && NEXT_ACTION_LABEL[o.stage]==='Mark picked up by delivery' && o.courierService!=='AC Delivery'){ state.modal = 'citypak:'+id; render(); return; }
+    // Only CityPak deliveries have a CityPak tag / tracking link to ask for (owner, 2026-11-16). AC Delivery, Customer
+    // Pickup and any other delivery line go straight to Picked Up by Delivery; asking them also used to switch the
+    // order over to CityPak when the tag form was submitted.
+    if(o && NEXT_ACTION_LABEL[o.stage]==='Mark picked up by delivery' && o.courierService==='CityPak'){ state.modal = 'citypak:'+id; render(); return; }
     advanceOrder(id);
   };
   if(byIdEl('form-citypak-tag')) byIdEl('form-citypak-tag').addEventListener('submit', submitCitypakTag);

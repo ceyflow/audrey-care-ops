@@ -149,6 +149,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   at the owner's request: do not bring it back unless asked.
 - **Profile details is a phone-only feature (owner, 2026-11-13).** The "Profile details" link is hidden on a PC (`@media (min-width:761px)`),
   where the header links stay Activity log / Change password / Log out.
+- **Only CityPak deliveries ask for the tracking number (owner, 2026-11-16).** Moving an order to "Picked up by delivery" opens the CityPak tag form ONLY when `courierService==='CityPak'`; AC Delivery, Customer Pickup and any other delivery line advance directly (the form used to appear for them too and then switched the order to CityPak).
 - **No "Load sample data" on the Orders board (owner, 2026-11-16).** The empty-board hint that offered to add fake orders was removed (and `loadSampleData` with it): an empty board can mean the orders failed to load, and adding sample orders to the real workspace then is dangerous. Do not bring back any one-click way to add sample orders to the live data.
 - **Costing products: select + delete, and the duplicate bug (owner, 2026-11-15).** On Costing & recipe, Vihanga and Rumesh (`isCostingSuperAdmin()`) have a
   "Select" button: tick products, "Select all", "Select extras" (only EMPTY extra copies of a name; the copy with saved versions is always kept; the owner does not want the word "duplicates" in the screen text),

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261117104500">
+<meta name="app-build" content="20261117113000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -21292,6 +21292,7 @@ function renderModal(){
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
   if(type==='complaintcustomerview') return complaintCustomerViewModal(id);
   if(type==='complaintphotos') return complaintPhotosModal(id);
+  if(type==='complaintview') return complaintViewModal(id);
   if(type==='staff') return staffFormModal(id==='new'?null:id);
   if(type==='recipe') return recipeFormModal();
   if(type==='mixingtemplates') return renderMixingTemplatesModal();
@@ -22587,6 +22588,9 @@ function canOpenComplaint(c){
 }
 function openComplaint(id){
   const c = byId(state.complaints, id);
+  // View-only roles (complaints_view_ongoing without complaints_manage) get the simple preview panel. It
+  // shows no assignee, so the "assigned to someone else" lock below does not apply to it.
+  if(c && complaintsOngoingOnly()){ openModal('complaintview:'+id); return; }
   if(c && !canOpenComplaint(c)){
     showToast(`This complaint is assigned to ${c.assignedTo} — only they or Admin can open it.`);
     return;
@@ -22715,6 +22719,37 @@ function complaintFormModal(id){
           </div>
         </div>
       </form>
+    </div>
+  </div>`;
+}
+
+// Simple read-only preview for the "See ongoing complaints only" role: customer, reason, date, status and
+// the images -- nothing else (no steps / update history, no assignee, no phone, no priority, no editing).
+// Not a form, so it follows the normal rule: clicking the dim background closes it ('complaintview:' does
+// not start with the form prefix 'complaint:').
+function complaintViewModal(id){
+  const c = byId(state.complaints, id);
+  if(!c) return '';
+  const photos = Array.isArray(c.photos) ? c.photos : [];
+  const pillCls = 'pill-' + String(c.status||'').toLowerCase().replace(' ','-').replace('in-progress','progress');
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:480px;">
+      <h2>${esc(c.customer)||'Complaint'}</h2>
+      <div class="sub">Complaint preview · view only</div>
+      <div class="field"><label>Reason</label><div>${esc(c.category)||'—'}</div></div>
+      <div class="field-row">
+        <div class="field"><label>Logged</label><div>${fmtDateTime(c.createdAt)}</div></div>
+        <div class="field"><label>Status</label><div><span class="pill ${pillCls}">${esc(c.status)}</span></div></div>
+      </div>
+      <div class="field"><label>Images${photos.length?` (${photos.length})`:''}</label>
+        ${photos.length ? `<div class="photo-grid">${photos.map((p,i)=>{ const url=complaintPhotoUrl(p); return `<button type="button" class="photo-thumb" data-photo-url="${escAttr(url)}"><img src="${escAttr(url)}" alt="Complaint photo ${i+1}" loading="lazy"></button>`; }).join('')}</div>` : `<div class="hint">No images were added.</div>`}
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" id="btn-cancel-modal">Close</button></div>
+    </div>
+    <div class="photo-lightbox" id="photo-lightbox">
+      <button type="button" class="photo-lightbox-close" id="btn-close-lightbox" aria-label="Close">✕</button>
+      <img id="photo-lightbox-img" src="" alt="Full size complaint photo">
     </div>
   </div>`;
 }

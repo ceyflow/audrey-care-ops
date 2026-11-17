@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261116173000">
+<meta name="app-build" content="20261117090000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -24939,7 +24939,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -24949,7 +24949,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

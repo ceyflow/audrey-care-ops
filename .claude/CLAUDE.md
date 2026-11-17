@@ -28,6 +28,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | Log a complaint, and Complaint details | `complaint:new` and `complaint:<id>` (matched as `complaint:`) |
 | Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
 | Profile details (full name, mobile) | `profiledetails` |
+| Add customer / Edit customer | `customer:new` and `customer:<id>` (matched as `customer:`; the colon keeps `customerimportreview`, `customercsvformat`, `customercolumns` as normal click-outside windows) |
 | Chat -> Group info (Admin edits the group name) | not `state.modal`-based: `state._c2.gi` and its own `#wa-gi` overlay, which has no outside-click handler. Closes only with the X button. |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261116173000">
+<meta name="app-build" content="20261117113000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4571,6 +4571,11 @@ function pagesForRole(role){
   // with no way into R&D over it. Guaranteed as a floor, unioned with whatever Settings actually
   // has, not dependent on that record being configured exactly right.
   if(role === 'R&D Officer') return [...new Set([...pages, 'rnd', 'chat'])];
+  // 'See ongoing complaints only' (complaints_view_ongoing) opens the Complaints page for that role by
+  // itself -- the Admin turns on one switch, not two. Because this feeds dataKeysForRole(), the database
+  // grant for the complaints data comes along with it. The page it opens is the trimmed read-only one
+  // (complaintsOngoingOnly()), unless the role also has complaints_manage.
+  if(!pages.includes('complaints') && custom && custom.status==='Active' && custom.permissions && custom.permissions.complaints_view_ongoing) return [...pages, 'complaints'];
   return pages;
 }
 // Every fine-grained, non-page-level access decision in the app (which buttons/actions a role
@@ -4605,6 +4610,7 @@ const PERMISSION_REGISTRY = [
   {dept:'rnd', deptLabel:'R&D', id:'rnd_manage', label:'Create/advance projects, manage chemists, mark attendance'},
   {dept:'rnd', deptLabel:'R&D', id:'rnd_delete', label:'Delete a project or chemist'},
   // Complaints
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_view_ongoing', label:'See ongoing complaints only (read only: no archive, no logging, no editing)'},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_manage', label:'Open and work on complaints'},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_edit_after_1hr', label:"Edit a complaint after the 1-hour window"},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_full_edit', label:'Edit category, priority and assignee (not just add updates)'},
@@ -4765,7 +4771,10 @@ function renderRolePermissionBody(r){
   const pageRows = ASSIGNABLE_ROLE_PAGES.map(pageId=>{
     const deptId = ROLE_PERM_PAGE_DEPT[pageId];
     const items = deptId ? PERMISSION_REGISTRY.filter(p=>p.dept===deptId) : [];
-    const isOpen = pages.includes(pageId);
+    // Complaints is also opened by the permission 'See ongoing complaints only' (see pagesForRole): show the
+    // switch on, and locked, so it never looks like the role has no Complaints access when it does.
+    const viaOngoing = pageId==='complaints' && !pages.includes(pageId) && !!permissions.complaints_view_ongoing;
+    const isOpen = pages.includes(pageId) || viaOngoing;
     const isExpanded = !!expanded[pageId];
     return `
     <div class="role-perm-row">
@@ -4773,7 +4782,7 @@ function renderRolePermissionBody(r){
         ${items.length ? `<span class="role-perm-caret${isExpanded?' open':''}">${icon('chevron')}</span>` : `<span class="role-perm-caret-spacer"></span>`}
         <span class="role-perm-row-label">${esc(PAGE_META[pageId].title)}</span>
         <label class="toggle-row role-perm-page-toggle">
-          <input type="checkbox" class="toggle-input" data-rp-page="${pageId}" ${isOpen?'checked':''}><span class="toggle-track"></span>
+          <input type="checkbox" class="toggle-input" data-rp-page="${pageId}" ${isOpen?'checked':''} ${viaOngoing?'disabled title="On because of ‘See ongoing complaints only’ below"':''}><span class="toggle-track"></span>
         </label>
       </div>
       ${(items.length && isExpanded) ? `
@@ -7377,6 +7386,11 @@ function isCostingSuperAdmin(){
   return name==='vihanga' || name==='rumesh';
 }
 function canManageComplaints(){ return !!state.session && roleCan(state.session.role, 'complaints_manage'); }
+// Ongoing = not yet Resolved / Closed. A role with complaints_view_ongoing and WITHOUT complaints_manage
+// gets the trimmed Complaints page: only these statuses, no archive, no logging, no customer link, no
+// delete / restore (a screen-level view; Admin and anyone who can work on complaints keep the full page).
+const ONGOING_COMPLAINT_STATUSES = ['Open','Assigned','In Progress'];
+function complaintsOngoingOnly(){ return !!state.session && roleCan(state.session.role, 'complaints_view_ongoing') && !roleCan(state.session.role, 'complaints_manage'); }
 function canAdvance(stageIdx){
   return !!state.session && roleCan(state.session.role, 'orders_advance') && stageIdx < STAGES.length-1;
 }
@@ -16843,6 +16857,32 @@ function brandingAddAddonModal(){
 
 /* ===================== Complaints page ===================== */
 function renderComplaintsPage(){
+  const ongoingOnly = complaintsOngoingOnly();
+  if(ongoingOnly){
+    // Trimmed read-only page (permission complaints_view_ongoing, no complaints_manage): only what is still
+    // running -- Open / Assigned / In Progress. No archive, no Log complaint, no customer link, no stats on
+    // finished complaints. Rows open the normal drawer, which is already read-only for this role.
+    if(state.complaintsView==='archive') state.complaintsView = 'active';
+    const f = ONGOING_COMPLAINT_STATUSES.includes(state.filters.complaintStatus) ? state.filters.complaintStatus : 'Open';
+    const live = state.complaints.filter(c=>ONGOING_COMPLAINT_STATUSES.includes(c.status) && !c.archived);
+    const openN = live.filter(c=>c.status==='Open').length;
+    return `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Ongoing complaints</div><div class="value ${live.length?'danger':''}"><span class="stat-num" data-target="${live.length}">${live.length}</span></div></div>
+      <div class="stat-card"><div class="label">Open</div><div class="value ${openN?'danger':''}"><span class="stat-num" data-target="${openN}">${openN}</span></div></div>
+    </div>
+    <div class="toolbar">
+      <div class="tabs">
+        ${ONGOING_COMPLAINT_STATUSES.map(s=>{
+          const n = live.filter(c=>c.status===s).length;
+          return `<button class="tab ${f===s?'active':''}" data-complaint-filter="${s}">${s}${n?` (${n})`:''}</button>`;
+        }).join('')}
+      </div>
+      <div class="hint">View only</div>
+    </div>
+    ${renderComplaintsTable(live.filter(c=>c.status===f), {ongoingOnly:true})}
+    `;
+  }
   if(state.complaintsView==='archive') return renderComplaintsArchivePage();
   const filter = state.filters.complaintStatus;
   const archived = archivedComplaints();
@@ -16941,8 +16981,8 @@ function renderComplaintsTable(rows, opts){
           <td><span class="pill pill-${c.priority.toLowerCase()}">${c.priority}</span></td>
           <td><span class="pill pill-${c.status.toLowerCase().replace(' ','-').replace('in-progress','progress')}">${c.status}</span></td>
           <td class="row-actions" onclick="event.stopPropagation()">
-            <button class="btn btn-sm" data-edit-complaint="${c.id}">Open</button>
-            <button class="btn btn-sm" data-view-as-customer="${c.id}">Customer view</button>
+            <button class="btn btn-sm" data-edit-complaint="${c.id}">${opts && opts.ongoingOnly ? 'View' : 'Open'}</button>
+            ${opts && opts.ongoingOnly ? '' : `<button class="btn btn-sm" data-view-as-customer="${c.id}">Customer view</button>`}
             ${canRestoreRow(c) && (c.status==='Resolved'||c.status==='Closed') ? `<button type="button" class="btn btn-sm" data-restore-complaint="${c.id}">Restore</button>` : ''}
             ${canDeleteRow(c)?`<button class="btn btn-sm btn-danger" data-delete-complaint-row="${c.id}">Delete</button>`:''}
           </td>
@@ -21252,6 +21292,7 @@ function renderModal(){
   if(type==='complaint') return complaintFormModal(id==='new'?null:id);
   if(type==='complaintcustomerview') return complaintCustomerViewModal(id);
   if(type==='complaintphotos') return complaintPhotosModal(id);
+  if(type==='complaintview') return complaintViewModal(id);
   if(type==='staff') return staffFormModal(id==='new'?null:id);
   if(type==='recipe') return recipeFormModal();
   if(type==='mixingtemplates') return renderMixingTemplatesModal();
@@ -22547,6 +22588,9 @@ function canOpenComplaint(c){
 }
 function openComplaint(id){
   const c = byId(state.complaints, id);
+  // View-only roles (complaints_view_ongoing without complaints_manage) get the simple preview panel. It
+  // shows no assignee, so the "assigned to someone else" lock below does not apply to it.
+  if(c && complaintsOngoingOnly()){ openModal('complaintview:'+id); return; }
   if(c && !canOpenComplaint(c)){
     showToast(`This complaint is assigned to ${c.assignedTo} — only they or Admin can open it.`);
     return;
@@ -22675,6 +22719,37 @@ function complaintFormModal(id){
           </div>
         </div>
       </form>
+    </div>
+  </div>`;
+}
+
+// Simple read-only preview for the "See ongoing complaints only" role: customer, reason, date, status and
+// the images -- nothing else (no steps / update history, no assignee, no phone, no priority, no editing).
+// Not a form, so it follows the normal rule: clicking the dim background closes it ('complaintview:' does
+// not start with the form prefix 'complaint:').
+function complaintViewModal(id){
+  const c = byId(state.complaints, id);
+  if(!c) return '';
+  const photos = Array.isArray(c.photos) ? c.photos : [];
+  const pillCls = 'pill-' + String(c.status||'').toLowerCase().replace(' ','-').replace('in-progress','progress');
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:480px;">
+      <h2>${esc(c.customer)||'Complaint'}</h2>
+      <div class="sub">Complaint preview · view only</div>
+      <div class="field"><label>Reason</label><div>${esc(c.category)||'—'}</div></div>
+      <div class="field-row">
+        <div class="field"><label>Logged</label><div>${fmtDateTime(c.createdAt)}</div></div>
+        <div class="field"><label>Status</label><div><span class="pill ${pillCls}">${esc(c.status)}</span></div></div>
+      </div>
+      <div class="field"><label>Images${photos.length?` (${photos.length})`:''}</label>
+        ${photos.length ? `<div class="photo-grid">${photos.map((p,i)=>{ const url=complaintPhotoUrl(p); return `<button type="button" class="photo-thumb" data-photo-url="${escAttr(url)}"><img src="${escAttr(url)}" alt="Complaint photo ${i+1}" loading="lazy"></button>`; }).join('')}</div>` : `<div class="hint">No images were added.</div>`}
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" id="btn-cancel-modal">Close</button></div>
+    </div>
+    <div class="photo-lightbox" id="photo-lightbox">
+      <button type="button" class="photo-lightbox-close" id="btn-close-lightbox" aria-label="Close">✕</button>
+      <img id="photo-lightbox-img" src="" alt="Full size complaint photo">
     </div>
   </div>`;
 }
@@ -24939,7 +25014,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -24949,7 +25024,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

@@ -28,6 +28,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | Log a complaint, and Complaint details | `complaint:new` and `complaint:<id>` (matched as `complaint:`) |
 | Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
 | Profile details (full name, mobile) | `profiledetails` |
+| Add customer / Edit customer | `customer:new` and `customer:<id>` (matched as `customer:`; the colon keeps `customerimportreview`, `customercsvformat`, `customercolumns` as normal click-outside windows) |
 | Chat -> Group info (Admin edits the group name) | not `state.modal`-based: `state._c2.gi` and its own `#wa-gi` overlay, which has no outside-click handler. Closes only with the X button. |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
@@ -106,6 +107,15 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   private device token from `driver_device_token`), `driver_send_location`, and the `lorry_positions` table. No device token
   exists, so nothing can be stored. To turn it on again, bring back the setup sheet, the office map and the driver backup button
   (see git history, PR #22 and #26).
+- **Every page / view / action must be switchable in Settings -> User role permission (owner, 2026-11-17).** The owner turns things on per role there
+  and cannot do it if the switch is missing ("I told you to add every single data"). Any NEW page, view or action goes into `PERMISSION_REGISTRY`
+  (and `ROLE_PERM_PAGE_DEPT` for a page) in the same change, and is checked with `roleCan()`. Do not hide a feature behind a hardcoded role name.
+  Example: **`complaints_view_ongoing`** ("See ongoing complaints only (read only...)"): turning it on opens the Complaints page for that role BY ITSELF
+  (`pagesForRole` adds `complaints`, so the database data grant follows; the page switch shows on + locked) and shows a trimmed read-only page
+  (`complaintsOngoingOnly()` = has it AND lacks `complaints_manage`): tabs Open / Assigned / In Progress only (`ONGOING_COMPLAINT_STATUSES`), no Archive,
+  no Log complaint, no customer link, no Customer view / Delete / Restore; rows say "View" and open a simple PREVIEW panel (`complaintview:<id>`, `complaintViewModal`; owner, 2026-11-17): customer, reason, logged date, status and images ONLY (tap an image to enlarge); no steps / update history, no assignee, no phone, no priority, no description, no form. It opens even when the complaint is assigned to someone else (`openComplaint`). It is a viewer, not a form, so it is NOT in the Panel closing Rule list: an outside click closes it. It is a SCREEN-level
+  filter: the `complaints` data row is still delivered whole to anyone who can read the page (the Dashboard already reads it). Admin and roles with
+  `complaints_manage` keep the full page.
 - **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
   delivered / not home / returned), the driver's FIRST name and the delivery time. NO map, NO lorry position and NO
   "stops before yours" count, by the owner's decision (the function does not return them). Never other customers' names, phones or

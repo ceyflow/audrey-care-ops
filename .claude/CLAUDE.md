@@ -107,6 +107,15 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   private device token from `driver_device_token`), `driver_send_location`, and the `lorry_positions` table. No device token
   exists, so nothing can be stored. To turn it on again, bring back the setup sheet, the office map and the driver backup button
   (see git history, PR #22 and #26).
+- **Every page / view / action must be switchable in Settings -> User role permission (owner, 2026-11-17).** The owner turns things on per role there
+  and cannot do it if the switch is missing ("I told you to add every single data"). Any NEW page, view or action goes into `PERMISSION_REGISTRY`
+  (and `ROLE_PERM_PAGE_DEPT` for a page) in the same change, and is checked with `roleCan()`. Do not hide a feature behind a hardcoded role name.
+  Example: **`complaints_view_ongoing`** ("See ongoing complaints only (read only...)"): turning it on opens the Complaints page for that role BY ITSELF
+  (`pagesForRole` adds `complaints`, so the database data grant follows; the page switch shows on + locked) and shows a trimmed read-only page
+  (`complaintsOngoingOnly()` = has it AND lacks `complaints_manage`): tabs Open / Assigned / In Progress only (`ONGOING_COMPLAINT_STATUSES`), no Archive,
+  no Log complaint, no customer link, no Customer view / Delete / Restore; rows say "View" and open the already read-only drawer. It is a SCREEN-level
+  filter: the `complaints` data row is still delivered whole to anyone who can read the page (the Dashboard already reads it). Admin and roles with
+  `complaints_manage` keep the full page.
 - **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
   delivered / not home / returned), the driver's FIRST name and the delivery time. NO map, NO lorry position and NO
   "stops before yours" count, by the owner's decision (the function does not return them). Never other customers' names, phones or

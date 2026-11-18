@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261118150000">
+<meta name="app-build" content="20261118170000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -824,7 +824,12 @@ html{ visibility:hidden; }
   .bsmc-card{background:#fff;border:1px solid #D9EDE0;border-radius:16px;padding:20px 22px;margin-bottom:16px;}
   .bsmc-label{text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700;color:#3C9058;margin-bottom:12px;}
   .bsmc-pill{display:inline-flex;align-items:center;background:#E4F8EA;color:#2E7D46;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;}
-  .pt-grid{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:20px;align-items:start;margin-top:6px;}
+  .pt-grid{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start;margin-top:0;}
+  .pt-grid .bsmc-card{margin:0;}
+  .pt-right .bsheet-step-row:last-of-type, .pt-right .prep-step-row:last-of-type{margin-bottom:14px;}
+  .pt-actions{display:flex;justify-content:flex-end;gap:8px;margin:18px 0 30px;}
+  #process-template-page .toolbar{margin-bottom:14px;}
+  #process-template-page .toolbar > div:last-child{margin-left:auto;}
   .pt-left{position:sticky;top:0;}
   .pt-left,.pt-right{min-width:0;}
   @media (max-width:760px){ .pt-grid{grid-template-columns:minmax(0,1fr);} .pt-left{position:static;} .pt-left .bsmc-card{padding:16px 14px;} .pt-right .prep-step-row, .pt-right .bsheet-step-row{max-width:100%;box-sizing:border-box;} .pt-right .bsr-head{flex-wrap:wrap;} .pt-right .bsr-title{flex-wrap:wrap;min-width:0;max-width:100%;} .pt-right .prep-title-input{min-width:0;flex:1 1 90px;max-width:100%;} }
@@ -19555,7 +19560,7 @@ function draftAddChecklistItem(stepId){ stepsAddChecklistItem(state._recipeDraft
 function draftAddFieldItem(stepId){ stepsAddFieldItem(state._recipeDraft, stepId); }
 function draftRemoveChecklistItem(stepId, itemId){ stepsRemoveChecklistItem(state._recipeDraft, stepId, itemId); }
 function templateDraftRemoveStep(stepId){
-  if(state._templateDraft.steps.length<=1) return;
+  if(state._templateDraft.steps.length<=1 && !state._templateDraft.processProductId) return;   // the Process template page may be emptied
   state._templateDraft.steps = state._templateDraft.steps.filter(s=>s.id!==stepId);
   renderKeepModalScroll();
 }
@@ -20768,13 +20773,14 @@ function renderMixingTemplatesModal(){
 }
 // The phrases / preparation-checking editor (cards + the two "add" buttons), shared by the Phrases-template editor and the
 // per-product "Process template" window. Both edit state._templateDraft with the same ids and handlers (tstep-*, tprep-*, ...).
-function templateStepsEditorHtml(d){
+function templateStepsEditorHtml(d, opts){
+  const compact = !!(opts && opts.compact);   // Process template page: no heading, no extra bottom gap (the page aligns it)
   // Phrases and Preparation/Checking steps live in one ordered list but are numbered within
   // their own kind (Phrase A, B, C… / Preparation/Checking Step 1, 2, 3…), not by raw position.
   let phraseCount = 0, prepCount = 0;
   const ordinals = d.steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
   return `
-      <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>
+      ${compact ? '' : `<div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>`}
       <div id="template-step-editor-list">
         ${d.steps.map((s,i)=>{
           const ord = ordinals[i];
@@ -20838,7 +20844,7 @@ function templateStepsEditorHtml(d){
           </div>`;
         }).join('')}
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;margin-bottom:${compact?0:20}px;flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" id="btn-add-template-step">+ Add phrase</button>
         <button type="button" class="btn btn-sm" id="btn-add-template-prep-step">+ Add preparation checking step</button>
       </div>
@@ -20872,22 +20878,10 @@ function costingActiveVersion(product){
   if(Object.prototype.hasOwnProperty.call(product,'activeVersionId')) return live.find(v=>v.id===product.activeVersionId) || null;
   return live.length===1 ? live[0] : null;   // never chosen yet: a product with one version has that one active
 }
-function templateHasContent(t){ return (t.steps||[]).some(s=>s.type==='preparation' ? (s.checklist||[]).length>0 : String(s.ingredient||'').trim()!==''); }
 function freshStepCopies(steps){
   return (steps||[]).map(s=>s.type==='preparation'
     ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
     : {...s, id:uid('STEP')});
-}
-// Structure only (owner, 2026-11-18): the cards and rows of an existing template WITHOUT any typed text -- no instructions, step names,
-// checklist questions or field labels / values. Temperature tags and wait minutes (settings, not typed text) are kept.
-function blankStepStructure(steps){
-  return (steps||[]).map(s=>{
-    if(s.type==='preparation'){
-      const rows = (s.checklist||[]).map(c=>c.kind==='field' ? {id:uid('FLD'), kind:'field', label:'', value:''} : {id:uid('CHK'), kind:'checklist', text:''});
-      return {id:uid('PREP'), type:'preparation', name:'', checklist: rows.length ? rows : [{id:uid('CHK'), kind:'checklist', text:''}]};
-    }
-    return {id:uid('STEP'), type:'phrase', ingredient:'', amount:'', temperature:s.temperature||'', waitMinutes:Number(s.waitMinutes)||0};
-  });
 }
 function cloneSteps(steps){
   return (steps||[]).map(s=>s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s});
@@ -20895,18 +20889,10 @@ function cloneSteps(steps){
 function openProcessTemplate(){
   if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
   const product = state.costingProducts.find(x=>x.id===state._costingOpenProductId); if(!product) return;
+  // A product with nothing saved yet opens EMPTY: the right side shows only "+ Add phrase" and "+ Add preparation checking step" (owner, 2026-11-18).
   const own = product.processTemplate && Array.isArray(product.processTemplate.steps) && product.processTemplate.steps.length ? product.processTemplate : null;
-  let steps, seededFrom = null;
-  if(own){ steps = cloneSteps(own.steps); }
-  else {
-    // Nothing saved for this product yet: start from the LAYOUT of the existing phrases template with the same name (the fullest one), if any --
-    // structure only, no typed text is copied. It is only a starting point until Save.
-    const key = (product.name||'').trim().toLowerCase();
-    const cand = (state.mixingStepTemplates||[]).filter(t=>(t.name||'').trim().toLowerCase()===key && templateHasContent(t)).sort((x,y)=>y.steps.length-x.steps.length)[0];
-    if(cand){ steps = blankStepStructure(cand.steps); seededFrom = {name:cand.name, n:cand.steps.length}; }
-    else { const st = newStepDraft(); st.type = 'phrase'; steps = [st]; }
-  }
-  state._templateDraft = {id:null, name:product.name, steps, processProductId:product.id, seededFrom};
+  const steps = own ? cloneSteps(own.steps) : [];
+  state._templateDraft = {id:null, name:product.name, steps, processProductId:product.id};
   state._costingProcessPage = true; state._costingDirty = false;   // a full PAGE inside Costing (not a popup)
   state.modal = null;
   render();
@@ -20946,14 +20932,12 @@ function renderProcessTemplatePage(product){
   <div id="process-template-page">
     <button type="button" class="btn-text" id="btn-back-from-process-template" style="margin-bottom:14px;">\u2190 ${esc(product.name)} versions</button>
     <div class="toolbar">
-      <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} \u2014 Process template${state._costingDirty ? ' <span style="color:var(--muted);font-weight:500;">(unsaved changes)</span>' : ''}</div>
+      <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} \u2014 Process template</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <button type="button" class="btn btn-sm" data-cancel-process-template>Cancel</button>
         <button type="button" class="btn btn-primary btn-sm" data-save-process-template>Save</button>
       </div>
     </div>
-    <div class="hint" style="margin:0 0 14px;">The batch sheet on the left comes from the active version${ver?` (${esc(ver.name)})`:''}.</div>
-    ${d.seededFrom ? `<div class="hint" style="margin:0 0 14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);">Started from the layout of your existing \u201c${esc(d.seededFrom.name)}\u201d phrases template (${d.seededFrom.n} step${d.seededFrom.n===1?'':'s'}): the cards and rows only, no text copied. Fill in the text, then press Save.</div>` : ''}
     <div class="pt-grid">
       <div class="pt-left">
         <div class="bsmc-card" style="margin-bottom:0;">
@@ -20961,12 +20945,12 @@ function renderProcessTemplatePage(product){
           ${left}
         </div>
       </div>
-      <div class="pt-right">${templateStepsEditorHtml(d)}</div>
+      <div class="pt-right">${templateStepsEditorHtml(d, {compact:true})}</div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin:6px 0 30px;">
-      <button type="button" class="btn" id="btn-cancel-process-template" data-cancel-process-template>Cancel</button>
-      <button type="button" class="btn btn-primary" id="btn-save-process-template" data-save-process-template>Save</button>
-    </div>
+    ${d.steps.length ? `<div class="pt-actions">
+      <button type="button" class="btn" data-cancel-process-template>Cancel</button>
+      <button type="button" class="btn btn-primary" data-save-process-template>Save</button>
+    </div>` : ''}
   </div>`;
 }
 // Same cleaning as the phrases-template editor: blank rows are dropped, a preparation step needs at least one item.

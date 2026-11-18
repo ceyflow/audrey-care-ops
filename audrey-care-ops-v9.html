@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261118170000">
+<meta name="app-build" content="20261118190000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -827,11 +827,30 @@ html{ visibility:hidden; }
   .pt-grid{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start;margin-top:0;}
   .pt-grid .bsmc-card{margin:0;}
   .pt-right .bsheet-step-row:last-of-type, .pt-right .prep-step-row:last-of-type{margin-bottom:14px;}
-  .pt-actions{display:flex;justify-content:flex-end;gap:8px;margin:18px 0 30px;}
+  .pt-actions{display:flex;justify-content:flex-end;gap:8px;margin:18px 0 0;}
+  #process-template-page{padding-bottom:110px;}   /* the floating notification bell (bottom right) and the phone tab bar must not sit on top of Cancel / Save */
   #process-template-page .toolbar{margin-bottom:14px;}
   #process-template-page .toolbar > div:last-child{margin-left:auto;}
-  .pt-left{position:sticky;top:0;}
+  .pt-left{position:sticky;top:92px;}   /* stays in view while the right side scrolls, below the sticky top bar */
   .pt-left,.pt-right{min-width:0;}
+  .pt-lines{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 12px;}
+  .pt-lines th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:9px 8px;border:1px solid var(--border);text-align:center;background:var(--bg);}
+  .pt-lines td{border:1px solid var(--border);padding:0;vertical-align:middle;}
+  .pt-lines .c-no{width:46px;text-align:center;font-size:13px;color:var(--muted);}
+  .pt-lines .c-pct{width:112px;}
+  .pt-lines .c-x{width:38px;text-align:center;}
+  .pt-lines input{width:100%;box-sizing:border-box;border:none;background:transparent;padding:11px 10px;font:inherit;font-size:13px;color:var(--ink);outline:none;min-width:0;}
+  .pt-lines .c-pct input{text-align:right;}
+  .pt-lines input:focus{background:var(--accent-soft);}
+  .pt-lines input.pt-unknown{color:#B3261E;}
+  .pt-ac{position:relative;}
+  .pt-ac-list{margin-top:0;z-index:40;}
+  .pt-phrase-foot{display:flex;align-items:center;gap:10px;}
+  .pt-plus{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--accent-dark);font-size:20px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 0 2px;transition:all .15s;}
+  .pt-plus:hover{background:var(--accent-soft);border-color:var(--accent);}
+  .pt-instr{margin-top:12px;}
+  .pt-instr textarea{width:100%;box-sizing:border-box;}
+  td.pt-rem.pt-neg{color:#B3261E;font-weight:700;}
   @media (max-width:760px){ .pt-grid{grid-template-columns:minmax(0,1fr);} .pt-left{position:static;} .pt-left .bsmc-card{padding:16px 14px;} .pt-right .prep-step-row, .pt-right .bsheet-step-row{max-width:100%;box-sizing:border-box;} .pt-right .bsr-head{flex-wrap:wrap;} .pt-right .bsr-title{flex-wrap:wrap;min-width:0;max-width:100%;} .pt-right .prep-title-input{min-width:0;flex:1 1 90px;max-width:100%;} }
   table.bsmc-table{width:100%;border-collapse:collapse;font-size:13px;}
   table.bsmc-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6C8071;font-weight:600;padding:8px 10px;}
@@ -19510,6 +19529,7 @@ function openTemplateStepsModal(id){
 }
 function templateDraftAddPhrase(){
   const s = newStepDraft(); s.type = 'phrase';
+  if(state._templateDraft.processProductId){ s.lines = []; s.instruction = ''; s.showInstr = false; }   // Process template page: a phrase starts as an empty table
   state._templateDraft.steps.push(s);
   renderKeepModalScroll();
 }
@@ -19591,6 +19611,12 @@ function syncTemplateDraftStepFieldsFromDOM(){
         const el = document.getElementById('tchk-'+c.id);
         if(el) c.text = el.value;
       });
+      return;
+    }
+    if(Array.isArray(s.lines)){
+      s.lines.forEach(l=>{ const n = document.getElementById('ptl-name-'+l.id), pc = document.getElementById('ptl-pct-'+l.id); if(n) l.name = n.value; if(pc) l.percent = pc.value; });
+      const ins = document.getElementById('pti-'+s.id); if(ins) s.instruction = ins.value;
+      const tp = document.getElementById('tstep-temp-'+s.id); if(tp) s.temperature = tp.value;
       return;
     }
     const ing = document.getElementById('tstep-ing-'+s.id);
@@ -20827,6 +20853,7 @@ function templateStepsEditorHtml(d, opts){
               </div>
             </div>`;
           }
+          if(compact && Array.isArray(s.lines)) return ptPhraseCardHtml(s, ord);   // Process template page: table of raw-material lines
           return `
           <div class="bsheet-step-row">
             <div class="bsr-head">
@@ -20881,10 +20908,129 @@ function costingActiveVersion(product){
 function freshStepCopies(steps){
   return (steps||[]).map(s=>s.type==='preparation'
     ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
-    : {...s, id:uid('STEP')});
+    : {...s, id:uid('STEP'), ...(Array.isArray(s.lines) ? {lines:s.lines.map(l=>({...l, id:uid('LN')}))} : {})});
 }
 function cloneSteps(steps){
-  return (steps||[]).map(s=>s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s});
+  return (steps||[]).map(s=>s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))}
+    : (Array.isArray(s.lines) ? {...s, lines:s.lines.map(l=>({...l}))}
+      : {...s, lines:[], instruction:s.ingredient||'', showInstr:!!String(s.ingredient||'').trim()}));   // a phrase saved before the table existed opens with its text as the instruction
+}
+
+// ---- Process template: a phrase is a small table of raw-material lines (No / Raw material / %) + an optional instruction ----
+function ptNorm(n){ return String(n==null?'':n).trim().toLowerCase(); }
+function newLineDraft(){ return {id:uid('LN'), name:'', percent:''}; }
+// Raw materials of the ACTIVE version (water balanced like the costing sheet): the pool that phrases draw from.
+function ptMaterials(){
+  const d = state._templateDraft; const product = d && byId(state.costingProducts, d.processProductId);
+  const ver = costingActiveVersion(product);
+  const mats = ver ? JSON.parse(JSON.stringify(ver.materials||[])) : [];
+  costingAutoBalanceWater({materials:mats}, null);
+  return mats.filter(m=>String(m.name||'').trim()).map(m=>({name:String(m.name).trim(), key:ptNorm(m.name), orig:Number(m.percent)||0}));
+}
+// How much of each raw material the phrases have used so far (by name), from the draft.
+function ptUsedFromDraft(d){
+  const used = {};
+  (d.steps||[]).forEach(st=>{ if(st.type!=='preparation') (st.lines||[]).forEach(l=>{ const k = ptNorm(l.name), v = parseFloat(l.percent)||0; if(k && v>0) used[k] = (used[k]||0) + v; }); });
+  return used;
+}
+function ptUsedFromDom(){
+  const used = {};
+  document.querySelectorAll('#process-template-page .pt-lines tbody tr').forEach(tr=>{
+    const n = tr.querySelector('[data-pt-name]'), v = tr.querySelector('[data-pt-pct]'); if(!n || !v) return;
+    const k = ptNorm(n.value), x = parseFloat(v.value) || 0; if(k && x>0) used[k] = (used[k]||0) + x;
+  });
+  return used;
+}
+// The left batch sheet: what is LEFT of each raw material after the phrases took their share (e.g. water 80, a phrase takes 50 -> 30).
+function ptRemainingRowsHtml(mats, used){
+  const taken = new Set(); let total = 0;
+  const rows = mats.map((m,i)=>{
+    let rem = m.orig;
+    if(!taken.has(m.key) && used[m.key]){ rem = m.orig - used[m.key]; taken.add(m.key); }   // a name listed twice on the sheet: only its first row is reduced
+    rem = Math.round(rem*1000)/1000; total += rem;
+    return `<tr data-pt-key="${escAttr(m.key)}" data-pt-orig="${m.orig}"><td>${i+1}</td><td>${esc(m.name)}</td><td class="pt-rem${rem<-0.0005?' pt-neg':''}">${rem.toFixed(3)}</td></tr>`;
+  }).join('');
+  return rows + `<tr class="bsmc-total"><td></td><td>Total</td><td class="pt-total">${(Math.round(total*1000)/1000).toFixed(3)}</td></tr>`;
+}
+// Live update while typing: no redraw (focus stays), just the numbers on the left.
+function ptUpdateRemaining(){
+  const page = document.getElementById('process-template-page'); if(!page) return;
+  const used = ptUsedFromDom(); const known = new Set(); const taken = new Set(); let total = 0;
+  page.querySelectorAll('.pt-left tr[data-pt-key]').forEach(tr=>{
+    const k = tr.dataset.ptKey; known.add(k);
+    let rem = parseFloat(tr.dataset.ptOrig) || 0;
+    if(!taken.has(k) && used[k]){ rem -= used[k]; taken.add(k); }
+    rem = Math.round(rem*1000)/1000; total += rem;
+    const c = tr.querySelector('.pt-rem'); if(c){ c.textContent = rem.toFixed(3); c.classList.toggle('pt-neg', rem < -0.0005); }
+  });
+  const t = page.querySelector('.pt-left .pt-total'); if(t) t.textContent = (Math.round(total*1000)/1000).toFixed(3);
+  page.querySelectorAll('.pt-lines [data-pt-name]').forEach(inp=>{ const k = ptNorm(inp.value); const unknown = !!k && !known.has(k); inp.classList.toggle('pt-unknown', unknown); inp.title = unknown ? 'Not on the batch sheet of the active version' : ''; });
+}
+function ptShowSuggestions(inp, list){
+  const q = ptNorm(inp.value); const used = ptUsedFromDom();
+  const items = ptMaterials().filter(m=>!q || m.key.includes(q)).slice(0,10);
+  if(!items.length){ list.style.display = 'none'; return; }
+  list.innerHTML = items.map(m=>{ const rem = Math.round((m.orig - (used[m.key]||0))*1000)/1000; return `<div class="ac-item" data-pt-pick="${escAttr(m.name)}"><span>${esc(m.name)}</span><span class="hint" style="float:right;margin-left:10px;">${rem.toFixed(3)} left</span></div>`; }).join('');
+  list.style.display = 'block';
+  list.querySelectorAll('.ac-item').forEach(it=>it.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    inp.value = it.dataset.ptPick; list.style.display = 'none';
+    inp.dispatchEvent(new Event('input', {bubbles:true})); list.style.display = 'none';
+    const pc = document.getElementById('ptl-pct-' + inp.dataset.ptName); if(pc) pc.focus();
+  }));
+}
+function ptAddLine(stepId){
+  syncTemplateDraftStepFieldsFromDOM();
+  const st = state._templateDraft.steps.find(x=>x.id===stepId); if(!st) return;
+  if(!Array.isArray(st.lines)) st.lines = [];
+  const ln = newLineDraft(); st.lines.push(ln);
+  renderKeepModalScroll();
+  const el = document.getElementById('ptl-name-' + ln.id); if(el) el.focus();
+}
+function ptRemoveLine(stepId, lineId){
+  syncTemplateDraftStepFieldsFromDOM();
+  const st = state._templateDraft.steps.find(x=>x.id===stepId); if(!st) return;
+  st.lines = (st.lines||[]).filter(l=>l.id!==lineId);
+  renderKeepModalScroll();
+}
+function ptShowInstruction(stepId){
+  syncTemplateDraftStepFieldsFromDOM();
+  const st = state._templateDraft.steps.find(x=>x.id===stepId); if(!st) return;
+  st.showInstr = true;
+  renderKeepModalScroll();
+  const el = document.getElementById('pti-' + stepId); if(el) el.focus();
+}
+function ptPhraseCardHtml(s, ord){
+  const lines = s.lines || [];
+  const showInstr = !!s.showInstr || String(s.instruction||'').trim() !== '';
+  return `
+  <div class="bsheet-step-row pt-phrase">
+    <div class="bsr-head">
+      <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temperatureTagHtml('tstep', s)}</div>
+      <div class="bsr-actions">
+        <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
+        <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
+        <button type="button" data-tstep-remove="${s.id}" title="Remove">✕</button>
+      </div>
+    </div>
+    <table class="pt-lines">
+      <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="c-pct">%</th><th class="c-x"></th></tr></thead>
+      <tbody>
+        ${lines.map((l,i)=>`
+        <tr>
+          <td class="c-no">${i+1}</td>
+          <td class="c-name"><div class="pt-ac"><input type="text" id="ptl-name-${l.id}" data-pt-name="${l.id}" value="${escAttr(l.name||'')}" placeholder="Raw material" autocomplete="off"><div class="ac-dropdown pt-ac-list" id="ptl-ac-${l.id}" style="display:none;"></div></div></td>
+          <td class="c-pct"><input type="number" id="ptl-pct-${l.id}" data-pt-pct="${l.id}" min="0" step="0.001" inputmode="decimal" value="${escAttr(l.percent==null?'':l.percent)}" placeholder="0.00"></td>
+          <td class="c-x"><button type="button" class="prep-checklist-remove" data-pt-line-remove="${s.id}:${l.id}" title="Remove this line">✕</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="pt-phrase-foot">
+      <button type="button" class="pt-plus" data-pt-line-add="${s.id}" aria-label="Add a raw material line" title="Add a line">+</button>
+      ${showInstr ? '' : `<button type="button" class="btn btn-sm" data-pt-add-instr="${s.id}">Add instruction</button>`}
+    </div>
+    ${showInstr ? `<div class="bsr-field pt-instr"><label>Instruction</label><textarea id="pti-${s.id}" rows="2" placeholder="e.g. Carbomer + H2O" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea></div>` : ''}
+  </div>`;
 }
 function openProcessTemplate(){
   if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
@@ -20924,8 +21070,7 @@ function renderProcessTemplatePage(product){
       : `<table class="bsmc-table">
           <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th></tr></thead>
           <tbody>
-            ${mats.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(m.name)}</td><td>${(Number(m.percent)||0).toFixed(3)}</td></tr>`).join('')}
-            <tr class="bsmc-total"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td></tr>
+            ${ptRemainingRowsHtml(ptMaterials(), ptUsedFromDraft(d))}
           </tbody>
         </table>`);
   return `
@@ -20967,6 +21112,15 @@ function cleanTemplateSteps(rawSteps){
       }).filter(Boolean);
       return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
     }
+    if(Array.isArray(s.lines)){   // Process template phrase: raw-material lines + optional instruction (no wait time)
+      const lines = s.lines.map(l=>({id:l.id, name:String(l.name||'').trim(), percent:Math.max(0, parseFloat(l.percent)||0)})).filter(l=>l.name);
+      const instruction = String(s.instruction||'').trim();
+      if(!lines.length && !instruction) return null;
+      const fmt = n=>String(Math.round(n*1000)/1000);
+      const text = lines.map(l=>l.name + (l.percent ? ' ' + fmt(l.percent) + '%' : '')).join(', ');
+      // `ingredient` keeps the Production Guide working: it shows this one line for the phrase.
+      return {id:s.id, type:'phrase', lines, instruction, ingredient:[text, instruction].filter(Boolean).join(' \u2014 '), amount:'', temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, Number(s.waitMinutes)||0)};
+    }
     const ingredient = (s.ingredient||'').trim();
     if(!ingredient) return null;
     return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
@@ -20977,12 +21131,11 @@ async function saveProcessTemplate(){
   syncTemplateDraftStepFieldsFromDOM();
   const d = state._templateDraft; if(!d || !d.processProductId) return;
   const product = byId(state.costingProducts, d.processProductId); if(!product) return;
-  const steps = cleanTemplateSteps(d.steps);
-  if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
+  const steps = cleanTemplateSteps(d.steps);   // may be empty: no phrases and no lists is allowed (owner, 2026-11-18)
   const had = Object.prototype.hasOwnProperty.call(product,'processTemplate'); const prev = product.processTemplate;
   product.processTemplate = {steps, updatedAt:new Date().toISOString(), updatedBy:(state.session.staffName||state.session.name)};
   if(!(await save('costingProducts'))){ if(had) product.processTemplate = prev; else delete product.processTemplate; return; }   // draft stays open to retry
-  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);
+  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);   // eslint-disable-line
   state._templateDraft = null; state._costingProcessPage = false; state._costingDirty = false;
   showToast('Process template saved');
   render();
@@ -24628,11 +24781,28 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-save-process-template]').forEach(b=>b.addEventListener('click', saveProcessTemplate));
   if(byIdEl('btn-back-from-process-template')) byIdEl('btn-back-from-process-template').onclick = leaveProcessTemplatePage;
   if(byIdEl('process-template-page')){
+    ptUpdateRemaining();
+    document.querySelectorAll('[data-pt-name]').forEach(inp=>{
+      const list = document.getElementById('ptl-ac-' + inp.dataset.ptName); if(!list) return;
+      inp.addEventListener('input', ()=>{ ptShowSuggestions(inp, list); ptUpdateRemaining(); });
+      inp.addEventListener('focus', ()=>ptShowSuggestions(inp, list));
+      inp.addEventListener('blur', ()=>{ setTimeout(()=>{ list.style.display = 'none'; }, 160); });
+      inp.addEventListener('keydown', e=>{
+        if(e.key==='Escape'){ list.style.display = 'none'; }
+        if(e.key==='Enter'){ e.preventDefault(); const first = list.querySelector('.ac-item'); if(list.style.display!=='none' && first) first.dispatchEvent(new Event('pointerdown', {bubbles:true, cancelable:true})); }
+      });
+    });
+    document.querySelectorAll('[data-pt-pct]').forEach(inp=>inp.addEventListener('input', ptUpdateRemaining));
+    document.querySelectorAll('[data-pt-line-add]').forEach(b=>b.addEventListener('click', ()=>ptAddLine(b.dataset.ptLineAdd)));
+    document.querySelectorAll('[data-pt-line-remove]').forEach(b=>b.addEventListener('click', ()=>{ const [sid, lid] = b.dataset.ptLineRemove.split(':'); ptRemoveLine(sid, lid); }));
+    document.querySelectorAll('[data-pt-add-instr]').forEach(b=>b.addEventListener('click', ()=>ptShowInstruction(b.dataset.ptAddInstr)));
+  }
+  if(byIdEl('process-template-page')){
     // anything typed or changed on this page marks it as having unsaved changes (drives the Discard confirm)
     const mark = ()=>{ if(!state._costingDirty){ state._costingDirty = true; } };
     byIdEl('process-template-page').addEventListener('input', mark);
     byIdEl('process-template-page').addEventListener('change', mark);
-    byIdEl('process-template-page').addEventListener('click', e=>{ if(e.target.closest('[data-tstep-up],[data-tstep-down],[data-tstep-remove],[data-tprep-add-item],[data-tprep-add-field],[data-tchk-remove],#btn-add-template-step,#btn-add-template-prep-step')) mark(); });
+    byIdEl('process-template-page').addEventListener('click', e=>{ if(e.target.closest('[data-tstep-up],[data-tstep-down],[data-tstep-remove],[data-tprep-add-item],[data-tprep-add-field],[data-tchk-remove],[data-pt-line-add],[data-pt-line-remove],[data-pt-add-instr],#btn-add-template-step,#btn-add-template-prep-step')) mark(); });
   }
   document.querySelectorAll('[data-active-costing-version]').forEach(cb=>cb.addEventListener('change', async ()=>{
     if(!(state.session && roleCan(state.session.role, 'costing_edit'))){ render(); return; }

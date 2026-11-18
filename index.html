@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261118120000">
+<meta name="app-build" content="20261118150000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7619,7 +7619,7 @@ function goTo(page){
   if(state.page==='costing' && state._costingDirty){
     openConfirmModal({
       title: 'Discard changes?', danger: true, confirmLabel: 'Discard',
-      message: 'Discard unsaved changes to this costing version?',
+      message: state._costingProcessPage ? 'Discard unsaved changes to this process template?' : 'Discard unsaved changes to this costing version?',
       onConfirm: ()=>{ performGoTo(page); },
     });
     return;
@@ -7632,6 +7632,7 @@ function performGoTo(page){
   state._costingOpenVersionId = null;
   state._costingDraft = null;
   state._costingDirty = false;
+  state._costingProcessPage = false;
   state._costingVersionsView = 'active';
   state._costSel = null;
   state.filters.gmpSection = null;
@@ -10870,6 +10871,7 @@ document.addEventListener('visibilitychange', ()=>{
 // a step or material deep in a long batch sheet or template used to do exactly that. Every such list mutation
 // re-renders through this instead.
 function renderKeepModalScroll(){
+  const winY = state._costingProcessPage ? window.scrollY : null;
   const overlayEl = document.querySelector('.overlay');
   const modalEl = document.querySelector('.modal');
   const overlayScroll = overlayEl ? overlayEl.scrollTop : null;
@@ -10877,6 +10879,7 @@ function renderKeepModalScroll(){
   render();
   if(overlayScroll!==null){ const e = document.querySelector('.overlay'); if(e) e.scrollTop = overlayScroll; }
   if(modalScroll!==null){ const e = document.querySelector('.modal'); if(e) e.scrollTop = modalScroll; }
+  if(winY!==null) window.scrollTo(0, winY);
 }
 
 /* ===================== AI workspace assistant ===================== */
@@ -11335,6 +11338,8 @@ let _lastOpenModal = null;
 let _lastAdminBroadcastId = null;
 let _headerMenuOutsideClickBound = false;
 function render(){
+  // The Process template PAGE is not a modal, so the modal field-snapshot below does not cover it: pull everything typed into the draft first.
+  if(state._costingProcessPage && state._templateDraft){ try{ syncTemplateDraftStepFieldsFromDOM(); }catch(e){} }
   // Any re-render while Team Chat is open rebuilds #chat-messages from scratch, which resets its
   // scroll to the top -- not just from chat's own actions (renderKeepChatScroll already covered
   // those) but from anything else that happens to call render() while chat is the open page: the
@@ -20015,6 +20020,7 @@ function renderRecipeLibraryPage(){
 function renderCostingPage(){
   const product = state._costingOpenProductId ? state.costingProducts.find(p=>p.id===state._costingOpenProductId) : null;
   if(!product) return renderCostingProductGrid();
+  if(state._costingProcessPage && state._templateDraft && state._templateDraft.processProductId===product.id && !state._costingOpenVersionId) return renderProcessTemplatePage(product);
   const version = state._costingOpenVersionId ? (product.versions||[]).find(v=>v.id===state._costingOpenVersionId) : null;
   if(!version) return renderCostingVersionsList(product);
   if(!state._costingDraft){
@@ -20901,11 +20907,26 @@ function openProcessTemplate(){
     else { const st = newStepDraft(); st.type = 'phrase'; steps = [st]; }
   }
   state._templateDraft = {id:null, name:product.name, steps, processProductId:product.id, seededFrom};
-  openModal('processtemplate');
+  state._costingProcessPage = true; state._costingDirty = false;   // a full PAGE inside Costing (not a popup)
+  state.modal = null;
+  render();
+  window.scrollTo(0, 0);
 }
-function renderProcessTemplateModal(){
+function closeProcessTemplatePage(){
+  state._costingProcessPage = false; state._templateDraft = null; state._costingDirty = false;
+  render();
+}
+// Back / Cancel: asks first when something was changed (same Discard confirm the costing sheet uses).
+function leaveProcessTemplatePage(){
+  if(state._costingDirty){
+    syncTemplateDraftStepFieldsFromDOM();   // keep what is typed, in case the person chooses to keep editing
+    openConfirmModal({ title:'Discard changes?', danger:true, confirmLabel:'Discard', message:'Discard unsaved changes to this process template?', onConfirm: closeProcessTemplatePage });
+    return;
+  }
+  closeProcessTemplatePage();
+}
+function renderProcessTemplatePage(product){
   const d = state._templateDraft; if(!d || !d.processProductId) return '';
-  const product = byId(state.costingProducts, d.processProductId); if(!product) return '';
   const ver = costingActiveVersion(product);
   const mats = ver ? JSON.parse(JSON.stringify(ver.materials||[])) : [];
   costingAutoBalanceWater({materials:mats}, null);   // same water balancing the costing sheet shows
@@ -20922,24 +20943,29 @@ function renderProcessTemplateModal(){
           </tbody>
         </table>`);
   return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:1080px;">
-      <h2>Process template</h2>
-      <div class="sub">${esc(product.name)} \u00b7 the batch sheet on the left comes from the active version${ver?` (${esc(ver.name)})`:''}.</div>
-      ${d.seededFrom ? `<div class="hint" style="margin:0 0 14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);">Started from the layout of your existing \u201c${esc(d.seededFrom.name)}\u201d phrases template (${d.seededFrom.n} step${d.seededFrom.n===1?'':'s'}): the cards and rows only, no text copied. Fill in the text, then press Save.</div>` : ''}
-      <div class="pt-grid">
-        <div class="pt-left">
-          <div class="bsmc-card" style="margin-bottom:0;">
-            <div class="bsmc-label">Batch sheet \u00b7 materials</div>
-            ${left}
-          </div>
+  <div id="process-template-page">
+    <button type="button" class="btn-text" id="btn-back-from-process-template" style="margin-bottom:14px;">\u2190 ${esc(product.name)} versions</button>
+    <div class="toolbar">
+      <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} \u2014 Process template${state._costingDirty ? ' <span style="color:var(--muted);font-weight:500;">(unsaved changes)</span>' : ''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button type="button" class="btn btn-sm" data-cancel-process-template>Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" data-save-process-template>Save</button>
+      </div>
+    </div>
+    <div class="hint" style="margin:0 0 14px;">The batch sheet on the left comes from the active version${ver?` (${esc(ver.name)})`:''}.</div>
+    ${d.seededFrom ? `<div class="hint" style="margin:0 0 14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);">Started from the layout of your existing \u201c${esc(d.seededFrom.name)}\u201d phrases template (${d.seededFrom.n} step${d.seededFrom.n===1?'':'s'}): the cards and rows only, no text copied. Fill in the text, then press Save.</div>` : ''}
+    <div class="pt-grid">
+      <div class="pt-left">
+        <div class="bsmc-card" style="margin-bottom:0;">
+          <div class="bsmc-label">Batch sheet \u00b7 materials</div>
+          ${left}
         </div>
-        <div class="pt-right">${templateStepsEditorHtml(d)}</div>
       </div>
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-process-template">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btn-save-process-template">Save</button>
-      </div>
+      <div class="pt-right">${templateStepsEditorHtml(d)}</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin:6px 0 30px;">
+      <button type="button" class="btn" id="btn-cancel-process-template" data-cancel-process-template>Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-save-process-template" data-save-process-template>Save</button>
     </div>
   </div>`;
 }
@@ -20973,9 +20999,9 @@ async function saveProcessTemplate(){
   product.processTemplate = {steps, updatedAt:new Date().toISOString(), updatedBy:(state.session.staffName||state.session.name)};
   if(!(await save('costingProducts'))){ if(had) product.processTemplate = prev; else delete product.processTemplate; return; }   // draft stays open to retry
   logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);
-  state._templateDraft = null;
+  state._templateDraft = null; state._costingProcessPage = false; state._costingDirty = false;
   showToast('Process template saved');
-  closeModal();
+  render();
 }
 function recipeFormModal(){
   const d = state._recipeDraft;
@@ -21464,7 +21490,6 @@ function renderModal(){
   if(type==='mixingtemplates') return renderMixingTemplatesModal();
   if(type==='instructionstyle') return renderInstructionStyleModal();
   if(type==='mixingtemplatesteps') return renderTemplateStepsModal();
-  if(type==='processtemplate') return renderProcessTemplateModal();
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
@@ -24615,8 +24640,16 @@ function attachShellHandlers(){
   if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
   // Costing -> product -> Process template window (the steps editor handlers below are shared with the phrases-template editor)
   if(byIdEl('btn-process-template')) byIdEl('btn-process-template').onclick = openProcessTemplate;
-  if(byIdEl('btn-cancel-process-template')) byIdEl('btn-cancel-process-template').onclick = ()=>{ state._templateDraft = null; closeModal(); };
-  if(byIdEl('btn-save-process-template')) byIdEl('btn-save-process-template').onclick = saveProcessTemplate;
+  document.querySelectorAll('[data-cancel-process-template]').forEach(b=>b.addEventListener('click', leaveProcessTemplatePage));
+  document.querySelectorAll('[data-save-process-template]').forEach(b=>b.addEventListener('click', saveProcessTemplate));
+  if(byIdEl('btn-back-from-process-template')) byIdEl('btn-back-from-process-template').onclick = leaveProcessTemplatePage;
+  if(byIdEl('process-template-page')){
+    // anything typed or changed on this page marks it as having unsaved changes (drives the Discard confirm)
+    const mark = ()=>{ if(!state._costingDirty){ state._costingDirty = true; } };
+    byIdEl('process-template-page').addEventListener('input', mark);
+    byIdEl('process-template-page').addEventListener('change', mark);
+    byIdEl('process-template-page').addEventListener('click', e=>{ if(e.target.closest('[data-tstep-up],[data-tstep-down],[data-tstep-remove],[data-tprep-add-item],[data-tprep-add-field],[data-tchk-remove],#btn-add-template-step,#btn-add-template-prep-step')) mark(); });
+  }
   document.querySelectorAll('[data-active-costing-version]').forEach(cb=>cb.addEventListener('change', async ()=>{
     if(!(state.session && roleCan(state.session.role, 'costing_edit'))){ render(); return; }
     const product = state.costingProducts.find(x=>x.id===state._costingOpenProductId); if(!product) return;
@@ -24700,6 +24733,7 @@ function attachShellHandlers(){
   });
   document.querySelectorAll('[data-open-costing-product]').forEach(el=>el.addEventListener('click', ()=>{
     state._costingOpenProductId = el.dataset.openCostingProduct;
+    state._costingProcessPage = false; state._templateDraft = null;
     state._costingOpenVersionId = null;
     state._costingDraft = null;
     state._costingDirty = false;
@@ -24708,6 +24742,7 @@ function attachShellHandlers(){
     render();
   }));
   if(byIdEl('btn-back-to-costing-products')) byIdEl('btn-back-to-costing-products').onclick = ()=>{
+    state._costingProcessPage = false;
     state._costingOpenProductId = null;
     state._costingVersionsView = 'active';
     history.replaceState(null,'','#costing');
@@ -25202,7 +25237,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), the Process template editor ('processtemplate'), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -25212,7 +25247,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('processtemplate'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

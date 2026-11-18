@@ -29,7 +29,6 @@ start. Don't wait to be asked, and mention it in your summary.
 | Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
 | Profile details (full name, mobile) | `profiledetails` |
 | Add customer / Edit customer | `customer:new` and `customer:<id>` (matched as `customer:`; the colon keeps `customerimportreview`, `customercsvformat`, `customercolumns` as normal click-outside windows) |
-| Process template editor (Costing -> product -> Process template) | `processtemplate` |
 | Chat -> Group info (Admin edits the group name) | not `state.modal`-based: `state._c2.gi` and its own `#wa-gi` overlay, which has no outside-click handler. Closes only with the X button. |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
@@ -126,7 +125,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
 - **Costing: active version + Process template (owner, 2026-11-18).** On a product's versions list (Costing & recipe) each version has an **Active** switch; ONLY ONE version can be
   active (one pointer on the product, `product.activeVersionId`; `''` = none chosen on purpose; a product that never chose and has exactly one live version shows that one as active;
   archiving the active version clears it; `costingActiveVersion(product)`). Next to Archive there is a **Process template** button (needs `costing_manage_templates`, the same switch
-  the old Phrases templates button used) that opens `processtemplate`: LEFT = the batch sheet of the ACTIVE version (No / Raw material / Percentage, water balanced like the costing sheet), RIGHT =
+  the old Phrases templates button used) that opens the Process template as a full PAGE inside Costing (owner, 2026-11-18: "should open a page, not a popup"; `state._costingProcessPage`, `renderProcessTemplatePage`, Back / Cancel asks "Discard changes?" through `_costingDirty` when something was changed; `render()` syncs the typed text into the draft first because a page is not covered by the modal field snapshot): LEFT = the batch sheet of the ACTIVE version (No / Raw material / Percentage, water balanced like the costing sheet), RIGHT =
   the phrases + preparation-checking editor MOVED here from the Recipe library (shared markup `templateStepsEditorHtml`, same `state._templateDraft` and handlers as the phrases-template editor, plus
   `processProductId`). Saved on the product as `product.processTemplate = {steps, updatedAt, updatedBy}` (`saveProcessTemplate`, `cleanTemplateSteps` drops blank rows). First open of a product with nothing
   saved starts from the LAYOUT ONLY of the fullest existing phrases template with the same product name (`blankStepStructure`: cards and rows, temperature tags and wait minutes, but NO typed text:

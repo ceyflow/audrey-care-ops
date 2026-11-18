@@ -113,7 +113,7 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   (and `ROLE_PERM_PAGE_DEPT` for a page) in the same change, and is checked with `roleCan()`. Do not hide a feature behind a hardcoded role name.
   Example: **`complaints_view_ongoing`** ("See ongoing complaints only (read only...)"): turning it on opens the Complaints page for that role BY ITSELF
   (`pagesForRole` adds `complaints`, so the database data grant follows; the page switch shows on + locked) and shows a trimmed read-only page
-  (`complaintsOngoingOnly()` = has it AND lacks `complaints_manage`): tabs Open / Assigned / In Progress / Resolved only (`VIEW_COMPLAINT_STATUSES`; Resolved added 2026-11-17 at the owner's request; Closed and the Archive stay hidden), no Archive,
+  (`complaintsOngoingOnly()` = has it AND lacks `complaints_manage`): tabs Open / Assigned / In Progress only (`ONGOING_COMPLAINT_STATUSES`), no Archive,
   no Log complaint, no customer link, no Customer view / Delete / Restore; rows say "View" and open a simple PREVIEW panel (`complaintview:<id>`, `complaintViewModal`; owner, 2026-11-17): customer, reason, logged date, status and images ONLY (tap an image to enlarge); no steps / update history, no assignee, no phone, no priority, no description, no form. It opens even when the complaint is assigned to someone else (`openComplaint`). It is a viewer, not a form, so it is NOT in the Panel closing Rule list: an outside click closes it. It is a SCREEN-level
   filter: the `complaints` data row is still delivered whole to anyone who can read the page (the Dashboard already reads it). Admin and roles with
   `complaints_manage` keep the full page.

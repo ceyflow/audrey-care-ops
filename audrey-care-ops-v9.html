@@ -4615,7 +4615,7 @@ const PERMISSION_REGISTRY = [
   {dept:'rnd', deptLabel:'R&D', id:'rnd_manage', label:'Create/advance projects, manage chemists, mark attendance'},
   {dept:'rnd', deptLabel:'R&D', id:'rnd_delete', label:'Delete a project or chemist'},
   // Complaints
-  {dept:'complaints', deptLabel:'Complaints', id:'complaints_view_ongoing', label:'See complaints, view only: Open, Assigned, In Progress and Resolved (no archive, no logging, no editing)'},
+  {dept:'complaints', deptLabel:'Complaints', id:'complaints_view_ongoing', label:'See ongoing complaints only (read only: no archive, no logging, no editing)'},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_manage', label:'Open and work on complaints'},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_edit_after_1hr', label:"Edit a complaint after the 1-hour window"},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_full_edit', label:'Edit category, priority and assignee (not just add updates)'},
@@ -7395,8 +7395,6 @@ function canManageComplaints(){ return !!state.session && roleCan(state.session.
 // gets the trimmed Complaints page: only these statuses, no archive, no logging, no customer link, no
 // delete / restore (a screen-level view; Admin and anyone who can work on complaints keep the full page).
 const ONGOING_COMPLAINT_STATUSES = ['Open','Assigned','In Progress'];
-// The view-only role also gets a Resolved tab (owner, 2026-11-17); Closed and the Archive stay hidden.
-const VIEW_COMPLAINT_STATUSES = [...ONGOING_COMPLAINT_STATUSES, 'Resolved'];
 function complaintsOngoingOnly(){ return !!state.session && roleCan(state.session.role, 'complaints_view_ongoing') && !roleCan(state.session.role, 'complaints_manage'); }
 function canAdvance(stageIdx){
   return !!state.session && roleCan(state.session.role, 'orders_advance') && stageIdx < STAGES.length-1;
@@ -16916,18 +16914,17 @@ function renderComplaintsPage(){
     // running -- Open / Assigned / In Progress. No archive, no Log complaint, no customer link, no stats on
     // finished complaints. Rows open the normal drawer, which is already read-only for this role.
     if(state.complaintsView==='archive') state.complaintsView = 'active';
-    const f = VIEW_COMPLAINT_STATUSES.includes(state.filters.complaintStatus) ? state.filters.complaintStatus : 'Open';
-    const live = state.complaints.filter(c=>VIEW_COMPLAINT_STATUSES.includes(c.status) && !c.archived);
-    const ongoingN = live.filter(c=>ONGOING_COMPLAINT_STATUSES.includes(c.status)).length;
+    const f = ONGOING_COMPLAINT_STATUSES.includes(state.filters.complaintStatus) ? state.filters.complaintStatus : 'Open';
+    const live = state.complaints.filter(c=>ONGOING_COMPLAINT_STATUSES.includes(c.status) && !c.archived);
     const openN = live.filter(c=>c.status==='Open').length;
     return `
     <div class="stat-grid">
-      <div class="stat-card"><div class="label">Ongoing complaints</div><div class="value ${ongoingN?'danger':''}"><span class="stat-num" data-target="${ongoingN}">${ongoingN}</span></div></div>
+      <div class="stat-card"><div class="label">Ongoing complaints</div><div class="value ${live.length?'danger':''}"><span class="stat-num" data-target="${live.length}">${live.length}</span></div></div>
       <div class="stat-card"><div class="label">Open</div><div class="value ${openN?'danger':''}"><span class="stat-num" data-target="${openN}">${openN}</span></div></div>
     </div>
     <div class="toolbar">
       <div class="tabs">
-        ${VIEW_COMPLAINT_STATUSES.map(s=>{
+        ${ONGOING_COMPLAINT_STATUSES.map(s=>{
           const n = live.filter(c=>c.status===s).length;
           return `<button class="tab ${f===s?'active':''}" data-complaint-filter="${s}">${s}${n?` (${n})`:''}</button>`;
         }).join('')}

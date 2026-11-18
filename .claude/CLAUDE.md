@@ -116,6 +116,12 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   no Log complaint, no customer link, no Customer view / Delete / Restore; rows say "View" and open a simple PREVIEW panel (`complaintview:<id>`, `complaintViewModal`; owner, 2026-11-17): customer, reason, logged date, status and images ONLY (tap an image to enlarge); no steps / update history, no assignee, no phone, no priority, no description, no form. It opens even when the complaint is assigned to someone else (`openComplaint`). It is a viewer, not a form, so it is NOT in the Panel closing Rule list: an outside click closes it. It is a SCREEN-level
   filter: the `complaints` data row is still delivered whole to anyone who can read the page (the Dashboard already reads it). Admin and roles with
   `complaints_manage` keep the full page.
+- **Box Count: previous days (owner, 2026-11-18).** The Box Count panel (`boxCountModal`) can look back at earlier days, VIEW ONLY: arrows (day -/+), a date
+  picker (never a future date), and shortcut chips for the 7 most recent earlier days that have counts (with box totals). A past day shows that day's totals and entries
+  but no entry form, no edit / delete / tick-boxes (`boxCountSavedRowHtml(b, true)`); "Today" / "Back to today" returns (`state._bcDate`, reset by `closeModal`).
+  Who: Admin and Sub Admin always, other roles through the switch `orders_boxcount_history` ("See previous days' box counts (view only)", Orders board section of User role
+  permission) -- `canViewBoxCountHistory()`. Typed-but-unsaved rows block jumping away (toast "Save or clear today's rows first"). Gotcha: `render()` restores every typed field of the open
+  panel to its OLD value (`captureOpenFormFields`), so `boxCountGoToDate` sets the date box AFTER render. Data was always kept per day (`boxCounts[].date`); nothing in the data changed.
 - **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
   delivered / not home / returned), the driver's FIRST name and the delivery time. NO map, NO lorry position and NO
   "stops before yours" count, by the owner's decision (the function does not return them). Never other customers' names, phones or

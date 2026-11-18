@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261117140000">
+<meta name="app-build" content="20261118090000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4595,6 +4595,7 @@ const PERMISSION_REGISTRY = [
   {dept:'orders', deptLabel:'Orders board', id:'orders_archive_now', label:'Archive an order immediately'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_restore_archived', label:'Restore an archived order'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_bulk_delete_archive', label:'Bulk-select and delete from the Archive tab'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_boxcount_history', label:"See previous days' box counts (view only)"},
   // Order inquiry
   {dept:'orderinquiry', deptLabel:'Order inquiry', id:'orderinquiry_resend_review', label:'Resend a review request after it was already sent'},
   // Blending Department board
@@ -7672,7 +7673,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -14897,7 +14898,34 @@ function canEditBoxCount(b){
   const me = state.session && (state.session.staffName || state.session.name);
   return !!(me && b.enteredBy===me);
 }
-function boxCountSavedRowHtml(b){
+// Previous days' box counts (owner, 2026-11-18): Admin and Sub Admin always; any other role when the Admin turns on
+// "See previous days' box counts" in Settings -> User role permission. Past days are VIEW ONLY (no add / edit / delete).
+function canViewBoxCountHistory(){ return !!state.session && (isAdminOrSubAdmin() || roleCan(state.session.role, 'orders_boxcount_history')); }
+function bcShiftDay(key, delta){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key||''); if(!m) return todayStr();
+  return localDateKey(new Date(+m[1], +m[2]-1, +m[3]+delta, 12));
+}
+// Typing in today's rows then jumping to another day would throw that work away -- so it is blocked until saved or cleared.
+function boxCountFormDirty(){
+  return [...document.querySelectorAll('#box-count-tbody .box-count-row')].some(row=>['customerName','boxType','boxCount','totalKg'].some(n=>{ const el=row.querySelector('[name="'+n+'"]'); return el && String(el.value||'').trim()!==''; }));
+}
+function boxCountGoToDate(key){
+  const today = todayStr();
+  if(!canViewBoxCountHistory()) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(key||'') || key>=today) key = null;
+  if(key && boxCountFormDirty()){ showToast("Save or clear today's rows first"); return; }
+  state._bcDate = key; state._boxCountSelected = []; state._boxCountEditId = null;
+  render();
+  // render() puts every typed field of the open panel back to its OLD value (captureOpenFormFields), so the date box would keep showing the previous day.
+  const dp = document.getElementById('bc-date-pick'); if(dp) dp.value = key || today;
+}
+function boxCountSavedRowHtml(b, readOnly){
+  if(readOnly){
+    return `
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;">
+    <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(b.boxType)} \u00d7 ${b.boxCount}${b.totalKg!=null?` \u2014 ${b.totalKg}kg`:''} \u2014 ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+  </div>`;
+  }
   if(state._boxCountEditId===b.id){
     return `
     <div class="box-count-row" data-box-count-edit-row="${b.id}" style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:9px 10px;margin-bottom:8px;">
@@ -14977,7 +15005,25 @@ async function saveEditBoxCount(id){
 }
 function boxCountModal(){
   const today = todayStr();
-  const todays = (state.boxCounts||[]).filter(b=>b.date===today).sort((a,b)=>new Date(b.at)-new Date(a.at));
+  const canHist = canViewBoxCountHistory();
+  const viewDate = (canHist && /^\d{4}-\d{2}-\d{2}$/.test(state._bcDate||'') && state._bcDate < today) ? state._bcDate : today;
+  const isPast = viewDate !== today;
+  const todays = (state.boxCounts||[]).filter(b=>b.date===viewDate).sort((a,b)=>new Date(b.at)-new Date(a.at));
+  // Recent days that have entries (shortcuts), newest first, today excluded.
+  const dayTotals = {};
+  (state.boxCounts||[]).forEach(b=>{ if(b.date && b.date<today) dayTotals[b.date] = (dayTotals[b.date]||0) + (Number(b.boxCount)||0); });
+  const recentDays = Object.keys(dayTotals).sort().reverse().slice(0,7);
+  const viewLabel = isPast ? fmtDate(viewDate+'T12:00:00') : 'Today, ' + fmtDate(new Date().toISOString());
+  const histBar = !canHist ? '' : `
+      <div class="bc-hist" style="margin:10px 0 0;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" data-bc-day="-1" aria-label="Previous day" style="min-width:40px;min-height:40px;">\u2039</button>
+          <input type="date" id="bc-date-pick" value="${viewDate}" max="${today}" aria-label="Pick a date" style="border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px;min-height:40px;">
+          <button type="button" class="btn btn-sm" data-bc-day="1" aria-label="Next day" ${isPast?'':'disabled'} style="min-width:40px;min-height:40px;">\u203a</button>
+          ${isPast ? `<button type="button" class="btn btn-sm" data-bc-today style="min-height:40px;">Today</button>` : ''}
+        </div>
+        ${recentDays.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${recentDays.map(d=>`<button type="button" class="btn btn-sm" data-bc-pick="${d}" ${d===viewDate?'aria-pressed="true" style="background:var(--accent-soft);border-color:var(--accent);"':''}>${esc(fmtDate(d+'T12:00:00').replace(/,\s*\d{4}$/,''))} \u00b7 ${dayTotals[d]}</button>`).join('')}</div>` : ''}
+      </div>`;
   const selectedCount = (state._boxCountSelected||[]).length;
   const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
   // Phone-only totals strip: what has already gone out today.
@@ -14991,14 +15037,15 @@ function boxCountModal(){
         <button type="button" class="bc-back" data-bc-close aria-label="Back to board"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <div>
           <h2>Box Count</h2>
-          <div class="sub">Today, ${fmtDate(new Date().toISOString())}</div>
+          <div class="sub">${viewLabel}${isPast?' \u00b7 view only':''}</div>
         </div>
-      </div>
-      <div class="bc-totals" aria-label="Sent out so far today">
+      </div>${histBar}
+      <div class="bc-totals" aria-label="${isPast?'Sent out on this day':'Sent out so far today'}">
         <div><b>${bcCustomers}</b><span>Customers</span></div>
         <div><b>${bcBoxes}</b><span>Boxes sent</span></div>
         <div><b>${bcKg}</b><span>Total kg</span></div>
       </div>
+      ${isPast ? `<div class="modal-actions" style="margin-top:14px;"><button type="button" class="btn" id="btn-cancel-modal">Close</button><button type="button" class="btn btn-primary" data-bc-today>Back to today</button></div>` : `
       <form id="form-box-count">
         <div id="box-count-tbody" style="max-height:360px;overflow-y:auto;margin-top:8px;">${boxCountRowHtml()}</div>
         <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;"><span class="od-d-only">+ Add row</span><span class="od-m-only">+ Add another customer</span></button>
@@ -15006,11 +15053,11 @@ function boxCountModal(){
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save all</button>
         </div>
-      </form>
+      </form>`}
       <div class="bc-saved" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
-          <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Saved today ${todays.length?`(${todays.length})`:''}</div>
-          ${(isAdminOrSubAdmin() && todays.length>0) ? `
+          <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">${isPast?'Saved on this day':'Saved today'} ${todays.length?`(${todays.length})`:''}</div>
+          ${(!isPast && isAdminOrSubAdmin() && todays.length>0) ? `
           <div style="display:flex;align-items:center;gap:10px;">
             ${selectedCount>0 ? `<button type="button" class="btn-text" id="btn-box-count-delete-selected" style="color:#C15B4E;font-size:11.5px;font-weight:700;">Delete selected (${selectedCount})</button>` : ''}
             <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);cursor:pointer;">
@@ -15019,9 +15066,9 @@ function boxCountModal(){
             </label>
           </div>` : ''}
         </div>
-        ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">Nothing logged yet today.</div>` : `
+        ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">${isPast?'No box counts were logged on this day.':'Nothing logged yet today.'}</div>` : `
         <div class="bc-saved-list" style="max-height:260px;overflow-y:auto;">
-          ${todays.map(b=>boxCountSavedRowHtml(b)).join('')}
+          ${todays.map(b=>boxCountSavedRowHtml(b, isPast)).join('')}
         </div>`}
       </div>
     </div>
@@ -23535,6 +23582,11 @@ function attachShellHandlers(){
   // Delegated on the row container (not bound per-row) so a row added later by "+ Add row"
   // already has a working remove button with no extra wiring step.
   document.querySelectorAll('[data-bc-close]').forEach(b=>b.addEventListener('click', closeModal));
+  // Previous days (view only): arrows, date picker, recent-day chips, back to today.
+  document.querySelectorAll('[data-bc-day]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(bcShiftDay(state._bcDate||todayStr(), parseInt(b.dataset.bcDay,10)))));
+  document.querySelectorAll('[data-bc-pick]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(b.dataset.bcPick)));
+  document.querySelectorAll('[data-bc-today]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(null)));
+  if(byIdEl('bc-date-pick')) byIdEl('bc-date-pick').addEventListener('change', e=>boxCountGoToDate(e.target.value));
   if(byIdEl('box-count-tbody')) byIdEl('box-count-tbody').addEventListener('click', (e)=>{
     // Phone-only controls (see boxCountRowHtml): they just fill in the real inputs, nothing else.
     const stepBtn = e.target.closest('.bc-step');

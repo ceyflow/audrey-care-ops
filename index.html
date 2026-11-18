@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261117113000">
+<meta name="app-build" content="20261118120000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -824,6 +824,10 @@ html{ visibility:hidden; }
   .bsmc-card{background:#fff;border:1px solid #D9EDE0;border-radius:16px;padding:20px 22px;margin-bottom:16px;}
   .bsmc-label{text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700;color:#3C9058;margin-bottom:12px;}
   .bsmc-pill{display:inline-flex;align-items:center;background:#E4F8EA;color:#2E7D46;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;}
+  .pt-grid{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:20px;align-items:start;margin-top:6px;}
+  .pt-left{position:sticky;top:0;}
+  .pt-left,.pt-right{min-width:0;}
+  @media (max-width:760px){ .pt-grid{grid-template-columns:minmax(0,1fr);} .pt-left{position:static;} .pt-left .bsmc-card{padding:16px 14px;} .pt-right .prep-step-row, .pt-right .bsheet-step-row{max-width:100%;box-sizing:border-box;} .pt-right .bsr-head{flex-wrap:wrap;} .pt-right .bsr-title{flex-wrap:wrap;min-width:0;max-width:100%;} .pt-right .prep-title-input{min-width:0;flex:1 1 90px;max-width:100%;} }
   table.bsmc-table{width:100%;border-collapse:collapse;font-size:13px;}
   table.bsmc-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6C8071;font-weight:600;padding:8px 10px;}
   table.bsmc-table td{padding:9px 10px;vertical-align:middle;}
@@ -4595,6 +4599,7 @@ const PERMISSION_REGISTRY = [
   {dept:'orders', deptLabel:'Orders board', id:'orders_archive_now', label:'Archive an order immediately'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_restore_archived', label:'Restore an archived order'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_bulk_delete_archive', label:'Bulk-select and delete from the Archive tab'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_boxcount_history', label:"See previous days' box counts (view only)"},
   // Order inquiry
   {dept:'orderinquiry', deptLabel:'Order inquiry', id:'orderinquiry_resend_review', label:'Resend a review request after it was already sent'},
   // Blending Department board
@@ -7670,7 +7675,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -14895,7 +14900,34 @@ function canEditBoxCount(b){
   const me = state.session && (state.session.staffName || state.session.name);
   return !!(me && b.enteredBy===me);
 }
-function boxCountSavedRowHtml(b){
+// Previous days' box counts (owner, 2026-11-18): Admin and Sub Admin always; any other role when the Admin turns on
+// "See previous days' box counts" in Settings -> User role permission. Past days are VIEW ONLY (no add / edit / delete).
+function canViewBoxCountHistory(){ return !!state.session && (isAdminOrSubAdmin() || roleCan(state.session.role, 'orders_boxcount_history')); }
+function bcShiftDay(key, delta){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key||''); if(!m) return todayStr();
+  return localDateKey(new Date(+m[1], +m[2]-1, +m[3]+delta, 12));
+}
+// Typing in today's rows then jumping to another day would throw that work away -- so it is blocked until saved or cleared.
+function boxCountFormDirty(){
+  return [...document.querySelectorAll('#box-count-tbody .box-count-row')].some(row=>['customerName','boxType','boxCount','totalKg'].some(n=>{ const el=row.querySelector('[name="'+n+'"]'); return el && String(el.value||'').trim()!==''; }));
+}
+function boxCountGoToDate(key){
+  const today = todayStr();
+  if(!canViewBoxCountHistory()) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(key||'') || key>=today) key = null;
+  if(key && boxCountFormDirty()){ showToast("Save or clear today's rows first"); return; }
+  state._bcDate = key; state._boxCountSelected = []; state._boxCountEditId = null;
+  render();
+  // render() puts every typed field of the open panel back to its OLD value (captureOpenFormFields), so the date box would keep showing the previous day.
+  const dp = document.getElementById('bc-date-pick'); if(dp) dp.value = key || today;
+}
+function boxCountSavedRowHtml(b, readOnly){
+  if(readOnly){
+    return `
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;">
+    <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(b.boxType)} \u00d7 ${b.boxCount}${b.totalKg!=null?` \u2014 ${b.totalKg}kg`:''} \u2014 ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+  </div>`;
+  }
   if(state._boxCountEditId===b.id){
     return `
     <div class="box-count-row" data-box-count-edit-row="${b.id}" style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:9px 10px;margin-bottom:8px;">
@@ -14975,7 +15007,25 @@ async function saveEditBoxCount(id){
 }
 function boxCountModal(){
   const today = todayStr();
-  const todays = (state.boxCounts||[]).filter(b=>b.date===today).sort((a,b)=>new Date(b.at)-new Date(a.at));
+  const canHist = canViewBoxCountHistory();
+  const viewDate = (canHist && /^\d{4}-\d{2}-\d{2}$/.test(state._bcDate||'') && state._bcDate < today) ? state._bcDate : today;
+  const isPast = viewDate !== today;
+  const todays = (state.boxCounts||[]).filter(b=>b.date===viewDate).sort((a,b)=>new Date(b.at)-new Date(a.at));
+  // Recent days that have entries (shortcuts), newest first, today excluded.
+  const dayTotals = {};
+  (state.boxCounts||[]).forEach(b=>{ if(b.date && b.date<today) dayTotals[b.date] = (dayTotals[b.date]||0) + (Number(b.boxCount)||0); });
+  const recentDays = Object.keys(dayTotals).sort().reverse().slice(0,7);
+  const viewLabel = isPast ? fmtDate(viewDate+'T12:00:00') : 'Today, ' + fmtDate(new Date().toISOString());
+  const histBar = !canHist ? '' : `
+      <div class="bc-hist" style="margin:10px 0 0;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" data-bc-day="-1" aria-label="Previous day" style="min-width:40px;min-height:40px;">\u2039</button>
+          <input type="date" id="bc-date-pick" value="${viewDate}" max="${today}" aria-label="Pick a date" style="border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px;min-height:40px;">
+          <button type="button" class="btn btn-sm" data-bc-day="1" aria-label="Next day" ${isPast?'':'disabled'} style="min-width:40px;min-height:40px;">\u203a</button>
+          ${isPast ? `<button type="button" class="btn btn-sm" data-bc-today style="min-height:40px;">Today</button>` : ''}
+        </div>
+        ${recentDays.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${recentDays.map(d=>`<button type="button" class="btn btn-sm" data-bc-pick="${d}" ${d===viewDate?'aria-pressed="true" style="background:var(--accent-soft);border-color:var(--accent);"':''}>${esc(fmtDate(d+'T12:00:00').replace(/,\s*\d{4}$/,''))} \u00b7 ${dayTotals[d]}</button>`).join('')}</div>` : ''}
+      </div>`;
   const selectedCount = (state._boxCountSelected||[]).length;
   const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
   // Phone-only totals strip: what has already gone out today.
@@ -14989,14 +15039,15 @@ function boxCountModal(){
         <button type="button" class="bc-back" data-bc-close aria-label="Back to board"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <div>
           <h2>Box Count</h2>
-          <div class="sub">Today, ${fmtDate(new Date().toISOString())}</div>
+          <div class="sub">${viewLabel}${isPast?' \u00b7 view only':''}</div>
         </div>
-      </div>
-      <div class="bc-totals" aria-label="Sent out so far today">
+      </div>${histBar}
+      <div class="bc-totals" aria-label="${isPast?'Sent out on this day':'Sent out so far today'}">
         <div><b>${bcCustomers}</b><span>Customers</span></div>
         <div><b>${bcBoxes}</b><span>Boxes sent</span></div>
         <div><b>${bcKg}</b><span>Total kg</span></div>
       </div>
+      ${isPast ? `<div class="modal-actions" style="margin-top:14px;"><button type="button" class="btn" id="btn-cancel-modal">Close</button><button type="button" class="btn btn-primary" data-bc-today>Back to today</button></div>` : `
       <form id="form-box-count">
         <div id="box-count-tbody" style="max-height:360px;overflow-y:auto;margin-top:8px;">${boxCountRowHtml()}</div>
         <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;"><span class="od-d-only">+ Add row</span><span class="od-m-only">+ Add another customer</span></button>
@@ -15004,11 +15055,11 @@ function boxCountModal(){
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save all</button>
         </div>
-      </form>
+      </form>`}
       <div class="bc-saved" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
-          <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Saved today ${todays.length?`(${todays.length})`:''}</div>
-          ${(isAdminOrSubAdmin() && todays.length>0) ? `
+          <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">${isPast?'Saved on this day':'Saved today'} ${todays.length?`(${todays.length})`:''}</div>
+          ${(!isPast && isAdminOrSubAdmin() && todays.length>0) ? `
           <div style="display:flex;align-items:center;gap:10px;">
             ${selectedCount>0 ? `<button type="button" class="btn-text" id="btn-box-count-delete-selected" style="color:#C15B4E;font-size:11.5px;font-weight:700;">Delete selected (${selectedCount})</button>` : ''}
             <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);cursor:pointer;">
@@ -15017,9 +15068,9 @@ function boxCountModal(){
             </label>
           </div>` : ''}
         </div>
-        ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">Nothing logged yet today.</div>` : `
+        ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">${isPast?'No box counts were logged on this day.':'Nothing logged yet today.'}</div>` : `
         <div class="bc-saved-list" style="max-height:260px;overflow-y:auto;">
-          ${todays.map(b=>boxCountSavedRowHtml(b)).join('')}
+          ${todays.map(b=>boxCountSavedRowHtml(b, isPast)).join('')}
         </div>`}
       </div>
     </div>
@@ -19545,22 +19596,7 @@ async function saveTemplateSteps(){
   syncTemplateDraftStepFieldsFromDOM();
   const d = state._templateDraft; if(!d) return;
   const name = (d.name||'').trim();
-  const steps = d.steps.map(s=>{
-    if(s.type==='preparation'){
-      const checklist = (s.checklist||[]).map(c=>{
-        if(c.kind==='field'){
-          const label = (c.label||'').trim();
-          return label ? {id:c.id, kind:'field', label, value:(c.value||'').trim()} : null;
-        }
-        const text = (c.text||'').trim();
-        return text ? {id:c.id, kind:'checklist', text} : null;
-      }).filter(Boolean);
-      return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
-    }
-    const ingredient = (s.ingredient||'').trim();
-    if(!ingredient) return null;
-    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
-  }).filter(Boolean);
+  const steps = cleanTemplateSteps(d.steps);
   if(!name){ showToast('Name this template'); return; }
   if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const t = templateById(d.id);
@@ -19951,7 +19987,6 @@ function renderRecipeLibraryPage(){
     <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
     <div style="display:flex;gap:8px;">
       ${canManageBlendBoard() ? `<button class="btn" id="btn-instruction-style">Instruction style</button>` : ''}
-      ${state.session && roleCan(state.session.role, 'costing_manage_templates') ? `<button class="btn" id="btn-mixing-templates">Phrases templates</button>` : ''}
     </div>
   </div>
   ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${state.session && roleCan(state.session.role,'costing_create_recipe')?'Create one to start guiding the blending team through a batch.':''}</div>` : `
@@ -20112,11 +20147,13 @@ function renderCostingVersionsList(product){
   const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
   const versions = activeCostingVersions(product).slice().sort((a,b)=>new Date(b.editedAt||b.createdAt)-new Date(a.editedAt||a.createdAt));
   const archivedCount = archivedCostingVersions(product).length;
+  const activeVer = costingActiveVersion(product);
   return `
   <button type="button" class="btn-text" id="btn-back-to-costing-products" style="margin-bottom:14px;">← Products</button>
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="color:var(--muted);font-weight:500;">(ID: ${esc(product.productId)})</span>`:''} — versions</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      ${(state.session && roleCan(state.session.role, 'costing_manage_templates')) ? `<button type="button" class="btn btn-sm" id="btn-process-template">Process template</button>` : ''}
       <button type="button" class="btn-text" data-costing-versions-view="archive" style="font-size:12.5px;">Archive${archivedCount?` (${archivedCount})`:''}</button>
       ${admin ? `<button type="button" class="btn btn-primary btn-sm" id="btn-add-costing-version">+ New version</button>` : ''}
     </div>
@@ -20124,11 +20161,12 @@ function renderCostingVersionsList(product){
   <div class="panel">
     ${versions.length===0 ? `<div class="empty-state">No versions yet. ${admin?'Create one to start costing this product.':''}</div>` : `
     <table class="data-table">
-      <thead><tr><th>Version</th><th>Created</th><th>Created by</th><th>Last edited</th><th>Edited by</th>${admin?'<th>Actions</th>':''}</tr></thead>
+      <thead><tr><th>Version</th><th>Active</th><th>Created</th><th>Created by</th><th>Last edited</th><th>Edited by</th>${admin?'<th>Actions</th>':''}</tr></thead>
       <tbody>
-        ${versions.map(v=>`
+        ${versions.map(v=>{ const isActive = !!activeVer && activeVer.id===v.id; return `
         <tr class="${admin?'clickable':''}" ${admin?`data-open-costing-version="${v.id}"`:''}>
           <td>${esc(v.name)}</td>
+          <td onclick="event.stopPropagation()"><label class="toggle-row" style="padding:0;gap:8px;${admin?'':'cursor:default;'}"><input type="checkbox" class="toggle-input" data-active-costing-version="${v.id}" ${isActive?'checked':''} ${admin?'':'disabled'} aria-label="Active version"><span class="toggle-track"></span><span style="font-size:12px;font-weight:600;color:${isActive?'var(--accent-dark)':'var(--muted)'};">${isActive?'Active':'Inactive'}</span></label></td>
           <td>${fmtDateTime(v.createdAt)}</td>
           <td>${esc(v.createdBy||'—')}</td>
           <td>${fmtDateTime(v.editedAt||v.createdAt)}</td>
@@ -20138,7 +20176,7 @@ function renderCostingVersionsList(product){
             <button type="button" class="btn btn-sm" data-transfer-costing-version="${v.id}">Transfer to Production Guide</button>
             ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version="${v.id}">Delete</button>`:''}
           </td>`:''}
-        </tr>`).join('')}
+        </tr>`; }).join('')}
       </tbody>
     </table>`}
   </div>
@@ -20722,20 +20760,14 @@ function renderMixingTemplatesModal(){
     </div>
   </div>`;
 }
-function renderTemplateStepsModal(){
-  const d = state._templateDraft; if(!d) return '';
+// The phrases / preparation-checking editor (cards + the two "add" buttons), shared by the Phrases-template editor and the
+// per-product "Process template" window. Both edit state._templateDraft with the same ids and handlers (tstep-*, tprep-*, ...).
+function templateStepsEditorHtml(d){
   // Phrases and Preparation/Checking steps live in one ordered list but are numbered within
   // their own kind (Phrase A, B, C… / Preparation/Checking Step 1, 2, 3…), not by raw position.
   let phraseCount = 0, prepCount = 0;
   const ordinals = d.steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
   return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:680px;">
-      <h2>${d.id?'Edit template':'New template'}</h2>
-      <div class="field" style="margin-bottom:18px;">
-        <label>Template name</label>
-        <input id="template-name" value="${escAttr(d.name)}" placeholder="e.g. Shower Gel">
-      </div>
       <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>
       <div id="template-step-editor-list">
         ${d.steps.map((s,i)=>{
@@ -20804,12 +20836,146 @@ function renderTemplateStepsModal(){
         <button type="button" class="btn btn-sm" id="btn-add-template-step">+ Add phrase</button>
         <button type="button" class="btn btn-sm" id="btn-add-template-prep-step">+ Add preparation checking step</button>
       </div>
+  `;
+}
+function renderTemplateStepsModal(){
+  const d = state._templateDraft; if(!d) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:680px;">
+      <h2>${d.id?'Edit template':'New template'}</h2>
+      <div class="field" style="margin-bottom:18px;">
+        <label>Template name</label>
+        <input id="template-name" value="${escAttr(d.name)}" placeholder="e.g. Shower Gel">
+      </div>
+      ${templateStepsEditorHtml(d)}
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-template-steps">Cancel</button>
         <button type="button" class="btn btn-primary" id="btn-save-template-steps">Save</button>
       </div>
     </div>
   </div>`;
+}
+// ---- Process template (per product, Costing & recipe) ----
+// Left: the batch sheet of the product's ACTIVE version (No / raw material / percentage). Right: the phrases and
+// preparation-checking steps, moved here from the Recipe library. Stored on the product (processTemplate.steps, same step shape
+// as a phrases template) and copied into the batch sheet when a version is transferred to the Production Guide.
+function costingActiveVersion(product){
+  if(!product) return null;
+  const live = activeCostingVersions(product);
+  if(Object.prototype.hasOwnProperty.call(product,'activeVersionId')) return live.find(v=>v.id===product.activeVersionId) || null;
+  return live.length===1 ? live[0] : null;   // never chosen yet: a product with one version has that one active
+}
+function templateHasContent(t){ return (t.steps||[]).some(s=>s.type==='preparation' ? (s.checklist||[]).length>0 : String(s.ingredient||'').trim()!==''); }
+function freshStepCopies(steps){
+  return (steps||[]).map(s=>s.type==='preparation'
+    ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
+    : {...s, id:uid('STEP')});
+}
+// Structure only (owner, 2026-11-18): the cards and rows of an existing template WITHOUT any typed text -- no instructions, step names,
+// checklist questions or field labels / values. Temperature tags and wait minutes (settings, not typed text) are kept.
+function blankStepStructure(steps){
+  return (steps||[]).map(s=>{
+    if(s.type==='preparation'){
+      const rows = (s.checklist||[]).map(c=>c.kind==='field' ? {id:uid('FLD'), kind:'field', label:'', value:''} : {id:uid('CHK'), kind:'checklist', text:''});
+      return {id:uid('PREP'), type:'preparation', name:'', checklist: rows.length ? rows : [{id:uid('CHK'), kind:'checklist', text:''}]};
+    }
+    return {id:uid('STEP'), type:'phrase', ingredient:'', amount:'', temperature:s.temperature||'', waitMinutes:Number(s.waitMinutes)||0};
+  });
+}
+function cloneSteps(steps){
+  return (steps||[]).map(s=>s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s});
+}
+function openProcessTemplate(){
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
+  const product = state.costingProducts.find(x=>x.id===state._costingOpenProductId); if(!product) return;
+  const own = product.processTemplate && Array.isArray(product.processTemplate.steps) && product.processTemplate.steps.length ? product.processTemplate : null;
+  let steps, seededFrom = null;
+  if(own){ steps = cloneSteps(own.steps); }
+  else {
+    // Nothing saved for this product yet: start from the LAYOUT of the existing phrases template with the same name (the fullest one), if any --
+    // structure only, no typed text is copied. It is only a starting point until Save.
+    const key = (product.name||'').trim().toLowerCase();
+    const cand = (state.mixingStepTemplates||[]).filter(t=>(t.name||'').trim().toLowerCase()===key && templateHasContent(t)).sort((x,y)=>y.steps.length-x.steps.length)[0];
+    if(cand){ steps = blankStepStructure(cand.steps); seededFrom = {name:cand.name, n:cand.steps.length}; }
+    else { const st = newStepDraft(); st.type = 'phrase'; steps = [st]; }
+  }
+  state._templateDraft = {id:null, name:product.name, steps, processProductId:product.id, seededFrom};
+  openModal('processtemplate');
+}
+function renderProcessTemplateModal(){
+  const d = state._templateDraft; if(!d || !d.processProductId) return '';
+  const product = byId(state.costingProducts, d.processProductId); if(!product) return '';
+  const ver = costingActiveVersion(product);
+  const mats = ver ? JSON.parse(JSON.stringify(ver.materials||[])) : [];
+  costingAutoBalanceWater({materials:mats}, null);   // same water balancing the costing sheet shows
+  const totalPct = mats.reduce((sum,m)=>sum+(Number(m.percent)||0), 0);
+  const left = !ver
+    ? `<div class="empty-state" style="padding:18px 8px;">No active version. Switch one version on in the versions list to see its batch sheet here.</div>`
+    : (mats.length===0
+      ? `<div class="empty-state" style="padding:18px 8px;">The active version (${esc(ver.name)}) has no raw materials yet.</div>`
+      : `<table class="bsmc-table">
+          <thead><tr><th>No</th><th>Raw material</th><th>Percentage</th></tr></thead>
+          <tbody>
+            ${mats.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(m.name)}</td><td>${(Number(m.percent)||0).toFixed(3)}</td></tr>`).join('')}
+            <tr class="bsmc-total"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td></tr>
+          </tbody>
+        </table>`);
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:1080px;">
+      <h2>Process template</h2>
+      <div class="sub">${esc(product.name)} \u00b7 the batch sheet on the left comes from the active version${ver?` (${esc(ver.name)})`:''}.</div>
+      ${d.seededFrom ? `<div class="hint" style="margin:0 0 14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);">Started from the layout of your existing \u201c${esc(d.seededFrom.name)}\u201d phrases template (${d.seededFrom.n} step${d.seededFrom.n===1?'':'s'}): the cards and rows only, no text copied. Fill in the text, then press Save.</div>` : ''}
+      <div class="pt-grid">
+        <div class="pt-left">
+          <div class="bsmc-card" style="margin-bottom:0;">
+            <div class="bsmc-label">Batch sheet \u00b7 materials</div>
+            ${left}
+          </div>
+        </div>
+        <div class="pt-right">${templateStepsEditorHtml(d)}</div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-cancel-process-template">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-process-template">Save</button>
+      </div>
+    </div>
+  </div>`;
+}
+// Same cleaning as the phrases-template editor: blank rows are dropped, a preparation step needs at least one item.
+function cleanTemplateSteps(rawSteps){
+  return (rawSteps||[]).map(s=>{
+    if(s.type==='preparation'){
+      const checklist = (s.checklist||[]).map(c=>{
+        if(c.kind==='field'){
+          const label = (c.label||'').trim();
+          return label ? {id:c.id, kind:'field', label, value:(c.value||'').trim()} : null;
+        }
+        const text = (c.text||'').trim();
+        return text ? {id:c.id, kind:'checklist', text} : null;
+      }).filter(Boolean);
+      return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
+    }
+    const ingredient = (s.ingredient||'').trim();
+    if(!ingredient) return null;
+    return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
+  }).filter(Boolean);
+}
+async function saveProcessTemplate(){
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
+  syncTemplateDraftStepFieldsFromDOM();
+  const d = state._templateDraft; if(!d || !d.processProductId) return;
+  const product = byId(state.costingProducts, d.processProductId); if(!product) return;
+  const steps = cleanTemplateSteps(d.steps);
+  if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
+  const had = Object.prototype.hasOwnProperty.call(product,'processTemplate'); const prev = product.processTemplate;
+  product.processTemplate = {steps, updatedAt:new Date().toISOString(), updatedBy:(state.session.staffName||state.session.name)};
+  if(!(await save('costingProducts'))){ if(had) product.processTemplate = prev; else delete product.processTemplate; return; }   // draft stays open to retry
+  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);
+  state._templateDraft = null;
+  showToast('Process template saved');
+  closeModal();
 }
 function recipeFormModal(){
   const d = state._recipeDraft;
@@ -21298,6 +21464,7 @@ function renderModal(){
   if(type==='mixingtemplates') return renderMixingTemplatesModal();
   if(type==='instructionstyle') return renderInstructionStyleModal();
   if(type==='mixingtemplatesteps') return renderTemplateStepsModal();
+  if(type==='processtemplate') return renderProcessTemplateModal();
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
@@ -23532,6 +23699,11 @@ function attachShellHandlers(){
   // Delegated on the row container (not bound per-row) so a row added later by "+ Add row"
   // already has a working remove button with no extra wiring step.
   document.querySelectorAll('[data-bc-close]').forEach(b=>b.addEventListener('click', closeModal));
+  // Previous days (view only): arrows, date picker, recent-day chips, back to today.
+  document.querySelectorAll('[data-bc-day]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(bcShiftDay(state._bcDate||todayStr(), parseInt(b.dataset.bcDay,10)))));
+  document.querySelectorAll('[data-bc-pick]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(b.dataset.bcPick)));
+  document.querySelectorAll('[data-bc-today]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(null)));
+  if(byIdEl('bc-date-pick')) byIdEl('bc-date-pick').addEventListener('change', e=>boxCountGoToDate(e.target.value));
   if(byIdEl('box-count-tbody')) byIdEl('box-count-tbody').addEventListener('click', (e)=>{
     // Phone-only controls (see boxCountRowHtml): they just fill in the real inputs, nothing else.
     const stepBtn = e.target.closest('.bc-step');
@@ -24441,6 +24613,21 @@ function attachShellHandlers(){
   if(byIdEl('btn-cancel-mixing-picker')) byIdEl('btn-cancel-mixing-picker').onclick = closeMixingTemplatesPicker;
   if(byIdEl('btn-use-mixing-template')) byIdEl('btn-use-mixing-template').onclick = (e)=>{ syncDraftStepFieldsFromDOM(); openMixingTemplatesPicker(e.currentTarget.dataset.recipeId); };
   if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
+  // Costing -> product -> Process template window (the steps editor handlers below are shared with the phrases-template editor)
+  if(byIdEl('btn-process-template')) byIdEl('btn-process-template').onclick = openProcessTemplate;
+  if(byIdEl('btn-cancel-process-template')) byIdEl('btn-cancel-process-template').onclick = ()=>{ state._templateDraft = null; closeModal(); };
+  if(byIdEl('btn-save-process-template')) byIdEl('btn-save-process-template').onclick = saveProcessTemplate;
+  document.querySelectorAll('[data-active-costing-version]').forEach(cb=>cb.addEventListener('change', async ()=>{
+    if(!(state.session && roleCan(state.session.role, 'costing_edit'))){ render(); return; }
+    const product = state.costingProducts.find(x=>x.id===state._costingOpenProductId); if(!product) return;
+    const id = cb.dataset.activeCostingVersion;
+    const had = Object.prototype.hasOwnProperty.call(product,'activeVersionId'); const prev = product.activeVersionId;
+    product.activeVersionId = cb.checked ? id : '';   // one pointer on the product: only ONE version can be active
+    if(!(await save('costingProducts'))){ if(had) product.activeVersionId = prev; else delete product.activeVersionId; render(); return; }
+    const v = (product.versions||[]).find(x=>x.id===id);
+    logActivity(cb.checked ? `Set costing version "${v?v.name:id}" active (${product.name})` : `Set costing version "${v?v.name:id}" inactive (${product.name})`);
+    render();
+  }));
   if(byIdEl('btn-save-template-steps')) byIdEl('btn-save-template-steps').onclick = saveTemplateSteps;
   if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPhrase(); };
   if(byIdEl('btn-add-template-prep-step')) byIdEl('btn-add-template-prep-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPreparationStep(); };
@@ -24628,14 +24815,14 @@ function attachShellHandlers(){
           standardPH: '',
           combineNote: version.productionMethod||'',
           materials: (version.materials||[]).map(m=>({id:uid('MAT'), name:m.name, percent:m.percent})),
-          steps: [],
+          steps: (product.processTemplate && Array.isArray(product.processTemplate.steps)) ? freshStepCopies(product.processTemplate.steps) : [],   // the product's Process template
           createdAt: new Date().toISOString(),
         };
         if(!Array.isArray(state.recipes)) state.recipes = [];
         state.recipes.unshift(newRecipe);
         if(!(await save('recipes'))) return;
         logActivity(`Transferred costing version "${version.name}" (${product.name}) to Production Guide as a ${batchSizeKg}kg batch sheet`);
-        showToast(`Created a ${batchSizeKg}kg batch sheet in Production Guide`);
+        showToast(newRecipe.steps.length ? `Created a ${batchSizeKg}kg batch sheet with ${newRecipe.steps.length} process step${newRecipe.steps.length===1?'':'s'} in Production Guide` : `Created a ${batchSizeKg}kg batch sheet in Production Guide`);
         goTo('recipes');
       },
     });
@@ -24649,6 +24836,7 @@ function attachShellHandlers(){
       onConfirm: async ()=>{
         if(version){
           version.archived = true;
+          if(product && product.activeVersionId===version.id) product.activeVersionId = '';   // an archived version cannot stay the active one
           version.archivedAt = new Date().toISOString();
           version.archivedBy = state.session.staffName || state.session.name;
           if(!(await save('costingProducts'))) return;
@@ -25014,7 +25202,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Mixing Step Templates editor,
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), the Process template editor ('processtemplate'), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -25024,7 +25212,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('processtemplate'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

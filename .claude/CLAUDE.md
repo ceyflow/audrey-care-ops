@@ -29,6 +29,7 @@ start. Don't wait to be asked, and mention it in your summary.
 | Driver's stop form (Delivered / Not at home / Returned, with photo + note) | `driverstop:<status>:<order>` (matched as `driverstop:`) |
 | Profile details (full name, mobile) | `profiledetails` |
 | Add customer / Edit customer | `customer:new` and `customer:<id>` (matched as `customer:`; the colon keeps `customerimportreview`, `customercsvformat`, `customercolumns` as normal click-outside windows) |
+| Process template editor (Costing -> product -> Process template) | `processtemplate` |
 | Chat -> Group info (Admin edits the group name) | not `state.modal`-based: `state._c2.gi` and its own `#wa-gi` overlay, which has no outside-click handler. Closes only with the X button. |
 | Notes & Reminders (`#notes-fab-popup`) | not `state.modal`-based — its own `state._notesFabOpen` flag and `#notes-fab-backdrop` handler (search for "Panel closing Rule: this popup holds the note-compose textarea"). Closes only via the X button or re-toggling the bell. The nested share-staff dropdown inside it is a picker, not a form, so it still closes on an outside click. |
 
@@ -116,6 +117,22 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   no Log complaint, no customer link, no Customer view / Delete / Restore; rows say "View" and open a simple PREVIEW panel (`complaintview:<id>`, `complaintViewModal`; owner, 2026-11-17): customer, reason, logged date, status and images ONLY (tap an image to enlarge); no steps / update history, no assignee, no phone, no priority, no description, no form. It opens even when the complaint is assigned to someone else (`openComplaint`). It is a viewer, not a form, so it is NOT in the Panel closing Rule list: an outside click closes it. It is a SCREEN-level
   filter: the `complaints` data row is still delivered whole to anyone who can read the page (the Dashboard already reads it). Admin and roles with
   `complaints_manage` keep the full page.
+- **Box Count: previous days (owner, 2026-11-18).** The Box Count panel (`boxCountModal`) can look back at earlier days, VIEW ONLY: arrows (day -/+), a date
+  picker (never a future date), and shortcut chips for the 7 most recent earlier days that have counts (with box totals). A past day shows that day's totals and entries
+  but no entry form, no edit / delete / tick-boxes (`boxCountSavedRowHtml(b, true)`); "Today" / "Back to today" returns (`state._bcDate`, reset by `closeModal`).
+  Who: Admin and Sub Admin always, other roles through the switch `orders_boxcount_history` ("See previous days' box counts (view only)", Orders board section of User role
+  permission) -- `canViewBoxCountHistory()`. Typed-but-unsaved rows block jumping away (toast "Save or clear today's rows first"). Gotcha: `render()` restores every typed field of the open
+  panel to its OLD value (`captureOpenFormFields`), so `boxCountGoToDate` sets the date box AFTER render. Data was always kept per day (`boxCounts[].date`); nothing in the data changed.
+- **Costing: active version + Process template (owner, 2026-11-18).** On a product's versions list (Costing & recipe) each version has an **Active** switch; ONLY ONE version can be
+  active (one pointer on the product, `product.activeVersionId`; `''` = none chosen on purpose; a product that never chose and has exactly one live version shows that one as active;
+  archiving the active version clears it; `costingActiveVersion(product)`). Next to Archive there is a **Process template** button (needs `costing_manage_templates`, the same switch
+  the old Phrases templates button used) that opens `processtemplate`: LEFT = the batch sheet of the ACTIVE version (No / Raw material / Percentage, water balanced like the costing sheet), RIGHT =
+  the phrases + preparation-checking editor MOVED here from the Recipe library (shared markup `templateStepsEditorHtml`, same `state._templateDraft` and handlers as the phrases-template editor, plus
+  `processProductId`). Saved on the product as `product.processTemplate = {steps, updatedAt, updatedBy}` (`saveProcessTemplate`, `cleanTemplateSteps` drops blank rows). First open of a product with nothing
+  saved starts from the LAYOUT ONLY of the fullest existing phrases template with the same product name (`blankStepStructure`: cards and rows, temperature tags and wait minutes, but NO typed text:
+  owner's rule "only copy the template structure, don't copy typed texts"); a saved Process template is copied (fresh ids, text included) into the batch sheet by **Transfer to Production Guide**.
+  The Recipe library toolbar no longer has "Phrases templates" (button removed; the batch sheet's "Use template" picker and the old global `mixingStepTemplates` data still exist, untouched; that list holds ~40 empty
+  copies of the starter names, the same seeding-bug family as the costing starters; clean it up only if the owner asks).
 - **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
   delivered / not home / returned), the driver's FIRST name and the delivery time. NO map, NO lorry position and NO
   "stops before yours" count, by the owner's decision (the function does not return them). Never other customers' names, phones or

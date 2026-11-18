@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261118210000">
+<meta name="app-build" content="20261118230000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -21028,7 +21028,7 @@ function ptPhraseCardHtml(s, ord){
       <button type="button" class="pt-plus" data-pt-line-add="${s.id}" aria-label="Add a raw material line" title="Add a line">+</button>
       ${showInstr ? '' : `<button type="button" class="btn btn-sm" data-pt-add-instr="${s.id}">Add instruction</button>`}
     </div>
-    ${showInstr ? `<div class="bsr-field pt-instr"><label>Instruction</label><textarea id="pti-${s.id}" rows="2" placeholder="e.g. Carbomer + H2O" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea></div>` : ''}
+    ${showInstr ? `<div class="bsr-field pt-instr"><label>Instruction</label><textarea id="pti-${s.id}" rows="2" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea></div>` : ''}
   </div>`;
 }
 function openProcessTemplate(){

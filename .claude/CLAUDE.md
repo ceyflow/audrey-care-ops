@@ -139,6 +139,13 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   a full costing page (Process template page, costing version sheet; `_costingDirty`) stays on the page and shows a toast, instead of silently throwing the typing away (popups were already protected). (6) Dead
   leftover removed: the old `chat-form` / `sendChatMessage` binding. NOT changed on purpose: "Leaked password protection" in Supabase Auth is a dashboard switch (needs the owner), the SECURITY DEFINER
   functions the advisor lists are the app's own RPC design (each checks the caller), RLS-without-policy on the private tables is deliberate (no direct access for anyone).
+- **Order stage moves are instant, with rollback (owner report, 2026-11-19).** Moving an order (button, CityPak tag form, or drag and drop) to "Picked up by delivery" (or any stage) used to wait for
+  3-5 sequential server round trips (who-am-I check, read orders, write orders, read the SMS setting) before the card moved or the "Send SMS?" question showed, and a FAILED save left an unsaved "ghost" move
+  that later snapped back (or was saved by accident with another order's save). Now `commitOrderMove` (used by `advanceOrder` and `moveOrderToStage`) starts the save in the background, shows the card in its
+  new column AND the SMS question at once, and `orderMoveRestore` puts the card back (stage, assignee, completedAt, delivery line, CityPak tag, board order, history entry) with a clear toast if the save fails.
+  "Yes, send SMS" waits for that save (`pendingSmsConfirm.saved`) and NEVER texts about a move that did not save. A second tap within 900 ms on the same order is ignored (`_lastAdvanceAt`: it was skipping stages).
+  The fresh read of the SMS setting (`triggerAutoOrderSms`) now only happens on the automatic-SMS path (where it matters: a stale tab must not text a customer the Admin turned off) and no longer
+  closes a window the person opened in the meantime (`keepModal`). Test: `order-move-test.js` (fails on the old build at the first check).
 - **Customers** (public tracking page, AC Delivery orders at stage 3+) call `track_lorry(order_id)`: state (loading / on the way /
   delivered / not home / returned), the driver's FIRST name and the delivery time. NO map, NO lorry position and NO
   "stops before yours" count, by the owner's decision (the function does not return them). Never other customers' names, phones or

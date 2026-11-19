@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261118230000">
+<meta name="app-build" content="20261119030000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7035,10 +7035,29 @@ async function pingServerLastSeen(){
   if(Date.now() - _lastServerPingAt < 60000) return;
   _lastServerPingAt = Date.now();
   try{
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+    // The login itself has expired or was cancelled (refused / "session missing"), as opposed to a bad network (which is retried quietly).
+    // Before this, such a phone kept asking once a minute for hours, half signed in, saving nothing (seen in the logs: one device, 123 refusals in 2 hours).
+    if(userErr && (userErr.name === 'AuthSessionMissingError' || userErr.status === 401 || userErr.status === 403)){
+      let revived = false;
+      try{ const r = await supabaseClient.auth.refreshSession(); revived = !!(r && r.data && r.data.session && !r.error); }catch(e2){}
+      if(revived){ _lastServerPingAt = 0; return; }   // a quiet refresh worked: the next check carries on normally
+      handleExpiredSignIn();
+      return;
+    }
     if(!user) return;
     await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', user.id);
   }catch(e){ console.error('last_seen heartbeat failed', e); }
+}
+// Signs the person out cleanly (their notifications on this phone are switched off first) and says why, so they can sign in again.
+let _expiredSignInHandling = false;
+async function handleExpiredSignIn(){
+  if(_expiredSignInHandling || !state.session) return;
+  _expiredSignInHandling = true;
+  try{ await logOut(); }
+  catch(e){ console.error('expired sign-in clean-up failed', e); state.session = null; try{ saveSession(); }catch(e2){} try{ render(); }catch(e3){} }
+  try{ showToast('Your sign-in expired. Please sign in again.'); }catch(e){}
+  setTimeout(()=>{ _expiredSignInHandling = false; }, 5000);
 }
 // A single admin-visible audit trail — who did what, and when. Call this alongside (never
 // instead of) the real action; a logging failure must never block or roll back the action it's
@@ -11411,7 +11430,8 @@ function renderInner(){
   if(state.boardMode){ app.innerHTML = renderBoardPage(); attachBoardHandlers(); return; }
   if(state.trackMode){ app.innerHTML = renderTrackPage(); attachTrackHandlers(); return; }
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
-  if(!state.session){ app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
+  // the sign-in page draws toasts too: after an automatic sign-out the reason ("Signed off after being inactive", "Your sign-in expired") used to be set but never shown
+  if(!state.session){ app.innerHTML = renderLogin() + (state.toast ? renderToast() : ''); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
   if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
@@ -21134,7 +21154,7 @@ async function saveProcessTemplate(){
   const had = Object.prototype.hasOwnProperty.call(product,'processTemplate'); const prev = product.processTemplate;
   product.processTemplate = {steps, updatedAt:new Date().toISOString(), updatedBy:(state.session.staffName||state.session.name)};
   if(!(await save('costingProducts'))){ if(had) product.processTemplate = prev; else delete product.processTemplate; return; }   // draft stays open to retry
-  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);   // eslint-disable-line
+  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);
   state._templateDraft = null; state._costingProcessPage = false; state._costingDirty = false;
   showToast('Process template saved');
   render();
@@ -25254,7 +25274,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = stopBatch;
 
   // Chat
-  if(byIdEl('chat-form')) byIdEl('chat-form').addEventListener('submit', sendChatMessage);
   attachChat2Handlers();
 
   // Bulk SMS
@@ -25899,6 +25918,13 @@ window.addEventListener('popstate', ()=>{
   // "Edit template" included — that silently popped state.modal below, discarding whatever was
   // being typed with no warning. Re-assert the current URL and leave the modal open instead.
   if(state.modal){ history.pushState(null, '', location.href); return; }
+  // Same protection for the full pages with typing in them (Process template page, costing version sheet): an accidental
+  // back-swipe must not silently throw the typing away. Stay put and say how to leave properly (Cancel asks "Discard changes?").
+  if(state.page==='costing' && state._costingDirty){
+    try{ history.pushState(null, '', '#costing/' + encodeURIComponent(state._costingOpenProductId || '') + (state._costingOpenVersionId ? '/' + encodeURIComponent(state._costingOpenVersionId) : '')); }catch(e){}
+    showToast('You have unsaved changes. Use Save, or Cancel to discard them.');
+    return;
+  }
   const hashParts = (location.hash||'').replace('#','').split('/');
   const page = hashParts[0] || '';
   if(!page || !pageAllowed(page)) return;

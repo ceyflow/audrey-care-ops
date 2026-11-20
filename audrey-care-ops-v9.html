@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261118230000">
+<meta name="app-build" content="20261119050000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7035,10 +7035,29 @@ async function pingServerLastSeen(){
   if(Date.now() - _lastServerPingAt < 60000) return;
   _lastServerPingAt = Date.now();
   try{
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+    // The login itself has expired or was cancelled (refused / "session missing"), as opposed to a bad network (which is retried quietly).
+    // Before this, such a phone kept asking once a minute for hours, half signed in, saving nothing (seen in the logs: one device, 123 refusals in 2 hours).
+    if(userErr && (userErr.name === 'AuthSessionMissingError' || userErr.status === 401 || userErr.status === 403)){
+      let revived = false;
+      try{ const r = await supabaseClient.auth.refreshSession(); revived = !!(r && r.data && r.data.session && !r.error); }catch(e2){}
+      if(revived){ _lastServerPingAt = 0; return; }   // a quiet refresh worked: the next check carries on normally
+      handleExpiredSignIn();
+      return;
+    }
     if(!user) return;
     await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', user.id);
   }catch(e){ console.error('last_seen heartbeat failed', e); }
+}
+// Signs the person out cleanly (their notifications on this phone are switched off first) and says why, so they can sign in again.
+let _expiredSignInHandling = false;
+async function handleExpiredSignIn(){
+  if(_expiredSignInHandling || !state.session) return;
+  _expiredSignInHandling = true;
+  try{ await logOut(); }
+  catch(e){ console.error('expired sign-in clean-up failed', e); state.session = null; try{ saveSession(); }catch(e2){} try{ render(); }catch(e3){} }
+  try{ showToast('Your sign-in expired. Please sign in again.'); }catch(e){}
+  setTimeout(()=>{ _expiredSignInHandling = false; }, 5000);
 }
 // A single admin-visible audit trail — who did what, and when. Call this alongside (never
 // instead of) the real action; a logging failure must never block or roll back the action it's
@@ -7774,8 +7793,9 @@ function orderSmsSender(kind){
   if(kind==='trackingUpdated') return sendOrderTrackingUpdatedSms;
   return sendOrderProcessingSms;
 }
-async function triggerAutoOrderSms(o, kind){
-  if(!kind || !SMS_CONFIGURED){ closeModal(); return; }
+async function triggerAutoOrderSms(o, kind, opts){
+  const keepModal = !!(opts && opts.keepModal);   // the caller already closed / replaced the window; do not close one the person opened since
+  if(!kind || !SMS_CONFIGURED){ if(!keepModal) closeModal(); return; }
   // Re-read orderSettings fresh rather than trusting this tab's in-memory copy, which only ever
   // updates via realtime — a long-lived tab whose realtime connection dropped (common once a tab
   // sits backgrounded for a while) would otherwise keep acting on whatever smsAutoSend was at
@@ -7790,7 +7810,7 @@ async function triggerAutoOrderSms(o, kind){
   }catch(e){ console.error('fresh orderSettings check failed', e); }
   if(autoSend){
     orderSmsSender(kind)(o);
-    closeModal();
+    if(!keepModal) closeModal();
   } else {
     state.pendingSmsConfirm = {orderId:o.id, kind};
     openModal('smsconfirm');
@@ -7807,19 +7827,62 @@ async function archiveOrderNow(id){
   closeModal();
   showToast('Order moved to Order Inquiry');
 }
-async function advanceOrder(id){
+// A stage move shows on screen AT ONCE (the card jumps, the "Send SMS?" question opens) while the save runs in the background.
+// Before, everything waited for 3-5 server round trips first (who-am-I check, read orders, write orders, read the SMS setting), so on a slow
+// connection nothing seemed to happen for seconds (people tapped twice), and a failed save left an unsaved "ghost" move behind that later
+// snapped back or got saved by accident with another order's save. Now a failed save puts the card back and says so, and nobody is texted
+// about a move that did not save.
+const _lastAdvanceAt = {};
+function orderMoveSnapshot(o, orderedIds){
+  return {
+    stage:o.stage, assignee:o.assignee, completedAt:o.completedAt||null, archived:!!o.archived, archivedAt:o.archivedAt||null,
+    courierService:o.courierService, courierNumber:o.courierNumber, histLen:Array.isArray(o.history) ? o.history.length : 0,
+    boardOrders:(orderedIds||[]).map(id=>{ const x = byId(state.orders, id); return x ? [id, x.boardOrder] : null; }).filter(Boolean),
+  };
+}
+function orderMoveRestore(o, snap){
+  o.stage = snap.stage; o.assignee = snap.assignee; o.completedAt = snap.completedAt; o.archived = snap.archived; o.archivedAt = snap.archivedAt;
+  o.courierService = snap.courierService; o.courierNumber = snap.courierNumber;
+  if(Array.isArray(o.history)) o.history.length = snap.histLen;
+  snap.boardOrders.forEach(([id, bo])=>{ const x = byId(state.orders, id); if(x) x.boardOrder = bo; });
+}
+async function commitOrderMove(o, snap, opts){
+  const savePromise = save('orders');   // started now, awaited below
+  const kind = opts.smsKind;
+  let asked = false;
+  if(kind && SMS_CONFIGURED && !orderSmsAutoSend()){
+    // The question does not depend on the save: ask straight away. "Yes" waits for the save before texting (see btn-sms-confirm-yes).
+    state.pendingSmsConfirm = {orderId:o.id, kind, saved:savePromise};
+    openModal('smsconfirm');
+    asked = true;
+  } else {
+    closeModal();   // closes the order window and redraws with the card already in its new column
+  }
+  const saved = await savePromise;
+  if(!saved){
+    orderMoveRestore(o, snap);
+    if(asked && state.pendingSmsConfirm && state.pendingSmsConfirm.orderId===o.id){ state.pendingSmsConfirm = null; if(state.modal==='smsconfirm') state.modal = null; }
+    render();
+    showToast(`Could not save the move, so ${o.orderNumber||o.id} is back in ${STAGES[snap.stage]}. Check the connection and try again.`, 8000);
+    return;
+  }
+  logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[o.stage]}`);
+  showToast(opts.label);
+  if(!asked) await triggerAutoOrderSms(o, kind, {keepModal:true});
+}
+async function advanceOrder(id, preSnap){
   const o = byId(state.orders,id);
   const lastStage = STAGES.length-1;
   if(!o || o.stage>=lastStage || !canAdvance(o.stage)) return;
+  // a second tap on the same order within a moment is a double-tap, not a wish to skip a stage
+  const nowMs = Date.now(); if(_lastAdvanceAt[id] && nowMs-_lastAdvanceAt[id] < 900) return; _lastAdvanceAt[id] = nowMs;
+  const snap = preSnap || orderMoveSnapshot(o);
   o.stage += 1; o.assignee = null;
   const justCompleted = o.stage===lastStage;
   if(justCompleted) o.completedAt = new Date().toISOString();
   if(!Array.isArray(o.history)) o.history = [];
   o.history.push({stage:o.stage, at:new Date().toISOString(), by:state.session.name});
-  if(!(await save('orders'))) return;
-  logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[o.stage]}`);
-  showToast(justCompleted ? 'Order picked up by delivery' : 'Moved to '+STAGES[o.stage]);
-  await triggerAutoOrderSms(o, orderAutoSmsKind(o.stage));
+  await commitOrderMove(o, snap, {label: justCompleted ? 'Order picked up by delivery' : 'Moved to '+STAGES[o.stage], smsKind: orderAutoSmsKind(o.stage)});
 }
 async function submitCitypakTag(e){
   e.preventDefault();
@@ -7827,9 +7890,10 @@ async function submitCitypakTag(e){
   const o = byId(state.orders, id); if(!o) return;
   const tag = (f.citypakTag.value||'').trim();
   if(!tag){ showToast('Enter the CityPak order tag number'); return; }
+  const snap = orderMoveSnapshot(o);   // before the tag is written, so a failed save can undo that too
   o.courierService = 'CityPak';
   o.courierNumber = tag;
-  await advanceOrder(id);
+  await advanceOrder(id, snap);
 }
 function applyBoardOrder(orderedIds){
   if(!orderedIds) return;
@@ -7844,6 +7908,7 @@ async function moveOrderToStage(id, newStage, newCourierService, orderedIds){
     return;
   }
   const oldStage = o.stage;
+  const snap = orderMoveSnapshot(o, orderedIds);
   o.stage = newStage;
   if(courierChanged) o.courierService = newCourierService;
   if(newStage===STAGES.length-1){ o.completedAt = new Date().toISOString(); }
@@ -7851,12 +7916,12 @@ async function moveOrderToStage(id, newStage, newCourierService, orderedIds){
   if(!Array.isArray(o.history)) o.history = [];
   o.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
   applyBoardOrder(orderedIds);
-  if(!(await save('orders'))) return;
-  logActivity(`Moved order ${o.orderNumber||o.id} (${o.customer}) to ${STAGES[newStage]}`);
-  showToast(courierChanged ? `Moved to ${STAGES[newStage]} — now ${newCourierService||'unassigned'} delivery` : 'Moved to '+STAGES[newStage]);
   // Only text the customer when the order actually progresses forward — a card dragged backwards
   // by accident shouldn't re-trigger a "your order is..." SMS.
-  await triggerAutoOrderSms(o, newStage>oldStage ? orderAutoSmsKind(newStage) : null);
+  await commitOrderMove(o, snap, {
+    label: courierChanged ? `Moved to ${STAGES[newStage]} \u2014 now ${newCourierService||'unassigned'} delivery` : 'Moved to '+STAGES[newStage],
+    smsKind: newStage>oldStage ? orderAutoSmsKind(newStage) : null,
+  });
 }
 async function assignOrderStaff(id, name){
   const o = byId(state.orders,id); if(!o) return;
@@ -11411,7 +11476,8 @@ function renderInner(){
   if(state.boardMode){ app.innerHTML = renderBoardPage(); attachBoardHandlers(); return; }
   if(state.trackMode){ app.innerHTML = renderTrackPage(); attachTrackHandlers(); return; }
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
-  if(!state.session){ app.innerHTML = renderLogin(); attachLoginHandlers(); return; }
+  // the sign-in page draws toasts too: after an automatic sign-out the reason ("Signed off after being inactive", "Your sign-in expired") used to be set but never shown
+  if(!state.session){ app.innerHTML = renderLogin() + (state.toast ? renderToast() : ''); attachLoginHandlers(); return; }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
   if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
@@ -21134,7 +21200,7 @@ async function saveProcessTemplate(){
   const had = Object.prototype.hasOwnProperty.call(product,'processTemplate'); const prev = product.processTemplate;
   product.processTemplate = {steps, updatedAt:new Date().toISOString(), updatedBy:(state.session.staffName||state.session.name)};
   if(!(await save('costingProducts'))){ if(had) product.processTemplate = prev; else delete product.processTemplate; return; }   // draft stays open to retry
-  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);   // eslint-disable-line
+  logActivity(`Saved the process template for ${product.name} (${steps.length} step${steps.length===1?'':'s'})`);
   state._templateDraft = null; state._costingProcessPage = false; state._costingDirty = false;
   showToast('Process template saved');
   render();
@@ -25254,7 +25320,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = stopBatch;
 
   // Chat
-  if(byIdEl('chat-form')) byIdEl('chat-form').addEventListener('submit', sendChatMessage);
   attachChat2Handlers();
 
   // Bulk SMS
@@ -25426,11 +25491,15 @@ function attachShellHandlers(){
     advanceOrder(id);
   };
   if(byIdEl('form-citypak-tag')) byIdEl('form-citypak-tag').addEventListener('submit', submitCitypakTag);
-  if(byIdEl('btn-sms-confirm-yes')) byIdEl('btn-sms-confirm-yes').onclick = ()=>{
+  if(byIdEl('btn-sms-confirm-yes')) byIdEl('btn-sms-confirm-yes').onclick = async ()=>{
     const pc = state.pendingSmsConfirm; if(!pc) return;
     const o = byId(state.orders, pc.orderId);
-    if(o){ orderSmsSender(pc.kind)(o); }
     closeModal();
+    if(!o) return;
+    // The question appears at once, before the move has finished saving: wait for the save (usually already done) and only text the
+    // customer if the move really went through. If it did not, the card was put back and a message already said so.
+    const saved = pc.saved ? await pc.saved : true;
+    if(saved) orderSmsSender(pc.kind)(o);
   };
   if(byIdEl('btn-sms-confirm-no')) byIdEl('btn-sms-confirm-no').onclick = ()=>closeModal();
   if(byIdEl('btn-delete-order')) byIdEl('btn-delete-order').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteOrder(id); };
@@ -25899,6 +25968,13 @@ window.addEventListener('popstate', ()=>{
   // "Edit template" included — that silently popped state.modal below, discarding whatever was
   // being typed with no warning. Re-assert the current URL and leave the modal open instead.
   if(state.modal){ history.pushState(null, '', location.href); return; }
+  // Same protection for the full pages with typing in them (Process template page, costing version sheet): an accidental
+  // back-swipe must not silently throw the typing away. Stay put and say how to leave properly (Cancel asks "Discard changes?").
+  if(state.page==='costing' && state._costingDirty){
+    try{ history.pushState(null, '', '#costing/' + encodeURIComponent(state._costingOpenProductId || '') + (state._costingOpenVersionId ? '/' + encodeURIComponent(state._costingOpenVersionId) : '')); }catch(e){}
+    showToast('You have unsaved changes. Use Save, or Cancel to discard them.');
+    return;
+  }
   const hashParts = (location.hash||'').replace('#','').split('/');
   const page = hashParts[0] || '';
   if(!page || !pageAllowed(page)) return;

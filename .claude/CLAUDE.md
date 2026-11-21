@@ -122,6 +122,21 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   Who: Admin and Sub Admin always, other roles through the switch `orders_boxcount_history` ("See previous days' box counts (view only)", Orders board section of User role
   permission) -- `canViewBoxCountHistory()`. Typed-but-unsaved rows block jumping away (toast "Save or clear today's rows first"). Gotcha: `render()` restores every typed field of the open
   panel to its OLD value (`captureOpenFormFields`), so `boxCountGoToDate` sets the date box AFTER render. Data was always kept per day (`boxCounts[].date`); nothing in the data changed.
+- **Elegant sidebar + date-focused Dashboard (owner, 2026-11-21: "leftside panel more decent with icons and animations; dashboard more elegant with colors and date focus").**
+  CSS block "Elegant sidebar + date-focused dashboard" (just before `@media print`). All colours come from the palette (`--accent*`, `--accent-rgb`); white text sits on `--ui-solid` (the palette's DEEP shade, `--ui-deep` ->
+  `--ui-deeper`), NOT on the light `--accent-grad`, because the default green / yellow / mint gradients are too pale for white small print. Keep it that way.
+  (1) SIDEBAR (`renderShell`): groups with 2+ visible items get a small label (Operations / Team / Other for Admin); runs of single-item groups share one unlabeled block; every item is an icon TILE (`.nav-ico`),
+  the active item has a deep-shade tile + 4px bar; hover moves the tile; profile card (`.sidebar-foot`, avatar + name + role + live dot) is pinned at the bottom ABOVE the 34px clock bar (`.sidebar{bottom:34px}` on >=761px);
+  the list scrolls under a soft fade. Entrances: `.nav-enter` (only on a real login) staggers the items, `.nav-fresh` (fresh page) pops the active tile; never on a plain redraw; all inside `prefers-reduced-motion:no-preference`.
+  Item markup keeps `data-nav` and the `nav-item` / `nav-item-unread` classes. Width is still 240px.
+  (2) DASHBOARD top (`renderDashDateTop`): LEFT a date card (greeting by hour, big Fraunces day number, weekday, month/year, ISO week + "N days left in YYYY" bar, and a sun / sunrise / sunset / moon Lottie from
+  `assets/lottie/tod-*.json`, chosen by hour in `dashTodKey`, credits in `assets/lottie/CREDITS.md`); RIGHT a Monday-first week strip with prev / next week + Today, one dot per kind per day (Due = `o.dueDate`, Received = `o.createdAt`,
+  Completed = `o.completedAt`), an "N overdue" shortcut to Orders (open, not archived, dueDate before today), and a detail for the picked day (3 counters + up to 6 orders, each opens its order window when the role has the Orders
+  page; otherwise plain rows). Picked day = `state._dashDay` (YYYY-MM-DD, null = today); it is a view filter, NOT a browser-history step. Counts come straight from `state.orders`, nothing new is stored.
+  (3) `mountDashTod()` runs from `attachShellHandlers()` after every render: the JSON text is fetched once per file and parsed fresh each mount (lottie edits what it is given), the old frame is carried over so a redraw
+  does not restart the animation, and with reduced motion it is shown paused. Do not add more Lottie instances casually: older PCs were already slow (see "Speed on older PCs").
+  (4) Desktop-only restyle (>=761px) of `.dash-stat-card` (icon badge shown, hover lift) and dashboard `.panel`s; panels sit in `.dash-grid` (2 columns from 1280px, `.dg-span2` = full width, else one column).
+  The PHONE dashboard keeps the layout picked earlier (2-column stat cards, hero colour still from Settings -> Mobile appearance via `--mobile-hero-bg`). The old `.dash-hero` markup is gone (its CSS is unused).
 - **Browser Back / Forward walks EVERY screen step; no tiny back buttons (owner, 2026-11-21: "no need these tiny buttons to go backward ... all the pages should go backwards with the
   website's own buttons, every backward step").** ONE mechanism in `index.html` (search "Browser Back / Forward walks EVERY screen step"): `navSnapshot()` describes the screen being shown (page + the
   open drill-down), `navCommit()` runs at the end of every `render()` and pushes a real history entry whenever that description changes (the first draw of a visit and a forced redirect REPLACE

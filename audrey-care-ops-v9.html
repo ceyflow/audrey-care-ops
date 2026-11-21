@@ -2893,6 +2893,200 @@ html{ visibility:hidden; }
     .mobile-tab:active,.sections-tile:active,.wa-row:active,.wa-ibtn:active,.wa-send:active,.header-menu-item:active{transform:scale(.94);transition-duration:.08s;}
     .sections-tile,.wa-row,.wa-ibtn,.wa-send,.header-menu-item{transition:transform .34s var(--ease-spring),background .15s ease;}
   }
+  /* =====================================================================================================
+     Elegant sidebar + date-focused dashboard (owner, 2026-11-21: "make the leftside section panel more
+     decent with icons and animations, dashboard more elegant with colors and date focus").
+     Everything below follows the workspace palette (var(--accent*), --accent-rgb, --accent-grad, --clay,
+     --s-delivered) so Settings > Appearance still recolours it. Entrance animations only play on a fresh
+     login / fresh page (.nav-enter / .nav-fresh, set from renderShell), never on a redraw; every moving
+     part is inside prefers-reduced-motion:no-preference. The phone dashboard keeps the layout the owner
+     picked (hero colour still comes from Settings > Mobile appearance via --mobile-hero-bg).
+     ===================================================================================================== */
+
+  /* White text/icons sit on the palette's DEEP shade, not its light --accent-grad: on the default green and on
+     yellow / mint the light gradient is too pale for white small print (about 2.5:1). --ui-solid stays rich in
+     every palette (blue, green, yellow, purple, indigo, mint, black) and keeps white text above 4.5:1. */
+  :root{--ui-deep:var(--accent-dark);--ui-deeper:color-mix(in srgb,var(--accent-dark) 78%,#0a1020);--ui-solid:linear-gradient(155deg,var(--ui-deep) 0%,var(--ui-deeper) 100%);}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.66) 0%,rgba(255,255,255,.36) 100%);
+    border-right:1px solid rgba(var(--accent-rgb),.10);
+    box-shadow:8px 0 36px rgba(var(--accent-rgb),.08);
+  }
+  @media (min-width:761px){ .sidebar{bottom:34px;} }   /* the bottom clock bar (34px) must not cover the profile card */
+  .sidebar .brand{position:relative;flex:none;padding:20px 22px 16px;border-bottom:none;}
+  .sidebar .brand::after{content:"";position:absolute;left:22px;right:22px;bottom:0;height:1px;background:linear-gradient(90deg,rgba(var(--accent-rgb),.30),rgba(var(--accent-rgb),.03));}
+  .sidebar .brand .tagline{display:flex;align-items:center;gap:7px;margin-top:5px;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
+  .sidebar .brand .tagline::before{content:"";width:14px;height:2px;border-radius:2px;background:var(--accent-grad);}
+  .nav-group{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 12px 26px;scrollbar-width:thin;scrollbar-color:rgba(var(--accent-rgb),.28) transparent;
+    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 22px),transparent);}   /* soft fade = "there is more below" */
+  .nav-group::-webkit-scrollbar{width:6px;}
+  .nav-group::-webkit-scrollbar-thumb{background:rgba(var(--accent-rgb),.22);border-radius:6px;}
+  .nav-section + .nav-section{margin-top:12px;}
+  .nav-section-label{display:flex;align-items:center;gap:8px;padding:6px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
+  .nav-section-label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(var(--accent-rgb),.18),transparent);}
+  .nav-section--plain:not(:first-child)::before{content:"";display:block;height:1px;margin:0 10px 10px;background:linear-gradient(90deg,rgba(var(--accent-rgb),.18),transparent);}
+  .nav-item{position:relative;gap:11px;min-height:40px;padding:5px 10px 5px 7px;border-radius:13px;font-size:13.5px;transition:background .22s ease,color .22s ease,transform .18s ease;}
+  .nav-item:hover{background:rgba(var(--accent-rgb),.07);}
+  .nav-item:active{transform:scale(.985);}
+  .nav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .nav-ico{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:var(--muted);background:rgba(var(--accent-rgb),.07);transition:background .22s ease,color .22s ease,box-shadow .22s ease,transform .32s var(--ease-spring,cubic-bezier(.34,1.56,.64,1));}
+  .nav-ico svg{width:17px;height:17px;color:inherit;transition:none;}
+  .nav-item:hover .nav-ico{background:rgba(var(--accent-rgb),.15);color:var(--accent-dark);transform:translateY(-1px) rotate(-6deg) scale(1.07);}
+  .nav-item:hover svg{animation:none;}                          /* replaces the old per-icon pop: the whole tile moves now */
+  .nav-item.active{color:var(--accent-dark);font-weight:600;background:linear-gradient(90deg,rgba(var(--accent-rgb),.15),rgba(var(--accent-rgb),.03));}
+  .nav-item.active .nav-ico{background:var(--ui-solid);color:#fff;box-shadow:0 7px 16px -5px rgba(var(--accent-rgb),.6);}
+  .nav-item.active::before{content:"";position:absolute;left:-12px;top:50%;width:4px;height:22px;margin-top:-11px;border-radius:0 4px 4px 0;background:var(--ui-deep);}
+  .nav-item.active .nav-ico svg{color:#fff;}                    /* beats the older ".nav-item.active svg" dark colour */
+  .nav-item.nav-item-unread .nav-ico{background:var(--danger-soft);}
+  .nav-item.active.nav-item-unread .nav-ico{background:var(--ui-solid);}
+  .nav-item.active.nav-item-unread svg{color:#fff;}
+  .nav-unread-dot{margin-left:auto;}
+  .sidebar-foot{flex:none;display:flex;align-items:center;gap:10px;margin:0 12px 12px;padding:10px 12px;border:1px solid rgba(var(--accent-rgb),.13);border-radius:15px;background:rgba(255,255,255,.62);font-size:11px;color:var(--muted);}
+  .sf-avatar{position:relative;flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--ui-solid);color:#fff;font-size:12px;font-weight:700;}
+  .sf-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+  .sf-text{min-width:0;display:flex;flex-direction:column;line-height:1.25;}
+  .sf-text b{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sf-text small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sf-live{margin-left:auto;flex:none;width:8px;height:8px;border-radius:50%;background:var(--s-delivered);}
+  @media (max-width:760px){
+    .nav-item{min-height:44px;}
+    .sidebar-foot{margin-bottom:calc(12px + env(safe-area-inset-bottom));}
+    .sidebar .brand{padding-top:calc(20px + env(safe-area-inset-top));}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .sidebar.nav-enter .nav-item,.sidebar.nav-enter .nav-section-label{animation:nav-in .55s var(--ease-ios,ease) backwards;animation-delay:calc(var(--i,0) * 26ms + 80ms);}
+    @keyframes nav-in{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:none;}}
+    .sidebar.nav-fresh .nav-item.active::before{animation:nav-bar-in .5s var(--ease-spring,ease) backwards;}
+    @keyframes nav-bar-in{from{transform:scaleY(.15);opacity:0;}to{transform:none;opacity:1;}}
+    .sidebar.nav-fresh .nav-item.active .nav-ico{animation:nav-ico-pop .6s var(--ease-spring,ease) backwards;}
+    @keyframes nav-ico-pop{0%{transform:scale(.78) rotate(-14deg);}60%{transform:scale(1.13) rotate(3deg);}100%{transform:none;}}
+    .sf-live{animation:sf-live 2.6s ease-out infinite;}
+    @keyframes sf-live{0%{box-shadow:0 0 0 0 rgba(63,169,104,.5);}70%{box-shadow:0 0 0 7px rgba(63,169,104,0);}100%{box-shadow:0 0 0 0 rgba(63,169,104,0);}}
+  }
+
+  /* ---------- Dashboard: date card + week strip ---------- */
+  .page-dashboard{--dash-line:rgba(var(--accent-rgb),.13);--dash-card:rgba(255,255,255,.84);--dash-shadow:0 1px 2px rgba(20,30,80,.04),0 16px 36px -14px rgba(var(--accent-rgb),.22);--c-due:var(--clay);--c-recv:var(--accent);--c-done:var(--s-delivered);}
+  .dash-top{display:grid;grid-template-columns:minmax(290px,350px) minmax(0,1fr);gap:18px;margin-bottom:18px;align-items:stretch;}
+  .dash-date{position:relative;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;justify-content:space-between;min-height:260px;padding:22px 24px 18px;border-radius:26px;color:#fff;
+    background:radial-gradient(110% 80% at 100% 0%,rgba(255,255,255,.26),transparent 58%),linear-gradient(180deg,rgba(6,14,36,.04),rgba(6,14,36,.26)),linear-gradient(205deg,var(--accent) -20%,var(--ui-deep) 52%,var(--ui-deeper) 100%);
+    box-shadow:0 24px 46px -20px rgba(var(--accent-rgb),.6);}
+  .dd-ring{position:absolute;z-index:-1;right:-80px;bottom:-100px;width:270px;height:270px;border-radius:50%;border:1px solid rgba(255,255,255,.2);pointer-events:none;}
+  .dd-ring.b{right:-36px;bottom:-56px;width:182px;height:182px;border-color:rgba(255,255,255,.15);}
+  .dd-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .dd-greet{font-size:13px;line-height:1.35;color:rgba(255,255,255,.88);}
+  .dd-greet b{display:block;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#fff;}
+  .dd-tod{flex:none;width:88px;height:88px;margin:-10px -8px 0 0;filter:drop-shadow(0 8px 12px rgba(0,0,0,.2));}
+  .dd-main{display:flex;align-items:flex-end;gap:16px;margin-top:10px;}
+  .dd-num{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:100px;line-height:.8;letter-spacing:-.035em;font-variant-numeric:lining-nums tabular-nums;text-shadow:0 6px 24px rgba(6,14,44,.25);}
+  .dd-meta{display:flex;flex-direction:column;gap:3px;padding-bottom:4px;min-width:0;}
+  .dd-wd{font-size:21px;font-weight:600;line-height:1.1;}
+  .dd-my{font-size:13px;letter-spacing:.03em;color:rgba(255,255,255,.86);}
+  .dd-foot{display:flex;align-items:center;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.24);font-size:11.5px;color:rgba(255,255,255,.92);white-space:nowrap;}
+  .dd-year{flex:1;min-width:30px;height:4px;border-radius:99px;background:rgba(255,255,255,.24);overflow:hidden;}
+  .dd-year i{display:block;height:100%;width:var(--p,50%);border-radius:inherit;background:#fff;}
+  .dash-week{display:flex;flex-direction:column;gap:14px;min-width:0;padding:18px 20px 16px;border-radius:26px;background:var(--dash-card);border:1px solid var(--dash-line);box-shadow:var(--dash-shadow);}
+  .dw-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .dw-title{display:flex;align-items:baseline;gap:9px;font-size:14px;font-weight:700;}
+  .dw-title small{font-size:12.5px;font-weight:500;color:var(--muted);}
+  .dw-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .dw-btn{height:32px;min-width:32px;padding:0 11px;display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--dash-line);border-radius:10px;background:#fff;color:var(--ink);font:600 12px/1 inherit;font-family:inherit;cursor:pointer;transition:border-color .18s,color .18s,background .18s,transform .18s;}
+  .dw-btn:hover{border-color:var(--accent);color:var(--accent-dark);}
+  .dw-btn:active{transform:scale(.96);}
+  .dw-btn:focus-visible,.dash-day:focus-visible,.dw-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dw-btn svg{width:14px;height:14px;}
+  .dw-overdue{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:10px;border:1px solid rgba(181,101,29,.28);background:var(--clay-soft);color:#8A4A12;font:700 11.5px/1 inherit;font-family:inherit;text-decoration:none;cursor:pointer;}
+  .dw-overdue svg{width:14px;height:14px;}
+  .dash-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+  .dash-day{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:78px;padding:10px 4px 9px;border:1px solid var(--dash-line);border-radius:18px;background:#fff;color:var(--ink);font:inherit;cursor:pointer;transition:transform .22s var(--ease-ios,ease),box-shadow .22s ease,border-color .22s ease,background .22s ease;}
+  .dash-day:hover{transform:translateY(-3px);border-color:rgba(var(--accent-rgb),.42);box-shadow:0 14px 24px -14px rgba(var(--accent-rgb),.5);}
+  .dash-day:active{transform:scale(.97);}
+  .dd-d-wd{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);}
+  .dd-d-num{font-family:'Fraunces',Georgia,serif;font-size:23px;font-weight:600;line-height:1.1;font-variant-numeric:lining-nums;}
+  .dd-d-dots{display:flex;gap:3px;height:6px;margin-top:3px;}
+  .dd-d-dots i{width:6px;height:6px;border-radius:50%;}
+  .dd-d-dots .due{background:var(--c-due);} .dd-d-dots .recv{background:var(--c-recv);} .dd-d-dots .done{background:var(--c-done);}
+  .dash-day.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+  .dash-day.today .dd-d-wd{color:var(--accent-dark);}
+  .dash-day.sel{border-color:transparent;background:var(--ui-solid);color:#fff;box-shadow:0 16px 28px -14px rgba(var(--accent-rgb),.65);}
+  .dash-day.sel .dd-d-wd{color:rgba(255,255,255,.86);}
+  .dash-day.sel .dd-d-dots i{box-shadow:0 0 0 1.5px rgba(255,255,255,.85);}
+  .dash-day.sel .dd-d-dots .recv{background:#fff;}
+  .dw-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);}
+  .dw-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dw-legend i{width:7px;height:7px;border-radius:50%;}
+  .dw-detail{display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px dashed var(--dash-line);}
+  .dw-detail-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .dw-detail-day{font-size:15px;font-weight:700;letter-spacing:-.005em;}
+  .dw-rel{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);}
+  .dw-mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  .dw-mini > div{display:flex;flex-direction:column;gap:1px;padding:10px 14px;border-radius:15px;background:var(--bg);border:1px solid var(--dash-line);border-left:3px solid var(--tc);}
+  .dw-mini b{font-size:22px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .dw-mini span{font-size:11.5px;color:var(--muted);font-weight:500;}
+  .dw-list{display:flex;flex-direction:column;gap:6px;}
+  .dw-row{appearance:none;-webkit-appearance:none;display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--dash-line);border-radius:13px;background:#fff;color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s;}
+  button.dw-row:hover{border-color:rgba(var(--accent-rgb),.4);box-shadow:0 8px 18px -12px rgba(var(--accent-rgb),.5);transform:translateX(2px);}
+  div.dw-row{cursor:default;}
+  .dw-tag{flex:none;min-width:70px;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:3px 8px;border-radius:999px;}
+  .dw-tag.due{background:var(--clay-soft);color:#8A4A12;} .dw-tag.recv{background:var(--accent-soft);color:var(--accent-dark);} .dw-tag.done{background:var(--s-delivered-soft);color:#1F6B3F;}
+  .dw-cust{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34%;}
+  .dw-prod{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dw-row .stage-badge{flex:none;}
+  .dw-more{font-size:12px;color:var(--muted);padding:2px 4px;}
+  .dw-empty{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:15px;background:var(--bg);color:var(--muted);font-size:12.5px;}
+  .dw-empty svg{width:20px;height:20px;flex:none;color:var(--accent);}
+
+  /* ---------- Dashboard: stat cards, panels, two-column layout (desktop only; the phone layout is unchanged) ---------- */
+  @media (min-width:761px){
+    .page-dashboard .dash-stat-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:20px;}
+    .page-dashboard .dash-stat-card{appearance:none;-webkit-appearance:none;position:relative;display:flex;align-items:center;gap:14px;min-width:0;padding:16px 18px;border-radius:22px;background:var(--dash-card);border:1px solid var(--dash-line);box-shadow:var(--dash-shadow);backdrop-filter:none;-webkit-backdrop-filter:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:transform .24s var(--ease-ios,ease),box-shadow .24s ease;}
+    .page-dashboard .dash-stat-card:hover{transform:translateY(-3px);box-shadow:0 22px 38px -16px rgba(var(--accent-rgb),.38);}
+    .page-dashboard .dash-stat-card.not-clickable{cursor:default;}
+    .page-dashboard .dash-stat-card.not-clickable:hover{transform:none;}
+    .page-dashboard .dash-stat-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+    .page-dashboard .dash-stat-card .stat-icon-badge{display:grid;place-items:center;flex:none;width:50px;height:50px;border-radius:16px;}
+    .page-dashboard .dash-stat-card .stat-icon-badge svg{width:25px;height:25px;}
+    .page-dashboard .dash-stat-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+    .page-dashboard .dash-stat-card .label{margin:0;font-size:12px;font-weight:500;color:var(--muted);}
+    .page-dashboard .dash-stat-value-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+    .page-dashboard .dash-stat-card .value{font-size:29px;font-weight:700;line-height:1.1;letter-spacing:-.025em;}
+    .page-dashboard .dash-stat-trend{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;}
+    .page-dashboard .dash-stat-chevron{display:flex;flex:none;margin-left:auto;color:var(--muted);opacity:0;transform:translateX(-4px);transition:opacity .2s,transform .2s;}
+    .page-dashboard .dash-stat-chevron svg{width:15px;height:15px;}
+    .page-dashboard .dash-stat-card:hover .dash-stat-chevron{opacity:1;transform:none;}
+    .page-dashboard .panel{background:var(--dash-card);border:1px solid var(--dash-line);border-radius:22px;box-shadow:var(--dash-shadow);backdrop-filter:none;-webkit-backdrop-filter:none;}
+    .page-dashboard .panel-head{padding:16px 20px;border-bottom:1px solid var(--dash-line);}
+    .page-dashboard .panel-head h3{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;letter-spacing:-.005em;}
+    .page-dashboard .panel-head h3::before{content:"";width:4px;height:15px;border-radius:3px;background:var(--accent);}
+    .page-dashboard .panel-body{padding:18px 20px;}
+    .dash-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;}
+    .dash-grid > .panel{margin:0 !important;}
+  }
+  @media (min-width:1280px){
+    .dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .dash-grid > .dg-span2{grid-column:1 / -1;}
+  }
+  @media (max-width:1100px){ .dash-top{grid-template-columns:1fr;} .dash-date{min-height:0;} }
+  @media (max-width:760px){
+    .dash-top{gap:12px;margin-bottom:14px;}
+    .dash-date{padding:16px 18px 14px;border-radius:22px;background:radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.22),transparent 56%),linear-gradient(180deg,rgba(6,14,36,.04),rgba(6,14,36,.24)),var(--mobile-hero-bg, linear-gradient(205deg,var(--accent) -20%,var(--ui-deep) 52%,var(--ui-deeper) 100%));}
+    .dd-num{font-size:66px;}
+    .dd-wd{font-size:18px;}
+    .dd-tod{width:66px;height:66px;margin:-6px -4px 0 0;}
+    .dd-foot{margin-top:12px;}
+    .dash-week{padding:14px 14px 12px;border-radius:22px;background:#fff;box-shadow:0 2px 6px rgba(19,32,30,.04),0 10px 24px rgba(19,32,30,.07);}
+    .dash-days{gap:5px;}
+    .dash-day{min-height:68px;padding:8px 2px 7px;border-radius:14px;}
+    .dd-d-wd{font-size:9px;letter-spacing:.05em;}
+    .dd-d-num{font-size:19px;}
+    .dw-mini{gap:8px;} .dw-mini > div{padding:8px 10px;} .dw-mini b{font-size:19px;}
+    .dw-row{flex-wrap:wrap;} .dw-cust{max-width:60%;} .dw-prod{flex-basis:100%;order:5;}
+    .dash-grid > .panel{margin-top:16px;}
+  }
+  @media (prefers-reduced-motion:reduce){ .dash-day,.dw-btn,.dw-row,.page-dashboard .dash-stat-card,.nav-item,.nav-ico{transition:none !important;} }
+
   @media print{
     body > *:not(#print-area){ display:none!important; }
     #print-area{ display:block!important; }
@@ -13896,19 +14090,38 @@ function renderShell(freshPage){
   return `
   <div class="shell ${justLoggedIn?'shell-enter':''} ${state._headerMenuOpen?'menu-open':''} ${state.page==='chat'?'page-chat':''} ${state.page==='dashboard'?'page-dashboard':''} ${state.page==='orders'?'page-orders':''}">
     ${state.sidebarOpen ? `<div class="sidebar-backdrop" id="sidebar-backdrop"></div>` : ''}
-    <aside class="sidebar ${state.sidebarOpen?'open':''}">
+    <aside class="sidebar ${state.sidebarOpen?'open':''} ${justLoggedIn?'nav-enter':''} ${freshPage?'nav-fresh':''}">
       <div class="brand">
         <img src="${currentLogo()}" alt="Audrey" class="brand-logo">
         <span class="tagline">Operations</span>
       </div>
-      <div class="nav-group">
-        ${navGroups.flatMap(g=>g.items).map(it=>`
-          <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}">
-            ${icon(it.icon)}<span>${esc(navLabel(it))}</span>
+      <nav class="nav-group" aria-label="Main navigation">
+        ${(() => {
+          // Groups with 2+ visible items get a small label; runs of single-item groups share one unlabeled block, so a
+          // role with only a few pages does not end up with a heading above every link.
+          const secs = [];
+          navGroups.forEach(g=>{
+            if(g.items.length>1) secs.push({label:g.group, items:g.items});
+            else if(secs.length && !secs[secs.length-1].label) secs[secs.length-1].items.push(...g.items);
+            else secs.push({label:null, items:[...g.items]});
+          });
+          let ni = 0;
+          return secs.map(sec=>`
+        <div class="nav-section ${sec.label?'':'nav-section--plain'}">
+          ${sec.label ? `<div class="nav-section-label" style="--i:${ni++}">${esc(sec.label)}</div>` : ''}
+          ${sec.items.map(it=>`
+          <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="--i:${ni++}" ${state.page===it.id?'aria-current="page"':''}>
+            <span class="nav-ico">${icon(it.icon)}</span><span class="nav-label">${esc(navLabel(it))}</span>
             ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
           </a>`).join('')}
+        </div>`).join('');
+        })()}
+      </nav>
+      <div class="sidebar-foot">
+        <span class="sf-avatar">${myProfilePhotoUrl() ? `<img src="${escAttr(myProfilePhotoUrl())}" alt="">` : esc(initials(state.session.name))}</span>
+        <span class="sf-text"><b>${esc(myDisplayName() || state.session.name)}</b><small>${esc(state.session.role)}</small></span>
+        <span class="sf-live" title="Signed in"></span>
       </div>
-      <div class="sidebar-foot">Signed in as ${esc(state.session.name)} · ${esc(state.session.role)}</div>
     </aside>
 
     <div class="main">
@@ -14597,6 +14810,148 @@ function animateDashboardCharts(){
   }
 }
 /* ===================== Dashboard ===================== */
+/* ===================== Dashboard: date focus (owner, 2026-11-21) =====================
+   The top of the Dashboard is a date card (today, big) plus a week strip you can walk through. Per day it counts
+   orders DUE (o.dueDate), RECEIVED (o.createdAt) and COMPLETED (o.completedAt), straight from state.orders, no new
+   data. The selected day lives in state._dashDay (YYYY-MM-DD, null = today); it is a view filter, not a history step.
+   The sun / moon animation is one of four small Lottie files in assets/lottie/ (see CREDITS.md there). */
+function dashDateFromKey(key){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key||''); return m ? new Date(+m[1], +m[2]-1, +m[3], 12) : new Date(); }
+function dashShiftDay(key, days){ const d = dashDateFromKey(key); d.setDate(d.getDate()+days); return localDateKey(d); }
+function dashIsoWeek(d){
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay()||7));
+  return Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(),0,1))) / 86400000 + 1) / 7);
+}
+function dashGreeting(d){ const h = d.getHours(); return h>=5&&h<12 ? 'Good morning' : h>=12&&h<17 ? 'Good afternoon' : h>=17&&h<22 ? 'Good evening' : 'Hello'; }
+function dashTodKey(d){ const h = d.getHours() + d.getMinutes()/60; return h>=5&&h<10 ? 'sunrise' : h>=10&&h<17 ? 'sun' : h>=17&&h<19.5 ? 'sunset' : 'night'; }
+function dashRelLabel(key, todayKey){
+  const n = Math.round((dashDateFromKey(key) - dashDateFromKey(todayKey)) / 86400000);
+  return n===0 ? 'Today' : n===1 ? 'Tomorrow' : n===-1 ? 'Yesterday' : n>1 ? `In ${n} days` : `${-n} days ago`;
+}
+// One pass over the orders: the 7 days of the week that contains `selKey`, plus what is on the selected day.
+function dashDateData(selKey){
+  const now = new Date(), todayKey = localDateKey(now);
+  const sel = /^\d{4}-\d{2}-\d{2}$/.test(selKey||'') ? selKey : todayKey;
+  const start = dashDateFromKey(sel); start.setDate(start.getDate() - ((start.getDay()+6)%7));   // Monday
+  const days = [], idx = {};
+  for(let i=0;i<7;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const key = localDateKey(d);
+    idx[key] = { key, d, due:0, recv:0, done:0, isToday:key===todayKey, isSel:key===sel };
+    days.push(idx[key]);
+  }
+  const final = STAGES.length-1;
+  const rows = {};            // order id -> {o, tags[]} for the selected day
+  let overdue = 0;
+  const tag = (o, t)=>{ (rows[o.id] || (rows[o.id] = {o, tags:[]})).tags.push(t); };
+  (state.orders||[]).forEach(o=>{
+    const c = o.createdAt ? localDateKey(o.createdAt) : '';
+    const f = o.completedAt ? localDateKey(o.completedAt) : '';
+    const du = o.dueDate || '';
+    if(idx[du]){ idx[du].due++; if(du===sel) tag(o,'due'); }
+    if(idx[c]){ idx[c].recv++; if(c===sel) tag(o,'recv'); }
+    if(idx[f]){ idx[f].done++; if(f===sel) tag(o,'done'); }
+    if(du && du < todayKey && !o.archived && o.stage < final) overdue++;
+  });
+  const order = {due:0, recv:1, done:2};
+  const list = Object.values(rows).sort((a,b)=> Math.min(...a.tags.map(t=>order[t])) - Math.min(...b.tags.map(t=>order[t])) || new Date(b.o.createdAt||0) - new Date(a.o.createdAt||0));
+  return { now, todayKey, sel, days, start, end: days[6].d, today: idx[sel], list, overdue };
+}
+// Sun / moon animation. The JSON is fetched once per file (kept as TEXT and parsed fresh for every mount, because
+// lottie edits the object it is given) and every render() rebuilds the page, so mounting carries the old frame over
+// instead of restarting the animation each time something redraws.
+const _todText = {}, _todLoading = {};
+let _todInst = null, _todKeyShown = null;
+function dashTodLoad(key){
+  if(_todText[key]) return Promise.resolve(_todText[key]);
+  if(!_todLoading[key]){
+    const build = (document.querySelector('meta[name="app-build"]')||{}).content || '1';
+    _todLoading[key] = fetch('assets/lottie/tod-' + key + '.json?v=' + build).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+      .then(t=>{ _todText[key] = t; return t; }).catch(e=>{ delete _todLoading[key]; throw e; });
+  }
+  return _todLoading[key];
+}
+function mountDashTod(){
+  let frame = 0;
+  if(_todInst){ try{ frame = _todInst.currentFrame || 0; _todInst.destroy(); }catch(e){} _todInst = null; }
+  const el = document.getElementById('dash-tod');
+  if(!el || typeof lottie==='undefined') return;
+  const key = el.dataset.tod, sameAsBefore = key === _todKeyShown;
+  const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  dashTodLoad(key).then(text=>{
+    if(!document.body.contains(el) || el.firstChild) return;      // redrawn again while the file was loading
+    const anim = lottie.loadAnimation({ container: el, renderer:'svg', loop:true, autoplay:!reduce, animationData: JSON.parse(text) });
+    _todInst = anim; _todKeyShown = key;
+    if(reduce) anim.goToAndStop(Math.round((anim.totalFrames||100)*0.5), true);
+    else if(sameAsBefore && frame) anim.goToAndPlay(frame, true);
+  }).catch(e=>{ console.warn('dashboard animation not loaded', e); });
+}
+function renderDashDateTop(){
+  const dd = dashDateData(state._dashDay);
+  const now = dd.now, todayKey = dd.todayKey;
+  const first = ((typeof myDisplayName==='function' && myDisplayName()) || state.session.name || '').trim().split(/\s+/)[0];
+  const jan1 = new Date(now.getFullYear(),0,1), dec31 = new Date(now.getFullYear(),11,31);
+  const dayOfYear = Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate()) - jan1) / 86400000) + 1;
+  const daysInYear = Math.round((dec31 - jan1) / 86400000) + 1;
+  const wd = d => d.toLocaleDateString(undefined,{weekday:'long'});
+  const shortRange = `${dd.start.toLocaleDateString(undefined,{day:'numeric',month:'short'})} – ${dd.end.toLocaleDateString(undefined,{day:'numeric',month:'short'})}`;
+  const canOpen = pageAllowed('orders');
+  const tagLabel = {due:'Due', recv:'Received', done:'Completed'};
+  const shown = dd.list.slice(0, 6);
+  const sel = dd.today, selD = sel.d;
+  const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  return `
+  <div class="dash-top">
+    <section class="dash-date" aria-label="Today">
+      <span class="dd-ring"></span><span class="dd-ring b"></span>
+      <div class="dd-top">
+        <div class="dd-greet">${dashGreeting(now)},<b>${esc(first)}</b></div>
+        <div class="dd-tod" id="dash-tod" data-tod="${dashTodKey(now)}" aria-hidden="true"></div>
+      </div>
+      <div class="dd-main">
+        <div class="dd-num">${now.getDate()}</div>
+        <div class="dd-meta"><span class="dd-wd">${esc(wd(now))}</span><span class="dd-my">${esc(now.toLocaleDateString(undefined,{month:'long',year:'numeric'}))}</span></div>
+      </div>
+      <div class="dd-foot"><span>Week ${dashIsoWeek(now)}</span><span class="dd-year" style="--p:${(dayOfYear/daysInYear*100).toFixed(1)}%"><i></i></span><span>${daysInYear-dayOfYear} days left in ${now.getFullYear()}</span></div>
+    </section>
+    <section class="dash-week" aria-label="Week view">
+      <div class="dw-head">
+        <div class="dw-title">Week ${dashIsoWeek(dd.start)} <small>${esc(shortRange)}</small></div>
+        <div class="dw-nav">
+          ${dd.overdue>0 && canOpen ? `<button type="button" class="dw-overdue" data-nav="orders" title="Open the Orders board">${svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}${dd.overdue} overdue</button>` : ''}
+          <button type="button" class="dw-btn" data-dash-week="-1" aria-label="Previous week">${svg('<path d="m15 18-6-6 6-6"/>')}</button>
+          <button type="button" class="dw-btn" data-dash-today ${sel.key===todayKey && state._dashDay==null ? 'disabled style="opacity:.45;cursor:default;"' : ''}>Today</button>
+          <button type="button" class="dw-btn" data-dash-week="1" aria-label="Next week">${svg('<path d="m9 18 6-6-6-6"/>')}</button>
+        </div>
+      </div>
+      <div class="dash-days" role="group" aria-label="Pick a day">
+        ${dd.days.map(x=>`
+        <button type="button" class="dash-day ${x.isToday?'today':''} ${x.isSel?'sel':''}" data-dash-day="${x.key}" aria-pressed="${x.isSel}" aria-label="${esc(x.d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}))}: ${x.due} due, ${x.recv} received, ${x.done} completed">
+          <span class="dd-d-wd">${esc(x.d.toLocaleDateString(undefined,{weekday:'short'}))}</span>
+          <span class="dd-d-num">${x.d.getDate()}</span>
+          <span class="dd-d-dots">${x.due?'<i class="due"></i>':''}${x.recv?'<i class="recv"></i>':''}${x.done?'<i class="done"></i>':''}</span>
+        </button>`).join('')}
+      </div>
+      <div class="dw-legend" aria-hidden="true"><span><i style="background:var(--c-due)"></i>Due</span><span><i style="background:var(--c-recv)"></i>Received</span><span><i style="background:var(--c-done)"></i>Completed</span></div>
+      <div class="dw-detail">
+        <div class="dw-detail-head"><span class="dw-detail-day">${esc(selD.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}))}</span><span class="dw-rel">${dashRelLabel(sel.key, todayKey)}</span></div>
+        <div class="dw-mini">
+          <div style="--tc:var(--c-due)"><b>${sel.due}</b><span>Due</span></div>
+          <div style="--tc:var(--c-recv)"><b>${sel.recv}</b><span>Received</span></div>
+          <div style="--tc:var(--c-done)"><b>${sel.done}</b><span>Completed</span></div>
+        </div>
+        ${shown.length ? `<div class="dw-list">
+          ${shown.map(r=>{
+            const st = orderStageStyle(r.o);
+            const inner = `${r.tags.map(t=>`<span class="dw-tag ${t}">${tagLabel[t]}</span>`).join('')}<span class="dw-cust">${esc(r.o.customer)}</span><span class="dw-prod">${esc(stripTags(r.o.product||'').slice(0,60))}</span><span class="stage-badge" style="background:${st.bg};color:${st.c};">${esc(orderStageLabel(r.o))}</span>`;
+            return canOpen ? `<button type="button" class="dw-row" data-dash-order="${escAttr(r.o.id)}">${inner}</button>` : `<div class="dw-row">${inner}</div>`;
+          }).join('')}
+          ${dd.list.length>shown.length ? `<div class="dw-more">+ ${dd.list.length-shown.length} more on this day</div>` : ''}
+        </div>` : `<div class="dw-empty">${svg('<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M8 3v3M16 3v3M3 10h18"/>')}Nothing is due, received or completed on this day.</div>`}
+      </div>
+    </section>
+  </div>`;
+}
 function renderDashboard(){
   const orders = activeOrders();
   const counts = STAGES.map((_,i)=>orders.filter(o=>o.stage===i).length);
@@ -14754,20 +15109,7 @@ function renderDashboard(){
   const sessionPages = mySessionPages();
 
   return `
-  <div class="dash-hero">
-    <svg class="dash-hero-swoosh" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
-      <circle cx="370" cy="10" r="90" fill="rgba(255,255,255,.08)"/>
-      <circle cx="320" cy="120" r="60" fill="rgba(255,255,255,.06)"/>
-    </svg>
-    <div class="dash-hero-row">
-      <div>
-        <p class="dash-hero-greet">Welcome back,</p>
-        <p class="dash-hero-name">${esc(state.session.name)}!</p>
-        <p class="dash-hero-sub">Here's what's happening today.</p>
-      </div>
-      <div class="dash-hero-trend"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L10 11 L14 15 L20 7"/><path d="M14 7h6v6"/></svg></div>
-    </div>
-  </div>
+  ${renderDashDateTop()}
 
   <div class="dash-stat-grid stat-grid">
     ${stats.map(s=>{
@@ -14786,8 +15128,9 @@ function renderDashboard(){
       </button>`;}).join('')}
   </div>
 
+  <div class="dash-grid">
   ${dashSectionsCfg.ordersOverview===false ? '' : `
-  <div class="panel" style="margin-top:20px;">
+  <div class="panel dg-span2" style="margin-top:20px;">
     <div class="panel-body">
       <div class="dash-chart-head">
         <div class="dash-chart-title">
@@ -14840,7 +15183,7 @@ function renderDashboard(){
   </div>`}
 
   ${dashSectionsCfg.monthCompare===false ? '' : `
-  <div class="panel" style="margin-top:16px;">
+  <div class="panel dg-span2" style="margin-top:16px;">
     <div class="panel-body">
       <div class="dash-month-panel-row">
         <div class="dash-month-group">
@@ -14964,7 +15307,7 @@ function renderDashboard(){
     </div>
   </div>
 
-  <div class="panel" style="margin-top:20px;">
+  <div class="panel dg-span2" style="margin-top:20px;">
     <div class="panel-head"><h3>Next 30 days (estimate)</h3></div>
     <div class="panel-body">
       <svg class="forecast-chart" viewBox="0 0 440 84" preserveAspectRatio="none">
@@ -14979,7 +15322,7 @@ function renderDashboard(){
     </div>
   </div>
 
-  <div class="panel" style="margin-top:20px;">
+  <div class="panel dg-span2" style="margin-top:20px;">
     <div class="panel-head"><h3>Orders Process</h3></div>
     <div class="panel-body">
       ${renderOrdersProcessColumns()}
@@ -14987,7 +15330,7 @@ function renderDashboard(){
     </div>
   </div>
 
-  <div class="panel" style="margin-top:20px;">
+  <div class="panel dg-span2" style="margin-top:20px;">
     <div class="panel-head"><h3>Recent orders</h3>${pageAllowed('orders') ? `<button class="btn btn-sm" id="dash-view-orders">View board</button>` : ''}</div>
     <div class="panel-body">
       ${total===0 ? `<div class="empty-state">No orders yet.</div>` : `
@@ -15002,6 +15345,7 @@ function renderDashboard(){
         </div>`;
       }).join('')}`}
     </div>
+  </div>
   </div>
   `;
 }
@@ -23614,6 +23958,7 @@ async function autoSaveRoleToggle(){
 function attachShellHandlers(){
   const byIdEl = id => document.getElementById(id);
   mountDallyOrbs();
+  mountDashTod();
 
   document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click', (e)=>{
     if(el.tagName==='A' && (e.ctrlKey||e.metaKey||e.shiftKey)) return; // let the browser open it in a new tab/window
@@ -25892,6 +26237,14 @@ function attachShellHandlers(){
     state._dashPeriod = el.dataset.dashPeriod;
     render();
   }));
+  // Dashboard week strip: pick a day / step a week / jump back to today / open an order listed for that day.
+  document.querySelectorAll('[data-dash-day]').forEach(el=>el.addEventListener('click', ()=>{ state._dashDay = el.dataset.dashDay; render(); }));
+  document.querySelectorAll('[data-dash-week]').forEach(el=>el.addEventListener('click', ()=>{
+    state._dashDay = dashShiftDay(state._dashDay || localDateKey(new Date()), (parseInt(el.dataset.dashWeek,10)||0) * 7);
+    render();
+  }));
+  document.querySelectorAll('[data-dash-today]').forEach(el=>el.addEventListener('click', ()=>{ state._dashDay = null; render(); }));
+  document.querySelectorAll('[data-dash-order]').forEach(el=>el.addEventListener('click', ()=>openModal('order:' + el.dataset.dashOrder)));
   document.querySelectorAll('[data-role-perm-expand]').forEach(el=>el.addEventListener('click', ()=>{
     const id = el.dataset.rolePermExpand;
     if(!state._rolePermExpanded) state._rolePermExpanded = {};

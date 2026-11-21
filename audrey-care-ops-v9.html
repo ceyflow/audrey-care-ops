@@ -112,8 +112,11 @@ html{ visibility:hidden; }
   @keyframes shell-enter{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   .sidebar{
     width:var(--sidebar-w);flex-shrink:0;
-    background:rgba(255,255,255,.38);
-    backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%);
+    /* No backdrop-filter on the always-visible surfaces (sidebar, top bar, panels, stat cards, account chip, phone order cards)
+       -- owner, 2026-11-21: scrolling "open orders" lagged. A blur layer that is re-drawn on every scroll frame cost ~15 frames a second
+       on a PC without graphics acceleration (measured: Ongoing orders 67 ms a frame; with the blur removed 16 ms). The page behind is a
+       smooth gradient, so the blur showed nothing anyway. Keep it that way: blur only on pop-ups that are open briefly (modal, drawer, overlay). */
+    background:rgba(255,255,255,.55);
     border-right:1px solid rgba(255,255,255,.5);
     box-shadow:4px 0 28px rgba(20,40,30,.06);
     display:flex;flex-direction:column;
@@ -406,9 +409,8 @@ html{ visibility:hidden; }
 
   .main{flex:1;display:flex;flex-direction:column;min-width:0;margin-left:var(--sidebar-w);}
   .topbar{
-    background:rgba(255,255,255,.35);
-    backdrop-filter:blur(22px) saturate(180%); -webkit-backdrop-filter:blur(22px) saturate(180%);
-    border-bottom:1px solid rgba(255,255,255,.5);
+    background:#fff;
+    border-bottom:1px solid rgba(20,40,30,.06);
     box-shadow:0 8px 24px rgba(20,40,30,.05);
     padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
     gap:12px;position:sticky;top:0;z-index:20;flex-wrap:wrap;
@@ -421,7 +423,7 @@ html{ visibility:hidden; }
   /* display:contents on desktop/tablet: these two groupings are invisible to layout there (same
      flat row of items as always) and only turn into real two-row blocks at phone width, below. */
   .header-right-top, .header-right-links{display:contents;}
-  .session-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
+  .session-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.6);border-radius:999px;padding:6px 14px 6px 6px;font-size:13px;}
   .session-chip .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;overflow:hidden;}
   .session-chip .avatar img{width:100%;height:100%;object-fit:cover;}
   .header-menu-toggle{display:none;}
@@ -499,8 +501,7 @@ html{ visibility:hidden; }
   /* ---------------- Stat cards ---------------- */
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
   .stat-card{
-    background:rgba(255,255,255,.4);
-    backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%);
+    background:rgba(255,255,255,.62);
     border:1px solid rgba(255,255,255,.65);border-radius:var(--radius);padding:16px 18px;
     box-shadow:0 1px 1px rgba(255,255,255,.8) inset, 0 10px 28px rgba(20,40,30,.08);
     transition:transform .18s ease,box-shadow .18s ease;
@@ -526,8 +527,7 @@ html{ visibility:hidden; }
   .topbar-img-layer{display:none;}
 
   .panel{
-    background:rgba(255,255,255,.4);
-    backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%);
+    background:rgba(255,255,255,.62);
     border:1px solid rgba(255,255,255,.65);border-radius:var(--radius);
     box-shadow:0 10px 32px rgba(20,40,30,.07);
     overflow-x:auto;overflow-y:hidden;margin-bottom:20px;-webkit-overflow-scrolling:touch;
@@ -546,13 +546,6 @@ html{ visibility:hidden; }
   .analytics-badge.up{background:var(--accent-soft);color:var(--accent-dark);}
   .analytics-badge.down{background:var(--danger-soft);color:var(--danger);}
   .analytics-card-value{font-size:27px;font-weight:800;margin:4px 0 8px;font-variant-numeric:tabular-nums;}
-  /* overflow:visible -- the first/last point sits with its cx exactly at 0%/100% (the chart's
-     own left/right edge), so without this an SVG's default overflow:hidden clips that circle
-     clean in half, leaving a small stray sliver at each end of the line (confirmed via a user
-     screenshot). The few px this lets the circles spill into is the panel's own padding, not
-     another element. */
-  .analytics-sparkline{width:100%;height:50px;display:block;overflow:visible;}
-  .analytics-sparkline-days{display:flex;justify-content:space-between;margin-top:2px;font-size:10px;color:var(--muted);}
   .analytics-gauge-wrap{position:relative;display:flex;justify-content:center;margin:2px 0 6px;}
   /* Dashboard hero banner + "Orders Overview" period toggle + full-ring month donut (2026-11,
      reference: a blue-gradient ops-dashboard mock the Admin asked to match). Same data this page
@@ -578,27 +571,73 @@ html{ visibility:hidden; }
   .dash-period-toggle{display:flex;gap:4px;background:var(--bg);border-radius:999px;padding:3px;}
   .dash-period-btn{border:none;background:none;font-size:12px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer;font-family:inherit;}
   .dash-period-btn.active{background:var(--accent);color:#fff;}
-  .dash-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px;}
-  .dash-chart-title{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;}
-  .dash-chart-peak{font-size:10.5px;font-weight:700;fill:#fff;}
-  .dash-chart-peak-bg{fill:var(--ink);}
-  /* The line itself already had a draw-in animation (animateDashboardCharts(), JS-measured via
-     getTotalLength() -- see there) that only fires on a fresh Dashboard entry, not on every
-     render(). The area fade-in and point pop-in below are new but follow that exact same
-     JS-driven, freshPage-only convention instead of a CSS @keyframes replayed on every render
-     (which is what a first version of this did -- it fought the existing line animation for
-     control of stroke-dashoffset, visibly glitching on first entry only, since period-toggle
-     re-renders never call animateDashboardCharts() and so never hit the conflict). transform-box
-     is the one thing that has to be static CSS, not inline style -- it needs to be in place
-     before the JS sets any transform, or the very first scale() has nothing to center on. */
-  .dash-chart-pt,.dash-chart-pt-peak{transform-box:fill-box;transform-origin:center;}
-  /* Tap-to-reveal count tooltip, shared by every non-peak point (the peak already has its own
-     always-on pill above), on both desktop and mobile. Same pill look as
-     .dash-chart-peak/-bg, kept as separate classes so toggling this one's display never
-     touches the always-visible peak pill. */
-  .dash-chart-pt{cursor:pointer;}
-  .dash-chart-pt-tip-bg{fill:var(--ink);}
-  .dash-chart-pt-tip{font-size:10.5px;font-weight:700;fill:#fff;}
+  /* ---- Orders overview chart (see dashOrdersChartHtml) ---- */
+  .oc{--oc-h:230px;--oc-top:36px;}   /* chart height, and headroom above the top gridline for the Peak flag */
+  .oc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .oc-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;}
+  .oc-sub{margin-top:2px;font-size:12px;color:var(--muted);}
+  .oc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 18px;}
+  .oc-kpi{border:1px solid var(--border);border-radius:14px;padding:11px 14px;background:var(--bg);min-width:0;}
+  .oc-kpi-l{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--muted);}
+  .oc-kpi-n{margin-top:2px;font-size:26px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .oc-kpi-s{margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);}
+  .oc-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;}
+  .oc-badge.up{background:#E4F8EA;color:#1F5C34;}
+  .oc-badge.down{background:#FCEEEB;color:#A33F32;}
+  .oc-key{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;}
+  .oc-key-recv{background:var(--accent-dark);}
+  .oc-key-done{background:#2B5FC1;}
+  .oc-plot{position:relative;padding-left:34px;display:flow-root;}   /* flow-root: the canvas's top margin must not collapse out of the box the axis is measured from */
+  .oc-y{position:absolute;left:0;top:var(--oc-top);height:var(--oc-h);width:30px;pointer-events:none;}
+  .oc-yl{position:absolute;right:6px;transform:translateY(-50%);font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .oc-canvas{position:relative;height:var(--oc-h);margin:var(--oc-top) 14px 0 0;touch-action:pan-y;outline:none;cursor:crosshair;-webkit-tap-highlight-color:transparent;}
+  .oc-canvas:focus-visible{box-shadow:0 0 0 3px var(--accent-soft);border-radius:8px;}
+  .oc-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .oc-grid line{stroke:var(--border);stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:3 4;}
+  .oc-grid line.base{stroke:#C8D3CC;stroke-dasharray:none;}
+  .oc-line{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke;}
+  .oc-line-recv{stroke:var(--accent-dark);stroke-width:2.8;}
+  .oc-line-done{stroke:#2B5FC1;stroke-width:2;opacity:.9;}
+  .oc-dot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;box-sizing:border-box;pointer-events:none;background:#fff;border:2px solid var(--accent-dark);transition:transform .12s ease,background .12s ease;}
+  .oc-dot-done{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-color:#2B5FC1;}
+  .oc-dense .oc-dot{width:6px;height:6px;margin:-3px 0 0 -3px;border-width:1.5px;}
+  .oc-dense .oc-dot-done{width:5px;height:5px;margin:-2.5px 0 0 -2.5px;}
+  .oc-dot.peak{width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--accent-dark);border-color:#fff;box-shadow:0 0 0 2px var(--accent-dark);}
+  .oc-dot.on{transform:scale(1.55);background:var(--accent-dark);}
+  .oc-dot-done.on{background:#2B5FC1;}
+  .oc-flag{position:absolute;left:min(max(var(--fx),34px),calc(100% - 34px));transform:translate(-50%,calc(-100% - 12px));padding:3px 9px;border-radius:999px;background:var(--ink);color:#fff;font-size:10.5px;font-weight:700;white-space:nowrap;pointer-events:none;}
+  .oc-guide{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--accent);display:none;pointer-events:none;}
+  .oc-tip{position:absolute;z-index:3;display:none;min-width:136px;padding:9px 11px;border-radius:12px;background:#fff;border:1px solid var(--border);box-shadow:0 12px 28px rgba(20,40,30,.18);font-size:12px;pointer-events:none;}
+  .oc-tip-l{margin-bottom:5px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .oc-tip-r{display:flex;align-items:center;gap:7px;color:var(--muted);line-height:1.7;}
+  .oc-tip-r b{margin-left:auto;padding-left:14px;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .oc-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);pointer-events:none;}
+  .oc-x{position:relative;height:34px;margin:8px 14px 0 0;}
+  .oc-xl{position:absolute;top:0;transform:translateX(-50%);font-size:10.5px;line-height:1.3;color:var(--muted);text-align:center;white-space:nowrap;}
+  .oc-xl b{color:var(--ink);font-weight:700;font-size:11.5px;}
+  .oc-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--muted);}
+  .oc-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .oc-legend-hint{margin-left:auto;font-size:11.5px;}
+  @media (max-width:760px){
+    .oc-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .oc-kpi{padding:10px 12px;}
+    .oc-kpi-n{font-size:23px;}
+    .oc{--oc-h:190px;--oc-top:34px;}
+    .oc-legend-hint{margin-left:0;width:100%;}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .oc-play .oc-line{stroke-dasharray:1;animation:oc-draw 1s cubic-bezier(.4,0,.2,1) both;}
+    .oc-play .oc-area{animation:oc-reveal 1s cubic-bezier(.4,0,.2,1) both;}
+    .oc-play .oc-dot,.oc-play .oc-flag{animation:oc-pop .35s cubic-bezier(.2,.9,.3,1.3) both;animation-delay:calc(var(--x,1) * .95s);}
+    .oc-play .oc-flag{animation:oc-fade .3s ease-out both;animation-delay:1s;}
+    .oc-play .oc-kpi{animation:oc-rise .45s ease-out both;}
+    .oc-play .oc-kpi:nth-child(2){animation-delay:.06s;} .oc-play .oc-kpi:nth-child(3){animation-delay:.12s;} .oc-play .oc-kpi:nth-child(4){animation-delay:.18s;}
+  }
+  @keyframes oc-draw{from{stroke-dashoffset:1;}to{stroke-dashoffset:0;}}
+  @keyframes oc-reveal{from{clip-path:inset(0 100% 0 0);}to{clip-path:inset(0 0 0 0);}}
+  @keyframes oc-pop{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
+  @keyframes oc-fade{from{opacity:0;}to{opacity:1;}}
+  @keyframes oc-rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
   /* Two donut groups ("This Month vs Last" + "This Month by Priority") side by side on a wide
      desktop panel, wrapping to stacked rows once a group drops below its own min-width -- the
      same flex-wrap that gives each group room on mobile also closes the gap that used to open up
@@ -1240,45 +1279,69 @@ html{ visibility:hidden; }
       /* A little darker than the theme's accent so white text on it clears 4.5:1. */
       .oq, .drawer.order-drawer, .modal.bc-modal{--oq-fill:color-mix(in srgb, var(--accent-dark) 82%, #0b1f12);}
     }
-    .oq-sub{margin:0 0 12px;font-size:14px;line-height:20px;color:var(--muted);}
-    .oq-actions{display:flex;gap:8px;position:relative;}
-    .oq-btn{flex:1;min-width:0;min-height:48px;border-radius:14px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;}
-    .oq-btn svg{flex:none;}
-    .oq-btn-primary{border-color:var(--oq-fill);color:var(--oq-fill);}
-    .oq-btn-icon{flex:none;width:48px;padding:0;}
-    .oq-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:236px;max-width:calc(100vw - 28px);background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(19,32,30,.18);padding:6px;}
-    .oq-menu-item{display:block;width:100%;text-align:left;min-height:44px;padding:0 12px;border:none;background:none;border-radius:10px;font-size:15px;font-weight:600;color:var(--ink);}
+    /* Phone Packing queue v2 (owner, 2026-11-21: "not user friendly, need a better ui design to work effectively"):
+       a sticky control bar (search + Box Count + menu, the 4 stages, the delivery lines) that stays in reach while the list scrolls,
+       compact order cards (4+ a screen), priority as a coloured edge, and one big next-stage button per card. */
+    .oq{padding-bottom:calc(96px + env(safe-area-inset-bottom));}   /* the floating tab bar must not cover the last card */
+    .oq-ctl{position:sticky;top:var(--oq-top,0px);z-index:15;margin:0 -14px;padding:8px 14px 10px;background:var(--bg);box-shadow:0 8px 12px -10px rgba(19,32,30,.3);}
+    .oq-bar{display:flex;gap:8px;align-items:center;position:relative;}
+    .oq-search{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 12px;border:1.5px solid var(--border);border-radius:14px;background:#fff;color:var(--muted);margin:0;}
+    .oq-search svg{flex:none;}
+    .oq-search input{flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;font-size:16px;color:var(--ink);padding:0;-webkit-appearance:none;appearance:none;}
+    .oq-search input::-webkit-search-cancel-button{display:none;}
+    .oq-search:focus-within{border-color:var(--oq-fill);}
+    .oq-x{flex:none;width:34px;height:34px;border:none;background:none;color:var(--muted);font-size:22px;line-height:1;border-radius:50%;}
+    .oq-ibtn{flex:none;width:46px;height:46px;border-radius:14px;border:1.5px solid var(--border);background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:0;}
+    .oq-ibtn svg{width:22px;height:22px;}
+    .oq-ibtn-primary{border-color:var(--oq-fill);color:var(--oq-fill);}
+    .oq-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:250px;max-width:calc(100vw - 28px);background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(19,32,30,.18);padding:6px;}
+    .oq-menu-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:46px;padding:0 12px;border:none;background:none;border-radius:10px;font-size:15px;font-weight:600;color:var(--ink);}
+    .oq-menu-item svg{flex:none;color:var(--oq-fill);}
     .oq-menu-item:active{background:var(--bg);}
-    .oq-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin-top:14px;padding:4px;background:#fff;border-radius:18px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
-    .oq-stage{min-height:62px;border:none;border-radius:14px;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 2px;}
-    .oq-stage-n{font-size:20px;font-weight:700;line-height:24px;color:var(--ink);}
-    .oq-stage-l{font-size:12px;font-weight:600;line-height:16px;white-space:nowrap;}
-    .oq-stage.on{background:var(--oq-fill);color:#fff;}
+    .oq-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px;}
+    .oq-stage{position:relative;min-height:54px;border:1.5px solid var(--border);border-radius:14px;background:#fff;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 2px;}
+    .oq-stage-n{font-size:19px;font-weight:700;line-height:22px;color:var(--ink);}
+    .oq-stage-l{font-size:11.5px;font-weight:600;line-height:14px;white-space:nowrap;}
+    .oq-stage.on{background:var(--oq-fill);border-color:var(--oq-fill);color:#fff;}
     .oq-stage.on .oq-stage-n{color:#fff;}
-    .oq-lines{display:flex;gap:8px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+    .oq-hot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:#E5484D;box-shadow:0 0 0 2px #fff;}
+    .oq-stage.on .oq-hot{box-shadow:0 0 0 2px var(--oq-fill);}
+    .oq-lines{display:flex;gap:6px;overflow-x:auto;padding:8px 0 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
     .oq-lines::-webkit-scrollbar{display:none;}
-    .oq-chip{flex:none;min-height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:14px;font-weight:600;white-space:nowrap;}
+    .oq-chip{flex:none;min-height:38px;padding:0 14px;border-radius:19px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap;}
     .oq-chip.on{background:var(--ink);border-color:var(--ink);color:#fff;}
-    .oq-list{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
-    .oq-card{padding:16px;border-radius:20px;}
-    .oq-over{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;letter-spacing:.3px;color:#55675B;}
-    .oq-dot{flex:none;width:10px;height:10px;border-radius:50%;}
-    .oq-name{margin-top:2px;font-size:17px;line-height:22px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
-    .oq-product{margin-top:10px;display:flex;align-items:center;gap:10px;}
-    .oq-product-icon{flex:none;width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--oq-fill);display:flex;align-items:center;justify-content:center;}
-    .oq-product-icon svg{width:22px;height:22px;}
-    .oq-product-text{flex:1;min-width:0;font-size:15px;line-height:20px;font-weight:500;color:var(--ink);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
-    .oq-pills{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;}
-    .oq-pill{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:600;line-height:16px;}
-    .oq-pill-high{background:#FCEEEB;color:#A33F32;font-weight:700;}
-    .oq-pill-medium{background:#FCEEDA;color:#8A5200;font-weight:700;}
-    .oq-pill-low{background:#E4F8EA;color:#1F5C34;font-weight:700;}
-    .oq-pill-line{background:#E9EEF5;color:#34435F;}
-    .oq-pill-time{background:var(--bg);color:#55675B;}
-    .oq-note{margin-top:12px;padding:10px 12px;border-radius:12px;background:#FCEEDA;color:#6B3F00;font-size:13px;line-height:18px;display:flex;gap:8px;align-items:flex-start;}
-    .oq-note svg{flex:none;margin-top:1px;}
-    .oq-note span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
-    .oq-empty{text-align:center;padding:36px 12px;font-size:14px;color:var(--muted);background:#fff;border-radius:20px;}
+    .oq-sub{display:flex;justify-content:space-between;gap:8px;margin:12px 2px 8px;font-size:13px;line-height:18px;color:var(--muted);font-weight:500;}
+    .oq-sub-hot{color:#A33F32;font-weight:700;}
+    .oq-list{display:flex;flex-direction:column;gap:10px;}
+    .oq .oq-card{--pri:#E0A82E;position:relative;padding:11px 13px 12px 14px;border-radius:16px;border-left:5px solid var(--pri);overflow:hidden;}
+    .oq .oq-pri-high{--pri:#E5484D;}
+    .oq .oq-pri-medium{--pri:#E0A82E;}
+    .oq .oq-pri-low{--pri:#34C759;}
+    .oq-top{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;color:#55675B;}
+    .oq-num{flex:none;letter-spacing:.2px;}
+    .oq-dot{flex:none;width:9px;height:9px;border-radius:50%;}
+    .oq-tag{display:inline-flex;align-items:center;gap:4px;min-width:0;padding:0 8px;min-height:22px;border-radius:11px;background:#E9EEF5;color:#34435F;font-size:11.5px;font-weight:600;}
+    .oq-tag svg{flex:none;width:12px;height:12px;}
+    .oq-tag span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .oq-pill{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:11px;font-size:11.5px;font-weight:700;line-height:16px;}
+    .oq-pill-high{background:#FCEEEB;color:#A33F32;}
+    .oq-wait{flex:none;margin-left:auto;display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 9px;border-radius:11px;background:var(--bg);color:#55675B;font-size:11.5px;font-weight:600;white-space:nowrap;}
+    .oq-wait svg{width:12px;height:12px;}
+    .oq-wait.warn{background:#FCEEDA;color:#8A5200;}
+    .oq-wait.late{background:#FCEEEB;color:#A33F32;}
+    .oq-name{margin-top:4px;font-size:17px;line-height:22px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
+    .oq-prod{margin:5px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px;}
+    .oq-prod li{position:relative;padding-left:14px;font-size:14.5px;line-height:20px;color:var(--ink);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .oq-prod li::before{content:'';position:absolute;left:3px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--muted);opacity:.6;}
+    .oq-prod li.oq-more{font-size:12.5px;color:var(--muted);}
+    .oq-prod li.oq-more::before{display:none;}
+    .oq-note{margin-top:8px;padding:7px 10px;border-radius:10px;background:#FCEEDA;color:#6B3F00;font-size:12.5px;line-height:17px;display:flex;gap:7px;align-items:flex-start;}
+    .oq-note svg{flex:none;width:15px;height:15px;margin-top:1px;}
+    .oq-note span{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .oq-act{margin-top:10px;width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border:none;border-radius:12px;background:var(--oq-fill);color:#fff;font-size:14.5px;font-weight:700;text-align:left;}
+    .oq-act:active{filter:brightness(.88);}
+    .oq-act svg{flex:none;}
+    .oq-empty{text-align:center;padding:36px 12px;font-size:14px;color:var(--muted);background:#fff;border-radius:16px;}
   }
   .column{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
   .column-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);}
@@ -1461,8 +1524,7 @@ html{ visibility:hidden; }
   /* Liquid Glass, mobile: the kanban cards on Orders/Packing/Blending/R&D's mobile board view. */
   @media (max-width:760px){
     .card{
-      background:linear-gradient(160deg, rgba(255,255,255,.6), rgba(255,255,255,.3));
-      backdrop-filter:blur(16px) saturate(220%); -webkit-backdrop-filter:blur(16px) saturate(220%);
+      background:linear-gradient(160deg, rgba(255,255,255,.9), rgba(255,255,255,.78));
       border:1px solid rgba(255,255,255,.65);border-radius:16px;padding:10px 12px;
       box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 6px 18px rgba(31,55,90,.08);
       position:relative;
@@ -14541,62 +14603,6 @@ const CHART_PALETTE = ['#6A5FCF','#3B6FE0','#2E9E5B','#C98A2E','#C2567A','#2FBF8
 // stay daily since both are still legible as individual days. Built from the FULL state.orders
 // (archived included, like the rest of this page's analytics) since a history chart needs
 // completed-and-archived orders too, not just what's currently on the active board.
-// Positions the Orders Overview sparkline's peak tooltip (pill + text) in real measured pixels
-// instead of CSS percent/calc() on the SVG elements themselves. Tried that first -- rect and text
-// each got a data-peak-pct-driven `style="x:clamp(...)"` with the identical expression, and still
-// landed ~200px apart on a real render (confirmed via getBoundingClientRect on both): CSS
-// percentage resolution for SVG x on <text> isn't reliably consistent with <rect>/<circle> across
-// at least this browser, so rather than chase that further, this measures the sparkline's actual
-// rendered width and sets plain pixel x attributes directly -- the one approach with no cross-
-// element ambiguity. Harmless no-op (returns early) on any page without this chart open; called
-// from the shared post-render wiring block alongside the other such init functions, so it reflects
-// any 7D/30D/90D period change or window resize that triggers a re-render.
-function layoutDashSparklinePeak(){
-  const svg = document.querySelector('.analytics-sparkline');
-  const rect = document.querySelector('.dash-chart-peak-bg');
-  const text = document.querySelector('.dash-chart-peak');
-  if(!svg || !rect || !text) return;
-  const w = svg.getBoundingClientRect().width;
-  if(!w) return;
-  const pct = parseFloat(rect.dataset.peakPct || '0');
-  const centerPx = pct/100*w;
-  const rectW = 54;
-  const rectX = Math.max(0, Math.min(w-rectW, centerPx-rectW/2));
-  const textX = Math.max(27, Math.min(w-27, centerPx));
-  rect.setAttribute('x', rectX.toFixed(1));
-  text.setAttribute('x', textX.toFixed(1));
-}
-// Tap-to-reveal count for every non-peak point on the Orders Overview sparkline (the peak point
-// already shows its own always-on pill). Same positioning math as layoutDashSparklinePeak above,
-// just driven by whichever point was tapped instead of the fixed peak index.
-function showDashChartPointTip(circle){
-  const svg = document.querySelector('.analytics-sparkline');
-  const bg = document.querySelector('[data-pt-tip-bg]');
-  const text = document.querySelector('[data-pt-tip]');
-  if(!svg || !bg || !text) return;
-  const w = svg.getBoundingClientRect().width;
-  if(!w) return;
-  const pct = parseFloat(circle.dataset.ptPct || '0');
-  const y = parseFloat(circle.dataset.ptY || '0');
-  const count = Number(circle.dataset.ptCount || 0);
-  const centerPx = pct/100*w;
-  const rectW = 54;
-  const rectX = Math.max(0, Math.min(w-rectW, centerPx-rectW/2));
-  const textX = Math.max(27, Math.min(w-27, centerPx));
-  bg.setAttribute('x', rectX.toFixed(1));
-  bg.setAttribute('y', Math.max(0, y-20).toFixed(1));
-  text.setAttribute('x', textX.toFixed(1));
-  text.setAttribute('y', Math.max(12, y-8).toFixed(1));
-  text.textContent = `${count} order${count===1?'':'s'}`;
-  bg.style.display = '';
-  text.style.display = '';
-}
-function hideDashChartPointTip(){
-  const bg = document.querySelector('[data-pt-tip-bg]');
-  const text = document.querySelector('[data-pt-tip]');
-  if(bg) bg.style.display = 'none';
-  if(text) text.style.display = 'none';
-}
 function ordersOverviewSeries(days){
   const orders = state.orders;
   const dayMs = 86400000;
@@ -14606,18 +14612,25 @@ function ordersOverviewSeries(days){
   const nBuckets = Math.ceil(days/bucketSize);
   const start = new Date(today0.getTime() - (nBuckets*bucketSize-1)*dayMs);
   const buckets = [];
-  for(let i=0;i<nBuckets;i++) buckets.push({date: new Date(start.getTime()+i*bucketSize*dayMs), count:0});
-  let prevCount = 0;
+  for(let i=0;i<nBuckets;i++) buckets.push({date: new Date(start.getTime()+i*bucketSize*dayMs), count:0, done:0});
+  let prevCount = 0, prevDone = 0;
+  // counts the order in its bucket; true when it falls in the equal-length window just before (for the % change)
+  const place = (iso, key)=>{
+    const idx = Math.floor((new Date(iso).getTime() - start.getTime()) / (dayMs*bucketSize));
+    if(idx>=0 && idx<nBuckets){ buckets[idx][key]++; return false; }
+    return idx<0 && idx>=-nBuckets;
+  };
   orders.forEach(o=>{
-    if(!o.createdAt) return;
-    const idx = Math.floor((new Date(o.createdAt).getTime() - start.getTime()) / (dayMs*bucketSize));
-    if(idx>=0 && idx<nBuckets) buckets[idx].count++;
-    else if(idx<0 && idx>=-nBuckets) prevCount++;
+    if(o.createdAt && place(o.createdAt,'count')) prevCount++;
+    if(o.completedAt && place(o.completedAt,'done')) prevDone++;
   });
   const total = buckets.reduce((s,b)=>s+b.count,0);
-  const changePct = prevCount>0 ? Math.round((total-prevCount)/prevCount*100) : (total>0?100:0);
+  const doneTotal = buckets.reduce((s,b)=>s+b.done,0);
+  const pct = (now, before)=> before>0 ? Math.round((now-before)/before*100) : (now>0?100:0);
+  const changePct = pct(total, prevCount);
+  const doneChangePct = pct(doneTotal, prevDone);
   const peakIdx = buckets.reduce((best,b,i)=>b.count>buckets[best].count?i:best, 0);
-  return {buckets, total, changePct, bucketSize, peakIdx};
+  return {buckets, total, changePct, bucketSize, peakIdx, days, doneTotal, doneChangePct, prevCount, prevDone, avgPerDay: total/days};
 }
 function computeDashboardAnalytics(){
   const orders = state.orders;
@@ -14749,141 +14762,17 @@ function animateDashboardCharts(){
     el.style.transition = `${isWidth?'width':'height'} ${dur}ms cubic-bezier(.4,0,.2,1)`;
     requestAnimationFrame(()=>{ el.style[isWidth?'width':'height'] = final; });
   });
-  // Orders Overview: two different entrance treatments, picked separately for each platform via
-  // their own side-by-side animation comparisons -- "Draw & Reveal" on mobile (unchanged below),
-  // "Ripple Highlight" on desktop (window.innerWidth, matching the same >760px breakpoint the
-  // CSS's own mobile media query uses elsewhere in this file).
-  const isDesktopChart = window.innerWidth > 760;
-  const kpiVal = document.getElementById('dash-chart-kpi-value');
-  const kpiBadge = document.getElementById('dash-chart-kpi-badge');
-  if(isDesktopChart){
-    // "Ripple Highlight": no draw-in -- the line and fill just ease in together (opacity only;
-    // a translateY here would distort inside the inner svg's non-uniform preserveAspectRatio=
-    // "none" scale, so that drift lives on the points below instead, which sit in the OUTER
-    // svg's own undistorted pixel coordinates). Points drift upward into place rather than
-    // popping, staggered by x position same as the mobile version. Once everything's settled, a
-    // single ring pings outward from the peak once to draw the eye there.
-    const spark = document.querySelector('.analytics-sparkline-line');
-    const sparkArea = document.querySelector('.dash-chart-area');
-    [spark, sparkArea].forEach(el=>{
-      if(!el) return;
-      el.style.transition = 'none';
-      el.style.opacity = '0';
-      el.getBoundingClientRect();
-      el.style.transition = 'opacity 700ms ease-out';
-      requestAnimationFrame(()=>{ el.style.opacity = el===sparkArea ? '.6' : '1'; });
-    });
-    document.querySelectorAll('.dash-chart-pt, .dash-chart-pt-peak').forEach(c=>{
-      const delay = 300 + Math.round(((parseFloat(c.getAttribute('cx')) || 0)/100) * 500);
-      c.style.transition = 'none';
-      c.style.transform = 'translateY(10px)';
-      c.style.opacity = '0';
-      c.getBoundingClientRect();
-      c.style.transition = `transform 500ms ease-out ${delay}ms, opacity 500ms ease-out ${delay}ms`;
-      requestAnimationFrame(()=>{ c.style.transform = 'translateY(0)'; c.style.opacity = '1'; });
-    });
-    const peakBg = document.querySelector('.dash-chart-peak-bg');
-    const peakText = document.querySelector('.dash-chart-peak');
-    [peakBg, peakText].forEach(el=>{
-      if(!el) return;
-      el.style.transition = 'none';
-      el.style.opacity = '0';
-      el.getBoundingClientRect();
-      el.style.transition = 'opacity 500ms ease-out 300ms';
-      requestAnimationFrame(()=>{ el.style.opacity = '1'; });
-    });
-    if(kpiVal){
-      const target = parseInt(kpiVal.dataset.target, 10) || 0;
-      kpiVal.textContent = '0';
-      const start = performance.now() + 200;
-      const tick = now=>{
-        const t = Math.min(1, Math.max(0, (now-start)/800));
-        const eased = t<1 ? 1-Math.pow(1-t,3) : 1;
-        kpiVal.textContent = Math.round(target*eased);
-        if(t<1) requestAnimationFrame(tick); else kpiVal.textContent = target;
-      };
+  // Orders overview: the lines draw in, the fill follows, every dot pops as the line passes it and the four totals count up (CSS in
+  // "Orders overview chart", switched on here only on a FRESH visit so a background redraw never replays it).
+  const oc = document.getElementById('dash-orders-chart');
+  if(oc){
+    oc.classList.add('oc-play'); setTimeout(()=>oc.classList.remove('oc-play'), 2000);
+    oc.querySelectorAll('[data-oc-count]').forEach(el=>{
+      const target = parseInt(el.dataset.ocCount, 10) || 0; const start = performance.now() + 150;
+      el.textContent = '0';
+      const tick = now=>{ const t = Math.min(1, Math.max(0,(now-start)/900)); el.textContent = Math.round(target*(t<1 ? 1-Math.pow(1-t,3) : 1)); if(t<1) requestAnimationFrame(tick); else el.textContent = target; };
       requestAnimationFrame(tick);
-    }
-    if(kpiBadge){
-      kpiBadge.style.transition = 'none';
-      kpiBadge.style.opacity = '0';
-      kpiBadge.getBoundingClientRect();
-      kpiBadge.style.transition = 'opacity 400ms ease-out 900ms';
-      requestAnimationFrame(()=>{ kpiBadge.style.opacity = '1'; });
-    }
-    const ripple = document.querySelector('.dash-chart-ripple');
-    if(ripple){
-      ripple.style.transition = 'none';
-      ripple.setAttribute('r', '4');
-      ripple.style.opacity = '0';
-      ripple.getBoundingClientRect();
-      setTimeout(()=>{
-        ripple.style.transition = 'r 900ms ease-out, opacity 900ms ease-out';
-        ripple.style.opacity = '.9';
-        ripple.setAttribute('r', '22');
-        requestAnimationFrame(()=>{ ripple.style.opacity = '0'; });
-      }, 1050);
-    }
-    return;
-  }
-  // "Draw & Reveal" (mobile): the line draws itself in, the fill reveals via clip-path right
-  // behind it (not a flat fade -- it follows the same duration/easing as the line so the paint
-  // and the draw finish together), each point (and the peak's own pill) pops in the instant the
-  // line reaches its x position rather than on a fixed stagger, and the big total counts up over
-  // the same span -- all driven off one shared duration so everything lands in sync.
-  const lineDur = 950;
-  const spark = document.querySelector('.analytics-sparkline-line');
-  if(spark){
-    spark.style.transition = 'none';
-    spark.style.strokeDasharray = '1';
-    spark.style.strokeDashoffset = '1';
-    spark.getBoundingClientRect();
-    spark.style.transition = `stroke-dashoffset ${lineDur}ms cubic-bezier(.4,0,.2,1)`;
-    requestAnimationFrame(()=>{ spark.style.strokeDashoffset = '0'; });
-  }
-  const sparkArea = document.querySelector('.dash-chart-area');
-  if(sparkArea){
-    sparkArea.style.transition = 'none';
-    sparkArea.style.clipPath = 'inset(0 100% 0 0)';
-    sparkArea.getBoundingClientRect();
-    sparkArea.style.transition = `clip-path ${lineDur}ms cubic-bezier(.4,0,.2,1)`;
-    requestAnimationFrame(()=>{ sparkArea.style.clipPath = 'inset(0 0% 0 0)'; });
-  }
-  // Delay is each point's own x position as a fraction of the line's own duration -- not DOM
-  // order (the peak's circle is always markup-last regardless of which bucket it actually is)
-  // and not a fixed per-item stagger -- so a point pops exactly as the drawing line passes it.
-  document.querySelectorAll('.dash-chart-pt, .dash-chart-pt-peak').forEach(c=>{
-    const delay = Math.round(((parseFloat(c.getAttribute('cx')) || 0)/100) * lineDur);
-    c.style.transition = 'none';
-    c.style.transform = 'scale(0)';
-    c.style.opacity = '0';
-    c.getBoundingClientRect();
-    c.style.transition = `transform 320ms cubic-bezier(.2,.9,.3,1.3) ${delay}ms, opacity 320ms ease-out ${delay}ms`;
-    requestAnimationFrame(()=>{ c.style.transform = 'scale(1)'; c.style.opacity = '1'; });
-  });
-  const peakBg = document.querySelector('.dash-chart-peak-bg');
-  const peakText = document.querySelector('.dash-chart-peak');
-  if(peakBg && peakText){
-    const delay = Math.round(((parseFloat(peakBg.dataset.peakPct) || 0)/100) * lineDur);
-    [peakBg, peakText].forEach(el=>{
-      el.style.transition = 'none';
-      el.style.opacity = '0';
-      el.getBoundingClientRect();
-      el.style.transition = `opacity 260ms ease-out ${delay}ms`;
-      requestAnimationFrame(()=>{ el.style.opacity = '1'; });
     });
-  }
-  if(kpiVal){
-    const target = parseInt(kpiVal.dataset.target, 10) || 0;
-    kpiVal.textContent = '0';
-    const start = performance.now();
-    const tick = now=>{
-      const t = Math.min(1, (now-start)/lineDur);
-      const eased = t<1 ? 1-Math.pow(1-t,3) : 1;
-      kpiVal.textContent = Math.round(target*eased);
-      if(t<1) requestAnimationFrame(tick); else kpiVal.textContent = target;
-    };
-    requestAnimationFrame(tick);
   }
   const gaugeArc = document.getElementById('month-gauge-arc');
   if(gaugeArc){
@@ -15038,6 +14927,114 @@ function renderDashDateTop(){
     </section>
   </div>`;
 }
+/* ===================== Dashboard: Orders overview chart (owner, 2026-11-21: "improve the chart design and all the points in there") =====================
+   Received (orders created) and Picked up (orders completed) per day (per week for 90D), straight from state.orders: real axis and
+   gridlines, a dot on EVERY point, the busiest point flagged, four summary tiles (total + change against the period before, picked up,
+   daily average, busiest day) and a hover / touch / arrow-key readout for any point. Lines are SVG stretched to the box (non-scaling
+   strokes); dots, labels and the readout are plain HTML so they stay round and sharp at any width. */
+function ocNiceMax(max){
+  const target = Math.max(1, max);
+  const rough = target/4;
+  let step = 1; const mag = Math.pow(10, Math.floor(Math.log10(Math.max(1,rough))));
+  for(const m of [1,2,5,10]){ step = m*mag; if(step>=rough) break; }
+  step = Math.max(1, step);
+  const top = Math.max(step*2, Math.ceil(target/step)*step);
+  return {step, top};
+}
+function dashOrdersChartHtml(ov, dashPeriod, periods){
+  const n = ov.buckets.length;
+  const maxV = Math.max(1, ...ov.buckets.map(b=>Math.max(b.count,b.done)));
+  const {step, top} = ocNiceMax(maxV);
+  const xPct = i => n>1 ? i*100/(n-1) : 50;
+  const yPct = v => 100 - (v/top)*100;
+  const fmtDay = d => d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  const fmtWd = d => d.toLocaleDateString(undefined,{weekday:'short'});
+  const weekly = ov.bucketSize>1;
+  const label = b => weekly ? (()=>{ const e = new Date(b.date.getTime()+(ov.bucketSize-1)*86400000); return fmtDay(b.date)+' – '+fmtDay(e); })() : fmtWd(b.date)+', '+fmtDay(b.date);
+  const narrow = window.innerWidth<=760;
+  const every = n<=7 ? 1 : (n<=14 ? (narrow?3:2) : (narrow?7:5));
+  const pts = ov.buckets.map(b=>({l:label(b), r:b.count, d:b.done}));
+  const recvLine = ov.buckets.map((b,i)=>`${xPct(i).toFixed(2)},${yPct(b.count).toFixed(2)}`).join(' ');
+  const doneLine = ov.buckets.map((b,i)=>`${xPct(i).toFixed(2)},${yPct(b.done).toFixed(2)}`).join(' ');
+  const area = `0,100 ${recvLine} ${xPct(n-1).toFixed(2)},100`;
+  const ticks = []; for(let v=0; v<=top; v+=step) ticks.push(v);
+  const peak = ov.buckets[ov.peakIdx];
+  const bestDone = ov.buckets.reduce((bi,b,i)=>b.done>ov.buckets[bi].done?i:bi, 0);
+  const upDown = v => `<span class="oc-badge ${v>=0?'up':'down'}">${v>=0?'▲':'▼'} ${Math.abs(v)}%</span>`;
+  const periodTxt = `vs previous ${ov.days} days`;
+  const avg = ov.avgPerDay>=10 ? Math.round(ov.avgPerDay) : (Math.round(ov.avgPerDay*10)/10);
+  const empty = ov.total===0 && ov.doneTotal===0;
+  return `
+  <div class="oc${n>20?' oc-dense':''}" id="dash-orders-chart">
+    <div class="oc-head">
+      <div>
+        <div class="oc-title"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V13M12 20V8M20 20V4"/></svg>Orders overview</div>
+        <div class="oc-sub">Orders received and picked up${weekly?', per week':', per day'}</div>
+      </div>
+      <div class="dash-period-toggle" data-dash-period-toggle>
+        ${Object.keys(periods).map(k=>`<button type="button" class="dash-period-btn ${k===dashPeriod?'active':''}" data-dash-period="${k}">${k.toUpperCase()}</button>`).join('')}
+      </div>
+    </div>
+    <div class="oc-kpis">
+      <div class="oc-kpi"><div class="oc-kpi-l"><i class="oc-key oc-key-recv"></i>Received</div><div class="oc-kpi-n" data-oc-count="${ov.total}">${ov.total}</div><div class="oc-kpi-s">${upDown(ov.changePct)}<span>${periodTxt}</span></div></div>
+      <div class="oc-kpi"><div class="oc-kpi-l"><i class="oc-key oc-key-done"></i>Picked up</div><div class="oc-kpi-n" data-oc-count="${ov.doneTotal}">${ov.doneTotal}</div><div class="oc-kpi-s">${upDown(ov.doneChangePct)}<span>${periodTxt}</span></div></div>
+      <div class="oc-kpi"><div class="oc-kpi-l">Daily average</div><div class="oc-kpi-n">${avg}</div><div class="oc-kpi-s"><span>orders received a day</span></div></div>
+      <div class="oc-kpi"><div class="oc-kpi-l">Busiest ${weekly?'week':'day'}</div><div class="oc-kpi-n">${peak.count}</div><div class="oc-kpi-s"><span>${esc(peak.count>0 ? label(peak) : 'no orders yet')}</span></div></div>
+    </div>
+    <div class="oc-plot">
+      <div class="oc-y" aria-hidden="true">${ticks.map(v=>`<span class="oc-yl" style="top:${yPct(v).toFixed(2)}%">${v}</span>`).join('')}</div>
+      <div class="oc-canvas" tabindex="0" role="img" aria-label="Orders received and picked up, ${esc(periods[dashPeriod]===7?'last 7 days':'last '+periods[dashPeriod]+' days')}. Use the arrow keys to read each point." data-oc-pts="${escAttr(JSON.stringify(pts))}" data-oc-top="${top}">
+        <svg class="oc-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs><linearGradient id="oc-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+          <g class="oc-grid">${ticks.map(v=>`<line class="${v===0?'base':''}" x1="0" x2="100" y1="${yPct(v).toFixed(2)}" y2="${yPct(v).toFixed(2)}"/>`).join('')}</g>
+          <polygon class="oc-area" points="${area}" fill="url(#oc-grad)"/>
+          <polyline class="oc-line oc-line-done" pathLength="1" points="${doneLine}"/>
+          <polyline class="oc-line oc-line-recv" pathLength="1" points="${recvLine}"/>
+        </svg>
+        ${ov.buckets.map((b,i)=>`<i class="oc-dot oc-dot-done" data-i="${i}" style="left:${xPct(i).toFixed(2)}%;top:${yPct(b.done).toFixed(2)}%;--x:${(xPct(i)/100).toFixed(3)}"></i>`).join('')}
+        ${ov.buckets.map((b,i)=>`<i class="oc-dot oc-dot-recv${i===ov.peakIdx&&b.count>0?' peak':''}" data-i="${i}" style="left:${xPct(i).toFixed(2)}%;top:${yPct(b.count).toFixed(2)}%;--x:${(xPct(i)/100).toFixed(3)}"></i>`).join('')}
+        ${peak.count>0 ? `<span class="oc-flag" style="--fx:${xPct(ov.peakIdx).toFixed(2)}%;top:${yPct(peak.count).toFixed(2)}%">Peak &middot; ${peak.count}</span>` : ''}
+        ${empty ? `<div class="oc-empty">No orders in this period yet</div>` : ''}
+        <div class="oc-guide"></div>
+        <div class="oc-tip" role="status"></div>
+      </div>
+      <div class="oc-x">${ov.buckets.map((b,i)=> (i%every===0 || i===n-1) ? `<span class="oc-xl" style="left:${xPct(i).toFixed(2)}%">${weekly ? esc(fmtDay(b.date)) : (n<=7 ? `${esc(fmtWd(b.date))}<br><b>${b.date.getDate()}</b>` : esc(fmtDay(b.date)))}</span>` : '').join('')}</div>
+    </div>
+    <div class="oc-legend"><span><i class="oc-key oc-key-recv"></i>Received</span><span><i class="oc-key oc-key-done"></i>Picked up</span><span class="oc-legend-hint">${narrow?'Touch':'Hover'} the chart to read any ${weekly?'week':'day'}</span></div>
+  </div>`;
+}
+// Readout for any point: hover (mouse), touch / drag (phone), or the arrow keys. Bound on every render (the chart is rebuilt each time).
+function attachDashOrdersChart(){
+  const root = document.getElementById('dash-orders-chart'); if(!root) return;
+  const canvas = root.querySelector('.oc-canvas'); const tip = root.querySelector('.oc-tip'); const guide = root.querySelector('.oc-guide');
+  let pts = []; try{ pts = JSON.parse(canvas.dataset.ocPts||'[]'); }catch(e){}
+  const top = parseFloat(canvas.dataset.ocTop)||1; const n = pts.length; if(!n) return;
+  let active = -1;
+  const hide = ()=>{ active = -1; tip.style.display = 'none'; guide.style.display = 'none'; root.querySelectorAll('.oc-dot.on').forEach(d=>d.classList.remove('on')); };
+  const show = i=>{
+    i = Math.max(0, Math.min(n-1, i)); if(i===active) return; active = i;
+    const W = canvas.clientWidth, H = canvas.clientHeight; const x = n>1 ? i/(n-1)*W : W/2; const pt = pts[i];
+    tip.innerHTML = `<div class="oc-tip-l">${esc(pt.l)}</div><div class="oc-tip-r"><i class="oc-key oc-key-recv"></i>Received<b>${pt.r}</b></div><div class="oc-tip-r"><i class="oc-key oc-key-done"></i>Picked up<b>${pt.d}</b></div>`;
+    tip.style.display = 'block'; guide.style.display = 'block'; guide.style.left = x+'px';
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.max(0, Math.min(W-tw, x-tw/2))+'px';
+    const yHigh = H - (Math.max(pt.r,pt.d)/top)*H;
+    tip.style.top = (yHigh-th-14 >= -6 ? yHigh-th-14 : Math.min(H-th, yHigh+16))+'px';
+    root.querySelectorAll('.oc-dot.on').forEach(d=>d.classList.remove('on'));
+    root.querySelectorAll('.oc-dot[data-i="'+i+'"]').forEach(d=>d.classList.add('on'));
+  };
+  const fromEvent = e=>{ const r = canvas.getBoundingClientRect(); const f = r.width ? (e.clientX-r.left)/r.width : 0; return n>1 ? Math.round(f*(n-1)) : 0; };
+  canvas.addEventListener('pointermove', e=>show(fromEvent(e)));
+  canvas.addEventListener('pointerdown', e=>show(fromEvent(e)));
+  canvas.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse') hide(); });
+  canvas.addEventListener('blur', hide);
+  canvas.addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); show(active<0 ? (e.key==='ArrowRight'?0:n-1) : active+(e.key==='ArrowRight'?1:-1)); }
+    else if(e.key==='Home'){ e.preventDefault(); show(0); } else if(e.key==='End'){ e.preventDefault(); show(n-1); } else if(e.key==='Escape') hide();
+  });
+  // a touch outside the chart closes the readout it left open
+  if(!window.__ocAwayBound){ window.__ocAwayBound = true; document.addEventListener('pointerdown', e=>{ if(!e.target.closest || e.target.closest('.oc-canvas')) return; document.querySelectorAll('.oc-dot.on').forEach(d=>d.classList.remove('on')); document.querySelectorAll('.oc-tip,.oc-guide').forEach(x=>x.style.display='none'); }); }
+}
 function renderDashboard(){
   const orders = activeOrders();
   const counts = STAGES.map((_,i)=>orders.filter(o=>o.stage===i).length);
@@ -15103,32 +15100,6 @@ function renderDashboard(){
   const DASH_PERIODS = {'7d':7, '30d':30, '90d':90};
   const dashPeriod = DASH_PERIODS[state._dashPeriod] ? state._dashPeriod : '7d';
   const ov = ordersOverviewSeries(DASH_PERIODS[dashPeriod]);
-  const ovMax = Math.max(1, ...ov.buckets.map(b=>b.count));
-  const ovN = ov.buckets.length;
-  const ovStepX = ovN>1 ? 300/(ovN-1) : 0;
-  const ovY = c => (62-(c/ovMax)*52).toFixed(1);
-  const ovPoints = ov.buckets.map((b,i)=>`${(i*ovStepX).toFixed(1)},${ovY(b.count)}`).join(' ');
-  const ovArea = `0,66 ${ovPoints} ${(ovStepX*(ovN-1)).toFixed(1)},66`;
-  const ovPeakX = (ov.peakIdx*ovStepX).toFixed(1);
-  const ovPeakY = ovY(ov.buckets[ov.peakIdx].count);
-  // X position as a PERCENT of chart width, for anything that must stay visually round/legible
-  // (dots, the peak tooltip pill+text) -- the line/area fill above use raw 0-300 viewBox units
-  // inside their own nested, non-uniformly-stretched <svg> (see markup below), which is fine for
-  // a plain stroked path but would turn a circle into an oval and squash tooltip text sideways.
-  // Percent-based x on the OUTER (unscaled, real-pixel) coordinate system keeps those round/legible
-  // at any container width, fixing the "ugly stretched dots/tooltip" look the first stretch-fix
-  // attempt introduced (confirmed via a user screenshot: ovals instead of circles, a squashed-wide
-  // tooltip pill).
-  const ovPctX = i => ovN>1 ? (i*100/(ovN-1)).toFixed(2) : 0;
-  const ovPeakPctX = ovPctX(ov.peakIdx);
-  // Weekday initials for 7D (matching the reference); sparse date ticks otherwise, so labels never
-  // collide however many buckets are on screen.
-  const ovLabelEvery = ovN<=7 ? 1 : (ovN<=30 ? 5 : 2);
-  const ovLabels = ov.buckets.map((b,i)=>({
-    show: i%ovLabelEvery===0 || i===ovN-1,
-    text: dashPeriod==='7d' ? b.date.toLocaleDateString(undefined,{weekday:'short'}) : `${b.date.getDate()}/${b.date.getMonth()+1}`
-  }));
-
   // Month-over-month donut: a genuine part-to-whole split (this month's share of this+last
   // month's combined volume) for the ring itself, plus a separately-labeled real growth % for the
   // side callout -- two different real numbers, not the same figure drawn twice.
@@ -15218,53 +15189,7 @@ function renderDashboard(){
   ${dashSectionsCfg.ordersOverview===false ? '' : `
   <div class="panel dg-span2" style="margin-top:20px;">
     <div class="panel-body">
-      <div class="dash-chart-head">
-        <div class="dash-chart-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V13M12 20V8M20 20V4"/></svg>
-          Orders Overview
-        </div>
-        <div class="dash-period-toggle" data-dash-period-toggle>
-          ${Object.keys(DASH_PERIODS).map(p=>`<button type="button" class="dash-period-btn ${p===dashPeriod?'active':''}" data-dash-period="${p}">${p.toUpperCase()}</button>`).join('')}
-        </div>
-      </div>
-      <div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 2px;">
-        <div class="analytics-card-value" id="dash-chart-kpi-value" data-target="${ov.total}">${ov.total}</div>
-        <div class="analytics-badge ${ov.changePct>=0?'up':'down'}" id="dash-chart-kpi-badge">${ov.changePct>=0?'▲':'▼'} ${Math.abs(ov.changePct)}%</div>
-      </div>
-      <div class="hint" style="font-size:12px;margin-bottom:6px;">Total Orders</div>
-      <svg class="analytics-sparkline" style="height:78px;">
-        <!-- Nested inner <svg>, scaled non-uniformly (preserveAspectRatio="none") to fill the
-             outer element's full real width regardless of screen size -- fine for the area fill
-             and line, which are plain data shapes with no legible/round parts to distort. The
-             OUTER svg deliberately has no viewBox of its own (so its coordinate system is real
-             CSS pixels, matching its actual rendered width/height) -- everything below that needs
-             to stay visually correct under any stretch (dots, the peak tooltip) is positioned in
-             THAT undistorted system instead: x as a percent of width (resolves against the real
-             rendered width, no transform involved) with y as a plain pixel value (already 0-78,
-             matching the outer height 1:1). Replacing the earlier whole-svg preserveAspectRatio=
-             "none" attempt, which also stretched these -- circles into ovals, the tooltip pill and
-             its text squashed sideways, confirmed ugly via a user screenshot. -->
-        <svg x="0" y="0" width="100%" height="100%" viewBox="0 0 300 78" preserveAspectRatio="none">
-          <polygon class="dash-chart-area" points="${ovArea}" fill="var(--accent-soft)"/>
-          <polyline class="analytics-sparkline-line" pathLength="1" points="${ovPoints}" fill="none" stroke="var(--accent-dark)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-        </svg>
-        ${ov.buckets.map((b,i)=>{
-          const y = ovY(b.count);
-          const pct = ovPctX(i);
-          return i===ov.peakIdx ? '' : `<circle class="dash-chart-pt" data-pt-pct="${pct}" data-pt-y="${y}" data-pt-count="${b.count}" cx="${pct}%" cy="${y}" r="3" fill="#fff" stroke="var(--accent-dark)" stroke-width="2"/>`;
-        }).join('')}
-        ${ov.buckets[ov.peakIdx].count>0 ? `
-        <line x1="${ovPeakPctX}%" y1="${ovPeakY}" x2="${ovPeakPctX}%" y2="66" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3"/>
-        <circle class="dash-chart-pt-peak" cx="${ovPeakPctX}%" cy="${ovPeakY}" r="3.5" fill="var(--accent-dark)"/>
-        <rect class="dash-chart-peak-bg" data-peak-pct="${ovPeakPctX}" x="0" y="${Math.max(0,Number(ovPeakY)-20)}" width="54" height="16" rx="8"/>
-        <text class="dash-chart-peak" data-peak-pct="${ovPeakPctX}" x="0" y="${Math.max(12,Number(ovPeakY)-8)}" text-anchor="middle">${ov.buckets[ov.peakIdx].count} orders</text>` : ''}
-        <rect class="dash-chart-pt-tip-bg" data-pt-tip-bg style="display:none;" x="0" y="0" width="54" height="16" rx="8"/>
-        <text class="dash-chart-pt-tip" data-pt-tip style="display:none;" x="0" y="0" text-anchor="middle"></text>
-        ${ov.buckets[ov.peakIdx].count>0 ? `<circle class="dash-chart-ripple" cx="${ovPeakPctX}%" cy="${ovPeakY}" r="4" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>` : ''}
-      </svg>
-      <div class="analytics-sparkline-days">
-        ${ovLabels.map(l=>`<span>${l.show?l.text:''}</span>`).join('')}
-      </div>
+      ${dashOrdersChartHtml(ov, dashPeriod, DASH_PERIODS)}
     </div>
   </div>`}
 
@@ -15861,6 +15786,8 @@ const OQ_ICON = {
   truck: OQ_SVG('<path d="M3 6h11v9H3zM14 9h4l3 3v3h-7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>', 14),
   clock: OQ_SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 14),
   alert: OQ_SVG('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 16),
+  search: OQ_SVG('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', 18),
+  chevron: OQ_SVG('<path d="m9 6 6 6-6 6"/>', 18),
 };
 // When the order entered the stage it is in now (falls back to when it was created) -- "how long
 // has this been sitting here", which is what a packer scans for, not "how old is the order".
@@ -15883,23 +15810,45 @@ function oqWaitLabel(o){
   if(o.stage===1) return ago ? `In progress ${ago}` : 'Just started';
   return ago ? `Waiting ${ago}` : 'Just received';
 }
+// Product text as separate lines (the stored value is small HTML; a line break becomes its own row instead of running two products together).
+function oqProductLines(html){
+  const spaced = String(html||'').replace(/<\s*br\s*\/?>/gi,'\n').replace(/<\/(div|p|li|h[1-6])>/gi,'\n');
+  return stripTags(spaced).split('\n').map(x=>x.trim()).filter(Boolean);
+}
+// How long it has been sitting in its stage: amber from 4 hours, red from a day (not for a picked-up order).
+function oqWaitClass(o){
+  if(o.stage>=STAGES.length-1) return '';
+  const mins = (Date.now() - new Date(oqStageSince(o)).getTime())/60000;
+  return mins>=24*60 ? ' late' : (mins>=4*60 ? ' warn' : '');
+}
+function oqMatches(o, q){
+  if(!q) return true;
+  const hay = (String(o.orderNumber||'')+' '+String(o.id||'')+' '+String(o.customer||'')+' '+oqProductLines(o.product).join(' ')+' '+stripTags(o.notes||'')).toLowerCase();
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
+}
+// One order in the phone Packing queue (owner, 2026-11-21: "not user friendly, need a better ui design to work effectively"):
+// compact (4+ orders a screen instead of 2), priority as a coloured edge, each product on its own row, the waiting time that
+// turns amber / red, and ONE big button for the next stage so packing does not have to open every order first.
 function renderOqCard(o, showLine){
   const priority = PRIORITIES.includes(o.priority) ? o.priority : 'Medium';
   const noteText = stripTags(o.notes||'').trim();
-  const productText = stripTags(o.product||'').trim();
+  const prod = oqProductLines(o.product);
   const line = state.deliveryLines.find(l=>l.key===(o.courierService||''));
   const lineLabel = line ? line.label : (o.courierService||'');
+  const next = canAdvance(o.stage) ? NEXT_ACTION_LABEL[o.stage] : '';
   return `
-  <div class="card oq-card" data-order="${escAttr(o.id)}">
-    <div class="oq-over">${o.color?`<span class="oq-dot" style="background:${escAttr(o.color)};"></span>`:''}<span>${esc(o.orderNumber||o.id)}</span></div>
-    <div class="oq-name">${esc(o.customer)}</div>
-    ${productText ? `<div class="oq-product"><span class="oq-product-icon">${OQ_ICON.box}</span><span class="oq-product-text">${esc(productText)}</span></div>` : ''}
-    <div class="oq-pills">
-      <span class="oq-pill oq-pill-${priority.toLowerCase()}">${esc(priority)} priority</span>
-      ${showLine && lineLabel ? `<span class="oq-pill oq-pill-line">${OQ_ICON.truck}${esc(lineLabel)}</span>` : ''}
-      <span class="oq-pill oq-pill-time">${OQ_ICON.clock}${esc(oqWaitLabel(o))}</span>
+  <div class="card oq-card oq-pri-${priority.toLowerCase()}" data-order="${escAttr(o.id)}">
+    <div class="oq-top">
+      ${o.color?`<span class="oq-dot" style="background:${escAttr(o.color)};"></span>`:''}
+      <span class="oq-num">${esc(o.orderNumber||o.id)}</span>
+      ${priority==='High' && o.stage<STAGES.length-1 ? `<span class="oq-pill oq-pill-high">High</span>` : ''}
+      ${showLine && lineLabel ? `<span class="oq-tag">${OQ_ICON.truck}<span>${esc(lineLabel)}</span></span>` : ''}
+      <span class="oq-wait${oqWaitClass(o)}">${OQ_ICON.clock}${esc(oqWaitLabel(o))}</span>
     </div>
+    <div class="oq-name">${esc(o.customer)}</div>
+    ${prod.length ? `<ul class="oq-prod">${prod.slice(0,3).map(t=>`<li>${esc(t)}</li>`).join('')}${prod.length>3?`<li class="oq-more">+ ${prod.length-3} more &mdash; tap to open</li>`:''}</ul>` : ''}
     ${noteText ? `<div class="oq-note"${o.color?` style="background:${escAttr(o.color)}1f;color:${escAttr(o.color)};"`:''}>${OQ_ICON.alert}<span>${esc(noteText)}</span></div>` : ''}
+    ${next ? `<button type="button" class="oq-act" data-oq-advance="${escAttr(o.id)}"><span>${esc(next)}</span>${OQ_ICON.chevron}</button>` : ''}
   </div>`;
 }
 function renderOrdersMobileQueue(active, archived){
@@ -15911,38 +15860,45 @@ function renderOrdersMobileQueue(active, archived){
   const scoped = lineSel==='all' ? visible : visible.filter(o=>(o.courierService||'')===lineSel);
   const stageIdx = Math.min(Math.max(parseInt(state._oqStage,10)||0, 0), STAGES.length-1);
   const stageOrders = visible.filter(o=>o.stage===stageIdx);
-  const list = scoped.filter(o=>o.stage===stageIdx).sort((a,b)=>boardOrderOf(a)-boardOrderOf(b));
+  const q = String(state._oqQuery||'').trim();
+  const inStage = scoped.filter(o=>o.stage===stageIdx).sort((a,b)=>boardOrderOf(a)-boardOrderOf(b));
+  const list = inStage.filter(o=>oqMatches(o,q));
   const highCount = scoped.filter(o=>o.stage<STAGES.length-1 && (o.priority||'Medium')==='High').length;
   const canCreate = !!(state.session && roleCan(state.session.role, 'orders_create'));
   const canManageLists = !!(state.session && roleCan(state.session.role, 'orders_manage_lists'));
-  const hasMore = canCreate || canManageLists;
-  const moreOpen = hasMore && !!state._oqMoreOpen;
+  const moreOpen = !!state._oqMoreOpen;
   return `
   <div class="oq">
-    <p class="oq-sub">${scoped.length} active order${scoped.length===1?'':'s'}${highCount?` · ${highCount} high priority`:''}</p>
-    <div class="oq-actions">
-      <button type="button" class="oq-btn oq-btn-primary" data-oq-boxcount>${OQ_ICON.box}<span>Box Count</span></button>
-      <button type="button" class="oq-btn" data-orders-view="archive">${OQ_ICON.archive}<span>Archive${archived.length?` (${archived.length})`:''}</span></button>
-      ${hasMore ? `<button type="button" class="oq-btn oq-btn-icon" id="btn-oq-more" aria-label="More actions" aria-haspopup="menu" aria-expanded="${moreOpen?'true':'false'}">${OQ_ICON.dots}</button>` : ''}
-      ${moreOpen ? `
-      <div class="oq-menu" role="menu">
-        ${canCreate ? lines.map(l=>`<button type="button" class="oq-menu-item" role="menuitem" data-new-order-courier="${escAttr(l.key)}">+ New order · ${esc(l.label)}</button>`).join('') : ''}
-        ${canManageLists ? `<button type="button" class="oq-menu-item" role="menuitem" data-oq-manage-lines>⚙ Manage lists</button>` : ''}
+    <div class="oq-ctl">
+      <div class="oq-bar">
+        <label class="oq-search">${OQ_ICON.search}<input id="oq-search" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Search orders" value="${escAttr(q)}">${q?`<button type="button" class="oq-x" data-oq-clear aria-label="Clear search">&times;</button>`:''}</label>
+        <button type="button" class="oq-ibtn oq-ibtn-primary" data-oq-boxcount aria-label="Box Count" title="Box Count">${OQ_ICON.box}</button>
+        <button type="button" class="oq-ibtn" id="btn-oq-more" aria-label="More actions" aria-haspopup="menu" aria-expanded="${moreOpen?'true':'false'}">${OQ_ICON.dots}</button>
+        ${moreOpen ? `
+        <div class="oq-menu" role="menu">
+          <button type="button" class="oq-menu-item" role="menuitem" data-oq-boxcount>${OQ_ICON.box}<span>Box Count</span></button>
+          <button type="button" class="oq-menu-item" role="menuitem" data-orders-view="archive">${OQ_ICON.archive}<span>Archive${archived.length?` (${archived.length})`:''}</span></button>
+          ${canCreate ? lines.map(l=>`<button type="button" class="oq-menu-item" role="menuitem" data-new-order-courier="${escAttr(l.key)}"><span>+ New order &middot; ${esc(l.label)}</span></button>`).join('') : ''}
+          ${canManageLists ? `<button type="button" class="oq-menu-item" role="menuitem" data-oq-manage-lines><span>&#9881; Manage lists</span></button>` : ''}
+        </div>` : ''}
+      </div>
+      <div class="oq-stages" role="group" aria-label="Order stage">
+        ${STAGES.map((_,i)=>{
+          const on = i===stageIdx;
+          const inThis = scoped.filter(o=>o.stage===i);
+          const hot = i<STAGES.length-1 && inThis.some(o=>(o.priority||'Medium')==='High');
+          return `<button type="button" class="oq-stage${on?' on':''}" data-oq-stage="${i}" aria-pressed="${on?'true':'false'}">${hot?'<span class="oq-hot" title="Has high priority orders"></span>':''}<span class="oq-stage-n">${inThis.length}</span><span class="oq-stage-l">${esc(STAGE_TAB_LABELS[i])}</span></button>`;
+        }).join('')}
+      </div>
+      ${lines.length>1 ? `
+      <div class="oq-lines" role="group" aria-label="Delivery line">
+        <button type="button" class="oq-chip${lineSel==='all'?' on':''}" data-oq-line="all" aria-pressed="${lineSel==='all'?'true':'false'}">All lines &middot; ${stageOrders.length}</button>
+        ${lines.map(l=>`<button type="button" class="oq-chip${lineSel===l.key?' on':''}" data-oq-line="${escAttr(l.key)}" aria-pressed="${lineSel===l.key?'true':'false'}">${esc(l.label)} &middot; ${stageOrders.filter(o=>(o.courierService||'')===l.key).length}</button>`).join('')}
       </div>` : ''}
     </div>
-    <div class="oq-stages" role="group" aria-label="Order stage">
-      ${STAGES.map((_,i)=>{
-        const on = i===stageIdx;
-        return `<button type="button" class="oq-stage${on?' on':''}" data-oq-stage="${i}" aria-pressed="${on?'true':'false'}"><span class="oq-stage-n">${scoped.filter(o=>o.stage===i).length}</span><span class="oq-stage-l">${esc(STAGE_TAB_LABELS[i])}</span></button>`;
-      }).join('')}
-    </div>
-    ${lines.length>1 ? `
-    <div class="oq-lines" role="group" aria-label="Delivery line">
-      <button type="button" class="oq-chip${lineSel==='all'?' on':''}" data-oq-line="all" aria-pressed="${lineSel==='all'?'true':'false'}">All lines · ${stageOrders.length}</button>
-      ${lines.map(l=>`<button type="button" class="oq-chip${lineSel===l.key?' on':''}" data-oq-line="${escAttr(l.key)}" aria-pressed="${lineSel===l.key?'true':'false'}">${esc(l.label)} · ${stageOrders.filter(o=>(o.courierService||'')===l.key).length}</button>`).join('')}
-    </div>` : ''}
+    <p class="oq-sub"><span>${q ? `${list.length} of ${inStage.length} match` : `${inStage.length} order${inStage.length===1?'':'s'} in ${esc(STAGE_TAB_LABELS[stageIdx])}`}</span>${highCount?`<span class="oq-sub-hot">${highCount} high priority</span>`:''}</p>
     <div class="oq-list">
-      ${list.length===0 ? `<div class="oq-empty">Nothing in ${esc(STAGE_TAB_LABELS[stageIdx])} right now.</div>` : list.map(o=>renderOqCard(o, lineSel==='all' && lines.length>1)).join('')}
+      ${list.length===0 ? `<div class="oq-empty">${q ? `No order matches &ldquo;${esc(q)}&rdquo;.` : `Nothing in ${esc(STAGE_TAB_LABELS[stageIdx])} right now.`}</div>` : list.map(o=>renderOqCard(o, lineSel==='all' && lines.length>1)).join('')}
     </div>
   </div>`;
 }
@@ -20143,10 +20099,10 @@ function openBatchSheetModal(id){   // (name kept for callers) opens the sheet a
 // Sets the page's working state (no redraw). Also used by browser Back / Forward (navApply).
 function startBatchSheetPage(id){
   state._recipeDraft = buildRecipeDraft(id);
-  // Starts blank, not a generated id — a different real batch number gets typed in by hand for every batch. Blank also survives
-  // redraws the same way a typed one does (captureOpenFormFields / syncDraftStepFieldsFromDOM). Left blank when the batch is
-  // started, startBatch() falls back to its own auto-generated id.
-  state._recipeDraft.batchNo = '';
+  // The batch number and batch size shown are the ones last SAVED on this sheet (owner, 2026-11-21: "batch size, batch number or any
+  // changes should save once click Save and click Start the batch"). A new sheet has no number yet; left blank when the batch is
+  // started, startBatch() falls back to its own auto-generated id. Typed text survives redraws (captureOpenFormFields / syncDraftStepFieldsFromDOM).
+  state._recipeDraft.batchNo = (byId(state.recipes, id) || {}).batchNo || '';
   state._batchSheetId = id;
 }
 function closeBatchSheetPage(){
@@ -20159,7 +20115,10 @@ function batchSheetDirty(){
   const d = state._recipeDraft, r = state._batchSheetId && byId(state.recipes, state._batchSheetId);
   if(!d || !r || d.id!==r.id || !document.getElementById('batchsheet-page')) return false;
   try{ syncDraftStepFieldsFromDOM(); }catch(e){}
-  return JSON.stringify(d.steps) !== JSON.stringify(r.steps);
+  if(JSON.stringify(d.steps) !== JSON.stringify(r.steps)) return true;
+  if(String(d.batchNo||'').trim() !== String(r.batchNo||'').trim()) return true;
+  const kg = parseFloat(d.sheetKg);
+  return d.sheetKg!=null && kg>0 && kg !== (Number(r.batchSizeKg)||0);
 }
 // ---- Process template: step-draft helpers (state._templateDraft) ----
 function templateDraftAddPhrase(){
@@ -20284,6 +20243,8 @@ function syncDraftStepFieldsFromDOM(){
   // pull current input values into the draft before add/remove/reorder/submit, so nothing typed is lost
   const batchNoEl = document.getElementById('sheet-batch-no');
   if(batchNoEl) state._recipeDraft.batchNo = batchNoEl.value;
+  const batchKgEl = document.getElementById('sheet-batch-kg');
+  if(batchKgEl) state._recipeDraft.sheetKg = batchKgEl.value;
   const steps = state._recipeDraft.steps;
   steps.forEach(s=>{
     if(s.type==='preparation'){
@@ -22216,6 +22177,11 @@ async function saveBatchSheetSteps(recipeId){
   if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
   const r = byId(state.recipes, recipeId); if(!r) return;
   r.steps = steps;
+  // The batch number and the batch size typed on the sheet are saved together with the steps (Save and Start the batch both do this).
+  r.batchNo = String(d.batchNo||'').trim();
+  const typedKg = parseFloat(d.sheetKg);
+  if(typedKg>0) r.batchSizeKg = typedKg;
+  d.batchNo = r.batchNo; d.sheetKg = String(r.batchSizeKg||'');
   // Deep-copy (not just {...s}) so the still-open draft's checklist arrays are independent of
   // what was just saved to r.steps — otherwise further edits here would mutate the saved recipe
   // directly, bypassing Save entirely, the same reference-sharing bug fixed for the template editor.
@@ -24471,7 +24437,23 @@ function attachShellHandlers(){
     state._oqLine = btn.dataset.oqLine;
     render();
   }));
-  document.querySelectorAll('[data-oq-boxcount]').forEach(btn=>btn.addEventListener('click', ()=>openModal('boxcount')));
+  document.querySelectorAll('[data-oq-boxcount]').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqMoreOpen = false; openModal('boxcount'); }));
+  // Search the queue (view state only). Re-draws as you type (the typed text and cursor are put back by render()), a little after the last key.
+  if(byIdEl('oq-search')){
+    let t = null;
+    byIdEl('oq-search').addEventListener('input', e=>{ const v = e.target.value; clearTimeout(t); t = setTimeout(()=>{ state._oqQuery = v; render(); }, 160); });
+  }
+  document.querySelectorAll('[data-oq-clear]').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqQuery = ''; render(); const i = byIdEl('oq-search'); if(i) i.focus(); }));
+  // The big "next stage" button on a queue card: same steps as the button inside the order screen (CityPak asks for its tag first).
+  document.querySelectorAll('[data-oq-advance]').forEach(btn=>btn.addEventListener('click', e=>{
+    e.stopPropagation();   // do not also open the order
+    const id = btn.dataset.oqAdvance; const o = byId(state.orders, id); if(!o) return;
+    if(NEXT_ACTION_LABEL[o.stage]==='Mark picked up by delivery' && o.courierService==='CityPak'){ state.modal = 'citypak:'+id; render(); return; }
+    advanceOrder(id);
+  }));
+  // The sticky control bar sits right under the phone header, whatever height that is on this phone (notch included).
+  const oqTop = document.querySelector('.shell .topbar');
+  if(oqTop && document.querySelector('.oq')) document.documentElement.style.setProperty('--oq-top', Math.round(oqTop.getBoundingClientRect().height)+'px');
   if(byIdEl('btn-oq-more')) byIdEl('btn-oq-more').onclick = ()=>{ state._oqMoreOpen = !state._oqMoreOpen; render(); };
   document.querySelectorAll('.oq-menu-item').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqMoreOpen = false; }));
   document.querySelectorAll('[data-oq-manage-lines]').forEach(btn=>btn.addEventListener('click', ()=>{
@@ -25829,8 +25811,8 @@ function attachShellHandlers(){
     const batchNo = noEl ? noEl.value.trim() : '';
     const recipeId = e.currentTarget.dataset.recipeId;
     const rcp = byId(state.recipes, recipeId);
-    // Steps typed on the sheet but not saved yet are saved first, so the batch runs with exactly what is on screen
-    // (and the "Discard changes?" question can never stop the jump to the Production Guide below).
+    // Anything typed on the sheet but not saved yet (steps, batch number, batch size) is saved first, so the batch runs with exactly
+    // what is on screen (and the "Discard changes?" question can never stop the jump to the Production Guide below).
     if(batchSheetDirty()){ await saveBatchSheetSteps(recipeId); if(batchSheetDirty()) return; }
     await startBatch(recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
     // zero-step recipes show a toast and stay open instead. Recipe library and the batch-running
@@ -26217,7 +26199,7 @@ function attachShellHandlers(){
   // while Settings > Mobile appearance is the open panel (desktop, where the preview column
   // exists at all -- see the @media(max-width:1100px) rule hiding it below that width).
   if(byIdEl('mobile-ui-preview-frame')) refreshMobileUiPreview();
-  layoutDashSparklinePeak();
+  attachDashOrdersChart();
 
   if(byIdEl('form-customer')) byIdEl('form-customer').addEventListener('submit', submitCustomer);
   if(byIdEl('btn-delete-customer')) byIdEl('btn-delete-customer').onclick = ()=>{ const id=byIdEl('form-customer').dataset.editId; deleteCustomer(id); };
@@ -26500,24 +26482,6 @@ document.addEventListener('click', e=>{
     try{ input.showPicker(); }catch(err){}
   }
 });
-// Orders Overview sparkline: tap any point to show its count in the same pill style as the
-// always-on peak tooltip. Delegated like the date-input handler above, so it keeps working
-// across every render() (initial load, every 7D/30D/90D period switch) without re-wiring.
-// Works on both desktop and mobile.
-let _activeDashChartPt = null;
-document.addEventListener('click', e=>{
-  const pt = e.target.closest('.dash-chart-pt');
-  if(pt){
-    if(_activeDashChartPt === pt){ hideDashChartPointTip(); _activeDashChartPt = null; return; }
-    showDashChartPointTip(pt);
-    _activeDashChartPt = pt;
-    return;
-  }
-  if(_activeDashChartPt && !e.target.closest('.analytics-sparkline')){
-    hideDashChartPointTip();
-    _activeDashChartPt = null;
-  }
-});
 // Fires when the browser's Back/Forward button pops one of the history entries pushed in
 // performGoTo (the hub sub-pages) — resync app state to whatever page the hash now names.
 window.addEventListener('popstate', (e)=>{
@@ -26653,14 +26617,6 @@ setInterval(()=>{
   const last = getPersistedLastActivity();
   if(mins>0 && last!=null && (Date.now()-last) >= mins*60*1000){ signOffForInactivity(); }
 }, 3000);
-// Keeps the Orders Overview sparkline's peak tooltip correctly centered if the browser window is
-// resized without anything else triggering a render() in between (e.g. just dragging a desktop
-// window wider) -- debounced since resize fires continuously while dragging.
-let _sparklineResizeTimer = null;
-window.addEventListener('resize', ()=>{
-  clearTimeout(_sparklineResizeTimer);
-  _sparklineResizeTimer = setTimeout(layoutDashSparklinePeak, 150);
-});
 loadAll();
 </script>
 <script>

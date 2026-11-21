@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261121163823">
+<meta name="app-build" content="20261121175158">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1917,6 +1917,54 @@ html{ visibility:hidden; }
   .rc-machine{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;letter-spacing:.01em;}
   .bsmc-page{max-width:860px;margin:0 auto 24px;padding:28px 32px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 14px 36px -16px rgba(var(--accent-rgb),.25);}
   @media (max-width:760px){ .bsmc-page{padding:18px 16px;border-radius:16px;} }
+  /* Batch sheet PAGE, two columns (owner, 2026-11-21): the sheet (materials + batch number / size) on the LEFT, the production steps on the RIGHT.
+     The left side stays in view while the steps scroll; on a phone it is one column, sheet first. */
+  .bsmc-page.bs2{max-width:1280px;margin-bottom:96px;}   /* bottom room: the floating bell / phone tab bar must not cover Close / Save / Start */
+  .bs-grid{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);gap:28px;align-items:start;}
+  .bs-left,.bs-right{min-width:0;}
+  @media (min-width:1000px){ .bs-left{position:sticky;top:92px;max-height:calc(100vh - 112px);overflow-y:auto;padding:2px 4px 6px 2px;scrollbar-width:thin;} }
+  @media (max-width:999px){ .bs-grid{grid-template-columns:minmax(0,1fr);gap:20px;} }
+  .bs-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;}
+  .bs-head img{max-height:64px;max-width:230px;object-fit:contain;display:block;}
+  .bs-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:23px;line-height:1.2;margin:0 0 6px;text-transform:uppercase;letter-spacing:.01em;}
+  .bs-machine{margin:0 0 10px;}
+  /* Batch number and batch size sit side by side, close together, same height */
+  .bs-run{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 16px;}
+  .bs-run-f{display:inline-flex;align-items:center;gap:6px;height:42px;box-sizing:border-box;padding:0 6px 0 12px;border:1.5px solid #BFE3CB;border-radius:999px;background:#F3FBF6;font-size:11.5px;font-weight:600;color:#2E7D46;white-space:nowrap;}
+  .bs-run-f input{height:32px;box-sizing:border-box;border:none;border-radius:999px;background:#fff;padding:0 12px;font:700 14px/1 inherit;font-family:inherit;color:#1B2340;text-align:right;min-width:0;}
+  .bs-run-f input::placeholder{color:#9CA9A0;font-weight:500;}
+  .bs-run-f input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .bs-run-no input{width:104px;}
+  .bs-run-size input{width:72px;}
+  .bs-run-f .u{padding-right:8px;}
+  @media (max-width:760px){
+    .bs-right .prep-step-row,.bs-right .bsheet-step-row{max-width:100%;box-sizing:border-box;padding:14px 12px;}
+    .bs-right .bsr-head{flex-wrap:wrap;}
+    .bs-right .bsr-title{flex-wrap:wrap;min-width:0;max-width:100%;}
+    .bs-right .prep-title-input{min-width:0;flex:1 1 90px;max-width:100%;}
+    .bs-left .bsmc-card{padding:14px 8px;}
+    .bs-left table.bsmc-table th,.bs-left table.bsmc-table td{padding:8px 5px;}
+    .bs-run-f input{min-width:0;}
+  }
+  .bs-steps-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;min-height:30px;}
+  .bs-steps-head .bsmc-label{margin:0;}
+  /* A phrase on the batch sheet: its raw materials as created on the Process template, quantities in kg of the typed batch size (never percentages) */
+  .bs-mats{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:13.5px;}
+  .bs-mats th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:7px 10px;text-align:left;border-bottom:1.5px solid var(--border);}
+  .bs-mats th.c-qty,.bs-mats td.c-qty{text-align:right;}
+  .bs-mats td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--ink);}
+  .bs-mats tr:last-child td{border-bottom:none;}
+  .bs-mats .c-no{width:38px;color:var(--muted);}
+  .bs-mats td.c-qty{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent-dark);white-space:nowrap;}
+  .bs-instr-text{font-size:14px;line-height:1.5;color:var(--ink);white-space:pre-wrap;}
+  .bs-temp-chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
+  .bsheet-step-row.bs-phrase .bsr-field{margin-top:2px;}
+  .bs-prep-line{display:flex;align-items:center;gap:9px;}
+  .bs-prep-box{width:15px;height:15px;border:1.5px solid #9CA9A0;border-radius:4px;flex:none;background:#fff;}
+  .bs-prep-fill{flex:none;width:90px;border-bottom:1.5px solid #9CA9A0;height:16px;}
+  table.bsmc-ledger .bsmc-ledger-mat{display:flex;justify-content:space-between;gap:14px;padding:1px 0;}
+  table.bsmc-ledger .bsmc-ledger-mat b{white-space:nowrap;font-variant-numeric:tabular-nums;}
+  table.bsmc-ledger .bsmc-ledger-instr{margin-top:4px;color:#4C5A50;}
   .recipe-card .rc-meta{font-size:12px;color:var(--muted);}
   .recipe-card.clickable-card:hover{background:var(--accent-soft);}
   .rc-icon-badge{width:36px;height:36px;border-radius:12px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin-bottom:2px;}
@@ -1943,6 +1991,13 @@ html{ visibility:hidden; }
   .batch-tile .bt-actions .btn-primary:hover{background:var(--accent-dark);filter:brightness(.88);}
   .batch-tile .bt-actions .btn-primary:disabled,.batch-tile .bt-actions .btn-primary:active{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;opacity:1;}
   .batch-tile .bt-actions .bt-expand{margin-left:auto;padding:7px 10px;}
+  /* machine number + raw materials (kg of the batch size) on the Production Guide card (owner, 2026-11-21) */
+  .batch-tile .bt-machine{margin:6px 0 0;}
+  .batch-tile .bt-mats{margin:10px 0 2px;border-top:1px solid #E1EAE3;}
+  .batch-tile .bt-mat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px dashed #E1EAE3;font-size:13px;}
+  .batch-tile .bt-mat span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+  .batch-tile .bt-mat span:last-child{font-weight:700;color:var(--tile-accent);white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .batch-tile .bt-headline.bt-wrap{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:8px;}
   .batch-prep-checklist{margin:14px 0;text-align:left;max-width:560px;}
   .batch-prep-checklist .bpc-row{font-size:15px;color:#15201A;padding:6px 0;}
   .batch-prep-checklist .bpc-check{display:flex;align-items:flex-start;gap:10px;}
@@ -2107,6 +2162,15 @@ html{ visibility:hidden; }
   .batch-focus .bf-temp-value.temp-yellow{color:#C98A12;}
   .batch-focus .bf-temp-value.temp-red{color:#D1484D;}
   .batch-focus .bf-amount{font-size:clamp(18px,2vw,24px);font-weight:600;color:#15201A;}
+  .batch-focus .bf-machine{margin-top:8px;}
+  .batch-focus .bf-machine .rc-machine{font-size:16px;}
+  /* raw materials of the step, quantities in kg of this batch's size */
+  .bf-mats{margin:22px 0 0;max-width:780px;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:4px 8px 6px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
+  .bf-mats-head{display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5B6E61;padding:14px 16px 8px;}
+  .bf-mats-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:1px solid #EEF3EF;}
+  .bf-mats-no{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font:700 13px 'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;}
+  .bf-mats-name{flex:1;min-width:0;font:600 clamp(18px,2vw,24px) 'Inter',sans-serif;color:#15201A;}
+  .bf-mats-qty{flex:none;font:700 clamp(20px,2.4vw,32px) 'Poppins',sans-serif;color:var(--accent-dark);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .batch-focus .batch-prep-checklist{display:flex;flex-direction:column;}
   .batch-focus .batch-prep-checklist .bpc-row{font-size:17px;font-weight:500;padding:10px 0;border-top:1px solid #EEF3EF;}
   .batch-focus .batch-prep-checklist .bpc-row:first-child{border-top:none;}
@@ -18871,30 +18935,35 @@ function renderMobileAppearancePanel(){
   </div>`;
 }
 function renderTimerAlertSoundPanel(){
+  // One row per machine + one for a batch whose sheet has no machine chosen. What is selected is what is heard (an unset machine shows its starter sound).
+  const rows = BATCH_MACHINES.map(m=>({key:m.id, labelHtml:machineChipHtml(m.id), sound:alertSoundForMachine(m.id)}))
+    .concat([{key:'', labelHtml:'<span class="hint" style="font-weight:600;">No machine chosen</span>', sound:currentAlertSound()}]);
   return `
   <div class="panel" id="settings-timer-alert-sound">
-    <div class="panel-head"><h3>Timer alert sound</h3></div>
+    <div class="panel-head"><h3>Machine alert sounds</h3></div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:12px;">Choose the sound played when a recipe batch timer finishes — heard by everyone watching that batch (Admin &amp; Blending). Preview any option, pick one, then save.</div>
+      <div class="hint" style="margin-bottom:12px;">Every machine has its own sound, so the floor knows which machine is calling without looking. It plays when a timed step of a batch running on that machine is over, and repeats until someone presses Next &mdash; heard by everyone watching that batch (Admin &amp; Blending). Pick a sound for each machine, preview it, then save.</div>
       <form id="form-alert-sound">
         <table class="data-table">
-          <thead><tr><th></th><th>Sound</th><th>Preview</th></tr></thead>
+          <thead><tr><th>Machine</th><th>Sound</th><th>Preview</th></tr></thead>
           <tbody>
-            ${Object.keys(ALERT_SOUNDS).map(id=>`
+            ${rows.map(r=>`
             <tr>
-              <td><input type="radio" name="alertSound" value="${id}" ${currentAlertSound()===id?'checked':''}></td>
-              <td>${esc(ALERT_SOUNDS[id].name)}${id==='chime'?' <span class="hint">(default)</span>':''}</td>
-              <td><button type="button" class="btn btn-sm" data-preview-sound="${id}">🔊 Preview</button></td>
+              <td style="white-space:nowrap;">${r.labelHtml}</td>
+              <td><select data-machine-sound="${escAttr(r.key)}" aria-label="Sound for ${escAttr(r.key||'a batch with no machine')}">
+                ${Object.keys(ALERT_SOUNDS).map(id=>`<option value="${id}"${r.sound===id?' selected':''}>${esc(ALERT_SOUNDS[id].name)}</option>`).join('')}
+              </select></td>
+              <td><button type="button" class="btn btn-sm" data-preview-sound>🔊 Preview</button></td>
             </tr>`).join('')}
           </tbody>
         </table>
         <div class="field" style="max-width:220px;margin-top:14px;">
           <label>Ringtone duration (seconds)</label>
           <input type="number" name="alertDuration" min="1" max="60" step="1" value="${currentAlertDurationSeconds()}">
-          <div class="hint">How long the alert keeps sounding once a batch timer finishes.</div>
+          <div class="hint">How long the alert keeps sounding each time it plays.</div>
         </div>
         <div class="modal-actions" style="justify-content:flex-start;margin-top:14px;">
-          <button type="submit" class="btn btn-primary">Save sound</button>
+          <button type="submit" class="btn btn-primary">Save sounds</button>
         </div>
       </form>
     </div>
@@ -18945,7 +19014,7 @@ function renderSettingsPage(){
     {id:'settings-login-customization', label:'Login panel customization', icon:'star', adminOnly:false},
     {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false},
     {id:'settings-mobile-appearance', label:'Mobile appearance', icon:'star', adminOnly:false},
-    {id:'settings-timer-alert-sound', label:'Timer alert sound', icon:'headset', adminOnly:false},
+    {id:'settings-timer-alert-sound', label:'Machine alert sounds', icon:'headset', adminOnly:false},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers', adminOnly:true},
     {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
     {id:'settings-role-permissions', label:'User role permission', icon:'fingerprint', adminOnly:true},
@@ -19661,15 +19730,25 @@ function playAlertSoundById(id, durationSeconds){
     playOnce();
   }, cycleMs);
 }
-function playBatchAlertSound(){
-  playAlertSoundById(currentAlertSound());
+// Each machine has its own alert sound (Settings -> Machine alert sounds, owner 2026-11-21): saved as branding.machineAlertSounds
+// {'Machine 1': 'chime', ...}. Until one is chosen a machine uses its own starter sound, so the three never sound alike; a batch
+// with no machine uses the general sound (branding.alertSound).
+const MACHINE_DEFAULT_SOUNDS = {'Machine 1':'chime', 'Machine 2':'bell', 'Machine 3':'alarm'};
+function alertSoundForMachine(machine){
+  if(!machine) return currentAlertSound();
+  const saved = state.branding && state.branding.machineAlertSounds && state.branding.machineAlertSounds[machine];
+  if(ALERT_SOUNDS[saved]) return saved;
+  return ALERT_SOUNDS[MACHINE_DEFAULT_SOUNDS[machine]] ? MACHINE_DEFAULT_SOUNDS[machine] : currentAlertSound();
+}
+function playBatchAlertSound(machine){
+  playAlertSoundById(alertSoundForMachine(typeof machine==='string' ? machine : ''));
 }
 
 // Preparation/Checking steps have no ingredient/amount/waitMinutes — the batch runner (timer,
 // step cards, focus overlay) was built only for phrase steps and would otherwise crash
 // (new Date(NaN).toISOString()) or show "undefined" the moment one of these is first/reached.
 function batchStepWaitMinutes(step){ return step && step.type!=='preparation' ? (step.waitMinutes||0) : 0; }
-function batchStepLabel(step){ return step.type==='preparation' ? (step.name||'Preparation/Checking') : step.ingredient; }
+function batchStepLabel(step, kg){ return step.type==='preparation' ? (step.name||'Preparation/Checking') : stepSummaryText(step, kg); }
 // The Instruction field is a growing textarea now (see instructionTextareaHtml) — people write
 // real multi-line steps into it ("Add Water 75Kg, Start the Heater" / "Then Add EDTA, SLES" /
 // "Wait until Dissolves all the SLES"), and showing the whole thing in one undifferentiated bold
@@ -19717,9 +19796,23 @@ function currentInstructionStyle(){
 // styleOverride lets the "Instruction style" picker render a live, accurate preview of each
 // option (on fixed sample text) using this exact function, instead of a separate hand-drawn
 // mockup that could drift from what the real Big screen actually renders.
-function renderBatchInstructionHtml(step, styleOverride){
-  const lines = splitStepLines(step.ingredient);
-  const style = styleOverride || currentInstructionStyle();
+// A step's raw materials as a clear list (name + kg of this batch's size), shown above its instruction text.
+function batchMaterialsHtml(step, kg){
+  const mats = stepRawLines(step, kg);
+  if(!mats.length) return '';
+  const size = Number(kg)||0;
+  return `<div class="bf-mats">
+    <div class="bf-mats-head"><span>Raw materials</span>${size>0 ? `<span>${esc(fmtQty(size))} kg batch</span>` : ''}</div>
+    ${mats.map((m,i)=>`<div class="bf-mats-row"><span class="bf-mats-no">${i+1}</span><span class="bf-mats-name">${esc(m.name)}</span><span class="bf-mats-qty">${esc(m.qty)}</span></div>`).join('')}
+  </div>`;
+}
+function renderBatchInstructionHtml(step, styleOverride, kg){
+  const lines = splitStepLines(stepInstructionText(step));
+  const mats = batchMaterialsHtml(step, kg);
+  if(!lines.length) return mats;
+  return mats + renderBatchInstructionLinesHtml(lines, styleOverride || currentInstructionStyle());
+}
+function renderBatchInstructionLinesHtml(lines, style){
   if(style==='unified'){
     return `<div class="bf-instr-unified">
       ${lines.map((line,i)=>`<div class="bf-instr-unified-line${i===0?' lead':''}">${esc(line)}</div>`).join('')}
@@ -19927,32 +20020,29 @@ function startBatchTicker(){
     const remaining = batchRemainingSeconds();
     const step = b.steps[b.currentStep];
 
-    // audible alert when a timed step finishes — repeats every 15s until the step actually
-    // advances, so it's heard on the factory floor even if the first chime is missed
+    // audible alert when a timed step finishes — repeats every 15s until someone moves the batch on,
+    // so it's heard on the factory floor even if the first chime is missed. The sound is the one chosen
+    // for this batch's MACHINE (Settings -> Machine alert sounds).
+    // The batch is NEVER moved to the next step automatically (owner, 2026-11-21): when the time is over it
+    // stays on this step, counting at 00:00 and sounding, until a person presses Next.
     if(step && step.waitMinutes>0 && remaining<=0){
       const key = b.id+':'+b.currentStep+':'+b.stepDeadline;
       const now = Date.now();
       if(state._lastBeepKey!==key || !state._lastBeepAt || (now-state._lastBeepAt)>=15000){
-        playBatchAlertSound();
+        playBatchAlertSound(b.machine);
         state._lastBeepKey = key;
         state._lastBeepAt = now;
       }
     }
 
-    // auto-advance timed steps once their countdown hits zero (an Admin's or Blending staff's open browser drives this)
-    if(step && step.waitMinutes>0 && remaining<=0 && canManageBlendBoard() && !state._autoAdvancing){
-      state._autoAdvancing = true;
-      nextBatchStep().finally(()=>{ state._autoAdvancing = false; });
-      return;
-    }
-
+    if(!step || !(step.waitMinutes>0)) return;   // only a TIMED step's counter / note is updated (an untimed step keeps its dash)
     const text = formatCountdown(remaining);
     ['batch-countdown','batch-focus-countdown'].forEach(id=>{
       const el = document.getElementById(id);
       if(el){ el.textContent = text; el.classList.toggle('done', remaining<=0); }
     });
     const noteEl = document.getElementById('batch-countdown-note');
-    if(noteEl) noteEl.textContent = remaining<=0 ? "Time's up — ready for the next step" : 'remaining on this step';
+    if(noteEl) noteEl.textContent = remaining<=0 ? "Time's up — press Next step when you're ready" : 'remaining on this step';
   }, 1000);
 }
 function stopBatchTicker(){
@@ -19989,6 +20079,37 @@ function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 // any batch size instead of being locked to one fixed absolute weight.
 function recipeMaterialAmount(percent, batchSizeKg){ return (Number(percent)||0)/100 * (Number(batchSizeKg)||0); }
 function recipeMaterialsTotalPercent(materials){ return (materials||[]).reduce((sum,m)=>sum+(Number(m.percent)||0), 0); }
+// Quantities inside a phrase (owner, 2026-11-21). A phrase made on the Process template keeps its raw-material lines as a PERCENT of the
+// batch ({lines:[{name,percent}], instruction}); every screen shows them as KG of the batch size that was typed (250 kg batch: 30% -> 75 kg),
+// never as a percentage. Only when no batch size is known at all does a line fall back to its percent.
+function fmtQty(n){ return String(Math.round((Number(n)||0)*1000)/1000); }
+function phraseQtyText(percent, kg){
+  const size = Number(kg)||0;
+  if(size>0) return fmtQty(recipeMaterialAmount(percent, size))+' kg';
+  return (Number(percent)||0) ? fmtQty(percent)+'%' : '';
+}
+function stepIsPhraseWithLines(s){ return !!s && s.type!=='preparation' && Array.isArray(s.lines); }
+function stepRawLines(s, kg){   // [{name, qty:'75 kg'}]; [] for a plain-text phrase
+  if(!stepIsPhraseWithLines(s)) return [];
+  return s.lines.filter(l=>String(l.name||'').trim()).map(l=>({name:String(l.name).trim(), qty:phraseQtyText(l.percent, kg)}));
+}
+function stepInstructionText(s){ return stepIsPhraseWithLines(s) ? String(s.instruction||'') : String((s&&s.ingredient)||''); }
+// One line for lists and toasts: "DI Water 75 kg, EDTA 0.25 kg — instruction"
+function stepSummaryText(s, kg){
+  if(!stepIsPhraseWithLines(s)) return String((s&&s.ingredient)||'');
+  const mats = stepRawLines(s, kg).map(l=>l.name+(l.qty?' '+l.qty:'')).join(', ');
+  return [mats, stepInstructionText(s).trim()].filter(Boolean).join(' — ');
+}
+// The old one-line text kept on every phrase (`ingredient`, with percentages): older screens and records read it, so it is rebuilt when the instruction changes.
+function phraseIngredientSummary(lines, instruction){
+  const text = (lines||[]).filter(l=>String(l.name||'').trim()).map(l=>String(l.name).trim() + (Number(l.percent) ? ' '+fmtQty(l.percent)+'%' : '')).join(', ');
+  return [text, String(instruction||'').trim()].filter(Boolean).join(' — ');
+}
+// A running / documented copy of a step that shares nothing with the recipe it came from.
+function copyRunStep(s){
+  if(s.type==='preparation') return {...s, checklist:(s.checklist||[]).map(c=>({...c}))};
+  return Array.isArray(s.lines) ? {...s, lines:s.lines.map(l=>({...l}))} : {...s};
+}
 // The size shown / printed / started on an OPEN batch sheet: what was typed in its "Batch size" box (state._recipeDraft.sheetKg,
 // never saved to the recipe), else the recipe's own (reference) size. Steps / process template do not depend on the size.
 function sheetBatchKg(r){
@@ -20002,6 +20123,8 @@ function updateSheetBatchKg(input){
   const kg = parseFloat(input.value)||0;
   r.materials.forEach(m=>{ const td = document.querySelector('.sheet-amt[data-mat-id="'+m.id+'"]'); if(td) td.textContent = recipeMaterialAmount(m.percent, kg).toFixed(3); });
   const tot = document.getElementById('sheet-total-amt'); if(tot) tot.textContent = recipeMaterialAmount(recipeMaterialsTotalPercent(r.materials), kg).toFixed(3);
+  // the raw materials inside each production step follow the typed size too (kg, never percentages)
+  document.querySelectorAll('#batchsheet-page .bs-qty[data-pct]').forEach(td=>{ td.textContent = phraseQtyText(parseFloat(td.dataset.pct)||0, kg); });
 }
 function buildRecipeDraft(id){
   const r = id ? byId(state.recipes, id) : null;
@@ -20293,10 +20416,12 @@ function syncDraftStepFieldsFromDOM(){
       return;
     }
     const ing = document.getElementById('step-ing-'+s.id);
+    const instr = document.getElementById('step-instr-'+s.id);   // a phrase with raw-material lines: only its instruction text is typed here
     const amt = document.getElementById('step-amt-'+s.id);
     const temp = document.getElementById('step-temp-'+s.id);
-    const wait = document.getElementById('step-wait-'+s.id);
+    const wait = document.getElementById('step-wait-'+s.id);   // (no Wait box on the batch sheet any more; still read for the old recipe form)
     if(ing) s.ingredient = ing.value;
+    if(instr && stepIsPhraseWithLines(s) && instr.value !== String(s.instruction||'')){ s.instruction = instr.value; s.ingredient = phraseIngredientSummary(s.lines, instr.value); }
     if(amt) s.amount = amt.value;
     if(temp) s.temperature = temp.value;
     if(wait) s.waitMinutes = parseFloat(wait.value)||0;
@@ -20394,6 +20519,7 @@ async function startBatch(recipeId, extra){
   const first = r.steps[0];
   state.activeBatch = {
     id: uid('BATCH'), recipeId: r.id, recipeName: r.name,
+    machine: r.machine || '',   // the machine chosen on the batch sheet card: shown on the Production Guide card, picks the alert sound
     productName: extra.productName || r.name, qty: extra.qty || '',
     batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '', batchSizeKg: extra.batchSizeKg || r.batchSizeKg || 0,
     // A preparation step's checklist array/items are objects, not primitives — {...s} alone
@@ -20403,7 +20529,7 @@ async function startBatch(recipeId, extra){
     // rewrite the recipe/template's own checklist data (e.g. a measured pH reading bleeding into
     // the next batch's starting "Initial Water pH Level"). Clone it the same way
     // finishBatchIntoBlendingBoard already does for its own snapshot.
-    steps: r.steps.map(s=> s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s}), currentStep: 0,
+    steps: r.steps.map(copyRunStep), currentStep: 0,
     status: 'running', stepDeadline: new Date(Date.now()+batchStepWaitMinutes(first)*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
   };
@@ -20453,6 +20579,7 @@ async function saveActiveBatchVerified(){
 }
 async function pauseBatch(){
   const b = state.activeBatch; if(!b || b.status!=='running') return;
+  stopAlertSound();
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.remainingSecondsWhenPaused = Math.max(0, batchRemainingSeconds());
   b.status = 'paused';
@@ -20467,6 +20594,7 @@ async function resumeBatch(){
 }
 async function nextBatchStep(){
   const b = state.activeBatch; if(!b) return;
+  stopAlertSound();   // moving on by hand ends the alert for the step that just finished
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   if(b.currentStep >= b.steps.length-1){
     // Used to persist status:'completed' to the server here, then immediately overwrite it with
@@ -20485,10 +20613,11 @@ async function nextBatchStep(){
   b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
   if(!(await saveActiveBatchVerified())) return;
-  showToast('Now: '+batchStepLabel(step)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
+  showToast('Now: '+batchStepLabel(step, b.batchSizeKg)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
 }
 async function prevBatchStep(){
   const b = state.activeBatch; if(!b || b.currentStep<=0) return;
+  stopAlertSound();
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   b.currentStep -= 1;
   const step = b.steps[b.currentStep];
@@ -20499,6 +20628,7 @@ async function prevBatchStep(){
 }
 async function restartCurrentStep(){
   const b = state.activeBatch; if(!b) return;
+  stopAlertSound();
   if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
   const step = b.steps[b.currentStep];
   b.status = 'running';
@@ -20510,6 +20640,7 @@ function stopBatch(){
   const isDone = state.activeBatch && state.activeBatch.status==='completed';
   const doStop = async ()=>{
     const b = state.activeBatch;
+    stopAlertSound();
     if(b && !await verifyActiveBatchStillCurrent(b.id)){
       // Someone already ended ours — possibly started a different one. Don't blindly null that
       // out; just drop our own stale copy.
@@ -20549,12 +20680,13 @@ async function finishBatchIntoBlendingBoard(b){
     recipeId: b.recipeId,
     recipeName: recipe ? recipe.name : b.recipeName,
     batchSizeKg: b.batchSizeKg || (recipe ? recipe.batchSizeKg : null),
+    machine: b.machine || (recipe ? recipe.machine : '') || '',
     materials: recipe ? recipe.materials.map(m=>({...m})) : [],
     standardPH: recipe ? recipe.standardPH : '',
     combineNote: recipe ? recipe.combineNote : '',
     startedAt: b.startedAt, startedBy: b.startedBy,
     completedAt: new Date().toISOString(), completedBy: state.session.name,
-    productionSteps: b.steps.map(s=> s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))} : {...s}),
+    productionSteps: b.steps.map(copyRunStep),
   };
   state.blendBatches.unshift(batch);
   if(!(await save('blendBatches'))) return;
@@ -20614,7 +20746,7 @@ function renderRecipeLibraryPage(){
   ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${state.session && roleCan(state.session.role,'costing_create_recipe')?'Create one to start guiding the blending team through a batch.':''}</div>` : `
   <div class="recipe-grid">
     ${state.recipes.map(r=>{
-      const totalMin = r.steps.reduce((sum,s)=>sum+(s.waitMinutes||0),0);
+      const totalMin = r.steps.reduce((sum,s)=>sum+(s.type!=='preparation' ? (s.waitMinutes||0) : 0),0);
       const matCount = (r.materials||[]).length;
       const totalPct = recipeMaterialsTotalPercent(r.materials);
       const menuOpen = state._recipeMenuOpen===r.id;
@@ -20631,7 +20763,7 @@ function renderRecipeLibraryPage(){
         ${r.machine ? `<div>${machineChipHtml(r.machine)}</div>` : ''}
         ${r.description ? `<div class="rc-meta">${esc(r.description)}</div>` : ''}
         ${matCount ? `<div class="rc-meta">${matCount} raw material${matCount===1?'':'s'} · ${totalPct.toFixed(1)}%${r.batchSizeKg?(' · ref. '+r.batchSizeKg+'kg batch'):''}</div>` : ''}
-        <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'} · ~${totalMin} min total${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
+        <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'}${' · ~'+totalMin+' min total'}${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
           ${matCount ? `<button class="btn btn-primary btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
           ${state.session && roleCan(state.session.role, 'costing_delete_recipe') ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
@@ -21225,7 +21357,7 @@ function batchStepsListHtml(b, isDone){
       const cls = i<b.currentStep || isDone ? 'done' : (i===b.currentStep ? 'current' : '');
       return `<div class="bs-row ${cls}">
         <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
-        <span style="flex:1;">${esc(batchStepLabel(s))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
+        <span style="flex:1;">${esc(batchStepLabel(s, b.batchSizeKg))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
         <span>${s.waitMinutes>0 ? s.waitMinutes+' min' : 'no wait'}</span>
       </div>`;
     }).join('')}
@@ -21258,11 +21390,13 @@ function renderActiveBatchCard(){
       <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}</div>`;
     })() : (()=>{
       const remaining = batchRemainingSeconds();
-      const parts = splitStepInstruction(step.ingredient);
+      const parts = splitStepInstruction(stepInstructionText(step));
+      const mats = stepRawLines(step, b.batchSizeKg);   // raw materials in kg of this batch's size
       const timed = step.waitMinutes>0;
       return `
       <div ${timed?'id="batch-countdown"':''} class="bt-countdown ${timed && remaining<=0 ? 'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
-      <div class="bt-headline">${esc(parts.headline)}</div>
+      ${mats.length ? `<div class="bt-mats">${mats.map(m=>`<div class="bt-mat"><span>${esc(m.name)}</span><span>${esc(m.qty)}</span></div>`).join('')}</div>` : ''}
+      ${parts.headline ? `<div class="bt-headline${mats.length?' bt-wrap':''}">${esc(parts.headline)}</div>` : ''}
       <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}${step.temperature?(' · '+esc(String(step.temperature))+'°C'):''}</div>`;
     })();
   return `
@@ -21271,6 +21405,7 @@ function renderActiveBatchCard(){
       <span class="bt-recipe">${esc(b.recipeName)}</span>
       <span class="bt-dot ${dotClass}"></span>
     </div>
+    ${b.machine ? `<div class="bt-machine">${machineChipHtml(b.machine)}</div>` : ''}
     ${bodyHtml}
     <div class="bt-actions">
       ${canManageBlendBoard() ? `
@@ -21304,6 +21439,7 @@ function renderBatchFocusOverlay(){
       <div class="batch-focus-head">
         <div>
           <div class="bf-recipe">${esc(b.recipeName)}</div>
+          ${b.machine ? `<div class="bf-machine">${machineChipHtml(b.machine)}</div>` : ''}
           ${!isDone ? `<div class="bf-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>` : ''}
         </div>
         <div style="display:flex;gap:10px;flex-shrink:0;">
@@ -21323,12 +21459,13 @@ function renderBatchFocusOverlay(){
           <div class="bf-side">${batchFocusTempStatHtml(step.temperature)}</div>
         </div>
       ` : (()=>{
+        const timed = step.waitMinutes>0;
         return `
-        ${renderBatchInstructionHtml(step)}
+        ${renderBatchInstructionHtml(step, null, b.batchSizeKg)}
         <div class="bf-grid">
           <div class="bf-main">
-            <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${step.waitMinutes>0 ? formatCountdown(remaining) : '—'}</div>
-            <div class="bf-note">${step.waitMinutes<=0 ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — moving on…" : 'remaining on this step'))}</div>
+            <div id="batch-focus-countdown" class="bf-countdown ${timed && remaining<=0?'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
+            <div ${timed?'id="batch-countdown-note" ':''}class="bf-note">${!timed ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — press Next step when you're ready" : 'remaining on this step'))}</div>
           </div>
           <div class="bf-side">
             ${step.amount ? `<div class="bf-side-card"><div class="bf-side-label">Amount</div><div class="bf-amount">${esc(step.amount)}</div></div>` : ''}
@@ -21851,8 +21988,62 @@ function recipeFormModal(){
     </div>
   </div>`;
 }
+// A phrase's instruction box when it has raw-material lines: only the instruction text is typed (the lines come from the Process template).
+function phraseInstructionTextareaHtml(s){
+  return `<textarea id="step-instr-${s.id}" rows="2" placeholder="Instruction (optional)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea>`;
+}
+// One phrase on the batch sheet (right side). Its raw materials are listed one by one as created on the Process template, with the quantity
+// in kg of the typed batch size (live: see updateSheetBatchKg), never percentages. Wait (min) stays (owner, 2026-11-21: "Don't remove wait time").
+function batchSheetPhraseCardHtml(s, ord, kg, editable){
+  const lines = stepIsPhraseWithLines(s) ? s.lines.filter(l=>String(l.name||'').trim()) : [];
+  const instrText = stepInstructionText(s);
+  const temp = editable ? temperatureTagHtml('step', s) : ((s.temperature ? `<span class="bs-temp-chip">${esc(String(s.temperature))}°C</span>` : '') + (Number(s.waitMinutes)>0 ? ` <span class="bs-temp-chip">Wait ${esc(String(s.waitMinutes))} min</span>` : ''));
+  const matsTable = lines.length ? `
+    <table class="bs-mats">
+      <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="c-qty">Amount needed</th></tr></thead>
+      <tbody>
+        ${lines.map((l,i)=>`<tr><td class="c-no">${i+1}</td><td>${esc(l.name)}</td><td class="c-qty bs-qty" data-pct="${escAttr(Number(l.percent)||0)}">${esc(phraseQtyText(l.percent, kg))}</td></tr>`).join('')}
+      </tbody>
+    </table>` : '';
+  const waitMin = Number(s.waitMinutes)||0;
+  const instrField = editable
+    ? `<div class="bsr-fields">
+        <div class="bsr-field"><label>Instruction</label>${stepIsPhraseWithLines(s) ? phraseInstructionTextareaHtml(s) : instructionTextareaHtml('step', s)}</div>
+        <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${waitMin}"></div>
+      </div>`
+    : (instrText.trim() ? `<div class="bsr-field"><label>Instruction</label><div class="bs-instr-text">${esc(instrText.trim())}</div></div>` : '');
+  return `
+  <div class="bsheet-step-row bs-phrase">
+    <div class="bsr-head">
+      <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temp}</div>
+      ${editable ? `<div class="bsr-actions">
+        <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
+        <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
+        <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
+      </div>` : ''}
+    </div>
+    ${matsTable}
+    ${instrField || (lines.length ? '' : '<div class="hint">Nothing written in this phrase yet.</div>')}
+  </div>`;
+}
+// A preparation / checking step for someone who may not edit steps: read-only list.
+function batchSheetPrepCardReadHtml(s, ord){
+  return `
+  <div class="prep-step-row">
+    <div class="bsr-head">
+      <div class="bsr-title"><span class="prep-badge">${ord}</span><span>${esc(s.name||('Preparation/Checking Step '+ord))}</span><span class="prep-pill">Preparation</span></div>
+    </div>
+    <div class="prep-checklist" style="margin-bottom:0;">
+      ${(s.checklist||[]).map(c=> c.kind==='field'
+        ? `<div class="prep-checklist-item bs-prep-line"><span style="flex:1;">${esc(c.label)}</span><span class="bs-prep-fill"></span></div>`
+        : `<div class="prep-checklist-item bs-prep-line"><span class="bs-prep-box"></span><span style="flex:1;">${esc(c.text)}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
 function recipeBatchSheetModal(recipeId){ return recipeBatchSheetInner(recipeId, false); }
 function renderBatchSheetPage(recipeId){ return recipeBatchSheetInner(recipeId, true); }
+// Batch sheet (owner, 2026-11-21): TWO columns. LEFT = the sheet (logo, date, product, machine, batch number + batch size side by side, materials);
+// RIGHT = the production steps. On a phone it is one column, the sheet first.
 function recipeBatchSheetInner(recipeId, asPage){
   const r = byId(state.recipes, recipeId); if(!r) return '';
   const batchSizeKg = sheetBatchKg(r);
@@ -21865,19 +22056,19 @@ function recipeBatchSheetInner(recipeId, asPage){
   const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
   const batchActive = isBatchDisplayActive();
   const tpl = batchSheetTemplate();
-  return `
-  ${asPage ? '<div id="batchsheet-page" class="bsmc-page">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px;">
-        <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:104px;max-width:440px;object-fit:contain;">` : ''}</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-          ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(new Date().toISOString())}</span>` : ''}
-          ${tpl.showBatchNo ? `<input id="sheet-batch-no" value="${esc((state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || '')}" placeholder="Batch No." class="bsmc-chip-batch-input" oninput="if(state._recipeDraft) state._recipeDraft.batchNo=this.value;">` : ''}
-        </div>
+  const batchNoVal = (state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || '';
+  const leftHtml = `
+      <div class="bs-head">
+        <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo">` : ''}</div>
+        ${tpl.showDate ? `<span class="bsmc-chip-date">${fmtDate(new Date().toISOString())}</span>` : ''}
       </div>
-      <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
-      ${r.machine ? `<div style="margin:0 0 8px;">${machineChipHtml(r.machine)}</div>` : ''}
-      ${(tpl.showDescription && r.description) ? `<div class="hint" style="margin-bottom:10px;">${esc(r.description)}</div>` : ''}
-      <label class="bsmc-size" title="Type the batch size, e.g. 250: the amounts below change to that size"><span>Batch size</span><input id="sheet-batch-kg" type="number" min="0" step="any" inputmode="decimal" value="${escAttr(typedKg)}" oninput="updateSheetBatchKg(this)"><span>kg</span></label>
+      <h2 class="bs-title">${esc(r.name)}</h2>
+      ${r.machine ? `<div class="bs-machine">${machineChipHtml(r.machine)}</div>` : ''}
+      ${(tpl.showDescription && r.description) ? `<div class="hint" style="margin-bottom:6px;">${esc(r.description)}</div>` : ''}
+      <div class="bs-run">
+        ${tpl.showBatchNo ? `<label class="bs-run-f bs-run-no" title="Type this batch's number"><span>Batch No.</span><input id="sheet-batch-no" value="${escAttr(batchNoVal)}" placeholder="Type no." oninput="if(state._recipeDraft) state._recipeDraft.batchNo=this.value;"></label>` : ''}
+        <label class="bs-run-f bs-run-size" title="Type the batch size, e.g. 250: the amounts on this sheet and in the steps change to that size"><span>Batch size</span><input id="sheet-batch-kg" type="number" min="0" step="any" inputmode="decimal" value="${escAttr(typedKg)}" oninput="updateSheetBatchKg(this)"><span class="u">kg</span></label>
+      </div>
       <div class="bsmc-card">
         <div class="bsmc-label">Materials</div>
         <table class="bsmc-table">
@@ -21888,17 +22079,15 @@ function recipeBatchSheetInner(recipeId, asPage){
           </tbody>
         </table>
       </div>
-      <div class="bsmc-label" style="margin:4px 0 10px;">Production Steps</div>
-      ${canEditSteps ? (()=>{
-        let phraseCount = 0, prepCount = 0;
-        const ordinals = draftSteps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
-        return `
-      <div id="step-editor-list">
-        ${draftSteps.map((s,i)=>{
-          const ord = ordinals[i];
-          if(s.type==='preparation'){
-            const checklist = s.checklist||[];
-            return `
+      ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}`;
+  let phraseCount = 0, prepCount = 0;
+  const ordinals = draftSteps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
+  const stepsHtml = draftSteps.length===0 ? `<div class="bsmc-card" style="margin-top:0;"><div class="hint">No production steps yet.</div></div>` : draftSteps.map((s,i)=>{
+    const ord = ordinals[i];
+    if(s.type!=='preparation') return batchSheetPhraseCardHtml(s, ord, batchSizeKg, canEditSteps);
+    if(!canEditSteps) return batchSheetPrepCardReadHtml(s, ord);
+    const checklist = s.checklist||[];
+    return `
             <div class="prep-step-row">
               <div class="bsr-head">
                 <div class="bsr-title">
@@ -21938,37 +22127,30 @@ function recipeBatchSheetInner(recipeId, asPage){
                 <button type="button" class="btn btn-sm" data-prep-add-field="${s.id}">+ Add Step Here</button>
               </div>
             </div>`;
-          }
-          return `
-          <div class="bsheet-step-row">
-            <div class="bsr-head">
-              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temperatureTagHtml('step', s)}</div>
-              <div class="bsr-actions">
-                <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
-                <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
-                <button type="button" data-step-remove="${s.id}" title="Remove">✕</button>
-              </div>
-            </div>
-            <div class="bsr-fields">
-              <div class="bsr-field"><label>Instruction</label>${instructionTextareaHtml('step', s)}</div>
-              <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
-            </div>
-          </div>`;
-        }).join('')}
+  }).join('');
+  const rightHtml = `
+      <div class="bs-steps-head">
+        <div class="bsmc-label">Production Steps</div>
+        ${canEditSteps ? `<button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>` : ''}
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <div id="step-editor-list">${stepsHtml}</div>
+      ${canEditSteps ? `<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" id="btn-add-step">+ Add phrase</button>
         <button type="button" class="btn btn-sm" id="btn-add-prep-step">+ Add preparation checking step</button>
-        <button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>
-      </div>
-      `;
-      })() : `<div class="bsmc-card" style="margin-top:0;">${r.steps.length ? bsmcLedgerStepsHtml(r.steps, documentedStepOrdinals(r.steps)) : '<div class="hint">No production steps yet.</div>'}</div>`}
-      ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
-      <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
+      </div>` : ''}`;
+  const actionsHtml = `
+      <div class="modal-actions" style="justify-content:center;margin-top:22px;flex-wrap:wrap;">
         <button type="button" class="btn" id="${asPage?'btn-close-batchsheet':'btn-cancel-modal'}">Close</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
         ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
+      </div>`;
+  return `
+  ${asPage ? '<div id="batchsheet-page" class="bsmc-page bs2">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
+      <div class="bs-grid"${asPage ? '' : ' style="grid-template-columns:minmax(0,1fr);"'}>
+        <div class="bs-left">${leftHtml}</div>
+        <div class="bs-right">${rightHtml}</div>
       </div>
+      ${actionsHtml}
   ${asPage ? '</div>' : '</div></div>'}`;
 }
 // Standard factory QA card (Production Area / Equipment / Water checks, operator sign-off,
@@ -22049,7 +22231,7 @@ function documentedStepOrdinals(steps){
 // documented record (printDocumentedBatchSheet): a live checklist item has no `checked`/`value` yet
 // (nothing's been done), so it naturally prints blank/unchecked without any special-casing, while a
 // documented one shows the actual recorded state from the run.
-function bsmcLedgerStepsHtml(steps, ordinals){
+function bsmcLedgerStepsHtml(steps, ordinals, kg){
   const rows = steps.map((s, i) => {
     const ord = ordinals[i];
     if(s.type==='preparation'){
@@ -22059,7 +22241,12 @@ function bsmcLedgerStepsHtml(steps, ordinals){
       ).join('');
       return `<tr class="bsmc-ledger-grp"><td colspan="5">${s.name?esc(s.name):'Preparation / Checking '+ord}</td></tr>${checklistRows}`;
     }
-    return `<tr class="bsmc-ledger-check"><td style="font-weight:700;">${esc(letterLabel(ord-1))}</td><td>${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}</td><td>${s.temperature?esc(s.temperature)+'°C':''}</td><td>${s.waitMinutes>0?s.waitMinutes+' min':''}</td><td></td></tr>`;
+    // A phrase with raw-material lines prints each raw material with its quantity in kg of the batch size, then its instruction.
+    const instr = stepInstructionText(s).trim();
+    const cell = stepIsPhraseWithLines(s)
+      ? stepRawLines(s, kg).map(l=>`<div class="bsmc-ledger-mat"><span>${esc(l.name)}</span><b>${esc(l.qty)}</b></div>`).join('') + (instr ? `<div class="bsmc-ledger-instr">${esc(instr)}</div>` : '')
+      : `${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}`;
+    return `<tr class="bsmc-ledger-check"><td style="font-weight:700;">${esc(letterLabel(ord-1))}</td><td>${cell}</td><td>${s.temperature?esc(s.temperature)+'°C':''}</td><td>${s.waitMinutes>0?s.waitMinutes+' min':''}</td><td></td></tr>`;
   }).join('');
   return `
   <table class="bsmc-ledger">
@@ -22094,18 +22281,17 @@ function printBatchSheet(recipeId){
       });
       return {type:'preparation', checklist};
     }
-    const ingEl = document.getElementById('step-ing-'+s.id);
-    const amtEl = document.getElementById('step-amt-'+s.id);
     const tempEl = document.getElementById('step-temp-'+s.id);
     const waitEl = document.getElementById('step-wait-'+s.id);
-    return {
-      type: 'phrase',
-      ingredient: ingEl ? ingEl.value : s.ingredient,
-      amount: amtEl ? amtEl.value : s.amount,
-      temperature: tempEl ? tempEl.value : s.temperature,
-      waitMinutes: waitEl ? (parseFloat(waitEl.value)||0) : s.waitMinutes,
-    };
-  }).filter(s=> s.type==='preparation' ? (s.checklist||[]).length>0 : s.ingredient);
+    const common = {type:'phrase', temperature: tempEl ? tempEl.value : s.temperature, waitMinutes: waitEl ? (parseFloat(waitEl.value)||0) : (s.waitMinutes||0)};
+    if(stepIsPhraseWithLines(s)){
+      const instrEl = document.getElementById('step-instr-'+s.id);
+      return {...common, lines:s.lines, instruction: instrEl ? instrEl.value : s.instruction, ingredient:s.ingredient};
+    }
+    const ingEl = document.getElementById('step-ing-'+s.id);
+    const amtEl = document.getElementById('step-amt-'+s.id);
+    return {...common, ingredient: ingEl ? ingEl.value : s.ingredient, amount: amtEl ? amtEl.value : s.amount};
+  }).filter(s=> s.type==='preparation' ? (s.checklist||[]).length>0 : (stepIsPhraseWithLines(s) ? (stepRawLines(s,1).length>0 || String(s.instruction||'').trim()!=='') : s.ingredient));
   const area = document.getElementById('print-area');
   if(!area) return;
   const tpl = batchSheetTemplate();
@@ -22115,7 +22301,7 @@ function printBatchSheet(recipeId){
       ${batchSheetHeaderHtml(tpl, {dateText: fmtDate(new Date().toISOString()), batchNoText: esc(batchNo)})}
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
       ${(tpl.showDescription && r.description) ? `<div style="margin-bottom:10px;color:#6C8071;font-size:13px;">${esc(r.description)}</div>` : ''}
-      <div class="bsmc-pill" style="margin-bottom:16px;">${batchSizeKg} kg batch</div>
+      <div style="margin-bottom:16px;"><span class="bsmc-pill">${batchSizeKg} kg batch</span>${r.machine ? ` <span class="bsmc-pill">${esc(r.machine)}</span>` : ''}</div>
       <div class="bsmc-card">
         <div class="bsmc-label">Materials</div>
         <table class="bsmc-table">
@@ -22129,7 +22315,7 @@ function printBatchSheet(recipeId){
       ${steps.length ? `
       <div class="bsmc-card bsmc-page-break">
         <div class="bsmc-label">Production Steps</div>
-        ${bsmcLedgerStepsHtml(steps, documentedStepOrdinals(steps))}
+        ${bsmcLedgerStepsHtml(steps, documentedStepOrdinals(steps), batchSizeKg)}
       </div>` : ''}
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
       ${renderPrepChecklistHTML()}
@@ -22177,7 +22363,7 @@ function printDocumentedBatchSheet(batchId){
         </div>
       </div>` : ''}
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(b.recipeName||b.product)}</h2>
-      <div class="bsmc-pill" style="margin-bottom:16px;">${b.batchSizeKg||0} kg batch</div>
+      <div style="margin-bottom:16px;"><span class="bsmc-pill">${b.batchSizeKg||0} kg batch</span>${b.machine ? ` <span class="bsmc-pill">${esc(b.machine)}</span>` : ''}</div>
       <div class="bsmc-card">
         <div class="bsmc-label">Materials</div>
         <table class="bsmc-table">
@@ -22191,7 +22377,7 @@ function printDocumentedBatchSheet(batchId){
       ${steps.length ? `
       <div class="bsmc-card bsmc-page-break">
         <div class="bsmc-label">Production Steps</div>
-        ${bsmcLedgerStepsHtml(steps, ordinals)}
+        ${bsmcLedgerStepsHtml(steps, ordinals, b.batchSizeKg||0)}
       </div>
       ` : ''}
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: b.combineNote, standardPH: b.standardPH})}
@@ -22214,6 +22400,12 @@ async function saveBatchSheetSteps(recipeId){
       }).filter(Boolean);
       return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
     }
+    if(stepIsPhraseWithLines(s)){   // a phrase made on the Process template keeps its raw-material lines (the instruction is the only text edited here)
+      const lines = s.lines.map(l=>({id:l.id, name:String(l.name||'').trim(), percent:Math.max(0, Number(l.percent)||0)})).filter(l=>l.name);
+      const instruction = String(s.instruction||'').trim();
+      if(!lines.length && !instruction) return null;
+      return {id:s.id, type:'phrase', lines, instruction, ingredient:phraseIngredientSummary(lines, instruction), amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
+    }
     const ingredient = (s.ingredient||'').trim();
     if(!ingredient) return null;
     return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
@@ -22224,7 +22416,7 @@ async function saveBatchSheetSteps(recipeId){
   // Deep-copy (not just {...s}) so the still-open draft's checklist arrays are independent of
   // what was just saved to r.steps — otherwise further edits here would mutate the saved recipe
   // directly, bypassing Save entirely, the same reference-sharing bug fixed for the template editor.
-  d.steps = steps.map(s => s.type==='preparation' ? {...s, checklist:s.checklist.map(c=>({...c}))} : {...s});
+  d.steps = steps.map(copyRunStep);
   const ok = await save('recipes');
   render();
   if(!ok) return;
@@ -25843,11 +26035,15 @@ function attachShellHandlers(){
     // one generated instead.
     const noEl = document.getElementById('sheet-batch-no');
     const batchNo = noEl ? noEl.value.trim() : '';
-    const rcp = byId(state.recipes, e.currentTarget.dataset.recipeId);
-    await startBatch(e.currentTarget.dataset.recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
+    const recipeId = e.currentTarget.dataset.recipeId;
+    const rcp = byId(state.recipes, recipeId);
+    // Steps typed on the sheet but not saved yet are saved first, so the batch runs with exactly what is on screen
+    // (and the "Discard changes?" question can never stop the jump to the Production Guide below).
+    if(batchSheetDirty()){ await saveBatchSheetSteps(recipeId); if(batchSheetDirty()) return; }
+    await startBatch(recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
     // zero-step recipes show a toast and stay open instead. Recipe library and the batch-running
-    // view (Production Guide) are separate pages now, so jump there to actually watch it run.
-    if(state.activeBatch){ closeModal(); goTo('recipes'); }
+    // view (Production Guide) are separate pages now: once the batch is started it appears there (owner, 2026-11-21).
+    if(state.activeBatch){ state._batchSheetId = null; state._recipeDraft = null; closeModal(); goTo('recipes'); }
   };
   if(byIdEl('form-recipe')) byIdEl('form-recipe').addEventListener('submit', submitRecipe);
   if(byIdEl('btn-add-step')) byIdEl('btn-add-step').onclick = ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftAddStep(); };
@@ -25872,7 +26068,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-batch-stop')) byIdEl('btn-batch-stop').onclick = stopBatch;
   if(byIdEl('btn-batch-focus')) byIdEl('btn-batch-focus').onclick = toggleBatchFocus;
   if(byIdEl('btn-batch-focus-close')) byIdEl('btn-batch-focus-close').onclick = toggleBatchFocus;
-  if(byIdEl('btn-batch-focus-test-sound')) byIdEl('btn-batch-focus-test-sound').onclick = playBatchAlertSound;
+  if(byIdEl('btn-batch-focus-test-sound')) byIdEl('btn-batch-focus-test-sound').onclick = ()=>playBatchAlertSound(state.activeBatch && state.activeBatch.machine);
   if(byIdEl('btn-batch-focus-pause')) byIdEl('btn-batch-focus-pause').onclick = pauseBatch;
   if(byIdEl('btn-batch-focus-resume')) byIdEl('btn-batch-focus-resume').onclick = resumeBatch;
   if(byIdEl('btn-batch-focus-prev')) byIdEl('btn-batch-focus-prev').onclick = prevBatchStep;
@@ -26440,18 +26636,24 @@ function attachShellHandlers(){
   if(byIdEl('form-alert-sound')) byIdEl('form-alert-sound').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const f = e.target;
-    const picked = f.alertSound.value;
     const duration = Math.min(60, Math.max(1, Number(f.alertDuration.value) || 5));
+    const machineSounds = {}; let generalSound = currentAlertSound();
+    f.querySelectorAll('select[data-machine-sound]').forEach(sel=>{
+      if(!ALERT_SOUNDS[sel.value]) return;
+      if(sel.dataset.machineSound) machineSounds[sel.dataset.machineSound] = sel.value; else generalSound = sel.value;
+    });
     if(!state.branding) state.branding = {addons: []};
-    state.branding.alertSound = picked;
+    state.branding.machineAlertSounds = machineSounds;
+    state.branding.alertSound = generalSound;   // the sound for a batch with no machine
     state.branding.alertDurationSeconds = duration;
     if(!(await save('branding'))) return;
-    showToast('Timer alert sound saved');
+    showToast('Machine alert sounds saved');
   });
   document.querySelectorAll('[data-preview-sound]').forEach(b=>b.addEventListener('click', ()=>{
     const durInput = document.querySelector('#form-alert-sound input[name="alertDuration"]');
     const dur = durInput ? (Number(durInput.value)||currentAlertDurationSeconds()) : currentAlertDurationSeconds();
-    playAlertSoundById(b.dataset.previewSound, dur);
+    const sel = b.closest('tr') && b.closest('tr').querySelector('select[data-machine-sound]');
+    if(sel) playAlertSoundById(sel.value, dur);
   }));
 
 

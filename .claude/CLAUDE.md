@@ -122,6 +122,15 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   Who: Admin and Sub Admin always, other roles through the switch `orders_boxcount_history` ("See previous days' box counts (view only)", Orders board section of User role
   permission) -- `canViewBoxCountHistory()`. Typed-but-unsaved rows block jumping away (toast "Save or clear today's rows first"). Gotcha: `render()` restores every typed field of the open
   panel to its OLD value (`captureOpenFormFields`), so `boxCountGoToDate` sets the date box AFTER render. Data was always kept per day (`boxCounts[].date`); nothing in the data changed.
+- **Order Print button + Soap / Sample box types (owner, 2026-11-21).** (1) The order window (`renderOrderDrawer`) has a **🖨️ Print** button directly UNDER "Copy tracking link"
+  (both sit in `.od-badge-actions`, stacked, same width). It calls `printOrderSheet(id)`: a plain A4 "Order Sheet" (customer, order number, stage, priority, dates, contact, delivery method,
+  tracking number, product, notes, address, picture, history, printed-by line) is written into `#print-area` and `window.print()` is called, the same pattern as `printAttendanceSheet`.
+  It prints the SAVED order (unsaved typing in the window is not included). Product goes through `richText()`, everything else through `esc()`. It is switchable per role:
+  permission **`orders_print`** ("Print an order", Orders board section of User role permission; Admin has it automatically, every other role starts OFF until the owner switches it on), and it is NOT shown in the
+  trimmed Ongoing orders view (that view hides contact / address / tracking number on purpose). `printOrderSheet` itself also refuses without the permission.
+  (2) Box Count box types are now **Large / Medium / Small / Soap / Sample**, defined ONCE in `BOX_COUNT_TYPES` (entry row select, the phone buttons and the saved-entry edit row all read it; the label
+  says "Box type"). The stored value is the word itself (`boxType`), so older entries are unchanged. One row = one customer + one box type + a quantity; a customer who got several types is entered as
+  several rows (a "one row, five quantity boxes per customer" layout was NOT built; ask the owner before changing the data shape). On the phone the five buttons sit 3 + 2 (`.bc-seg` is a 6-column grid).
 - **Costing: active version + Process template (owner, 2026-11-18).** On a product's versions list (Costing & recipe) each version has an **Active** switch; ONLY ONE version can be
   active (one pointer on the product, `product.activeVersionId`; `''` = none chosen on purpose; a product that never chose and has exactly one live version shows that one as active;
   archiving the active version clears it; `costingActiveVersion(product)`). Next to Archive there is a **Process template** button (needs `costing_manage_templates`, the same switch

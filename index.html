@@ -2179,6 +2179,7 @@ html{ visibility:hidden; }
     .order-drawer .od-badge-row{margin-bottom:12px;}
     .order-drawer .od-badge-row .stage-badge{display:none;}
     .order-drawer .od-badge-row .btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;border-radius:12px;font-size:14px;font-weight:600;}
+    .order-drawer .od-badge-row .od-badge-actions{width:100%;gap:8px;}
     .order-drawer .field{margin-bottom:16px;}
     .order-drawer .field label{font-size:13px;}
     /* 16px inputs: anything smaller makes iOS Safari zoom the page when a field is focused. */
@@ -2231,7 +2232,10 @@ html{ visibility:hidden; }
     /* The real <select> stays in the form (so "required" still validates and its message can point at
        it) but is visually replaced by the three buttons below. */
     .bc-modal select[name="boxType"]{position:absolute;left:0;right:0;bottom:0;width:auto !important;height:48px;opacity:0;pointer-events:none;}
-    .bc-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+    /* Five types (Large / Medium / Small / Soap / Sample): three buttons on the first line, two wider ones filling the second. */
+    .bc-seg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}
+    .bc-seg-btn{grid-column:span 2;}
+    .bc-seg-btn:nth-child(n+4){grid-column:span 3;}
     .bc-seg-btn{min-height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--ink);font-size:15px;font-weight:600;}
     .bc-seg-btn[aria-pressed="true"]{background:var(--oq-fill);border-color:var(--oq-fill);color:#fff;font-weight:700;}
     .bc-stepper{display:flex;align-items:center;height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;}
@@ -4624,6 +4628,7 @@ const PERMISSION_REGISTRY = [
   {dept:'orders', deptLabel:'Orders board', id:'orders_restore_archived', label:'Restore an archived order'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_bulk_delete_archive', label:'Bulk-select and delete from the Archive tab'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_boxcount_history', label:"See previous days' box counts (view only)"},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_print', label:'Print an order (Print button in the order window)'},
   // Order inquiry
   {dept:'orderinquiry', deptLabel:'Order inquiry', id:'orderinquiry_resend_review', label:'Resend a review request after it was already sent'},
   // Blending Department board
@@ -14951,6 +14956,10 @@ const BOX_COUNT_ICON_DELETE = `<svg width="14" height="14" viewBox="0 0 24 24" f
 // wrappers become a roomy card: labels, a Large/Medium/Small button group that fills in the hidden
 // <select> below it, and a -/+ stepper around the quantity box. The real inputs (name, required,
 // min/step) are untouched, so submitBoxCount() reads exactly what it always did.
+// The box types a count can be logged against (owner, 2026-11-21: Soap and Sample added to Large / Medium / Small).
+// The saved value is just this word (b.boxType), so every entry saved before still reads correctly. Used by the
+// entry row, the phone buttons and the edit row, so a type is added in ONE place.
+const BOX_COUNT_TYPES = ['Large','Medium','Small','Soap','Sample'];
 function boxCountRowHtml(){
   return `
   <div class="box-count-row" style="display:flex;gap:7px;align-items:center;padding:4px 0;">
@@ -14959,17 +14968,13 @@ function boxCountRowHtml(){
       <input name="customerName" required autocomplete="off" placeholder="Customer" style="flex:1;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:13px;">
     </div>
     <div class="bc-f bc-f-size">
-      <span class="bc-lab">Box size</span>
+      <span class="bc-lab">Box type</span>
       <select name="boxType" required style="width:92px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;border-radius:12px;padding:10px 6px;">
         <option value="">Select</option>
-        <option value="Large">Large</option>
-        <option value="Medium">Medium</option>
-        <option value="Small">Small</option>
+        ${BOX_COUNT_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('')}
       </select>
-      <div class="bc-seg" role="group" aria-label="Box size">
-        <button type="button" class="bc-seg-btn" data-bc-size="Large" aria-pressed="false">Large</button>
-        <button type="button" class="bc-seg-btn" data-bc-size="Medium" aria-pressed="false">Medium</button>
-        <button type="button" class="bc-seg-btn" data-bc-size="Small" aria-pressed="false">Small</button>
+      <div class="bc-seg" role="group" aria-label="Box type">
+        ${BOX_COUNT_TYPES.map(t=>`<button type="button" class="bc-seg-btn" data-bc-size="${t}" aria-pressed="false">${t}</button>`).join('')}
       </div>
     </div>
     <div class="bc-f bc-f-qty">
@@ -15028,9 +15033,7 @@ function boxCountSavedRowHtml(b, readOnly){
     <div class="box-count-row" data-box-count-edit-row="${b.id}" style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:9px 10px;margin-bottom:8px;">
       <input name="customerName" required autocomplete="off" value="${escAttr(b.customerName)}" style="flex:1;min-width:0;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 9px;font-size:12.5px;">
       <select name="boxType" required style="width:80px;flex:none;border:1px solid var(--border);background:#fff;font-size:11.5px;border-radius:6px;padding:7px 4px;">
-        <option value="Large" ${b.boxType==='Large'?'selected':''}>Large</option>
-        <option value="Medium" ${b.boxType==='Medium'?'selected':''}>Medium</option>
-        <option value="Small" ${b.boxType==='Small'?'selected':''}>Small</option>
+        ${BOX_COUNT_TYPES.map(t=>`<option value="${t}" ${b.boxType===t?'selected':''}>${t}</option>`).join('')}
       </select>
       <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" value="${b.boxCount}" style="width:44px;flex:none;border:1px solid var(--border);background:#fff;font-size:11.5px;text-align:center;border-radius:6px;padding:7px 2px;">
       <input name="totalKg" type="number" min="0" step="0.01" autocomplete="off" value="${b.totalKg!=null?b.totalKg:''}" placeholder="Kg" style="width:48px;flex:none;border:1px solid var(--border);background:#fff;font-size:11.5px;text-align:center;border-radius:6px;padding:7px 2px;">
@@ -22398,6 +22401,75 @@ function newOrderModal(presetCourier){
   </div>`;
 }
 
+// Order print (owner, 2026-11-21): the "Print" button under "Copy tracking link" in the order window.
+// Same pattern as printAttendanceSheet / printBatchSheet: a plain read-only A4 copy is written into
+// #print-area (outside the window) and window.print() is called, so the window itself never prints.
+// It prints the SAVED order. Product is shown through richText(), everything else through esc(),
+// so nothing a person typed can run inside the printout.
+function printOrderSheet(orderId){
+  const o = byId(state.orders, orderId); if(!o) return;
+  if(!state.session || !roleCan(state.session.role, 'orders_print')) return;
+  const area = document.getElementById('print-area'); if(!area) return;
+  const line = (state.deliveryLines||[]).find(l=>l.key===o.courierService);
+  const day = d => d ? fmtDate(d+'T12:00:00') : '';
+  const salesman = orderSalesmanFor(o);
+  const printedBy = state.session.staffName || state.session.name || '';
+  const labelTd = 'padding:5px 8px 5px 0;width:120px;color:#6B7570;vertical-align:top;';
+  const valueTd = 'padding:5px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;';
+  const row = (label, value) => `<td style="${labelTd}">${label}</td><td style="${valueTd}">${value ? esc(value) : '<span style="color:#C3C9C1;font-weight:400;">—</span>'}</td>`;
+  const history = (Array.isArray(o.history) ? o.history : []).filter(Boolean);
+  area.innerHTML = `
+  <div style="max-width:720px;margin:0 auto;padding:10px 24px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;">
+    <div style="text-align:center;margin-bottom:14px;">
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:600;">Audrey Care (Pvt) Ltd.</div>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;">Order Sheet</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #1C2320;padding-bottom:8px;margin-bottom:12px;">
+      <div style="min-width:0;">
+        <div style="font-size:11px;color:#6B7570;">Customer</div>
+        <div style="font-size:20px;font-weight:700;">${esc(o.customer)}</div>
+      </div>
+      <div style="text-align:right;flex:none;">
+        <div style="font-size:11px;color:#6B7570;">Order number</div>
+        <div style="font-size:18px;font-weight:700;">${esc(o.orderNumber || o.id)}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
+      <tr>${row('Current stage', orderStageLabel(o))}<td style="width:20px;"></td>${row('Priority', o.priority || 'Medium')}</tr>
+      <tr>${row('Created', o.createdAt ? fmtDateTime(o.createdAt) : '')}<td></td>${row('Sales person', salesman)}</tr>
+      <tr>${row('Start date', day(o.startDate))}<td></td>${row('Due date', day(o.dueDate))}</tr>
+      <tr>${row('Customer contact', o.phone)}<td></td>${row('Delivery method', line ? line.label : o.courierService)}</tr>
+      <tr>${row('Tracking number', o.courierNumber)}<td></td><td></td><td></td></tr>
+    </table>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Product / task</div>
+      <div style="border:1px solid #D8DCD4;border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.5;min-height:40px;">${richText(o.product)}</div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Notes</div>
+      <div style="border:1px solid #D8DCD4;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.5;min-height:32px;">${o.notes ? esc(unbr(o.notes)) : '<span style="color:#C3C9C1;">—</span>'}</div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Customer address</div>
+      <div style="border:1px solid #D8DCD4;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.5;min-height:32px;">${o.address ? esc(unbr(o.address)) : '<span style="color:#C3C9C1;">—</span>'}</div>
+    </div>
+    ${o.photo ? `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Picture</div>
+      <img src="${escAttr(o.photo)}" alt="Order picture" style="max-width:100%;max-height:230px;object-fit:contain;border:1px solid #D8DCD4;border-radius:6px;">
+    </div>` : ''}
+    ${history.length ? `
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">History</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="border-bottom:1.5px solid #1C2320;"><th style="text-align:left;padding:3px 6px;">Stage</th><th style="text-align:left;padding:3px 6px;">When</th><th style="text-align:left;padding:3px 6px;">By</th></tr></thead>
+        <tbody>${history.map(h=>`<tr style="border-bottom:1px solid #E7E9E4;"><td style="padding:3px 6px;font-weight:600;">${esc(STAGES[h.stage]||'—')}</td><td style="padding:3px 6px;">${h.at ? esc(fmtDateTime(h.at)) : ''}</td><td style="padding:3px 6px;">${esc(h.by||'')}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : ''}
+    <div style="margin-top:14px;font-size:10.5px;color:#6B7570;text-align:right;">Printed ${esc(fmtDateTime(new Date().toISOString()))}${printedBy ? ' by '+esc(printedBy) : ''}</div>
+  </div>`;
+  waitForPrintAreaImages(area).then(()=>window.print());
+}
 function renderOrderDrawer(id){
   const o = byId(state.orders,id); if(!o) return '';
   const style = orderStageStyle(o);
@@ -22424,6 +22496,9 @@ function renderOrderDrawer(id){
   // tracking number, priority/dates, or the order photo. Those stay in the full drawer everywhere
   // else (Packing, Orders board, Order inquiry).
   const limited = state.page === 'ongoingorders';
+  // Print button (owner, 2026-11-21): switchable per role (orders_print). Not shown in the trimmed Ongoing orders
+  // view, which deliberately hides the order number, contact, address and tracking number the printout carries.
+  const canPrint = !!role && roleCan(role, 'orders_print') && !limited;
   return `
   <div class="drawer-overlay" id="overlay"></div>
   <div class="drawer order-drawer">
@@ -22446,7 +22521,10 @@ function renderOrderDrawer(id){
     </div>
     <div class="od-badge-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
       <span class="stage-badge" style="background:${style.bg};color:${style.c};">${orderStageLabel(o)}</span>
-      <button type="button" class="btn btn-sm" data-copy-order-track-link="${escAttr(o.id)}" title="Copy a link the customer can open to see this order's live status, to send however you like">🔗 Copy tracking link</button>
+      <div class="od-badge-actions" style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+        <button type="button" class="btn btn-sm" data-copy-order-track-link="${escAttr(o.id)}" title="Copy a link the customer can open to see this order's live status, to send however you like">🔗 Copy tracking link</button>
+        ${canPrint ? `<button type="button" class="btn btn-sm" data-print-order="${escAttr(o.id)}" title="Print this order">🖨️ Print</button>` : ''}
+      </div>
     </div>
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">${o.archived ? 'View only — this order is archived and can\'t be edited.' : (canEditTrackingOnly ? 'View only — except the delivery tracking number below, which you can edit and save.' : (canAdv ? 'View only — you don\'t have edit rights for order details, but you can move this order forward below.' : 'View only — you don\'t have edit rights for orders.'))}</div>` : ''}
@@ -25504,6 +25582,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-sms-confirm-no')) byIdEl('btn-sms-confirm-no').onclick = ()=>closeModal();
   if(byIdEl('btn-delete-order')) byIdEl('btn-delete-order').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteOrder(id); };
   if(byIdEl('btn-archive-order-now')) byIdEl('btn-archive-order-now').onclick = ()=>{ const id=state.modal.split(':')[1]; archiveOrderNow(id); };
+  document.querySelectorAll('[data-print-order]').forEach(b=>b.addEventListener('click', ()=>printOrderSheet(b.dataset.printOrder)));
   document.querySelectorAll('[data-copy-order-track-link]').forEach(b=>b.addEventListener('click', async ()=>{
     const link = orderTrackLink(b.dataset.copyOrderTrackLink);
     try{ await navigator.clipboard.writeText(link); showToast('Tracking link copied'); }

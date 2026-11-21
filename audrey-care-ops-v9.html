@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261121162426">
+<meta name="app-build" content="20261121163823">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -403,7 +403,6 @@ html{ visibility:hidden; }
 
   .btn svg{width:14px;height:14px;transition:transform .2s ease;vertical-align:-2px;margin-right:4px;}
   .btn:hover svg{animation:icon-pop .38s ease;}
-  .sidebar-foot{margin-top:auto;padding:16px 20px;font-size:11px;color:var(--muted);border-top:1px solid rgba(255,255,255,.5);}
 
   .main{flex:1;display:flex;flex-direction:column;min-width:0;margin-left:var(--sidebar-w);}
   .topbar{
@@ -2942,15 +2941,15 @@ html{ visibility:hidden; }
   .sidebar .brand::after{content:"";position:absolute;left:22px;right:22px;bottom:0;height:1px;background:linear-gradient(90deg,rgba(var(--accent-rgb),.30),rgba(var(--accent-rgb),.03));}
   .sidebar .brand .tagline{display:flex;align-items:center;gap:7px;margin-top:5px;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
   .sidebar .brand .tagline::before{content:"";width:14px;height:2px;border-radius:2px;background:var(--accent-grad);}
-  .nav-group{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 12px 26px;scrollbar-width:thin;scrollbar-color:rgba(var(--accent-rgb),.28) transparent;
-    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 22px),transparent);}   /* soft fade = "there is more below" */
+  /* One flat list that FITS the screen height with no scrolling (owner, 2026-11-21): every row is as tall as the window allows
+     (30-44px), so up to 17 pages fit from ~700px high upward. On a phone the side menu may still scroll. */
+  .nav-group{--nav-h:clamp(30px,calc((100vh - 172px) / 17 - 2px),44px);flex:1 1 auto;min-height:0;overflow:hidden;padding:10px 12px 8px;}
+  .nav-item{height:var(--nav-h);min-height:0;padding-top:0;padding-bottom:0;}
+  .nav-ico{width:min(30px,calc(var(--nav-h) - 8px));height:min(30px,calc(var(--nav-h) - 8px));}
+  @media (max-width:760px){ .nav-group{overflow-y:auto;--nav-h:44px;} .nav-item{min-height:44px;} }
   .nav-group::-webkit-scrollbar{width:6px;}
   .nav-group::-webkit-scrollbar-thumb{background:rgba(var(--accent-rgb),.22);border-radius:6px;}
-  .nav-section + .nav-section{margin-top:12px;}
-  .nav-section-label{display:flex;align-items:center;gap:8px;padding:6px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
-  .nav-section-label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(var(--accent-rgb),.18),transparent);}
-  .nav-section--plain:not(:first-child)::before{content:"";display:block;height:1px;margin:0 10px 10px;background:linear-gradient(90deg,rgba(var(--accent-rgb),.18),transparent);}
-  .nav-item{position:relative;gap:11px;min-height:40px;padding:5px 10px 5px 7px;border-radius:13px;font-size:13.5px;transition:background .22s ease,color .22s ease,transform .18s ease;}
+  .nav-item{position:relative;gap:11px;padding:5px 10px 5px 7px;border-radius:13px;font-size:13.5px;transition:background .22s ease,color .22s ease,transform .18s ease;}
   .nav-item:hover{background:rgba(var(--accent-rgb),.07);}
   .nav-item:active{transform:scale(.985);}
   .nav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -2966,27 +2965,17 @@ html{ visibility:hidden; }
   .nav-item.active.nav-item-unread .nav-ico{background:var(--ui-solid);}
   .nav-item.active.nav-item-unread svg{color:#fff;}
   .nav-unread-dot{margin-left:auto;}
-  .sidebar-foot{flex:none;display:flex;align-items:center;gap:10px;margin:0 12px 12px;padding:10px 12px;border:1px solid rgba(var(--accent-rgb),.13);border-radius:15px;background:rgba(255,255,255,.62);font-size:11px;color:var(--muted);}
-  .sf-avatar{position:relative;flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--ui-solid);color:#fff;font-size:12px;font-weight:700;}
-  .sf-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
-  .sf-text{min-width:0;display:flex;flex-direction:column;line-height:1.25;}
-  .sf-text b{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .sf-text small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .sf-live{margin-left:auto;flex:none;width:8px;height:8px;border-radius:50%;background:var(--s-delivered);}
   @media (max-width:760px){
     .nav-item{min-height:44px;}
-    .sidebar-foot{margin-bottom:calc(12px + env(safe-area-inset-bottom));}
     .sidebar .brand{padding-top:calc(20px + env(safe-area-inset-top));}
   }
   @media (prefers-reduced-motion:no-preference){
-    .sidebar.nav-enter .nav-item,.sidebar.nav-enter .nav-section-label{animation:nav-in .55s var(--ease-ios,ease) backwards;animation-delay:calc(var(--i,0) * 26ms + 80ms);}
+    .sidebar.nav-enter .nav-item{animation:nav-in .55s var(--ease-ios,ease) backwards;animation-delay:calc(var(--i,0) * 26ms + 80ms);}
     @keyframes nav-in{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:none;}}
     .sidebar.nav-fresh .nav-item.active::before{animation:nav-bar-in .5s var(--ease-spring,ease) backwards;}
     @keyframes nav-bar-in{from{transform:scaleY(.15);opacity:0;}to{transform:none;opacity:1;}}
     .sidebar.nav-fresh .nav-item.active .nav-ico{animation:nav-ico-pop .6s var(--ease-spring,ease) backwards;}
     @keyframes nav-ico-pop{0%{transform:scale(.78) rotate(-14deg);}60%{transform:scale(1.13) rotate(3deg);}100%{transform:none;}}
-    .sf-live{animation:sf-live 2.6s ease-out infinite;}
-    @keyframes sf-live{0%{box-shadow:0 0 0 0 rgba(63,169,104,.5);}70%{box-shadow:0 0 0 7px rgba(63,169,104,0);}100%{box-shadow:0 0 0 0 rgba(63,169,104,0);}}
   }
 
   /* ---------- Dashboard: date card + week strip ---------- */
@@ -6193,6 +6182,33 @@ const ICONS = {
   fingerprint:'<path d="M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3"/><path d="M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6"/><path d="M12 11v2a14 14 0 0 0 2.5 8"/><path d="M8 15a18 18 0 0 0 1.8 6"/><path d="M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95"/>',
   share:'<circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.6l7.3-4.3"/><path d="M8.3 13.4l7.3 4.3"/>'
 };
+// Sidebar icons (owner, 2026-11-21: "update the leftside panel icons with better ones"): the Lucide set (ISC licence), one consistent
+// 24px / 1.8 stroke family, keyed by PAGE id. Only the sidebar uses these; icon() and every other place keep their own icons.
+const SIDEBAR_ICONS = {
+  dashboard:'<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+  orders:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/>',
+  blendingdept:'<path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/>',
+  customercare:'<path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/><path d="M21 16v2a4 4 0 0 1-4 4h-5"/>',
+  customers:'<path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/>',
+  suppliers:'<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>',
+  itemlist:'<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  ordersprocess:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+  deliveryruns:'<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+  gmp:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  rnd:'<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
+  staff:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  chat:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  attendance:'<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
+  bulksms:'<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+  ratings:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+};
+SIDEBAR_ICONS.driverrun = SIDEBAR_ICONS.deliveryruns;
+function sidebarIcon(it){
+  const body = SIDEBAR_ICONS[it.id];
+  if(!body) return icon(it.icon);
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}
 function icon(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`; }
 const TRACK_STAGE_PATHS = [
   '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>',
@@ -14129,32 +14145,12 @@ function renderShell(freshPage){
         <span class="tagline">Operations</span>
       </div>
       <nav class="nav-group" aria-label="Main navigation">
-        ${(() => {
-          // Groups with 2+ visible items get a small label; runs of single-item groups share one unlabeled block, so a
-          // role with only a few pages does not end up with a heading above every link.
-          const secs = [];
-          navGroups.forEach(g=>{
-            if(g.items.length>1) secs.push({label:g.group, items:g.items});
-            else if(secs.length && !secs[secs.length-1].label) secs[secs.length-1].items.push(...g.items);
-            else secs.push({label:null, items:[...g.items]});
-          });
-          let ni = 0;
-          return secs.map(sec=>`
-        <div class="nav-section ${sec.label?'':'nav-section--plain'}">
-          ${sec.label ? `<div class="nav-section-label" style="--i:${ni++}">${esc(sec.label)}</div>` : ''}
-          ${sec.items.map(it=>`
-          <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="--i:${ni++}" ${state.page===it.id?'aria-current="page"':''}>
-            <span class="nav-ico">${icon(it.icon)}</span><span class="nav-label">${esc(navLabel(it))}</span>
-            ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
-          </a>`).join('')}
-        </div>`).join('');
-        })()}
+        ${navGroups.flatMap(g=>g.items).map((it,ni)=>`
+        <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="--i:${ni}" ${state.page===it.id?'aria-current="page"':''}>
+          <span class="nav-ico">${sidebarIcon(it)}</span><span class="nav-label">${esc(navLabel(it))}</span>
+          ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
+        </a>`).join('')}
       </nav>
-      <div class="sidebar-foot">
-        <span class="sf-avatar">${myProfilePhotoUrl() ? `<img src="${escAttr(myProfilePhotoUrl())}" alt="">` : esc(initials(state.session.name))}</span>
-        <span class="sf-text"><b>${esc(myDisplayName() || state.session.name)}</b><small>${esc(state.session.role)}</small></span>
-        <span class="sf-live" title="Signed in"></span>
-      </div>
     </aside>
 
     <div class="main">

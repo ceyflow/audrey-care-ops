@@ -1970,11 +1970,15 @@ html{ visibility:hidden; }
   .rc-dots:hover,.rc-dots[aria-expanded="true"]{background:var(--accent-soft);color:var(--accent-dark);}
   .rc-dots:focus-visible,.rc-menu-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
   .rc-menu-backdrop{position:fixed;inset:0;z-index:30;}
-  .rc-menu{position:absolute;z-index:31;top:38px;right:10px;min-width:164px;padding:6px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 36px -12px rgba(20,30,70,.28);display:flex;flex-direction:column;gap:2px;}
+  .rc-menu{position:absolute;z-index:31;top:38px;right:10px;min-width:200px;padding:6px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 36px -12px rgba(20,30,70,.28);display:flex;flex-direction:column;gap:2px;}
   .rc-menu-item{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:6px 10px;border:none;border-radius:9px;background:transparent;font:600 13px/1 inherit;font-family:inherit;text-align:left;cursor:pointer;}
   .rc-menu-item:hover,.rc-menu-item.on{background:var(--bg);}
   .rc-menu-item i,.rc-machine i{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;}
   .rc-menu-item b{margin-left:auto;color:var(--accent-dark);}
+  .rc-menu-label{padding:8px 10px 3px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  .rc-menu-start{color:var(--accent-dark);}
+  .rc-menu-start:disabled{color:var(--muted);cursor:default;}
+  .rc-menu-danger{color:#B3261E;border-top:1px solid var(--border);border-radius:0 0 9px 9px;margin-top:4px;}
   .rc-menu-clear{color:var(--muted);font-weight:500;border-top:1px solid var(--border);border-radius:0 0 9px 9px;margin-top:2px;}
   .rc-machine{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;letter-spacing:.01em;}
   .bsmc-page{max-width:860px;margin:0 auto 24px;padding:28px 32px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 14px 36px -16px rgba(var(--accent-rgb),.25);}
@@ -2143,7 +2147,7 @@ html{ visibility:hidden; }
        everything else and needing the whole page scrolled past to reach the bottom of it. */
     .batch-focus-body{flex-direction:row;gap:40px;align-items:stretch;overflow-y:hidden;}
     .batch-focus .batch-focus-body .bf-main-col{flex:1 1 640px;min-width:0;overflow-y:auto;padding-right:8px;}
-    .batch-focus .batch-focus-body .bf-steps-card{flex:0 0 420px;margin-top:0;overflow-y:auto;}
+    .batch-focus .batch-focus-body .bf-right-col{flex:0 0 440px;margin-top:0;overflow-y:auto;}
   }
   .batch-focus-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
   .batch-focus-close{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #D8E3DA;color:#15201A;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:600;flex-shrink:0;cursor:pointer;}
@@ -2248,6 +2252,19 @@ html{ visibility:hidden; }
   .batch-focus .bf-note{margin-top:8px;font-size:14px;font-weight:500;color:#5B6E61;}
   .batch-focus .bf-test-sound{background:#fff;border:1px solid #D8E3DA;color:#15201A;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0;}
   .batch-focus .bf-test-sound:hover{background:#EFF5F1;}
+  .batch-focus .bf-right-col{display:flex;flex-direction:column;gap:16px;min-width:0;margin-top:24px;}
+  .batch-focus .bf-right-col .bf-steps-card{margin-top:0;}
+  .batch-focus .bf-sheet-card{background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
+  .bf-sheet-meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
+  .bf-sheet-meta span{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#F3FBF6;border:1px solid #D9EDE0;font-size:13px;color:#15201A;}
+  .bf-sheet-meta i{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5B6E61;}
+  .bf-sheet-meta b{font-weight:700;}
+  table.bf-sheet-table{width:100%;border-collapse:collapse;font-size:14px;color:#15201A;}
+  .bf-sheet-table th{padding:6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6C8071;text-align:left;border-bottom:1.5px solid #20291F;}
+  .bf-sheet-table td{padding:8px 6px;border-bottom:1px solid #EEF3EF;font-variant-numeric:tabular-nums;}
+  .bf-sheet-table th:nth-child(n+3),.bf-sheet-table td:nth-child(n+3){text-align:right;}
+  .bf-sheet-table tr.cur td{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;}
+  .bf-sheet-table tr.tot td{border-top:2px solid #20291F;border-bottom:none;font-weight:700;}
   .batch-focus .bf-steps-card{margin-top:24px;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:20px 24px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
   .batch-focus .bf-controls{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
   .batch-focus .bf-controls .btn{background:#fff;border:1px solid #D8E3DA;color:#15201A;font-size:15px;font-weight:700;padding:13px 24px;border-radius:12px;}
@@ -20379,6 +20396,7 @@ async function startBatch(recipeId, extra){
     // rewrite the recipe/template's own checklist data (e.g. a measured pH reading bleeding into
     // the next batch's starting "Initial Water pH Level"). Clone it the same way
     // finishBatchIntoBlendingBoard already does for its own snapshot.
+    materials: (r.materials||[]).map(m=>({...m})),   // the sheet's raw materials as they were when the batch started (shown on the big screen)
     steps: r.steps.map(copyRunStep), currentStep: 0,
     status: 'running', stepDeadline: new Date(Date.now()+batchStepWaitMinutes(first)*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
@@ -20531,7 +20549,7 @@ async function finishBatchIntoBlendingBoard(b){
     recipeName: recipe ? recipe.name : b.recipeName,
     batchSizeKg: b.batchSizeKg || (recipe ? recipe.batchSizeKg : null),
     machine: b.machine || (recipe ? recipe.machine : '') || '',
-    materials: recipe ? recipe.materials.map(m=>({...m})) : [],
+    materials: Array.isArray(b.materials) ? b.materials.map(m=>({...m})) : (recipe ? recipe.materials.map(m=>({...m})) : []),
     standardPH: recipe ? recipe.standardPH : '',
     combineNote: recipe ? recipe.combineNote : '',
     startedAt: b.startedAt, startedBy: b.startedBy,
@@ -20583,9 +20601,22 @@ async function setRecipeMachine(recipeId, machine){
   logActivity(r.machine ? `Set batch sheet "${r.name}" to ${r.machine}` : `Cleared the machine on batch sheet "${r.name}"`);
   showToast(r.machine ? `${r.name}: ${r.machine}` : 'Machine cleared');
 }
+// "Start the batch" from the three-dots menu on a Batch sheets card (owner, 2026-11-21): runs the sheet with its SAVED batch size and
+// batch number (the ones saved on the open sheet), then shows it in the Production Guide, same as the Start button inside the sheet.
+async function startBatchFromCard(recipeId){
+  const r = byId(state.recipes, recipeId); if(!r || !canManageBlendBoard()) return;
+  state._recipeMenuOpen = null;
+  if(isBatchDisplayActive()){ showToast('A batch is already running'); render(); return; }
+  await startBatch(recipeId, Object.assign(r.batchNo ? {batchNo:r.batchNo} : {}, {batchSizeKg: r.batchSizeKg||0}));
+  if(state.activeBatch) goTo('recipes'); else render();
+}
 function renderRecipeLibraryPage(){
   if(state._batchSheetId && byId(state.recipes, state._batchSheetId)) return renderBatchSheetPage(state._batchSheetId);
   const canMachine = canAssignMachine();
+  const canStart = canManageBlendBoard();
+  const canDelete = !!(state.session && roleCan(state.session.role, 'costing_delete_recipe'));
+  const hasMenu = canMachine || canStart || canDelete;   // each item inside is shown only to roles allowed to do it
+  const batchRunning = isBatchDisplayActive();
   return `
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Batch sheets</div>
@@ -20604,11 +20635,14 @@ function renderRecipeLibraryPage(){
       <div class="recipe-card" style="position:relative;">
         <div class="rc-head">
           <div class="rc-title">${esc(r.name)}</div>
-          ${canMachine ? `<button type="button" class="rc-dots" data-recipe-menu="${r.id}" aria-label="Choose machine" aria-haspopup="menu" aria-expanded="${menuOpen}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
+          ${hasMenu ? `<button type="button" class="rc-dots" data-recipe-menu="${r.id}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${menuOpen}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
         </div>
         ${menuOpen ? `<div class="rc-menu" role="menu">
-          ${BATCH_MACHINES.map(m=>`<button type="button" role="menuitem" class="rc-menu-item ${r.machine===m.id?'on':''}" data-machine-recipe="${r.id}" data-machine-value="${m.id}"><i style="background:${m.color};"></i><span style="color:${m.color};">${m.id}</span>${r.machine===m.id?'<b>✓</b>':''}</button>`).join('')}
-          ${r.machine ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-clear" data-machine-recipe="${r.id}" data-machine-value="">Clear machine</button>` : ''}
+          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}" ${batchRunning?'disabled':''}>${batchRunning ? 'A batch is running' : '\u25B6 Start the batch'}</button>` : ''}
+          ${canMachine ? `<div class="rc-menu-label">Machine</div>
+          ${BATCH_MACHINES.map(m=>`<button type="button" role="menuitem" class="rc-menu-item ${r.machine===m.id?'on':''}" data-machine-recipe="${r.id}" data-machine-value="${m.id}"><i style="background:${m.color};"></i><span style="color:${m.color};">${m.id}</span>${r.machine===m.id?'<b>\u2713</b>':''}</button>`).join('')}
+          ${r.machine ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-clear" data-machine-recipe="${r.id}" data-machine-value="">Clear machine</button>` : ''}` : ''}
+          ${canDelete ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
         </div>` : ''}
         ${r.machine ? `<div>${machineChipHtml(r.machine)}</div>` : ''}
         ${r.description ? `<div class="rc-meta">${esc(r.description)}</div>` : ''}
@@ -20616,7 +20650,6 @@ function renderRecipeLibraryPage(){
         <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'}${' · ~'+totalMin+' min total'}${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
           ${matCount ? `<button class="btn btn-primary btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
-          ${state.session && roleCan(state.session.role, 'costing_delete_recipe') ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
         </div>
       </div>`;
     }).join('')}
@@ -21275,6 +21308,34 @@ function batchFocusTempStatHtml(temp){
   const glow = batchTempGlowClass(temp);
   return `<div class="bf-side-card"><div class="bf-side-label"><span class="bf-temp-dot ${glow}"></span>Temperature</div><div class="bf-temp-value ${glow}">${esc(String(temp))}°C</div></div>`;
 }
+// The batch sheet of the running batch (owner, 2026-11-21: "in here right side add the relevant batch sheet too"): batch number, size,
+// machine and the materials table at THIS batch's size; the raw materials of the step on screen are highlighted. Uses the materials saved
+// with the batch when it started (older running batches fall back to the recipe's).
+function batchRunSheetHtml(b){
+  const r = byId(state.recipes, b.recipeId);
+  const mats = Array.isArray(b.materials) ? b.materials : (r ? (r.materials||[]) : []);
+  if(!mats.length) return '';
+  const kg = Number(b.batchSizeKg)||0;
+  const step = b.status==='completed' ? null : b.steps[b.currentStep];
+  const inStep = new Set(stepRawLines(step, kg).map(l=>String(l.name).trim().toLowerCase()));
+  const totalPct = recipeMaterialsTotalPercent(mats);
+  return `
+      <div class="bf-sheet-card">
+        <div class="bf-main-label">Batch sheet</div>
+        <div class="bf-sheet-meta">
+          ${b.batchNo ? `<span><i>Batch No.</i><b>${esc(b.batchNo)}</b></span>` : ''}
+          ${kg>0 ? `<span><i>Batch size</i><b>${esc(fmtQty(kg))} kg</b></span>` : ''}
+          ${b.machine ? `<span><i>Machine</i><b style="color:${machineColor(b.machine)};">${esc(b.machine)}</b></span>` : ''}
+        </div>
+        <table class="bf-sheet-table">
+          <thead><tr><th>No</th><th>Raw material</th><th>%</th><th>Amount (kg)</th></tr></thead>
+          <tbody>
+            ${mats.map((m,i)=>`<tr${inStep.has(String(m.name||'').trim().toLowerCase())?' class="cur"':''}><td>${i+1}</td><td>${esc(m.name)}</td><td>${(Number(m.percent)||0).toFixed(3)}</td><td>${kg>0 ? recipeMaterialAmount(m.percent, kg).toFixed(3) : '\u2014'}</td></tr>`).join('')}
+            <tr class="tot"><td></td><td>Total</td><td>${totalPct.toFixed(3)}</td><td>${kg>0 ? recipeMaterialAmount(totalPct, kg).toFixed(3) : '\u2014'}</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+}
 function renderBatchFocusOverlay(){
   const b = state.activeBatch;
   const isDone = b.status==='completed';
@@ -21333,9 +21394,12 @@ function renderBatchFocusOverlay(){
         <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
       </div>` : ''}
     </div>
-      <div class="bf-steps-card">
-        <div class="bf-main-label">All steps</div>
-        ${batchStepsListHtml(b, isDone)}
+      <div class="bf-right-col">
+        ${batchRunSheetHtml(b)}
+        <div class="bf-steps-card">
+          <div class="bf-main-label">All steps</div>
+          ${batchStepsListHtml(b, isDone)}
+        </div>
       </div>
     </div>
   </div>`;
@@ -25493,7 +25557,8 @@ function attachShellHandlers(){
     const [stepId, itemId] = b.dataset.tchkRemove.split(':');
     templateDraftRemoveChecklistItem(stepId, itemId);
   }));
-  document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>deleteRecipe(b.dataset.deleteRecipe)));
+  document.querySelectorAll('[data-delete-recipe]').forEach(b=>b.addEventListener('click', ()=>{ state._recipeMenuOpen = null; deleteRecipe(b.dataset.deleteRecipe); }));
+  document.querySelectorAll('[data-start-recipe]').forEach(b=>b.addEventListener('click', ()=>startBatchFromCard(b.dataset.startRecipe)));
 
   // Costing & recipe
   if(byIdEl('btn-add-costing-product')) byIdEl('btn-add-costing-product').onclick = ()=>openModal('costingaddproduct');

@@ -20035,6 +20035,7 @@ function startBatchTicker(){
       }
     }
 
+    if(!step || !(step.waitMinutes>0)) return;   // only a TIMED step's counter / note is updated (an untimed step keeps its dash)
     const text = formatCountdown(remaining);
     ['batch-countdown','batch-focus-countdown'].forEach(id=>{
       const el = document.getElementById(id);
@@ -20762,7 +20763,7 @@ function renderRecipeLibraryPage(){
         ${r.machine ? `<div>${machineChipHtml(r.machine)}</div>` : ''}
         ${r.description ? `<div class="rc-meta">${esc(r.description)}</div>` : ''}
         ${matCount ? `<div class="rc-meta">${matCount} raw material${matCount===1?'':'s'} · ${totalPct.toFixed(1)}%${r.batchSizeKg?(' · ref. '+r.batchSizeKg+'kg batch'):''}</div>` : ''}
-        <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'}${totalMin>0?(' · ~'+totalMin+' min total'):''}${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
+        <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'}${' · ~'+totalMin+' min total'}${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
           ${matCount ? `<button class="btn btn-primary btn-sm" data-view-batchsheet="${r.id}">📋 Batch sheet</button>` : ''}
           ${state.session && roleCan(state.session.role, 'costing_delete_recipe') ? `<button class="btn btn-sm btn-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
@@ -21357,7 +21358,7 @@ function batchStepsListHtml(b, isDone){
       return `<div class="bs-row ${cls}">
         <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
         <span style="flex:1;">${esc(batchStepLabel(s, b.batchSizeKg))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
-        ${s.waitMinutes>0 ? `<span>${s.waitMinutes} min</span>` : ''}
+        <span>${s.waitMinutes>0 ? s.waitMinutes+' min' : 'no wait'}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -21393,7 +21394,7 @@ function renderActiveBatchCard(){
       const mats = stepRawLines(step, b.batchSizeKg);   // raw materials in kg of this batch's size
       const timed = step.waitMinutes>0;
       return `
-      ${timed ? `<div id="batch-countdown" class="bt-countdown ${remaining<=0 ? 'done':''}">${formatCountdown(remaining)}</div>` : ''}
+      <div ${timed?'id="batch-countdown"':''} class="bt-countdown ${timed && remaining<=0 ? 'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
       ${mats.length ? `<div class="bt-mats">${mats.map(m=>`<div class="bt-mat"><span>${esc(m.name)}</span><span>${esc(m.qty)}</span></div>`).join('')}</div>` : ''}
       ${parts.headline ? `<div class="bt-headline${mats.length?' bt-wrap':''}">${esc(parts.headline)}</div>` : ''}
       <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}${step.temperature?(' · '+esc(String(step.temperature))+'°C'):''}</div>`;
@@ -21462,10 +21463,10 @@ function renderBatchFocusOverlay(){
         return `
         ${renderBatchInstructionHtml(step, null, b.batchSizeKg)}
         <div class="bf-grid">
-          ${timed ? `<div class="bf-main">
-            <div id="batch-focus-countdown" class="bf-countdown ${remaining<=0?'done':''}">${formatCountdown(remaining)}</div>
-            <div id="batch-countdown-note" class="bf-note">${b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — press Next step when you're ready" : 'remaining on this step')}</div>
-          </div>` : ''}
+          <div class="bf-main">
+            <div id="batch-focus-countdown" class="bf-countdown ${timed && remaining<=0?'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
+            <div ${timed?'id="batch-countdown-note" ':''}class="bf-note">${!timed ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — press Next step when you're ready" : 'remaining on this step'))}</div>
+          </div>
           <div class="bf-side">
             ${step.amount ? `<div class="bf-side-card"><div class="bf-side-label">Amount</div><div class="bf-amount">${esc(step.amount)}</div></div>` : ''}
             ${batchFocusTempStatHtml(step.temperature)}
@@ -21992,11 +21993,11 @@ function phraseInstructionTextareaHtml(s){
   return `<textarea id="step-instr-${s.id}" rows="2" placeholder="Instruction (optional)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea>`;
 }
 // One phrase on the batch sheet (right side). Its raw materials are listed one by one as created on the Process template, with the quantity
-// in kg of the typed batch size (live: see updateSheetBatchKg); no percentages, no wait time (owner, 2026-11-21).
+// in kg of the typed batch size (live: see updateSheetBatchKg), never percentages. Wait (min) stays (owner, 2026-11-21: "Don't remove wait time").
 function batchSheetPhraseCardHtml(s, ord, kg, editable){
   const lines = stepIsPhraseWithLines(s) ? s.lines.filter(l=>String(l.name||'').trim()) : [];
   const instrText = stepInstructionText(s);
-  const temp = editable ? temperatureTagHtml('step', s) : (s.temperature ? `<span class="bs-temp-chip">${esc(String(s.temperature))}°C</span>` : '');
+  const temp = editable ? temperatureTagHtml('step', s) : ((s.temperature ? `<span class="bs-temp-chip">${esc(String(s.temperature))}°C</span>` : '') + (Number(s.waitMinutes)>0 ? ` <span class="bs-temp-chip">Wait ${esc(String(s.waitMinutes))} min</span>` : ''));
   const matsTable = lines.length ? `
     <table class="bs-mats">
       <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="c-qty">Amount needed</th></tr></thead>
@@ -22004,8 +22005,12 @@ function batchSheetPhraseCardHtml(s, ord, kg, editable){
         ${lines.map((l,i)=>`<tr><td class="c-no">${i+1}</td><td>${esc(l.name)}</td><td class="c-qty bs-qty" data-pct="${escAttr(Number(l.percent)||0)}">${esc(phraseQtyText(l.percent, kg))}</td></tr>`).join('')}
       </tbody>
     </table>` : '';
+  const waitMin = Number(s.waitMinutes)||0;
   const instrField = editable
-    ? `<div class="bsr-field"><label>Instruction</label>${stepIsPhraseWithLines(s) ? phraseInstructionTextareaHtml(s) : instructionTextareaHtml('step', s)}</div>`
+    ? `<div class="bsr-fields">
+        <div class="bsr-field"><label>Instruction</label>${stepIsPhraseWithLines(s) ? phraseInstructionTextareaHtml(s) : instructionTextareaHtml('step', s)}</div>
+        <div class="bsr-field"><label>Wait (min)</label><input id="step-wait-${s.id}" type="number" min="0" step="0.5" value="${waitMin}"></div>
+      </div>`
     : (instrText.trim() ? `<div class="bsr-field"><label>Instruction</label><div class="bs-instr-text">${esc(instrText.trim())}</div></div>` : '');
   return `
   <div class="bsheet-step-row bs-phrase">
@@ -22227,28 +22232,25 @@ function documentedStepOrdinals(steps){
 // (nothing's been done), so it naturally prints blank/unchecked without any special-casing, while a
 // documented one shows the actual recorded state from the run.
 function bsmcLedgerStepsHtml(steps, ordinals, kg){
-  // No Wait column unless some step really has a wait (owner, 2026-11-21: wait time removed from the batch sheet; old records that have one still show it).
-  const hasWait = steps.some(s=>s.type!=='preparation' && s.waitMinutes>0);
-  const cols = hasWait ? 5 : 4;
   const rows = steps.map((s, i) => {
     const ord = ordinals[i];
     if(s.type==='preparation'){
       const checklistRows = (s.checklist||[]).map(c => c.kind==='field'
-        ? `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.label)}</td><td colspan="${hasWait?2:1}" style="font-weight:700;">${c.value?esc(c.value):'—'}</td><td></td></tr>`
-        : `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.text)}</td><td></td>${hasWait?'<td></td>':''}<td>${c.checked?'☑':'☐'}</td></tr>`
+        ? `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.label)}</td><td colspan="2" style="font-weight:700;">${c.value?esc(c.value):'—'}</td><td></td></tr>`
+        : `<tr class="bsmc-ledger-check"><td></td><td>${esc(c.text)}</td><td></td><td></td><td>${c.checked?'☑':'☐'}</td></tr>`
       ).join('');
-      return `<tr class="bsmc-ledger-grp"><td colspan="${cols}">${s.name?esc(s.name):'Preparation / Checking '+ord}</td></tr>${checklistRows}`;
+      return `<tr class="bsmc-ledger-grp"><td colspan="5">${s.name?esc(s.name):'Preparation / Checking '+ord}</td></tr>${checklistRows}`;
     }
     // A phrase with raw-material lines prints each raw material with its quantity in kg of the batch size, then its instruction.
     const instr = stepInstructionText(s).trim();
     const cell = stepIsPhraseWithLines(s)
       ? stepRawLines(s, kg).map(l=>`<div class="bsmc-ledger-mat"><span>${esc(l.name)}</span><b>${esc(l.qty)}</b></div>`).join('') + (instr ? `<div class="bsmc-ledger-instr">${esc(instr)}</div>` : '')
       : `${esc(s.ingredient)}${s.amount?' — '+esc(s.amount):''}`;
-    return `<tr class="bsmc-ledger-check"><td style="font-weight:700;">${esc(letterLabel(ord-1))}</td><td>${cell}</td><td>${s.temperature?esc(s.temperature)+'°C':''}</td>${hasWait?`<td>${s.waitMinutes>0?s.waitMinutes+' min':''}</td>`:''}<td></td></tr>`;
+    return `<tr class="bsmc-ledger-check"><td style="font-weight:700;">${esc(letterLabel(ord-1))}</td><td>${cell}</td><td>${s.temperature?esc(s.temperature)+'°C':''}</td><td>${s.waitMinutes>0?s.waitMinutes+' min':''}</td><td></td></tr>`;
   }).join('');
   return `
   <table class="bsmc-ledger">
-    <thead><tr><th style="width:26px;">#</th><th>Instruction</th><th style="width:70px;">Temp</th>${hasWait?'<th style="width:70px;">Wait</th>':''}<th style="width:26px;"></th></tr></thead>
+    <thead><tr><th style="width:26px;">#</th><th>Instruction</th><th style="width:70px;">Temp</th><th style="width:70px;">Wait</th><th style="width:26px;"></th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261121233807">
+<meta name="app-build" content="20261121235753">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2317,6 +2317,41 @@ html{ visibility:hidden; }
   .bf-sheet-table tr.cur td{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;}
   .bf-sheet-table tr.tot td{border-top:2px solid #20291F;border-bottom:none;font-weight:700;}
   .batch-focus .bf-steps-card{margin-top:24px;background:#fff;border:1px solid #E1EAE3;border-radius:16px;padding:20px 24px;box-shadow:0 1px 2px rgba(20,40,28,.04);}
+  /* Production Guide big screen (owner, 2026-11-21: "need both batch sheet and all steps in one visible area, no need scroll, add to right side both of them").
+     On a wide screen the RIGHT area is wider and holds the Batch sheet and All steps SIDE BY SIDE, each as tall as the screen, so nothing needs scrolling for a normal
+     recipe. On a medium screen they stay stacked but are made compact (row height follows the screen height). Phones / tablets keep the normal stacked page. */
+  @media (min-width:1100px){
+    .batch-focus .bf-right-col{gap:14px;}
+    .batch-focus .bf-right-col .bf-sheet-card,.batch-focus .bf-right-col .bf-steps-card{padding:clamp(10px,2vh,20px) clamp(14px,1.4vw,22px);}
+    .batch-focus .bf-right-col .bf-main-label{margin-bottom:clamp(6px,1.2vh,12px);}
+    .batch-focus .bf-right-col .bf-sheet-meta{margin-bottom:clamp(6px,1.2vh,12px);}
+    .batch-focus .bf-right-col .bf-sheet-table{font-size:clamp(12.5px,1.7vh,14px);}
+    /* row height follows the screen height AND how many raw materials there are (--bf-rows is set on the card), so a long recipe still fits without scrolling */
+    .batch-focus .bf-right-col .bf-sheet-table td{padding:clamp(1px,calc(((100vh - 320px) / (var(--bf-rows,12) + 1) - 19px) / 2),8px) 6px;}
+    .batch-focus .bf-right-col .batch-steplist{margin-top:0;}
+    /* neat and clear: batch no. / size / machine as three tidy cells, and the step being worked on stands out in the list */
+    .batch-focus .bf-right-col .bf-sheet-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+    .batch-focus .bf-right-col .bf-sheet-meta span{flex-direction:column;align-items:flex-start;gap:2px;padding:7px 10px;border-radius:12px;min-width:0;}
+    .batch-focus .bf-right-col .bf-sheet-meta b{font-size:14px;overflow-wrap:anywhere;line-height:1.2;}
+    .batch-focus .bf-right-col .batch-steplist .bs-row.current{background:var(--accent-soft);border-radius:10px;padding-left:10px;padding-right:10px;margin:2px 0;box-shadow:inset 3px 0 0 var(--accent-dark);}
+    .batch-focus .bf-right-col .batch-steplist .bs-row.current .bs-num{background:var(--accent-dark);color:#fff;}
+    .batch-focus .bf-right-col .batch-steplist .bs-row{padding:clamp(3px,1vh,10px) 0;gap:10px;}
+  }
+  @media (min-width:1100px) and (max-height:820px){
+    .batch-focus-body{padding-top:18px;padding-bottom:18px;}
+  }
+  @media (min-width:1200px){
+    .batch-focus .batch-focus-body{padding-left:clamp(28px,3vw,56px);padding-right:clamp(28px,3vw,56px);gap:clamp(24px,2.4vw,40px);}
+    .batch-focus .batch-focus-body .bf-right-col{flex:0 0 clamp(600px,46vw,980px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-items:stretch;overflow:hidden;}
+    .batch-focus .bf-right-col > .bf-sheet-card,.batch-focus .bf-right-col > .bf-steps-card{min-height:0;overflow-y:auto;}
+    .batch-focus .bf-right-col > :only-child{grid-column:1 / -1;}
+  }
+  @media (min-width:1200px) and (max-width:1499px){
+    /* two narrow columns: the kg amount is what matters on the floor, so the % column steps aside */
+    .batch-focus .bf-right-col .bf-sheet-table th:nth-child(3),.batch-focus .bf-right-col .bf-sheet-table td:nth-child(3){display:none;}
+    .batch-focus .bf-right-col .bf-sheet-meta{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .batch-focus .bf-right-col .bf-sheet-meta span:first-child{grid-column:1 / -1;}
+  }
   .batch-focus .bf-controls{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
   .batch-focus .bf-controls .btn{background:#fff;border:1px solid #D8E3DA;color:#15201A;font-size:15px;font-weight:700;padding:13px 24px;border-radius:12px;}
   .batch-focus .bf-controls .btn:hover{background:#EFF5F1;}
@@ -21609,7 +21644,7 @@ function batchRunSheetHtml(b){
   const inStep = new Set(stepRawLines(step, kg).map(l=>String(l.name).trim().toLowerCase()));
   const totalPct = recipeMaterialsTotalPercent(mats);
   return `
-      <div class="bf-sheet-card">
+      <div class="bf-sheet-card" style="--bf-rows:${mats.length};">
         <div class="bf-main-label">Batch sheet</div>
         <div class="bf-sheet-meta">
           ${b.batchNo ? `<span><i>Batch No.</i><b>${esc(b.batchNo)}</b></span>` : ''}

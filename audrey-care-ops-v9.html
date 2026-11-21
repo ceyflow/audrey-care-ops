@@ -3432,14 +3432,14 @@ async function functionHeaders(json){
 const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector('meta[name="app-build"]')||{}).content || '1');
 
 // 'templates' used to be a real synced key; nothing in the app reads state.templates any more
-// (superseded by batchSheetTemplate/smsTemplates/mixingStepTemplates as separate keys) — dropped
+// (superseded by batchSheetTemplate/smsTemplates as separate keys) — dropped
 // from here so it stops being fetched on every login for no reason.
 // rndProjects moved here from DEFERRED_KEYS below — R&D is now in active daily use (chemists
 // marking their own attendance, Admin adding products), and deferred-loading it meant every single
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','mixingStepTemplates','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','gmpChecklistEntries','blendBatches','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -4905,7 +4905,7 @@ const PERMISSION_REGISTRY = [
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_delete', label:'Delete a batch'},
   // Costing & Recipe / Production Guide
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit', label:'View and edit costing sheets'},
-  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_manage_templates', label:'Manage phrase / mixing-step templates'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_manage_templates', label:'Open and edit a product\'s Process template (Costing)'},
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_create_recipe', label:'Create new recipes'},
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_recipe', label:'Delete a recipe'},
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit_steps', label:'Edit recipe steps inline'},
@@ -5140,7 +5140,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 19;
+const PAGE_DATA_KEYS_VERSION = 20;   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -5168,7 +5168,7 @@ const PAGE_DATA_KEYS = {
   driverrun: [],
   blendingdept: [],
   blending: ['blendBatches'],
-  recipes: ['recipes','activeBatch','mixingStepTemplates'],
+  recipes: ['recipes','activeBatch'],
   costing: ['costingProducts','suppliers','recipes'],
   customers: ['customers','staff','salesPersonColors'],
   suppliers: ['suppliers'],
@@ -6639,7 +6639,6 @@ async function loadAll(){
   // deleted the seeded "Body Lotion - Hotel Range" recipe. Checking "does it exist right now"
   // instead of "was this ever saved before" would silently resurrect it on every later refresh.
   const recipesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('recipes')] == null;
-  const mixingStepTemplatesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('mixingStepTemplates')] == null;
   const costingProductsNeverSaved = loadedValues[SYNCED_KEYS.indexOf('costingProducts')] == null;
   if(!state.branding || !Array.isArray(state.branding.addons)) state.branding = {addons: []};
   if(!state.navOrder || typeof state.navOrder !== 'object' || Array.isArray(state.navOrder)) state.navOrder = {};
@@ -6730,9 +6729,9 @@ async function loadAll(){
   if(!Array.isArray(state.recipes)) state.recipes = [];
   // Same isAdmin() gating as deliveryLines/staffCategories/complaintCategories/complaintPriorities
   // above — a non-Admin role (or a page load that races ahead of RLS resolving) can see an empty
-  // 'recipes'/'mixingStepTemplates' read that looks exactly like "never saved" without being one,
+  // 'recipes' read that looks exactly like "never saved" without being one,
   // and this block used to fire the seed write regardless of role. Confirmed as the live cause of
-  // saveQuietly('recipes'/'mixingStepTemplates') failing with "could not confirm the server's
+  // saveQuietly('recipes') failing with "could not confirm the server's
   // current contents" right at login — the seed write landed before this session's read of its own
   // key had resolved, so mergeBeforeSave correctly refused to save blind.
   if(isAdmin() && recipesNeverSaved && !state.recipes.some(r=>r.name==='Body Lotion - Hotel Range')){
@@ -6757,12 +6756,6 @@ async function loadAll(){
       createdAt: new Date().toISOString()
     });
     saveQuietly('recipes').catch(()=>{});
-  }
-  if(!Array.isArray(state.mixingStepTemplates)) state.mixingStepTemplates = [];
-  if(isAdmin() && mixingStepTemplatesNeverSaved && state.mixingStepTemplates.length===0){
-    const DEFAULT_MIXING_TEMPLATE_NAMES = ['Shower Gel', 'Shampoo', 'Conditioner', 'Body Lotion', 'Hand Wash'];
-    state.mixingStepTemplates = DEFAULT_MIXING_TEMPLATE_NAMES.map(name => ({id: uid('MTPL'), name, steps: [newStepDraft()]}));
-    saveQuietly('mixingStepTemplates').catch(()=>{});
   }
   if(!Array.isArray(state.costingProducts)) state.costingProducts = [];
   await seedDefaultCostingProducts(costingProductsNeverSaved);
@@ -6823,7 +6816,7 @@ async function loadAll(){
   // this comment originally described, meaning this exact condition kept re-firing on later
   // Admin logins after this gate was already in place). state.userRoles.length===0 can't tell
   // "genuinely never seeded" apart from "this read raced and came back empty" -- only the raw
-  // batch-fetch result can, the same way recipesNeverSaved/mixingStepTemplatesNeverSaved do it
+  // batch-fetch result can, the same way recipesNeverSaved does it
   // above. Checking that instead is what actually closes the race, not just narrows who can hit it.
   const userRolesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('userRoles')] == null;
   if(isAdmin() && userRolesNeverSaved && state.userRoles.length===0){
@@ -20168,60 +20161,10 @@ function batchSheetDirty(){
   try{ syncDraftStepFieldsFromDOM(); }catch(e){}
   return JSON.stringify(d.steps) !== JSON.stringify(r.steps);
 }
-// ---- Mixing steps templates ----
-// Reusable step sequences (by product type) a new recipe can start from, instead of typing the
-// same mixing procedure out every time. Kept entirely separate from state._recipeDraft (its own
-// draft object + add/move/remove/sync functions below) so editing a template never risks
-// clobbering an in-progress recipe edit, and vice versa.
-function templateById(id){ return byId(state.mixingStepTemplates, id); }
-function openMixingTemplatesModal(){ state._mixingTemplatePickerForRecipeId = null; openModal('mixingtemplates'); }
-// Opened from a recipe's batch sheet via "Use template" — same card grid, but in this mode each
-// card is a one-click "load these steps into the sheet I came from" picker instead of the usual
-// manage/edit/delete view, and Close returns to that batch sheet rather than closing outright.
-function openMixingTemplatesPicker(recipeId){
-  if(!byId(state.recipes, recipeId)) return;
-  state._mixingTemplatePickerForRecipeId = recipeId;
-  openModal('mixingtemplates');
-}
-async function applyMixingTemplateToRecipe(templateId){
-  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
-  const recipeId = state._mixingTemplatePickerForRecipeId;
-  const t = templateById(templateId);
-  state._mixingTemplatePickerForRecipeId = null;
-  if(!recipeId || !t || !state._recipeDraft || state._recipeDraft.id!==recipeId){ openModal(null); return; }
-  // Fresh ids throughout (steps and, for preparation steps, their checklist items too) so the
-  // recipe's copy is fully independent of the template it came from.
-  state._recipeDraft.steps = t.steps.map(s => s.type==='preparation'
-    ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
-    : {...s, id:uid('STEP')});
-  openModal(null);   // the sheet is a page now: closing the picker just shows it again
-  // Persist right away instead of leaving it as an unsaved draft — applying a template felt like
-  // it "didn't stick" whenever someone navigated off the sheet before remembering to hit the
-  // separate Save button, since reopening the sheet rebuilds the draft from whatever's actually
-  // saved on the recipe.
-  await saveBatchSheetSteps(recipeId);
-}
-function closeMixingTemplatesPicker(){
-  const recipeId = state._mixingTemplatePickerForRecipeId;
-  state._mixingTemplatePickerForRecipeId = null;
-  openModal(null);
-}
-function openTemplateStepsModal(id){
-  const t = templateById(id); if(!t) return;
-  // {...s} alone would leave a preparation step's checklist array shared by reference with the
-  // saved template — editing/reordering/removing a checklist item in the draft would mutate the
-  // real template immediately, even before Save (and survive a Cancel). Clone it too.
-  state._templateDraft = {
-    id: t.id, name: t.name,
-    steps: t.steps.map(s => s.type==='preparation'
-      ? {...s, checklist: (s.checklist||[]).map(c=>({...c}))}
-      : {...s}),
-  };
-  openModal('mixingtemplatesteps:'+id);
-}
+// ---- Process template: step-draft helpers (state._templateDraft) ----
 function templateDraftAddPhrase(){
   const s = newStepDraft(); s.type = 'phrase';
-  if(state._templateDraft.processProductId){ s.lines = []; s.instruction = ''; s.showInstr = false; }   // Process template page: a phrase starts as an empty table
+  s.lines = []; s.instruction = ''; s.showInstr = false;   // a phrase starts as an empty table
   state._templateDraft.steps.push(s);
   renderKeepModalScroll();
 }
@@ -20236,7 +20179,7 @@ const DEFAULT_PREP_CHECKLIST_ITEMS = [
   'Are all the materials received in good condition? (Check for color change, expiration, change of nature, and odor)',
 ];
 // Generic step-draft operations, parameterized by which draft object to mutate (state._recipeDraft
-// or state._templateDraft) — both the batch sheet and the phrases template editor can now contain
+// or state._templateDraft) — both the batch sheet and the Process template page contain
 // Preparation/Checking steps, and this is the one place that logic lives.
 function stepsAddPreparationStep(draft){
   draft.steps.push({
@@ -20272,7 +20215,6 @@ function draftAddChecklistItem(stepId){ stepsAddChecklistItem(state._recipeDraft
 function draftAddFieldItem(stepId){ stepsAddFieldItem(state._recipeDraft, stepId); }
 function draftRemoveChecklistItem(stepId, itemId){ stepsRemoveChecklistItem(state._recipeDraft, stepId, itemId); }
 function templateDraftRemoveStep(stepId){
-  if(state._templateDraft.steps.length<=1 && !state._templateDraft.processProductId) return;   // the Process template page may be emptied
   state._templateDraft.steps = state._templateDraft.steps.filter(s=>s.id!==stepId);
   renderKeepModalScroll();
 }
@@ -20286,8 +20228,6 @@ function templateDraftMoveStep(stepId, dir){
 }
 function syncTemplateDraftStepFieldsFromDOM(){
   const d = state._templateDraft; if(!d) return;
-  const nameEl = document.getElementById('template-name');
-  if(nameEl) d.name = nameEl.value;
   d.steps.forEach(s=>{
     if(s.type==='preparation'){
       const nameEl2 = document.getElementById('tprepname-'+s.id);
@@ -20311,57 +20251,6 @@ function syncTemplateDraftStepFieldsFromDOM(){
       const tp = document.getElementById('tstep-temp-'+s.id); if(tp) s.temperature = tp.value;
       return;
     }
-    const ing = document.getElementById('tstep-ing-'+s.id);
-    const temp = document.getElementById('tstep-temp-'+s.id);
-    const wait = document.getElementById('tstep-wait-'+s.id);
-    if(ing) s.ingredient = ing.value;
-    if(temp) s.temperature = temp.value;
-    if(wait) s.waitMinutes = parseFloat(wait.value)||0;
-  });
-}
-async function saveTemplateSteps(){
-  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
-  syncTemplateDraftStepFieldsFromDOM();
-  const d = state._templateDraft; if(!d) return;
-  const name = (d.name||'').trim();
-  const steps = cleanTemplateSteps(d.steps);
-  if(!name){ showToast('Name this template'); return; }
-  if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
-  const t = templateById(d.id);
-  if(t){ t.name = name; t.steps = steps; }
-  // Gated on success, and the draft stays put on failure — save() already shows its own
-  // "Could not save" toast and retries twice; clearing the draft and navigating away regardless
-  // would silently lose the edit with no easy way to retry it.
-  if(!(await save('mixingStepTemplates'))) return;
-  state._templateDraft = null;
-  showToast('Template saved');
-  openMixingTemplatesModal();
-}
-function deleteMixingTemplate(id){
-  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
-  const t = templateById(id);
-  openConfirmModal({
-    title: 'Delete template', danger: true, confirmLabel: 'Delete', keepParentModal: true,
-    message: `Delete "${t?esc(t.name):'this template'}"? Recipes already created from it are not affected.`,
-    onConfirm: async ()=>{
-      state.mixingStepTemplates = state.mixingStepTemplates.filter(x=>x.id!==id);
-      await save('mixingStepTemplates');
-    },
-  });
-}
-function addMixingTemplatePrompt(){
-  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
-  openPromptModal({
-    title: 'New phrases template', label: 'Template name', placeholder: 'e.g. Face Wash',
-    confirmLabel: 'Create', _returnTo: 'mixingtemplates',
-    onSubmit: async (value)=>{
-      const name = (value||'').trim();
-      if(!name) return;
-      const t = {id: uid('MTPL'), name, steps: [newStepDraft()]};
-      state.mixingStepTemplates.push(t);
-      if(!(await save('mixingStepTemplates'))) return;
-      openTemplateStepsModal(t.id);
-    },
   });
 }
 function draftAddStep(){ state._recipeDraft.steps.push(newStepDraft()); renderKeepModalScroll(); }
@@ -20399,7 +20288,7 @@ function syncDraftStepFieldsFromDOM(){
   steps.forEach(s=>{
     if(s.type==='preparation'){
       // Only ever reached via the batch sheet (recipeFormModal never seeds a preparation step) —
-      // same field layout as the phrases template editor's preparation cards.
+      // same field layout as the Process template page's preparation cards.
       const prepNameEl = document.getElementById('step-prepname-'+s.id);
       if(prepNameEl) s.name = prepNameEl.value;
       (s.checklist||[]).forEach(c=>{
@@ -21490,66 +21379,14 @@ function renderBatchFocusOverlay(){
     </div>
   </div>`;
 }
-function renderMixingTemplatesModal(){
-  const list = state.mixingStepTemplates || [];
-  const pickerRecipeId = state._mixingTemplatePickerForRecipeId;
-  if(pickerRecipeId){
-    return `
-    <div class="overlay" id="overlay">
-      <div class="modal" style="max-width:720px;">
-        <h2>Use a phrases template</h2>
-        <div class="sub">Pick one — its steps replace whatever's currently in the batch sheet.</div>
-        ${list.length===0 ? `<div class="empty-state">No templates yet.</div>` : `
-        <div class="recipe-grid" style="margin:16px 0;">
-          ${list.map(t=>`
-          <div class="recipe-card">
-            <div class="rc-title">${esc(t.name)}</div>
-            <div class="rc-meta">${t.steps.length} step${t.steps.length===1?'':'s'}</div>
-            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-              <button class="btn btn-primary btn-sm" data-use-mixing-template="${t.id}">Use this template</button>
-            </div>
-          </div>`).join('')}
-        </div>`}
-        <div class="modal-actions" style="margin-top:16px;">
-          <button type="button" class="btn" id="btn-cancel-mixing-picker">Close</button>
-        </div>
-      </div>
-    </div>`;
-  }
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:720px;">
-      <h2>Phrases templates</h2>
-      <div class="sub">Reusable step sequences — start a new recipe from one instead of typing the mixing procedure out again.</div>
-      ${list.length===0 ? `<div class="empty-state">No templates yet.</div>` : `
-      <div class="recipe-grid" style="margin:16px 0;">
-        ${list.map(t=>`
-        <div class="recipe-card">
-          <div class="rc-title">${esc(t.name)}</div>
-          <div class="rc-meta">${t.steps.length} step${t.steps.length===1?'':'s'}</div>
-          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" data-edit-mixing-template="${t.id}">Edit steps</button>
-            <button class="btn btn-sm btn-danger" data-delete-mixing-template="${t.id}">Delete</button>
-          </div>
-        </div>`).join('')}
-      </div>`}
-      <div class="modal-actions" style="justify-content:space-between;margin-top:16px;">
-        <button type="button" class="btn btn-primary" id="btn-add-mixing-template">+ Add a template</button>
-        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
-      </div>
-    </div>
-  </div>`;
-}
-// The phrases / preparation-checking editor (cards + the two "add" buttons), shared by the Phrases-template editor and the
-// per-product "Process template" window. Both edit state._templateDraft with the same ids and handlers (tstep-*, tprep-*, ...).
-function templateStepsEditorHtml(d, opts){
-  const compact = !!(opts && opts.compact);   // Process template page: no heading, no extra bottom gap (the page aligns it)
+// The phrases / preparation-checking editor (cards + the two "add" buttons) of the per-product "Process template" page.
+// It edits state._templateDraft (ids and handlers tstep-*, tprep-*, ...).
+function templateStepsEditorHtml(d){
   // Phrases and Preparation/Checking steps live in one ordered list but are numbered within
   // their own kind (Phrase A, B, C… / Preparation/Checking Step 1, 2, 3…), not by raw position.
   let phraseCount = 0, prepCount = 0;
   const ordinals = d.steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
   return `
-      ${compact ? '' : `<div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 12px;">Production Steps</div>`}
       <div id="template-step-editor-list">
         ${d.steps.map((s,i)=>{
           const ord = ordinals[i];
@@ -21596,52 +21433,19 @@ function templateStepsEditorHtml(d, opts){
               </div>
             </div>`;
           }
-          if(compact && Array.isArray(s.lines)) return ptPhraseCardHtml(s, ord);   // Process template page: table of raw-material lines
-          return `
-          <div class="bsheet-step-row">
-            <div class="bsr-head">
-              <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temperatureTagHtml('tstep', s)}</div>
-              <div class="bsr-actions">
-                <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
-                <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
-                <button type="button" data-tstep-remove="${s.id}" title="Remove">✕</button>
-              </div>
-            </div>
-            <div class="bsr-fields">
-              <div class="bsr-field"><label>Instruction</label>${instructionTextareaHtml('tstep', s)}</div>
-              <div class="bsr-field"><label>Wait (min)</label><input id="tstep-wait-${s.id}" type="number" min="0" step="0.5" value="${s.waitMinutes}"></div>
-            </div>
-          </div>`;
+          return ptPhraseCardHtml(s, ord);   // a phrase = a table of raw-material lines + an optional instruction
         }).join('')}
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:${compact?0:20}px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" id="btn-add-template-step">+ Add phrase</button>
         <button type="button" class="btn btn-sm" id="btn-add-template-prep-step">+ Add preparation checking step</button>
       </div>
   `;
 }
-function renderTemplateStepsModal(){
-  const d = state._templateDraft; if(!d) return '';
-  return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:680px;">
-      <h2>${d.id?'Edit template':'New template'}</h2>
-      <div class="field" style="margin-bottom:18px;">
-        <label>Template name</label>
-        <input id="template-name" value="${escAttr(d.name)}" placeholder="e.g. Shower Gel">
-      </div>
-      ${templateStepsEditorHtml(d)}
-      <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-template-steps">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btn-save-template-steps">Save</button>
-      </div>
-    </div>
-  </div>`;
-}
 // ---- Process template (per product, Costing & recipe) ----
 // Left: the batch sheet of the product's ACTIVE version (No / raw material / percentage). Right: the phrases and
-// preparation-checking steps, moved here from the Recipe library. Stored on the product (processTemplate.steps, same step shape
-// as a phrases template) and copied into the batch sheet when a version is transferred to the Production Guide.
+// preparation-checking steps, moved here from the Recipe library. Stored on the product (processTemplate.steps) and copied
+// into the batch sheet when a version is transferred to Batch sheets.
 function costingActiveVersion(product){
   if(!product) return null;
   const live = activeCostingVersions(product);
@@ -21868,7 +21672,7 @@ function renderProcessTemplatePage(product){
           ${left}
         </div>
       </div>
-      <div class="pt-right">${templateStepsEditorHtml(d, {compact:true})}</div>
+      <div class="pt-right">${templateStepsEditorHtml(d)}</div>
     </div>
     ${d.steps.length ? `<div class="pt-actions">
       <button type="button" class="btn" data-cancel-process-template>Cancel</button>
@@ -21876,7 +21680,7 @@ function renderProcessTemplatePage(product){
     </div>` : ''}
   </div>`;
 }
-// Same cleaning as the phrases-template editor: blank rows are dropped, a preparation step needs at least one item.
+// Cleaning of the Process template's steps: blank rows are dropped, a preparation step needs at least one item.
 function cleanTemplateSteps(rawSteps){
   return (rawSteps||[]).map(s=>{
     if(s.type==='preparation'){
@@ -22131,7 +21935,6 @@ function recipeBatchSheetInner(recipeId, asPage){
   const rightHtml = `
       <div class="bs-steps-head">
         <div class="bsmc-label">Production Steps</div>
-        ${canEditSteps ? `<button type="button" class="btn btn-sm" id="btn-use-mixing-template" data-recipe-id="${r.id}">Use template</button>` : ''}
       </div>
       <div id="step-editor-list">${stepsHtml}</div>
       ${canEditSteps ? `<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
@@ -22459,9 +22262,7 @@ function renderModal(){
   if(type==='complaintview') return complaintViewModal(id);
   if(type==='staff') return staffFormModal(id==='new'?null:id);
   if(type==='recipe') return recipeFormModal();
-  if(type==='mixingtemplates') return renderMixingTemplatesModal();
   if(type==='instructionstyle') return renderInstructionStyleModal();
-  if(type==='mixingtemplatesteps') return renderTemplateStepsModal();
   if(type==='recipesheet') return recipeBatchSheetModal(parts.slice(1).join(':'));
   if(type==='citypak') return citypakTagModal(parts.slice(1).join(':'));
   if(type==='deliveryoutcome') return deliveryOutcomeModal(parts.slice(1).join(':'));
@@ -25656,18 +25457,10 @@ function attachShellHandlers(){
 
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);
-  if(byIdEl('btn-mixing-templates')) byIdEl('btn-mixing-templates').onclick = openMixingTemplatesModal;
   if(byIdEl('btn-instruction-style')) byIdEl('btn-instruction-style').onclick = openInstructionStyleModal;
   if(byIdEl('btn-close-instruction-style')) byIdEl('btn-close-instruction-style').onclick = ()=>openModal(null);
   document.querySelectorAll('[data-pick-instruction-style]').forEach(b=>b.addEventListener('click', ()=>applyInstructionStyle(b.dataset.pickInstructionStyle)));
-  if(byIdEl('btn-add-mixing-template')) byIdEl('btn-add-mixing-template').onclick = addMixingTemplatePrompt;
-  document.querySelectorAll('[data-edit-mixing-template]').forEach(b=>b.addEventListener('click', ()=>openTemplateStepsModal(b.dataset.editMixingTemplate)));
-  document.querySelectorAll('[data-delete-mixing-template]').forEach(b=>b.addEventListener('click', ()=>deleteMixingTemplate(b.dataset.deleteMixingTemplate)));
-  document.querySelectorAll('[data-use-mixing-template]').forEach(b=>b.addEventListener('click', ()=>applyMixingTemplateToRecipe(b.dataset.useMixingTemplate)));
-  if(byIdEl('btn-cancel-mixing-picker')) byIdEl('btn-cancel-mixing-picker').onclick = closeMixingTemplatesPicker;
-  if(byIdEl('btn-use-mixing-template')) byIdEl('btn-use-mixing-template').onclick = (e)=>{ syncDraftStepFieldsFromDOM(); openMixingTemplatesPicker(e.currentTarget.dataset.recipeId); };
-  if(byIdEl('btn-cancel-template-steps')) byIdEl('btn-cancel-template-steps').onclick = ()=>{ state._templateDraft = null; openMixingTemplatesModal(); };
-  // Costing -> product -> Process template window (the steps editor handlers below are shared with the phrases-template editor)
+  // Costing -> product -> Process template window (the steps editor handlers below belong to it)
   if(byIdEl('btn-process-template')) byIdEl('btn-process-template').onclick = openProcessTemplate;
   document.querySelectorAll('[data-cancel-process-template]').forEach(b=>b.addEventListener('click', leaveProcessTemplatePage));
   document.querySelectorAll('[data-save-process-template]').forEach(b=>b.addEventListener('click', saveProcessTemplate));
@@ -25706,7 +25499,6 @@ function attachShellHandlers(){
     logActivity(cb.checked ? `Set costing version "${v?v.name:id}" active (${product.name})` : `Set costing version "${v?v.name:id}" inactive (${product.name})`);
     render();
   }));
-  if(byIdEl('btn-save-template-steps')) byIdEl('btn-save-template-steps').onclick = saveTemplateSteps;
   if(byIdEl('btn-add-template-step')) byIdEl('btn-add-template-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPhrase(); };
   if(byIdEl('btn-add-template-prep-step')) byIdEl('btn-add-template-prep-step').onclick = ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftAddPreparationStep(); };
   document.querySelectorAll('[data-tstep-up]').forEach(b=>b.addEventListener('click', ()=>{ syncTemplateDraftStepFieldsFromDOM(); templateDraftMoveStep(b.dataset.tstepUp, -1); }));
@@ -26222,7 +26014,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('mixingtemplatesteps') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

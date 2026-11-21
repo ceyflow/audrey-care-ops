@@ -7659,9 +7659,119 @@ async function logOut(){
   if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
   render();
 }
-// These pages are only ever opened from their department hub's cards (Blending Department /
-// Customer Care) — mapped to that hub so Back can return there. See performGoTo/popstate below.
-const SUBPAGE_PARENT_HUB = { blending:'blendingdept', recipes:'blendingdept', recipelibrary:'blendingdept', costing:'blendingdept', orderinquiry:'customercare', complaints:'customercare', ongoingorders:'customercare' };
+/* ===================== Browser Back / Forward walks EVERY screen step (owner, 2026-11-21) =====================
+   The owner does not want little "← Products" / "‹ Settings" style back buttons: the browser's own Back
+   (and Forward) button must step back through every screen, page after page and drill-down after drill-down.
+   ONE mechanism does it, instead of each page pushing its own history entry:
+     * navSnapshot()  = a tiny description of the screen being shown (page + which drill-down is open).
+     * navCommit()    = called at the end of every render(): when the snapshot differs from the history entry
+                        we are on, a NEW entry is pushed (so Back returns to the previous screen). The first
+                        draw of a page load, and a forced redirect, REPLACE the entry instead.
+     * navApply()     = the popstate handler puts the saved snapshot back into `state` and redraws.
+   A new drill-down screen only has to be added to navSnapshot() / navApply() (and navHash() if it should
+   survive a refresh). Windows (state.modal) are NOT screens: Back never closes one, it leaves it open (an
+   accidental back-swipe must not throw away half-typed work), see the popstate listener at the end. */
+function navSnapshot(){
+  const f = state.filters || {};
+  const s = { page: state.page };
+  if(state.page==='gmp' && f.gmpSection) s.gmp = f.gmpSection;
+  if(state.page==='settings' && state._settingsOpenPanel) s.set = state._settingsOpenPanel;
+  if(state.page==='costing' && state._costingOpenProductId){
+    s.cp = state._costingOpenProductId;
+    if(state._costingOpenVersionId) s.cv = state._costingOpenVersionId;
+    else if(state._costingProcessPage) s.cpt = 1;
+    if(state._costingVersionsView==='archive') s.cva = 1;
+  }
+  if(state.page==='attendance'){
+    if(state._attEditRequestsOpen) s.aer = 1;
+    else if(state._attRecordsOpen){ s.ar = 1; if(state._attRecordsStaff) s.as = state._attRecordsStaff; }
+  }
+  if(state.page==='rnd' && f.rndView==='outcome') s.ro = f.rndOutcomeKind || '';
+  if(state.page==='orders' && state.ordersView==='archive') s.oa = 1;
+  return s;
+}
+// What goes in the address bar. Only the parts that can be restored after a refresh (same shapes as before:
+// #page, #gmp/<card>, #settings/<panel>, #costing/<product>/<version>); the rest lives in the history entry itself.
+function navHash(s){
+  let h = '#' + s.page;
+  if(s.gmp) h += '/' + s.gmp;
+  else if(s.set) h += '/' + s.set;
+  else if(s.cp){ h += '/' + encodeURIComponent(s.cp); if(s.cv) h += '/' + encodeURIComponent(s.cv); }
+  return h;
+}
+// For a history entry that has no saved snapshot (a hand-typed address, an entry from an older visit).
+function navFromHash(){
+  try{
+    const parts = (location.hash||'').replace('#','').split('/');
+    const page = (parts[0]||'').toLowerCase();
+    if(!page) return null;
+    const s = { page };
+    if(page==='gmp' && parts[1]) s.gmp = decodeURIComponent(parts[1]);
+    if(page==='settings' && parts[1]) s.set = decodeURIComponent(parts[1]);
+    if(page==='costing' && parts[1]){ s.cp = decodeURIComponent(parts[1]); if(parts[2]) s.cv = decodeURIComponent(parts[2]); }
+    return s;
+  }catch(e){ return null; }
+}
+const _navKeys = {};   // history position -> screen key, for the entries made during this page visit (see navBackIfParent)
+function navCommit(){
+  if(!state.session || !state.loaded || state.trackMode || state.boardMode || state.complaintMode || state._showWelcome) return;
+  const snap = navSnapshot();
+  const key = JSON.stringify(snap);
+  const hs = history.state;
+  const replace = !!state._navReplace; state._navReplace = false;   // one-shot: never let it carry over to a later move
+  if(hs && hs.navKey===key) return;                       // still on the screen this entry describes
+  try{
+    if(!hs || !hs.navKey || replace){                    // first draw / adopting an older entry / forced redirect: no new step
+      const idx = hs && typeof hs.idx==='number' ? hs.idx : 0;
+      history.replaceState({ navKey:key, nav:snap, idx }, '', navHash(snap));
+      _navKeys[idx] = key;
+    } else {
+      const idx = (typeof hs.idx==='number' ? hs.idx : 0) + 1;
+      history.pushState({ navKey:key, nav:snap, idx }, '', navHash(snap));
+      _navKeys[idx] = key;
+    }
+  }catch(e){}
+}
+// Leaving a drill-down with its own Cancel / Save: when the step before this one IS the screen we are going
+// back to, take that step (history.back) instead of stacking a copy of it. Call AFTER `state` already shows the
+// parent screen. Returns true when it went back (the popstate listener redraws), false when the caller must render().
+function navBackIfParent(){
+  try{
+    const hs = history.state;
+    if(!hs || typeof hs.idx!=='number' || hs.idx<1) return false;
+    if(_navKeys[hs.idx-1] !== JSON.stringify(navSnapshot())) return false;
+    history.back();
+    return true;
+  }catch(e){ return false; }
+}
+// Puts a saved screen back into `state` (no redraw). Returns false when this person may not open that page.
+function navApply(t){
+  if(!t || !t.page || !pageAllowed(t.page)) return false;
+  const f = state.filters;
+  state.page = t.page; state.modal = null; state.sidebarOpen = false; state._moreFabOpen = false;
+  f.gmpSection = t.gmp || null;
+  state._settingsOpenPanel = t.set || null;
+  state._attEditRequestsOpen = !!t.aer;
+  state._attRecordsOpen = !!(t.ar || t.as);
+  state._attRecordsStaff = t.as || null;
+  if(t.ro!=null){ f.rndView = 'outcome'; f.rndOutcomeKind = t.ro; } else if(f.rndView==='outcome'){ f.rndView = 'board'; }
+  if(t.oa) state.ordersView = 'archive'; else if(state.ordersView==='archive') state.ordersView = 'kanban';
+  // Costing: close whatever is open, then re-open exactly what the saved screen had.
+  if(state._costingProcessPage) state._templateDraft = null;
+  state._costingOpenProductId = null; state._costingOpenVersionId = null; state._costingDraft = null;
+  state._costingDirty = false; state._costingProcessPage = false; state._costingVersionsView = 'active'; state._costSel = null;
+  if(t.page==='costing' && t.cp && roleCan(state.session.role, 'costing_edit')){
+    const product = byId(state.costingProducts||[], t.cp);
+    if(product){
+      state._costingOpenProductId = product.id;
+      if(t.cva) state._costingVersionsView = 'archive';
+      const version = t.cv ? (product.versions||[]).find(v=>v.id===t.cv) : null;
+      if(version) costingStartVersionSheet(product, version);
+      else if(t.cpt && roleCan(state.session.role, 'costing_manage_templates')) startProcessTemplateDraft(product);
+    }
+  }
+  return true;
+}
 function goTo(page){
   if(!pageAllowed(page)) return;
   if(state.page==='costing' && state._costingDirty){
@@ -7693,23 +7803,8 @@ function performGoTo(page){
   state._settingsOpenPanel = null;
   state._moreFabOpen = false;
   if(page==='chat'){ state.chatNotice = null; clearTimeout(state._chatNoticeTimer); }
-  const curHashParts = (location.hash||'').replace('#','').split('/');
-  if((curHashParts[0]||'')!==page){
-    // Costing & recipe / Production Guide / Mixing and Filling, and Order inquiry / Complaints,
-    // are only ever opened from their department hub's cards — push a real history entry for
-    // them so the browser's Back button returns to that hub, instead of leaving the app.
-    if(SUBPAGE_PARENT_HUB[page]) history.pushState(null,'','#'+page);
-    else history.replaceState(null,'','#'+page);
-  } else if(page==='gmp' && curHashParts[1]){
-    // Re-opening GMP from the sidebar always lands on the hub (reset above) — drop a stale
-    // "#gmp/<section>" left over from a card that was open before navigating elsewhere, so a
-    // card re-opened from here pushes exactly one history entry, not two.
-    history.replaceState(null,'','#gmp');
-  } else if(page==='settings' && curHashParts[1]){
-    // Same cleanup for Settings: re-opening it from the sidebar always lands on the Jump to
-    // grid (reset above), so drop a stale "#settings/<panel>" left over from before.
-    history.replaceState(null,'','#settings');
-  }
+  // The browser history step for this move (a new entry, so Back returns here) is made by navCommit()
+  // at the end of render() — see "Browser Back / Forward walks EVERY screen step" above.
   render();
   if(page==='chat'){ c2Enter(); } else { c2Leave(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
@@ -11458,6 +11553,7 @@ function render(){
     const newChatEl = document.getElementById('chat-messages');
     if(newChatEl) newChatEl.scrollTop = chatScroll;
   }
+  navCommit();   // a new screen = a new browser history step (see navSnapshot)
 }
 // Renders normally, unless the user currently has a text field focused inside an open modal or
 // drawer (e.g. typing in the order edit form) — a background update (a teammate moving a
@@ -11482,9 +11578,14 @@ function renderInner(){
   if(state.trackMode){ app.innerHTML = renderTrackPage(); attachTrackHandlers(); return; }
   if(state.complaintMode){ app.innerHTML = renderComplaintPublicPage(); attachComplaintPublicHandlers(); return; }
   // the sign-in page draws toasts too: after an automatic sign-out the reason ("Signed off after being inactive", "Your sign-in expired") used to be set but never shown
-  if(!state.session){ app.innerHTML = renderLogin() + (state.toast ? renderToast() : ''); attachLoginHandlers(); return; }
+  if(!state.session){
+    // Signed out: forget the screen this history entry described, so the next person's first screen replaces it
+    // instead of stacking onto the previous person's screens.
+    try{ if(history.state && history.state.navKey) history.replaceState(null, '', location.href); }catch(e){}
+    app.innerHTML = renderLogin() + (state.toast ? renderToast() : ''); attachLoginHandlers(); return;
+  }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
-  if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; }
+  if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; state._navReplace = true; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.
   if(state.modal==='brandcrop' && document.getElementById('crop-frame')) return;
@@ -12269,7 +12370,6 @@ function renderAttendanceEditRequestsList(){
       </div>` : `<div class="hint" style="margin-top:8px;">Reviewed by ${esc(r.reviewedBy||'—')}${r.reviewedAt?', '+esc(fmtDateTime(r.reviewedAt)):''}</div>`}
     </div>`;
   return `
-  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-att-edit-requests-back>‹ Attendance</button></div>
   <div class="panel">
     <div class="panel-head"><h3>Edit Requests</h3></div>
     <div class="panel-body" style="padding-top:12px;">
@@ -12283,7 +12383,6 @@ function renderAttendanceEditRequestsList(){
 function renderAttendanceStaffList(){
   const names = [...new Set((state.tempAttendance||[]).map(a=>a.staffName))].sort((a,b)=>a.localeCompare(b));
   return `
-  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-att-records-back>‹ Attendance</button></div>
   <div class="panel">
     <div class="panel-head"><h3>Records — Staff</h3></div>
     ${names.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded yet.</div>` : names.map(n=>{
@@ -12336,8 +12435,7 @@ function renderAttendanceStaffReport(staffName){
   const dayLabel = d => new Date(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">—</span>`;
   return `
-  <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-    <button type="button" class="btn btn-sm" data-att-records-back-staff>‹ Staff</button>
+  <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
     <button type="button" class="btn btn-sm" data-att-print-staff="${escAttr(staffName)}">🖨 Print attendance sheet</button>
   </div>
   <div class="panel">
@@ -15876,7 +15974,6 @@ function renderRndOutcomeView(kind){
   const projects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1 && (kind==='unset' ? !p.outcome : p.outcome===kind))
     .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   return `
-  <div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-rnd-outcome-back>‹ Products</button></div>
   <div class="landing-section-title" style="margin-bottom:10px;">${esc(label)} <span class="hint">(${projects.length})</span></div>
   ${projects.length===0 ? `<div class="empty-col">None yet</div>` : `
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
@@ -16329,7 +16426,7 @@ function renderGmpPage(){
     : section==='feedback' ? renderGmpFeedbackSection()
     : null;
   if(!inner) return renderGmpHub();
-  return `<div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-gmp-back>‹ GMP</button></div>${inner}`;
+  return inner;
 }
 function renderGmpHub(){
   const cards = [
@@ -18490,7 +18587,7 @@ function renderSettingsPage(){
   // Same hub/drill-down pattern as GMP (renderGmpPage/renderGmpHub): clicking a card replaces the
   // whole grid with just that panel, not an accordion stacked below every other card.
   if(renderOpenPanel){
-    return `<div style="margin-bottom:14px;"><button type="button" class="btn btn-sm" data-settings-back>‹ Settings</button></div>${renderOpenPanel()}`;
+    return renderOpenPanel();
   }
   // Same card grid on phone and desktop — the mobile tab bar's "Settings" icon already fans out
   // to the rest of the app (MORE_FAB_ITEMS/renderMoreFabMenu), so once you're actually on this
@@ -20247,6 +20344,21 @@ function costingDeleteSelected(){
 }
 function activeCostingVersions(product){ return (product.versions||[]).filter(v=>!v.archived); }
 function archivedCostingVersions(product){ return (product.versions||[]).filter(v=>v.archived).sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0)); }
+// Opens one version's costing sheet (no redraw): builds the working copy the sheet edits. Used by clicking a version
+// and by browser Forward / Back (navApply).
+function costingStartVersionSheet(product, version){
+  state._costingOpenVersionId = version.id;
+  state._costingDraft = {
+    materials: JSON.parse(JSON.stringify(version.materials||[])),
+    batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
+    batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
+    fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
+    notes: version.notes||'',
+    productionMethod: version.productionMethod||'',
+  };
+  costingAutoBalanceWater(state._costingDraft, null);
+  state._costingDirty = false;
+}
 function renderCostingVersionsList(product){
   if(state._costingVersionsView==='archive') return renderCostingVersionsArchive(product);
   const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
@@ -20254,7 +20366,6 @@ function renderCostingVersionsList(product){
   const archivedCount = archivedCostingVersions(product).length;
   const activeVer = costingActiveVersion(product);
   return `
-  <button type="button" class="btn-text" id="btn-back-to-costing-products" style="margin-bottom:14px;">← Products</button>
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="color:var(--muted);font-weight:500;">(ID: ${esc(product.productId)})</span>`:''} — versions</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -20291,7 +20402,6 @@ function renderCostingVersionsArchive(product){
   const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
   const versions = archivedCostingVersions(product);
   return `
-  <button type="button" class="btn-text" data-costing-versions-view="active" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} — archived versions</div>
   </div>
@@ -20443,7 +20553,6 @@ function renderCostingProductSheet(product, version){
   const colCount = 5 + sizes.length*2 + (admin?1:0);
   const batchColors = draft.batchColors || {};
   return `
-  <button type="button" class="btn-text" id="btn-back-to-costing-versions" style="margin-bottom:14px;">← ${esc(product.name)} versions</button>
   <div class="toolbar" style="align-items:flex-start;">
     <div style="font-size:23px;font-weight:700;font-family:'Fraunces',serif;color:var(--ink);">${esc(product.name)}${product.productId?` <span style="font-size:14px;font-weight:500;color:var(--muted);font-family:inherit;">(ID: ${esc(product.productId)})</span>`:''} — ${esc(version.name)}${state._costingDirty ? ' <span style="font-size:14px;color:var(--muted);font-weight:500;font-family:inherit;">(unsaved changes)</span>' : ''}</div>
     ${admin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -21100,20 +21209,26 @@ function ptPhraseCardHtml(s, ord){
     ${showInstr ? `<div class="bsr-field pt-instr"><label>Instruction</label><textarea id="pti-${s.id}" rows="2" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea></div>` : ''}
   </div>`;
 }
-function openProcessTemplate(){
-  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
-  const product = state.costingProducts.find(x=>x.id===state._costingOpenProductId); if(!product) return;
+// Builds the Process template page's working copy from what is saved on the product (no redraw). Used by the
+// "Process template" button and by browser Forward / Back (navApply).
+function startProcessTemplateDraft(product){
   // A product with nothing saved yet opens EMPTY: the right side shows only "+ Add phrase" and "+ Add preparation checking step" (owner, 2026-11-18).
   const own = product.processTemplate && Array.isArray(product.processTemplate.steps) && product.processTemplate.steps.length ? product.processTemplate : null;
   const steps = own ? cloneSteps(own.steps) : [];
   state._templateDraft = {id:null, name:product.name, steps, processProductId:product.id};
   state._costingProcessPage = true; state._costingDirty = false;   // a full PAGE inside Costing (not a popup)
+}
+function openProcessTemplate(){
+  if(!(state.session && roleCan(state.session.role, 'costing_manage_templates'))) return;
+  const product = state.costingProducts.find(x=>x.id===state._costingOpenProductId); if(!product) return;
+  startProcessTemplateDraft(product);
   state.modal = null;
   render();
   window.scrollTo(0, 0);
 }
 function closeProcessTemplatePage(){
   state._costingProcessPage = false; state._templateDraft = null; state._costingDirty = false;
+  if(navBackIfParent()) return;   // the step before this one is the versions list: take it (history.back redraws), no extra entry
   render();
 }
 // Back / Cancel: asks first when something was changed (same Discard confirm the costing sheet uses).
@@ -21143,7 +21258,6 @@ function renderProcessTemplatePage(product){
         </table>`);
   return `
   <div id="process-template-page">
-    <button type="button" class="btn-text" id="btn-back-from-process-template" style="margin-bottom:14px;">\u2190 ${esc(product.name)} versions</button>
     <div class="toolbar">
       <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} \u2014 Process template</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -23506,20 +23620,13 @@ function attachShellHandlers(){
     e.preventDefault();
     goTo(el.dataset.nav);
   }));
-  // Settings has grown into 11 panels — same hub/drill-down pattern as GMP, history included:
-  // opening a card pushes a real history entry (#settings/<panel>) so the browser's own Back
-  // button returns to the grid in one step, resynced by the popstate listener below. The in-app
-  // "‹ Settings" button goes through history.back() too, so both ways back stay in sync.
+  // Settings has grown into 11 panels — same hub/drill-down pattern as GMP. Opening a card is a new
+  // screen, so navCommit() (end of render) adds the browser history entry (#settings/<panel>); the
+  // browser's own Back returns to the grid. There is no separate "‹ Settings" button any more.
   document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
-    const panel = el.dataset.settingsJump;
-    history.pushState(null,'','#settings/'+panel);
-    state._settingsOpenPanel = panel;
+    state._settingsOpenPanel = el.dataset.settingsJump;
     render();
-  }));
-  document.querySelectorAll('[data-settings-back]').forEach(el=>el.addEventListener('click', ()=>{
-    if(((location.hash||'').replace('#','').split('/')[1]||'')) history.back();
-    else { state._settingsOpenPanel = null; render(); }
   }));
   if(byIdEl('btn-more-fab-toggle')) byIdEl('btn-more-fab-toggle').onclick = ()=>{ state._moreFabOpen = !state._moreFabOpen; render(); };
   if(byIdEl('more-fab-backdrop')) byIdEl('more-fab-backdrop').onclick = ()=>{ state._moreFabOpen = false; render(); };
@@ -24058,7 +24165,6 @@ function attachShellHandlers(){
   // Admin: Edit Requests hub card, its list, and Approve/Reject -- wired once here since both the
   // persistent alert panel and the Edit Requests list render the same approve/reject buttons.
   document.querySelectorAll('[data-att-edit-requests-open]').forEach(b=>b.addEventListener('click', ()=>{ state._attEditRequestsOpen = true; render(); }));
-  document.querySelectorAll('[data-att-edit-requests-back]').forEach(b=>b.addEventListener('click', ()=>{ state._attEditRequestsOpen = false; render(); }));
   document.querySelectorAll('[data-att-edit-approve]').forEach(b=>b.addEventListener('click', ()=>resolveAttendanceEditRequest(b.dataset.attEditApprove, true)));
   document.querySelectorAll('[data-att-edit-reject]').forEach(b=>b.addEventListener('click', ()=>resolveAttendanceEditRequest(b.dataset.attEditReject, false)));
   if(byIdEl('btn-dismiss-att-edit-alert')) byIdEl('btn-dismiss-att-edit-alert').onclick = ()=>{ state._attEditAlert = null; render(); };
@@ -24335,7 +24441,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-new-rnd-m')) byIdEl('btn-new-rnd-m').onclick = ()=>openModal('rnd:new');
   document.querySelectorAll('[data-rnd-view-mode]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = b.dataset.rndViewMode; render(); }));
   document.querySelectorAll('[data-rnd-outcome-view]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'outcome'; state.filters.rndOutcomeKind = b.dataset.rndOutcomeView; render(); }));
-  document.querySelectorAll('[data-rnd-outcome-back]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.rndView = 'board'; render(); }));
   document.querySelectorAll('[data-delete-rnd-attendance]').forEach(b=>b.addEventListener('click', ()=>deleteRndAttendance(b.dataset.deleteRndAttendance)));
   if(byIdEl('btn-quarantine-rnd')) byIdEl('btn-quarantine-rnd').onclick = ()=>{
     const id = state.modal.split(':')[1];
@@ -24430,9 +24535,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-delete-att]').forEach(b=>b.addEventListener('click', ()=>deleteAttendanceEntry(b.dataset.deleteAtt)));
   // Attendance admin: Records hub -> staff list -> one staff's monthly report
   document.querySelectorAll('[data-att-records-open]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = true; render(); ensureFullNames().then(()=>{ if(!state.modal) render(); }); }));
-  document.querySelectorAll('[data-att-records-back]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = false; render(); }));
   document.querySelectorAll('[data-att-staff-row]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = b.dataset.attStaffRow; state._attRecordsMonth = null; render(); }));
-  document.querySelectorAll('[data-att-records-back-staff]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = null; render(); }));
   document.querySelectorAll('[data-att-print-staff]').forEach(b=>b.addEventListener('click', ()=>printAttendanceSheet(b.dataset.attPrintStaff)));
   document.querySelectorAll('[data-att-month-prev]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), -1); render(); }));
   document.querySelectorAll('[data-att-month-next]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsMonth = rndShiftMonth(state._attRecordsMonth||todayStr().slice(0,7), 1); render(); }));
@@ -24776,18 +24879,10 @@ function attachShellHandlers(){
   };
 
   // GMP: hub navigation + Inspections / Maintenance & Calibration / Pest control / Customer Feedback
-  // Opening a card pushes a real history entry (like SUBPAGE_PARENT_HUB pages) so the browser's
-  // own Back button returns to the hub in one step, instead of leaving the app entirely — see
-  // the popstate listener below. The in-app "‹ GMP" button goes through history.back() too, so
-  // both ways back stay in sync with exactly one step.
+  // Opening a card is a new screen: navCommit() (end of render) adds the browser history entry, so the
+  // browser's own Back button returns to the hub in one step. There is no "‹ GMP" button any more.
   document.querySelectorAll('[data-gmp-section]').forEach(b=>b.addEventListener('click', ()=>{
-    const section = b.dataset.gmpSection;
-    history.pushState(null,'','#gmp/'+section);
-    state.filters.gmpSection = section; render();
-  }));
-  document.querySelectorAll('[data-gmp-back]').forEach(b=>b.addEventListener('click', ()=>{
-    if(((location.hash||'').replace('#','').split('/')[1]||'')) history.back();
-    else { state.filters.gmpSection = null; render(); }
+    state.filters.gmpSection = b.dataset.gmpSection; render();
   }));
   document.querySelectorAll('[data-gmp-inspection-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpInspectionId = b.dataset.gmpInspectionSelect; render(); }));
   document.querySelectorAll('[data-gmp-maintenance-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpMaintenanceSub = b.dataset.gmpMaintenanceSelect; render(); }));
@@ -24922,7 +25017,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-process-template')) byIdEl('btn-process-template').onclick = openProcessTemplate;
   document.querySelectorAll('[data-cancel-process-template]').forEach(b=>b.addEventListener('click', leaveProcessTemplatePage));
   document.querySelectorAll('[data-save-process-template]').forEach(b=>b.addEventListener('click', saveProcessTemplate));
-  if(byIdEl('btn-back-from-process-template')) byIdEl('btn-back-from-process-template').onclick = leaveProcessTemplatePage;
   if(byIdEl('process-template-page')){
     ptUpdateRemaining();
     document.querySelectorAll('[data-pt-name]').forEach(inp=>{
@@ -25035,54 +25129,18 @@ function attachShellHandlers(){
     state._costingDraft = null;
     state._costingDirty = false;
     state._costingVersionsView = 'active';
-    history.replaceState(null,'','#costing/'+encodeURIComponent(state._costingOpenProductId));
-    render();
+    render();   // the browser history step (#costing/<product>) is made by navCommit() inside render()
   }));
-  if(byIdEl('btn-back-to-costing-products')) byIdEl('btn-back-to-costing-products').onclick = ()=>{
-    state._costingProcessPage = false;
-    state._costingOpenProductId = null;
-    state._costingVersionsView = 'active';
-    history.replaceState(null,'','#costing');
-    render();
-  };
+  // Archive <-> versions list is a screen change too: browser Back returns from the Archive (no separate "back" button).
   document.querySelectorAll('[data-costing-versions-view]').forEach(el=>el.addEventListener('click', ()=>{
     state._costingVersionsView = el.dataset.costingVersionsView;
     render();
   }));
-  if(byIdEl('btn-back-to-costing-versions')) byIdEl('btn-back-to-costing-versions').onclick = ()=>{
-    const goBack = ()=>{
-      state._costingOpenVersionId = null;
-      state._costingDraft = null;
-      state._costingDirty = false;
-      history.replaceState(null,'','#costing/'+encodeURIComponent(state._costingOpenProductId));
-      render();
-    };
-    if(state._costingDirty){
-      openConfirmModal({
-        title: 'Discard changes?', danger: true, confirmLabel: 'Discard',
-        message: 'Discard unsaved changes to this version?',
-        onConfirm: goBack,
-      });
-      return;
-    }
-    goBack();
-  };
   document.querySelectorAll('[data-open-costing-version]').forEach(el=>el.addEventListener('click', ()=>{
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     const version = product && (product.versions||[]).find(v=>v.id===el.dataset.openCostingVersion);
     if(!version) return;
-    state._costingOpenVersionId = version.id;
-    state._costingDraft = {
-      materials: JSON.parse(JSON.stringify(version.materials||[])),
-      batchSizes: JSON.parse(JSON.stringify(version.batchSizes||[])),
-      batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
-      fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
-      notes: version.notes||'',
-      productionMethod: version.productionMethod||'',
-    };
-    costingAutoBalanceWater(state._costingDraft, null);
-    state._costingDirty = false;
-    history.replaceState(null,'','#costing/'+encodeURIComponent(product.id)+'/'+encodeURIComponent(version.id));
+    costingStartVersionSheet(product, version);
     render();
   }));
   if(byIdEl('btn-add-costing-version')) byIdEl('btn-add-costing-version').onclick = async ()=>{
@@ -25099,7 +25157,6 @@ function attachShellHandlers(){
     state._costingOpenVersionId = newVersion.id;
     state._costingDraft = {materials:[], batchSizes:[], batchColors:{}, fixedCosts:JSON.parse(JSON.stringify(newVersion.fixedCosts)), notes:'', productionMethod:''};
     state._costingDirty = false;
-    history.replaceState(null,'','#costing/'+encodeURIComponent(product.id)+'/'+encodeURIComponent(newVersion.id));
     render();
   };
   document.querySelectorAll('[data-rename-costing-version]').forEach(b=>b.addEventListener('click', ()=>openModal('costingrenameversion:'+b.dataset.renameCostingVersion)));
@@ -25820,7 +25877,6 @@ function attachShellHandlers(){
     // _rolePermRoleId is still the only state the destination panel itself reads or writes.
     state._rolePermRoleId = f.id;
     state._rolePermExpanded = {};
-    history.pushState(null,'','#settings/settings-role-permissions');
     state._settingsOpenPanel = 'settings-role-permissions';
     render();
   }));
@@ -26040,30 +26096,49 @@ document.addEventListener('click', e=>{
 });
 // Fires when the browser's Back/Forward button pops one of the history entries pushed in
 // performGoTo (the hub sub-pages) — resync app state to whatever page the hash now names.
-window.addEventListener('popstate', ()=>{
+window.addEventListener('popstate', (e)=>{
   if(!state.session || state.trackMode || state.boardMode || state.complaintMode) return;
+  const target = (e.state && e.state.nav) || navFromHash();
+  // The browser has already stepped off the screen that is still showing: put its history entry back on top.
+  const stay = ()=>{
+    try{
+      const s = navSnapshot(), key = JSON.stringify(s);
+      const idx = (e.state && typeof e.state.idx==='number' ? e.state.idx : 0) + 1;
+      history.pushState({ navKey:key, nav:s, idx }, '', navHash(s));
+      _navKeys[idx] = key;
+    }catch(err){}
+  };
   // A mobile back-gesture (an edge-swipe, easy to trigger by accident while typing near the
   // screen's edge) fires this exactly like a real Back-button press. With any modal open —
-  // "Edit template" included — that silently popped state.modal below, discarding whatever was
-  // being typed with no warning. Re-assert the current URL and leave the modal open instead.
-  if(state.modal){ history.pushState(null, '', location.href); return; }
+  // "Edit template" included — that silently popped state.modal, discarding whatever was
+  // being typed with no warning. Stay on this screen and leave the window open instead (say so,
+  // so Back does not just look broken).
+  if(state.modal){ stay(); showToast('Close this window first, then use Back.'); return; }
+  // Already showing that screen (a Cancel / Save that went back itself changed `state` first): just redraw.
+  if(target && JSON.stringify(target)===JSON.stringify(navSnapshot())){ render(); return; }
   // Same protection for the full pages with typing in them (Process template page, costing version sheet): an accidental
-  // back-swipe must not silently throw the typing away. Stay put and say how to leave properly (Cancel asks "Discard changes?").
+  // back-swipe must not silently throw the typing away. Stay put and ask; only "Discard" really goes back.
   if(state.page==='costing' && state._costingDirty){
-    try{ history.pushState(null, '', '#costing/' + encodeURIComponent(state._costingOpenProductId || '') + (state._costingOpenVersionId ? '/' + encodeURIComponent(state._costingOpenVersionId) : '')); }catch(e){}
-    showToast('You have unsaved changes. Use Save, or Cancel to discard them.');
+    stay();
+    if(state._costingProcessPage && state._templateDraft){ try{ syncTemplateDraftStepFieldsFromDOM(); }catch(err){} }   // keep what is typed, in case they keep editing
+    openConfirmModal({
+      title: 'Discard changes?', danger: true, confirmLabel: 'Discard',
+      message: state._costingProcessPage ? 'Discard unsaved changes to this process template?' : 'Discard unsaved changes to this costing version?',
+      onConfirm: ()=>{ state._costingDirty = false; history.back(); },
+    });
     return;
   }
-  const hashParts = (location.hash||'').replace('#','').split('/');
-  const page = hashParts[0] || '';
-  if(!page || !pageAllowed(page)) return;
-  state.page = page; state.modal = null;
-  state._moreFabOpen = false;
-  if(page==='gmp') state.filters.gmpSection = hashParts[1] || null;
-  if(page==='settings') state._settingsOpenPanel = hashParts[1] || null;
-  if(page==='chat'){ c2Enter(); } else { c2Leave(); }
+  // Put the saved screen back. If it cannot be reproduced exactly (a product that was deleted since), the entry is
+  // corrected in place by navCommit() (state._navReplace) instead of adding a step.
+  state._navReplace = true;
+  if(!navApply(target)){ state._navReplace = false; return; }
+  const page = state.page;
+  if(page==='chat'){ state.chatNotice = null; c2Enter(); } else { c2Leave(); }
   if(page==='recipes'){ startBatchTicker(); } else { stopBatchTicker(); }
   render();
+  state._navReplace = false;
+  const deferredKeys = DEFERRED_KEY_PAGES[page];
+  if(deferredKeys) ensureDeferredKeysLoaded(deferredKeys).then(fetched => { if(fetched) render(); }).catch(err => { console.error('deferred load for '+page+' failed', err); render(); });
 });
 // Inactivity sign-off: armed once here (not per-render), so it survives every re-render without
 // piling up duplicate listeners. Each real input event stamps a timestamp and reschedules a

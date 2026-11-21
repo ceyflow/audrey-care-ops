@@ -823,6 +823,9 @@ html{ visibility:hidden; }
      theme is active, same reasoning as the fixed temperature/status colors elsewhere. */
   .bsmc-card{background:#fff;border:1px solid #D9EDE0;border-radius:16px;padding:20px 22px;margin-bottom:16px;}
   .bsmc-label{text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700;color:#3C9058;margin-bottom:12px;}
+  .bsmc-size{display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;padding:4px 6px 4px 14px;border:1.5px solid #BFE3CB;border-radius:999px;background:#F3FBF6;font-size:12px;font-weight:600;color:#2E7D46;}
+  .bsmc-size input{width:84px;border:none;border-radius:999px;background:#fff;padding:6px 10px;font-size:14px;font-weight:700;color:#1B2340;text-align:right;}
+  .bsmc-size input:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .bsmc-pill{display:inline-flex;align-items:center;background:#E4F8EA;color:#2E7D46;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;}
   .pt-grid{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start;margin-top:0;}
   .pt-grid .bsmc-card{margin:0;}
@@ -19963,6 +19966,20 @@ function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 // any batch size instead of being locked to one fixed absolute weight.
 function recipeMaterialAmount(percent, batchSizeKg){ return (Number(percent)||0)/100 * (Number(batchSizeKg)||0); }
 function recipeMaterialsTotalPercent(materials){ return (materials||[]).reduce((sum,m)=>sum+(Number(m.percent)||0), 0); }
+// The size shown / printed / started on an OPEN batch sheet: what was typed in its "Batch size" box (state._recipeDraft.sheetKg,
+// never saved to the recipe), else the recipe's own (reference) size. Steps / process template do not depend on the size.
+function sheetBatchKg(r){
+  const d = state._recipeDraft, v = (d && d.id===r.id) ? parseFloat(d.sheetKg) : NaN;
+  return v>0 ? v : (r.batchSizeKg||0);
+}
+// Typing in the Batch size box: rewrite every Amount cell in place (no redraw, so the cursor stays put).
+function updateSheetBatchKg(input){
+  const r = state._recipeDraft && byId(state.recipes, state._recipeDraft.id); if(!r) return;
+  state._recipeDraft.sheetKg = input.value;
+  const kg = parseFloat(input.value)||0;
+  r.materials.forEach(m=>{ const td = document.querySelector('.sheet-amt[data-mat-id="'+m.id+'"]'); if(td) td.textContent = recipeMaterialAmount(m.percent, kg).toFixed(3); });
+  const tot = document.getElementById('sheet-total-amt'); if(tot) tot.textContent = recipeMaterialAmount(recipeMaterialsTotalPercent(r.materials), kg).toFixed(3);
+}
 function buildRecipeDraft(id){
   const r = id ? byId(state.recipes, id) : null;
   return r
@@ -20337,7 +20354,7 @@ async function startBatch(recipeId, extra){
   state.activeBatch = {
     id: uid('BATCH'), recipeId: r.id, recipeName: r.name,
     productName: extra.productName || r.name, qty: extra.qty || '',
-    batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '',
+    batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '', batchSizeKg: extra.batchSizeKg || r.batchSizeKg || 0,
     // A preparation step's checklist array/items are objects, not primitives — {...s} alone
     // leaves them shared by reference with the recipe's own steps. Harmless while the checklist
     // was read-only during a run, but now that updateBatchPrepFieldValue/updateBatchPrepChecked
@@ -20483,14 +20500,14 @@ async function finishBatchIntoBlendingBoard(b){
     // Quantity defaults to the batch size locked in from Costing when the batch was started
     // (recipe.batchSizeKg) — that's the real amount that was actually mixed, so there's no reason
     // to make someone retype it by hand unless this run genuinely produced a different amount.
-    product: b.productName || b.recipeName, qty: b.qty || (recipe && recipe.batchSizeKg ? recipe.batchSizeKg+' Kg' : ''), variation: b.variation || '',
+    product: b.productName || b.recipeName, qty: b.qty || ((b.batchSizeKg || (recipe && recipe.batchSizeKg)) ? (b.batchSizeKg || recipe.batchSizeKg)+' Kg' : ''), variation: b.variation || '',
     priority: 'Medium', notes: '',
     stage: 0, assignee: null,
     createdAt: new Date().toISOString(),
     history: [{stage:0, at:new Date().toISOString(), by:state.session.name}],
     recipeId: b.recipeId,
     recipeName: recipe ? recipe.name : b.recipeName,
-    batchSizeKg: recipe ? recipe.batchSizeKg : null,
+    batchSizeKg: b.batchSizeKg || (recipe ? recipe.batchSizeKg : null),
     materials: recipe ? recipe.materials.map(m=>({...m})) : [],
     standardPH: recipe ? recipe.standardPH : '',
     combineNote: recipe ? recipe.combineNote : '',
@@ -21562,9 +21579,7 @@ async function transferProcessToBatchSheets(){
   if(state._costingDirty){ showToast('Save the process template first, then transfer.'); return; }
   const version = costingActiveVersion(product);
   if(!version){ showToast('Choose an Active version first.'); return; }
-  const sizes = (version.batchSizes||[]).map(Number).filter(n=>n>0).sort((a,b)=>a-b);
-  if(!sizes.length){ showToast('Add a batch size to the active version first.'); return; }
-  const batchSizeKg = sizes[0];   // only sizes that were actually costed are used
+  const batchSizeKg = 100;   // owner, 2026-11-21: always start at 100 kg; the real size is typed on the batch sheet itself
   const steps = (product.processTemplate && Array.isArray(product.processTemplate.steps)) ? freshStepCopies(product.processTemplate.steps) : [];
   const newRecipe = {
     id: uid('RCP'),
@@ -21770,7 +21785,8 @@ function recipeFormModal(){
 }
 function recipeBatchSheetModal(recipeId){
   const r = byId(state.recipes, recipeId); if(!r) return '';
-  const batchSizeKg = r.batchSizeKg || 0;
+  const batchSizeKg = sheetBatchKg(r);
+  const typedKg = (state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.sheetKg!=null) ? state._recipeDraft.sheetKg : batchSizeKg;
   const totalPct = recipeMaterialsTotalPercent(r.materials);
   const totalAmt = recipeMaterialAmount(totalPct, batchSizeKg);
   // Step editing lives here now (admin only) instead of a separate Edit screen — reuses the
@@ -21791,7 +21807,7 @@ function recipeBatchSheetModal(recipeId){
       </div>
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
       ${(tpl.showDescription && r.description) ? `<div class="hint" style="margin-bottom:10px;">${esc(r.description)}</div>` : ''}
-      <div class="bsmc-pill" title="Locked — set when transferred from Costing" style="margin-bottom:16px;">${batchSizeKg} kg batch · locked</div>
+      <label class="bsmc-size" title="Type the batch size, e.g. 250: the amounts below change to that size"><span>Batch size</span><input id="sheet-batch-kg" type="number" min="0" step="any" inputmode="decimal" value="${escAttr(typedKg)}" oninput="updateSheetBatchKg(this)"><span>kg</span></label>
       <div class="bsmc-card">
         <div class="bsmc-label">Materials</div>
         <table class="bsmc-table">
@@ -21989,7 +22005,7 @@ function bsmcLedgerStepsHtml(steps, ordinals){
 // comes straight from the recipe).
 function printBatchSheet(recipeId){
   const r = byId(state.recipes, recipeId); if(!r) return;
-  const batchSizeKg = r.batchSizeKg||0;
+  const batchSizeKg = sheetBatchKg(r);   // what was typed in the sheet's Batch size box
   const noEl = document.getElementById('sheet-batch-no');
   const batchNo = noEl ? noEl.value : uid('BLD');
   const totalPct = recipeMaterialsTotalPercent(r.materials);
@@ -22030,7 +22046,7 @@ function printBatchSheet(recipeId){
       ${batchSheetHeaderHtml(tpl, {dateText: fmtDate(new Date().toISOString()), batchNoText: esc(batchNo)})}
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
       ${(tpl.showDescription && r.description) ? `<div style="margin-bottom:10px;color:#6C8071;font-size:13px;">${esc(r.description)}</div>` : ''}
-      <div class="bsmc-pill" style="margin-bottom:16px;">${batchSizeKg} kg batch · locked</div>
+      <div class="bsmc-pill" style="margin-bottom:16px;">${batchSizeKg} kg batch</div>
       <div class="bsmc-card">
         <div class="bsmc-label">Materials</div>
         <table class="bsmc-table">
@@ -22092,7 +22108,7 @@ function printDocumentedBatchSheet(batchId){
         </div>
       </div>` : ''}
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(b.recipeName||b.product)}</h2>
-      <div class="bsmc-pill" style="margin-bottom:16px;">${b.batchSizeKg||0} kg batch · locked</div>
+      <div class="bsmc-pill" style="margin-bottom:16px;">${b.batchSizeKg||0} kg batch</div>
       <div class="bsmc-card">
         <div class="bsmc-label">Materials</div>
         <table class="bsmc-table">
@@ -25754,7 +25770,8 @@ function attachShellHandlers(){
     // one generated instead.
     const noEl = document.getElementById('sheet-batch-no');
     const batchNo = noEl ? noEl.value.trim() : '';
-    await startBatch(e.currentTarget.dataset.recipeId, batchNo ? {batchNo} : undefined);
+    const rcp = byId(state.recipes, e.currentTarget.dataset.recipeId);
+    await startBatch(e.currentTarget.dataset.recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
     // zero-step recipes show a toast and stay open instead. Recipe library and the batch-running
     // view (Production Guide) are separate pages now, so jump there to actually watch it run.
     if(state.activeBatch){ closeModal(); goTo('recipes'); }

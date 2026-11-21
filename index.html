@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261119050000">
+<meta name="app-build" content="20261121162426">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1902,6 +1902,22 @@ html{ visibility:hidden; }
   .cost-selected .cost-check{background:var(--accent);border-color:var(--accent);}
   .recipe-card:hover{box-shadow:0 10px 24px rgba(20,25,20,.12);border-color:var(--accent);}
   .recipe-card .rc-title{font-weight:600;font-size:14.5px;}
+  .rc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+  .rc-head .rc-title{flex:1;min-width:0;}
+  .rc-dots{flex:none;width:32px;height:32px;margin:-6px -8px 0 0;border:none;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:background .15s,color .15s;}
+  .rc-dots svg{width:18px;height:18px;}
+  .rc-dots:hover,.rc-dots[aria-expanded="true"]{background:var(--accent-soft);color:var(--accent-dark);}
+  .rc-dots:focus-visible,.rc-menu-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .rc-menu-backdrop{position:fixed;inset:0;z-index:30;}
+  .rc-menu{position:absolute;z-index:31;top:38px;right:10px;min-width:164px;padding:6px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 36px -12px rgba(20,30,70,.28);display:flex;flex-direction:column;gap:2px;}
+  .rc-menu-item{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:6px 10px;border:none;border-radius:9px;background:transparent;font:600 13px/1 inherit;font-family:inherit;text-align:left;cursor:pointer;}
+  .rc-menu-item:hover,.rc-menu-item.on{background:var(--bg);}
+  .rc-menu-item i,.rc-machine i{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;}
+  .rc-menu-item b{margin-left:auto;color:var(--accent-dark);}
+  .rc-menu-clear{color:var(--muted);font-weight:500;border-top:1px solid var(--border);border-radius:0 0 9px 9px;margin-top:2px;}
+  .rc-machine{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;letter-spacing:.01em;}
+  .bsmc-page{max-width:860px;margin:0 auto 24px;padding:28px 32px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 14px 36px -16px rgba(var(--accent-rgb),.25);}
+  @media (max-width:760px){ .bsmc-page{padding:18px 16px;border-radius:16px;} }
   .recipe-card .rc-meta{font-size:12px;color:var(--muted);}
   .recipe-card.clickable-card:hover{background:var(--accent-soft);}
   .rc-icon-badge{width:36px;height:36px;border-radius:12px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin-bottom:2px;}
@@ -4840,6 +4856,7 @@ const PERMISSION_REGISTRY = [
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_create_recipe', label:'Create new recipes'},
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_recipe', label:'Delete a recipe'},
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit_steps', label:'Edit recipe steps inline'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'batchsheets_assign_machine', label:'Choose the machine a batch sheet runs on (Batch sheets cards)'},
   // R&D
   {dept:'rnd', deptLabel:'R&D', id:'rnd_manage', label:'Create/advance projects, manage chemists, mark attendance'},
   {dept:'rnd', deptLabel:'R&D', id:'rnd_delete', label:'Delete a project or chemist'},
@@ -7888,6 +7905,7 @@ function navSnapshot(){
   }
   if(state.page==='rnd' && f.rndView==='outcome') s.ro = f.rndOutcomeKind || '';
   if(state.page==='orders' && state.ordersView==='archive') s.oa = 1;
+  if(state.page==='recipelibrary' && state._batchSheetId) s.bs = state._batchSheetId;
   return s;
 }
 // What goes in the address bar. Only the parts that can be restored after a refresh (same shapes as before:
@@ -7956,6 +7974,9 @@ function navApply(t){
   state._attRecordsStaff = t.as || null;
   if(t.ro!=null){ f.rndView = 'outcome'; f.rndOutcomeKind = t.ro; } else if(f.rndView==='outcome'){ f.rndView = 'board'; }
   if(t.oa) state.ordersView = 'archive'; else if(state.ordersView==='archive') state.ordersView = 'kanban';
+  // Batch sheets: an open sheet page is a screen of its own.
+  state._batchSheetId = null; state._recipeMenuOpen = null;
+  if(t.page==='recipelibrary' && t.bs && byId(state.recipes, t.bs)) startBatchSheetPage(t.bs); else if(state._recipeDraft && state.page!=='recipelibrary') state._recipeDraft = null;
   // Costing: close whatever is open, then re-open exactly what the saved screen had.
   if(state._costingProcessPage) state._templateDraft = null;
   state._costingOpenProductId = null; state._costingOpenVersionId = null; state._costingDraft = null;
@@ -7973,6 +7994,11 @@ function navApply(t){
   return true;
 }
 function goTo(page){
+  if(!pageAllowed(page)) return;
+  if(state._batchSheetId && state.page==='recipelibrary' && batchSheetDirty()){
+    openConfirmModal({ title:'Discard changes?', danger:true, confirmLabel:'Discard', message:'Discard unsaved changes to this batch sheet?', onConfirm: ()=>{ state._recipeDraft = null; performGoTo(page); } });
+    return;
+  }
   if(!pageAllowed(page)) return;
   if(state.page==='costing' && state._costingDirty){
     openConfirmModal({
@@ -7993,6 +8019,7 @@ function performGoTo(page){
   state._costingProcessPage = false;
   state._costingVersionsView = 'active';
   state._costSel = null;
+  state._batchSheetId = null; state._recipeMenuOpen = null;
   state.filters.gmpSection = null;
   state._attRecordsOpen = false;
   state._attRecordsStaff = null;
@@ -11260,7 +11287,7 @@ document.addEventListener('visibilitychange', ()=>{
 // a step or material deep in a long batch sheet or template used to do exactly that. Every such list mutation
 // re-renders through this instead.
 function renderKeepModalScroll(){
-  const winY = state._costingProcessPage ? window.scrollY : null;
+  const winY = (state._costingProcessPage || state._batchSheetId) ? window.scrollY : null;
   const overlayEl = document.querySelector('.overlay');
   const modalEl = document.querySelector('.modal');
   const overlayScroll = overlayEl ? overlayEl.scrollTop : null;
@@ -11739,7 +11766,7 @@ function render(){
   // that first-arrival scroll-to-bottom instead.
   const chatEl = state.page==='chat' ? document.getElementById('chat-messages') : null;
   const chatScroll = chatEl ? chatEl.scrollTop : null;
-  const openForm = document.querySelector('.modal, .drawer');
+  const openForm = document.querySelector('.modal, .drawer, #batchsheet-page');
   if(openForm){
     const formSnapshot = captureOpenFormFields(openForm);
     renderInner();
@@ -19994,15 +20021,33 @@ function openRecipeModal(id){
 // The batch sheet is now also where the blending team tweaks mixing steps (reorder/delete/add)
 // right before running a batch, instead of a separate admin-only Edit screen — reuses the same
 // draft + step-editor wiring as the full recipe form.
-function openBatchSheetModal(id){
+function openBatchSheetModal(id){   // (name kept for callers) opens the sheet as a full PAGE inside Batch sheets, not a popup (owner, 2026-11-21)
   if(!byId(state.recipes, id)) return;
+  startBatchSheetPage(id);
+  state.modal = null; state._recipeMenuOpen = null;
+  render();
+  window.scrollTo(0, 0);
+}
+// Sets the page's working state (no redraw). Also used by browser Back / Forward (navApply).
+function startBatchSheetPage(id){
   state._recipeDraft = buildRecipeDraft(id);
-  // Starts blank, not a generated id — a different real batch number gets typed in by hand for
-  // every batch. Blank also survives the sheet's own re-renders (on Save, a step edit, …) the same
-  // way a typed one does, via syncDraftStepFieldsFromDOM(); see its own note. Left blank when the
-  // batch is actually started, startBatch() falls back to its own auto-generated id.
+  // Starts blank, not a generated id — a different real batch number gets typed in by hand for every batch. Blank also survives
+  // redraws the same way a typed one does (captureOpenFormFields / syncDraftStepFieldsFromDOM). Left blank when the batch is
+  // started, startBatch() falls back to its own auto-generated id.
   state._recipeDraft.batchNo = '';
-  openModal('recipesheet:'+id);
+  state._batchSheetId = id;
+}
+function closeBatchSheetPage(){
+  state._batchSheetId = null; state._recipeDraft = null;
+  if(navBackIfParent()) return;   // the step before this one is the Batch sheets list: step back instead of stacking a copy
+  render();
+}
+// Unsaved step edits on the open sheet page (typed but "Save" not pressed). Browser Back / the sidebar ask before dropping them.
+function batchSheetDirty(){
+  const d = state._recipeDraft, r = state._batchSheetId && byId(state.recipes, state._batchSheetId);
+  if(!d || !r || d.id!==r.id || !document.getElementById('batchsheet-page')) return false;
+  try{ syncDraftStepFieldsFromDOM(); }catch(e){}
+  return JSON.stringify(d.steps) !== JSON.stringify(r.steps);
 }
 // ---- Mixing steps templates ----
 // Reusable step sequences (by product type) a new recipe can start from, instead of typing the
@@ -20030,7 +20075,7 @@ async function applyMixingTemplateToRecipe(templateId){
   state._recipeDraft.steps = t.steps.map(s => s.type==='preparation'
     ? {...s, id:uid('PREP'), checklist:(s.checklist||[]).map(c=>({...c, id:uid(c.kind==='field'?'FLD':'CHK')}))}
     : {...s, id:uid('STEP')});
-  openModal('recipesheet:'+recipeId);
+  openModal(null);   // the sheet is a page now: closing the picker just shows it again
   // Persist right away instead of leaving it as an unsaved draft — applying a template felt like
   // it "didn't stick" whenever someone navigated off the sheet before remembering to hit the
   // separate Save button, since reopening the sheet rebuilds the draft from whatever's actually
@@ -20040,7 +20085,7 @@ async function applyMixingTemplateToRecipe(templateId){
 function closeMixingTemplatesPicker(){
   const recipeId = state._mixingTemplatePickerForRecipeId;
   state._mixingTemplatePickerForRecipeId = null;
-  openModal(recipeId ? 'recipesheet:'+recipeId : null);
+  openModal(null);
 }
 function openTemplateStepsModal(id){
   const t = templateById(id); if(!t) return;
@@ -20545,22 +20590,49 @@ function renderRecipesPage(){
   if(isBatchDisplayActive()) return renderActiveBatchCard();
   return `<div class="empty-state">No batch running right now. Open a sheet in <a href="#" data-nav="recipelibrary">Batch sheets</a> and start one from its Batch sheet to see it here.</div>`;
 }
+// Machines a batch sheet can run on (owner, 2026-11-21): chosen from the three-dots menu on a card, saved on the recipe (r.machine),
+// shown in colour on the card and on the open sheet. The colours are dark enough for text on white.
+const BATCH_MACHINES = [{id:'Machine 1', color:'#1F5FBF'}, {id:'Machine 2', color:'#B35C00'}, {id:'Machine 3', color:'#1B7F4B'}];
+function machineColor(id){ const m = BATCH_MACHINES.find(x=>x.id===id); return m ? m.color : 'var(--muted)'; }
+function machineChipHtml(id){ return `<span class="rc-machine" style="color:${machineColor(id)};"><i style="background:${machineColor(id)};"></i>${esc(id)}</span>`; }
+function canAssignMachine(){ return !!state.session && roleCan(state.session.role, 'batchsheets_assign_machine'); }
+async function setRecipeMachine(recipeId, machine){
+  const r = byId(state.recipes, recipeId); if(!r || !canAssignMachine()) return;
+  r.machine = BATCH_MACHINES.some(m=>m.id===machine) ? machine : '';
+  state._recipeMenuOpen = null;
+  render();
+  if(!(await save('recipes'))) return;
+  logActivity(r.machine ? `Set batch sheet "${r.name}" to ${r.machine}` : `Cleared the machine on batch sheet "${r.name}"`);
+  showToast(r.machine ? `${r.name}: ${r.machine}` : 'Machine cleared');
+}
 function renderRecipeLibraryPage(){
+  if(state._batchSheetId && byId(state.recipes, state._batchSheetId)) return renderBatchSheetPage(state._batchSheetId);
+  const canMachine = canAssignMachine();
   return `
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Batch sheets</div>
     <div style="display:flex;gap:8px;">
     </div>
   </div>
+  ${state._recipeMenuOpen ? `<div class="rc-menu-backdrop" id="rc-menu-backdrop"></div>` : ''}
   ${state.recipes.length===0 ? `<div class="empty-state">No recipes yet. ${state.session && roleCan(state.session.role,'costing_create_recipe')?'Create one to start guiding the blending team through a batch.':''}</div>` : `
   <div class="recipe-grid">
     ${state.recipes.map(r=>{
       const totalMin = r.steps.reduce((sum,s)=>sum+(s.waitMinutes||0),0);
       const matCount = (r.materials||[]).length;
       const totalPct = recipeMaterialsTotalPercent(r.materials);
+      const menuOpen = state._recipeMenuOpen===r.id;
       return `
-      <div class="recipe-card">
-        <div class="rc-title">${esc(r.name)}</div>
+      <div class="recipe-card" style="position:relative;">
+        <div class="rc-head">
+          <div class="rc-title">${esc(r.name)}</div>
+          ${canMachine ? `<button type="button" class="rc-dots" data-recipe-menu="${r.id}" aria-label="Choose machine" aria-haspopup="menu" aria-expanded="${menuOpen}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
+        </div>
+        ${menuOpen ? `<div class="rc-menu" role="menu">
+          ${BATCH_MACHINES.map(m=>`<button type="button" role="menuitem" class="rc-menu-item ${r.machine===m.id?'on':''}" data-machine-recipe="${r.id}" data-machine-value="${m.id}"><i style="background:${m.color};"></i><span style="color:${m.color};">${m.id}</span>${r.machine===m.id?'<b>✓</b>':''}</button>`).join('')}
+          ${r.machine ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-clear" data-machine-recipe="${r.id}" data-machine-value="">Clear machine</button>` : ''}
+        </div>` : ''}
+        ${r.machine ? `<div>${machineChipHtml(r.machine)}</div>` : ''}
         ${r.description ? `<div class="rc-meta">${esc(r.description)}</div>` : ''}
         ${matCount ? `<div class="rc-meta">${matCount} raw material${matCount===1?'':'s'} · ${totalPct.toFixed(1)}%${r.batchSizeKg?(' · ref. '+r.batchSizeKg+'kg batch'):''}</div>` : ''}
         <div class="rc-meta">${r.steps.length} step${r.steps.length===1?'':'s'} · ~${totalMin} min total${r.standardPH?(' · pH '+esc(r.standardPH)):''}</div>
@@ -21783,7 +21855,9 @@ function recipeFormModal(){
     </div>
   </div>`;
 }
-function recipeBatchSheetModal(recipeId){
+function recipeBatchSheetModal(recipeId){ return recipeBatchSheetInner(recipeId, false); }
+function renderBatchSheetPage(recipeId){ return recipeBatchSheetInner(recipeId, true); }
+function recipeBatchSheetInner(recipeId, asPage){
   const r = byId(state.recipes, recipeId); if(!r) return '';
   const batchSizeKg = sheetBatchKg(r);
   const typedKg = (state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.sheetKg!=null) ? state._recipeDraft.sheetKg : batchSizeKg;
@@ -21796,8 +21870,7 @@ function recipeBatchSheetModal(recipeId){
   const batchActive = isBatchDisplayActive();
   const tpl = batchSheetTemplate();
   return `
-  <div class="overlay" id="overlay">
-    <div class="modal" style="max-width:680px;">
+  ${asPage ? '<div id="batchsheet-page" class="bsmc-page">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px;">
         <div>${(tpl.showLogo && batchSheetLogo()) ? `<img src="${batchSheetLogo()}" alt="Logo" style="max-height:104px;max-width:440px;object-fit:contain;">` : ''}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
@@ -21806,6 +21879,7 @@ function recipeBatchSheetModal(recipeId){
         </div>
       </div>
       <h2 style="font-family:'Poppins',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.01em;">${esc(r.name)}</h2>
+      ${r.machine ? `<div style="margin:0 0 8px;">${machineChipHtml(r.machine)}</div>` : ''}
       ${(tpl.showDescription && r.description) ? `<div class="hint" style="margin-bottom:10px;">${esc(r.description)}</div>` : ''}
       <label class="bsmc-size" title="Type the batch size, e.g. 250: the amounts below change to that size"><span>Batch size</span><input id="sheet-batch-kg" type="number" min="0" step="any" inputmode="decimal" value="${escAttr(typedKg)}" oninput="updateSheetBatchKg(this)"><span>kg</span></label>
       <div class="bsmc-card">
@@ -21895,12 +21969,11 @@ function recipeBatchSheetModal(recipeId){
       })() : `<div class="bsmc-card" style="margin-top:0;">${r.steps.length ? bsmcLedgerStepsHtml(r.steps, documentedStepOrdinals(r.steps)) : '<div class="hint">No production steps yet.</div>'}</div>`}
       ${batchSheetTrailingSectionsHtml(tpl, {combineNote: r.combineNote, standardPH: r.standardPH})}
       <div class="modal-actions" style="justify-content:center;margin-top:16px;flex-wrap:wrap;">
-        <button type="button" class="btn" id="btn-cancel-modal">Close</button>
+        <button type="button" class="btn" id="${asPage?'btn-close-batchsheet':'btn-cancel-modal'}">Close</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
         ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
       </div>
-    </div>
-  </div>`;
+  ${asPage ? '</div>' : '</div></div>'}`;
 }
 // Standard factory QA card (Production Area / Equipment / Water checks, operator sign-off,
 // finished-product QC, finishing checks) — matches the paper "Batch Preparation Check List" used
@@ -25761,6 +25834,10 @@ function attachShellHandlers(){
   attachCostingMaterialNameAutocomplete();
   attachCostingSupplierAutocomplete();
   document.querySelectorAll('[data-view-batchsheet]').forEach(b=>b.addEventListener('click', ()=>openBatchSheetModal(b.dataset.viewBatchsheet)));
+  if(byIdEl('btn-close-batchsheet')) byIdEl('btn-close-batchsheet').onclick = closeBatchSheetPage;
+  document.querySelectorAll('[data-recipe-menu]').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); state._recipeMenuOpen = state._recipeMenuOpen===b.dataset.recipeMenu ? null : b.dataset.recipeMenu; render(); }));
+  if(byIdEl('rc-menu-backdrop')) byIdEl('rc-menu-backdrop').onclick = ()=>{ state._recipeMenuOpen = null; render(); };
+  document.querySelectorAll('[data-machine-recipe]').forEach(b=>b.addEventListener('click', ()=>setRecipeMachine(b.dataset.machineRecipe, b.dataset.machineValue)));
   if(byIdEl('btn-print-batchsheet')) byIdEl('btn-print-batchsheet').onclick = (e)=>printBatchSheet(e.currentTarget.dataset.recipeId);
   if(byIdEl('btn-save-batchsheet-steps')) byIdEl('btn-save-batchsheet-steps').onclick = ()=>saveBatchSheetSteps(state._recipeDraft && state._recipeDraft.id);
   if(byIdEl('btn-start-batch-from-sheet')) byIdEl('btn-start-batch-from-sheet').onclick = async (e)=>{
@@ -26483,6 +26560,11 @@ window.addEventListener('popstate', (e)=>{
       message: state._costingProcessPage ? 'Discard unsaved changes to this process template?' : 'Discard unsaved changes to this costing version?',
       onConfirm: ()=>{ state._costingDirty = false; history.back(); },
     });
+    return;
+  }
+  if(state.page==='recipelibrary' && state._batchSheetId && batchSheetDirty()){
+    stay();
+    openConfirmModal({ title:'Discard changes?', danger:true, confirmLabel:'Discard', message:'Discard unsaved changes to this batch sheet?', onConfirm: ()=>{ state._recipeDraft = null; history.back(); } });
     return;
   }
   // Put the saved screen back. If it cannot be reproduced exactly (a product that was deleted since), the entry is

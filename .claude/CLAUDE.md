@@ -129,6 +129,12 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   The real size is typed on the OPEN batch sheet: a **Batch size (kg)** box (`#sheet-batch-kg`, `updateSheetBatchKg`) rewrites the Amount column live (percent x size); the typed value lives in `state._recipeDraft.sheetKg` (never saved to the recipe,
   reset each time a sheet is opened) and `sheetBatchKg(r)` feeds the sheet, Print and Start batch (`activeBatch.batchSizeKg`, so the Mixing and Filling card gets that size). The saved process-template steps are the same at any size.
   (3) Settings -> Mobile appearance preview is one thin-outline phone (dynamic island, side buttons) at 390 x 844; the iPhone SE / 14 / 14 Pro Max buttons were removed (`MOBILE_PREVIEW_DEVICES` has one entry).
+- **Batch sheet = a PAGE; machine on each card (owner, 2026-11-21).** Clicking "Batch sheet" on a Batch sheets card no longer opens a popup: `openBatchSheetModal(id)` (name kept) sets `state._batchSheetId` and
+  `renderRecipeLibraryPage` draws the same sheet as a page (`recipeBatchSheetInner(id, true)`, `#batchsheet-page`). It is a browser-history step (`s.bs` in `navSnapshot`); its **Close** button steps back
+  (`closeBatchSheetPage` -> `navBackIfParent`); unsaved step edits (`batchSheetDirty`) make browser Back and the sidebar ask "Discard changes?". The old modal route (`recipesheet:`) still exists but nothing opens it.
+  The Use-template picker is still a popup ON TOP of the page. Each card has a three-dots button (`.rc-dots`) with Machine 1 / 2 / 3 (+ "Clear machine"); the choice is saved on the recipe (`r.machine`, `setRecipeMachine`)
+  and shown in colour on the card and at the top of the open sheet (`BATCH_MACHINES`: blue / amber / green, dark enough for text). Needs the permission **`batchsheets_assign_machine`** (Costing & Recipe section; Admin has it
+  automatically, every other role starts OFF until switched on in User role permission).
 - **Elegant sidebar + date-focused Dashboard (owner, 2026-11-21: "leftside panel more decent with icons and animations; dashboard more elegant with colors and date focus").**
   CSS block "Elegant sidebar + date-focused dashboard" (just before `@media print`). All colours come from the palette (`--accent*`, `--accent-rgb`); white text sits on `--ui-solid` (the palette's DEEP shade, `--ui-deep` ->
   `--ui-deeper`), NOT on the light `--accent-grad`, because the default green / yellow / mint gradients are too pale for white small print. Keep it that way.

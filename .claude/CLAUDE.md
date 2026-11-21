@@ -122,6 +122,11 @@ Keep these true when changing the app. Details and the audit are in the owner's 
   Who: Admin and Sub Admin always, other roles through the switch `orders_boxcount_history` ("See previous days' box counts (view only)", Orders board section of User role
   permission) -- `canViewBoxCountHistory()`. Typed-but-unsaved rows block jumping away (toast "Save or clear today's rows first"). Gotcha: `render()` restores every typed field of the open
   panel to its OLD value (`captureOpenFormFields`), so `boxCountGoToDate` sets the date box AFTER render. Data was always kept per day (`boxCounts[].date`); nothing in the data changed.
+- **"Recipe library" is now "Batch sheets"; Transfer moved to the Process template page; one clean phone preview (owner, 2026-11-21).** (1) The page id stays `recipelibrary` (no data / permission changes), only the words
+  changed (nav label, page title, Blending Department card, Production Guide hint). A label the owner already renamed in Settings -> navigation still wins. (2) The "Transfer to Production Guide" button is GONE from the costing
+  versions list. On the Process template page, left of the upper Cancel, there is **Transfer to batch sheets** (`transferProcessToBatchSheets`, needs `costing_edit`): NO popup; it builds a batch sheet from the ACTIVE version +
+  the SAVED process template at the version's SMALLEST costed batch size, adds it to `state.recipes`, and opens Batch sheets. It asks to save first when the page has unsaved changes, and needs an Active version that has a batch size.
+  (3) Settings -> Mobile appearance preview is one thin-outline phone (dynamic island, side buttons) at 390 x 844; the iPhone SE / 14 / 14 Pro Max buttons were removed (`MOBILE_PREVIEW_DEVICES` has one entry).
 - **Elegant sidebar + date-focused Dashboard (owner, 2026-11-21: "leftside panel more decent with icons and animations; dashboard more elegant with colors and date focus").**
   CSS block "Elegant sidebar + date-focused dashboard" (just before `@media print`). All colours come from the palette (`--accent*`, `--accent-rgb`); white text sits on `--ui-solid` (the palette's DEEP shade, `--ui-deep` ->
   `--ui-deeper`), NOT on the light `--accent-grad`, because the default green / yellow / mint gradients are too pale for white small print. Keep it that way.

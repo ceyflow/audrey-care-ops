@@ -1646,15 +1646,18 @@ html{ visibility:hidden; }
   @media (max-width:1100px){ .mobile-ui-preview-col{display:none;} }
   @media (max-width:760px){ .mobile-ui-preview-col{display:none;} }
   .mobile-ui-preview-phone{
-    position:relative;background:#111;border-radius:40px;padding:14px 8px;
-    box-shadow:0 20px 44px rgba(19,32,30,.28), 0 0 0 2px #2a2a2a;
+    position:relative;background:#fff;border:3px solid #15161a;border-radius:54px;padding:12px;
+    box-shadow:0 0 0 1px #fff,0 0 0 2.5px #15161a,0 24px 48px -18px rgba(19,32,30,.22);
   }
+  /* side buttons: volume (left) and power (right), drawn as thin bars */
+  .mobile-ui-preview-phone::before{content:"";position:absolute;left:-7px;top:96px;width:3px;height:30px;border-radius:2px;background:#15161a;box-shadow:0 52px 0 #15161a,0 98px 0 #15161a;}
+  .mobile-ui-preview-phone::after{content:"";position:absolute;right:-7px;top:150px;width:3px;height:64px;border-radius:2px;background:#15161a;}
   .mobile-ui-preview-notch{
-    position:absolute;top:14px;left:50%;transform:translateX(-50%);
-    width:120px;height:22px;background:#111;border-radius:0 0 16px 16px;z-index:2;
+    position:absolute;top:22px;left:50%;transform:translateX(-50%);
+    width:104px;height:28px;background:#15161a;border-radius:16px;z-index:2;
   }
   .mobile-ui-preview-phone iframe{
-    display:block;border:none;border-radius:28px;background:#fff;
+    display:block;border:none;border-radius:40px;background:#fff;
   }
 
   /* ---------------- Login screen ---------------- */
@@ -4528,10 +4531,10 @@ function applyMobileUiRuntime(){
 // its own independent viewport. An <iframe> gives exactly that: its contents get their own layout
 // viewport sized to the iframe element's own CSS width, so a 390px-wide iframe triggers the same
 // mobile media query a 390px-wide phone screen would, with zero extra CSS of its own.
+// One clean phone (owner, 2026-11-21: "no need 3 names like iPhone SE, iPhone 14, iPhone 14 Pro Max"): a thin-outline phone with a
+// dynamic island, always the standard 390 x 844 size. (Kept as a one-entry table so the size lives in one place.)
 const MOBILE_PREVIEW_DEVICES = {
-  se:  {label:'iPhone SE',        w:375, h:667},
-  std: {label:'iPhone 14',        w:390, h:844},
-  max: {label:'iPhone 14 Pro Max',w:430, h:932},
+  std: {label:'Phone', w:390, h:844},
 };
 function currentMobilePreviewDevice(){
   const id = state._mobilePreviewDevice;
@@ -12304,7 +12307,7 @@ const NAV = [
     {id:'orders', label:'Orders board', icon:'orders'},
     {id:'blendingdept', label:'Blending Department', icon:'blender', children:[
       {id:'costing', label:'Costing & recipe'},
-      {id:'recipelibrary', label:'Recipe library'},
+      {id:'recipelibrary', label:'Batch sheets'},
       {id:'recipes', label:'Production Guide'},
       {id:'blending', label:'Mixing and Filling'},
     ]},
@@ -14040,10 +14043,10 @@ const PAGE_META = {
   customercare:{title:'Customer Care', sub:'Choose what you need — order lookups or complaint handling.'},
   orderinquiry:{title:'Order inquiry', sub:'Look up any order to answer a customer\'s question.'},
   ongoingorders:{title:'Ongoing orders', sub:'Every order in the pipeline — click to open only your own.'},
-  blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, recipe library, or costing.'},
+  blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, batch sheets, or costing.'},
   blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
   recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
-  recipelibrary:{title:'Recipe library', sub:'Create and manage the recipes the blending team runs batches from.'},
+  recipelibrary:{title:'Batch sheets', sub:'Create and manage the batch sheets the blending team runs batches from.'},
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
   suppliers:{title:'Suppliers', sub:'Vendors you source raw materials from.'},
@@ -16153,7 +16156,7 @@ function renderOrderInquiryPage(){
 function renderBlendingDeptPage(){
   const cards = [
     {id:'costing', label:'Costing & recipe', icon:'list'},
-    {id:'recipelibrary', label:'Recipe library', icon:'flask'},
+    {id:'recipelibrary', label:'Batch sheets', icon:'flask'},
     {id:'recipes', label:'Production Guide', icon:'recipe'},
     {id:'blending', label:'Mixing and Filling', icon:'blender'},
   ].filter(c=>pageAllowed(c.id));
@@ -18829,9 +18832,7 @@ function renderMobileAppearancePanel(){
       <div class="mobile-ui-preview-col">
         <div style="position:sticky;top:16px;">
           <div class="hint" style="font-weight:600;color:var(--ink);margin-bottom:8px;">Live preview — Dashboard</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
-            ${Object.keys(MOBILE_PREVIEW_DEVICES).map(id=>`<button type="button" class="theme-swatch-btn ${currentMobilePreviewDevice()===id?'selected':''}" style="padding:6px 10px;font-size:12px;" data-mobileui-previewdevice="${id}">${esc(MOBILE_PREVIEW_DEVICES[id].label)}</button>`).join('')}
-          </div>
+          <div style="height:6px;"></div>
           <div class="mobile-ui-preview-phone">
             <div class="mobile-ui-preview-notch"></div>
             <iframe id="mobile-ui-preview-frame" title="Mobile appearance live preview" scrolling="yes"></iframe>
@@ -20525,12 +20526,12 @@ function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatc
 // stays small even once several batches can run side by side.
 function renderRecipesPage(){
   if(isBatchDisplayActive()) return renderActiveBatchCard();
-  return `<div class="empty-state">No batch running right now. Open a recipe in <a href="#" data-nav="recipelibrary">Recipe library</a> and start one from its Batch sheet to see it here.</div>`;
+  return `<div class="empty-state">No batch running right now. Open a sheet in <a href="#" data-nav="recipelibrary">Batch sheets</a> and start one from its Batch sheet to see it here.</div>`;
 }
 function renderRecipeLibraryPage(){
   return `
   <div class="toolbar">
-    <div class="hint" style="font-weight:600;color:var(--ink);">Recipe library</div>
+    <div class="hint" style="font-weight:600;color:var(--ink);">Batch sheets</div>
     <div style="display:flex;gap:8px;">
     </div>
   </div>
@@ -20733,7 +20734,6 @@ function renderCostingVersionsList(product){
           <td>${esc(v.editedBy||v.createdBy||'—')}</td>
           ${admin?`<td class="row-actions" onclick="event.stopPropagation()">
             <button type="button" class="btn btn-sm" data-rename-costing-version="${v.id}">Rename</button>
-            <button type="button" class="btn btn-sm" data-transfer-costing-version="${v.id}">Transfer to Production Guide</button>
             ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version="${v.id}">Delete</button>`:''}
           </td>`:''}
         </tr>`; }).join('')}
@@ -21553,6 +21553,37 @@ function ptPhraseCardHtml(s, ord){
     ${showInstr ? `<div class="bsr-field pt-instr"><label>Instruction</label><textarea id="pti-${s.id}" rows="2" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea></div>` : ''}
   </div>`;
 }
+// "Transfer to batch sheets" (Process template page, owner 2026-11-21): no popup. Builds a batch sheet from the product's ACTIVE
+// costing version (the one shown on the left of the page) + its SAVED process template, at that version's smallest costed batch
+// size, adds it to Batch sheets (state.recipes) and opens that page.
+async function transferProcessToBatchSheets(){
+  const product = (state.costingProducts||[]).find(p=>p.id===state._costingOpenProductId);
+  if(!product || !(state.session && roleCan(state.session.role, 'costing_edit'))) return;
+  if(state._costingDirty){ showToast('Save the process template first, then transfer.'); return; }
+  const version = costingActiveVersion(product);
+  if(!version){ showToast('Choose an Active version first.'); return; }
+  const sizes = (version.batchSizes||[]).map(Number).filter(n=>n>0).sort((a,b)=>a-b);
+  if(!sizes.length){ showToast('Add a batch size to the active version first.'); return; }
+  const batchSizeKg = sizes[0];   // only sizes that were actually costed are used
+  const steps = (product.processTemplate && Array.isArray(product.processTemplate.steps)) ? freshStepCopies(product.processTemplate.steps) : [];
+  const newRecipe = {
+    id: uid('RCP'),
+    name: `${product.name} — ${version.name}`,
+    description: version.notes||'',
+    batchSizeKg,
+    standardPH: '',
+    combineNote: version.productionMethod||'',
+    materials: (version.materials||[]).map(m=>({id:uid('MAT'), name:m.name, percent:m.percent})),
+    steps,
+    createdAt: new Date().toISOString(),
+  };
+  if(!Array.isArray(state.recipes)) state.recipes = [];
+  state.recipes.unshift(newRecipe);
+  if(!(await save('recipes'))) return;
+  logActivity(`Transferred costing version "${version.name}" (${product.name}) to Batch sheets as a ${batchSizeKg}kg batch sheet`);
+  if(pageAllowed('recipelibrary')){ goTo('recipelibrary'); showToast(`Created a ${batchSizeKg}kg batch sheet in Batch sheets`); }
+  else showToast(`Created a ${batchSizeKg}kg batch sheet`);
+}
 // Builds the Process template page's working copy from what is saved on the product (no redraw). Used by the
 // "Process template" button and by browser Forward / Back (navApply).
 function startProcessTemplateDraft(product){
@@ -21605,6 +21636,7 @@ function renderProcessTemplatePage(product){
     <div class="toolbar">
       <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} \u2014 Process template</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        ${(state.session && roleCan(state.session.role, 'costing_edit')) ? `<button type="button" class="btn btn-sm" data-transfer-process-template title="Create a batch sheet from the active version and this process template">Transfer to batch sheets</button>` : ''}
         <button type="button" class="btn btn-sm" data-cancel-process-template>Cancel</button>
         <button type="button" class="btn btn-primary btn-sm" data-save-process-template>Save</button>
       </div>
@@ -25519,48 +25551,7 @@ function attachShellHandlers(){
     closeModal();
     showToast('Renamed');
   });
-  document.querySelectorAll('[data-transfer-costing-version]').forEach(b=>b.addEventListener('click', ()=>{
-    const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
-    const version = product && (product.versions||[]).find(v=>v.id===b.dataset.transferCostingVersion);
-    if(!product || !version) return;
-    const sizes = (version.batchSizes||[]).slice().sort((a,b)=>a-b);
-    openPromptModal({
-      title: 'Batch size to transfer', label: 'Batch size (Kg)', inputType: 'number',
-      placeholder: 'e.g. 250', defaultValue: sizes.length ? sizes[0] : '',
-      confirmLabel: 'Create batch sheet',
-      onSubmit: async (value)=>{
-        let batchSizeKg = Math.max(0, parseFloat(value)||0);
-        if(!batchSizeKg){ showToast('Enter a batch size in Kg'); return; }
-        // Only the preset sizes on this costing version were actually costed — an arbitrary
-        // in-between figure would ship a batch sheet whose cost/ratios were never verified.
-        // Snap to whichever preset is closest instead (e.g. 100 -> 102) and say so.
-        if(sizes.length){
-          const nearest = sizes.reduce((best,sz)=> Math.abs(sz-batchSizeKg) < Math.abs(best-batchSizeKg) ? sz : best, sizes[0]);
-          if(nearest !== batchSizeKg){
-            showToast(`Adjusted to ${nearest}kg — the nearest costed batch size on file`);
-            batchSizeKg = nearest;
-          }
-        }
-        const newRecipe = {
-          id: uid('RCP'),
-          name: `${product.name} — ${version.name}`,
-          description: version.notes||'',
-          batchSizeKg,
-          standardPH: '',
-          combineNote: version.productionMethod||'',
-          materials: (version.materials||[]).map(m=>({id:uid('MAT'), name:m.name, percent:m.percent})),
-          steps: (product.processTemplate && Array.isArray(product.processTemplate.steps)) ? freshStepCopies(product.processTemplate.steps) : [],   // the product's Process template
-          createdAt: new Date().toISOString(),
-        };
-        if(!Array.isArray(state.recipes)) state.recipes = [];
-        state.recipes.unshift(newRecipe);
-        if(!(await save('recipes'))) return;
-        logActivity(`Transferred costing version "${version.name}" (${product.name}) to Production Guide as a ${batchSizeKg}kg batch sheet`);
-        showToast(newRecipe.steps.length ? `Created a ${batchSizeKg}kg batch sheet with ${newRecipe.steps.length} process step${newRecipe.steps.length===1?'':'s'} in Production Guide` : `Created a ${batchSizeKg}kg batch sheet in Production Guide`);
-        goTo('recipes');
-      },
-    });
-  }));
+  document.querySelectorAll('[data-transfer-process-template]').forEach(b=>b.addEventListener('click', transferProcessToBatchSheets));
   document.querySelectorAll('[data-delete-costing-version]').forEach(b=>b.addEventListener('click', ()=>{
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     const version = product && (product.versions||[]).find(v=>v.id===b.dataset.deleteCostingVersion);
@@ -26052,10 +26043,6 @@ function attachShellHandlers(){
   // Preview device size: purely local UI state (state._mobilePreviewDevice), never saved --
   // which iPhone size you're eyeballing the layout against isn't something to sync to every
   // other device/session.
-  document.querySelectorAll('[data-mobileui-previewdevice]').forEach(btn=>btn.addEventListener('click', ()=>{
-    state._mobilePreviewDevice = btn.dataset.mobileuiPreviewdevice;
-    render();
-  }));
   const mobileBgColorInput = document.querySelector('input[name="mobileBgColor"]');
   if(mobileBgColorInput) mobileBgColorInput.addEventListener('change', ()=>{
     draftMobileUiField(m=>{ if(!m.header) m.header={}; m.header.color = mobileBgColorInput.value; });

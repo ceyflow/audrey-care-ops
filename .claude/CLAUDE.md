@@ -59,6 +59,25 @@ that can only add an update to a complaint: they close it with Close like everyo
 
 ---
 
+## New permissions: switch them on for the right roles in the LIVE data too
+
+*(Owner, 2026-11-21: "update the permission roles in future like these updates as well".)*
+
+**The rule.** Whenever a change adds a NEW permission to `PERMISSION_REGISTRY`, do not stop at the code. In the same piece of work, also set it in the live
+role records, because a saved role never has a key that did not exist when it was last saved (absent = OFF for every role except Admin). How:
+
+1. Decide which roles get it. If the owner named them, use exactly that. If they did not, ask which roles (Admin always gets it).
+2. Update the live row with the Supabase tools (project `mntnobzwbvqpvmaxqcuc`, table `app_data`, key `userRoles`, a JSON array of role records, each with a `permissions` object).
+   Use ONE targeted statement that only sets the new keys with `jsonb_set(r, '{permissions,<id>}', 'true'::jsonb, true)` for the named roles, keeps the array order
+   (`jsonb_agg(... order by ord)` over `jsonb_array_elements(value) with ordinality`), and sets `updated_at = now()`. Read the row first; check the result afterwards (still 10+ roles, only the intended keys changed). Never rewrite a whole role.
+3. Say in the summary exactly which roles now have it. Setting a permission to `true` for Admin explicitly is fine (it shows ticked in Settings).
+4. Also tell the owner people may need to refresh once.
+
+**Current live state (2026-11-21).** `orders_print` (Print an order): Admin, Sub Admin, Packing. `batchsheets_assign_machine` (choose the machine on a batch sheet): Admin, Sub Admin.
+Everyone else: off (switchable in Settings -> User role permission).
+
+---
+
 ## System notes (written by Claude after the 2026-11-11 security work; not owner rules)
 
 Keep these true when changing the app. Details and the audit are in the owner's private report, not in this repo.

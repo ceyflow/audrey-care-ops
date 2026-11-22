@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audrey Care</title>
+<script>
+// GitHub Pages serves this file for any address it has no page for. A scanned vessel sticker opens /batch/<id> (or /vessel/<id>);
+// send it to the app, which shows that batch (after sign-in). Anything else gets a short "not found" message with a link home.
+(function(){
+  var m = location.pathname.match(/^\/(?:batch|vessel)\/([^\/]+)\/?$/i);
+  if(m){
+    var extra = location.search ? '&' + location.search.slice(1) : '';
+    location.replace('/?batch=' + m[1] + extra);
+  }
+})();
+</script>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#F2F9F4;color:#13201E;text-align:center;padding:24px;}
+  a{color:#3C9058;font-weight:600;}
+</style>
+</head>
+<body>
+  <div>
+    <h1 style="font-size:20px;margin:0 0 8px;">Audrey Care (Pvt) Ltd</h1>
+    <p style="margin:0 0 14px;">That page was not found.</p>
+    <a href="/">Go to the app</a>
+  </div>
+</body>
+</html>

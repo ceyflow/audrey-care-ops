@@ -33,6 +33,13 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;          // Supabase, CDNs, fonts, map tiles: not ours
   if (url.pathname.endsWith('/sw.js')) return;
+  // A scanned vessel sticker opens /batch/<id> (or /vessel/<id>). The site has no such file (GitHub Pages answers with 404.html, which forwards it),
+  // so an installed app forwards it here, without a network round-trip, to the real page: /?batch=<id> (see renderBatchVerifyPage in index.html).
+  const bm = url.pathname.match(/^\/(?:batch|vessel)\/([^\/]+)\/?$/i);
+  if (req.mode === 'navigate' && bm) {
+    event.respondWith(Response.redirect('/?batch=' + bm[1] + (url.search ? '&' + url.search.slice(1) : ''), 302));
+    return;
+  }
   if (req.cache === 'no-store' || url.searchParams.has('_')) return; // the page's own "is there a newer version?" check
   if (req.headers.has('range')) return;                     // partial downloads (media) are not cacheable
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122161216">
+<meta name="app-build" content="20261122164711">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5408,33 +5408,64 @@ const PERMISSION_REGISTRY = [
   {dept:'orders', deptLabel:'Orders board', id:'orders_manage_lists', label:'Manage delivery lists'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_edit_full', label:'Edit full order details'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_edit_tracking_only', label:'Edit delivery tracking number only'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_color_tags', label:'Choose an order\'s colour tag (the colour swatch in the order forms)'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_delete', label:'Delete an order'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_archive_now', label:'Archive an order immediately'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_restore_archived', label:'Restore an archived order'},
   {dept:'orders', deptLabel:'Orders board', id:'orders_bulk_delete_archive', label:'Bulk-select and delete from the Archive tab'},
-  {dept:'orders', deptLabel:'Orders board', id:'orders_boxcount_history', label:"See previous days' box counts (view only)"},
   {dept:'orders', deptLabel:'Orders board', id:'orders_print', label:'Print an order (Print button in the order window)'},
+  {dept:'orders', deptLabel:'Orders board', id:'boxcount_use', label:'Box Count: open it and log how many boxes went out'},
+  {dept:'orders', deptLabel:'Orders board', id:'boxcount_edit_any', label:'Box Count: edit any entry (everyone can still fix their own)'},
+  {dept:'orders', deptLabel:'Orders board', id:'boxcount_delete', label:'Box Count: delete entries (one, or several selected)'},
+  {dept:'orders', deptLabel:'Orders board', id:'orders_boxcount_history', label:"Box Count: see previous days (view only)"},
+  {dept:'orders', deptLabel:'Orders board', id:'boxcount_alert', label:'Box Count: get the "New box count logged" alert panel'},
   // Order inquiry
   {dept:'orderinquiry', deptLabel:'Order inquiry', id:'orderinquiry_resend_review', label:'Resend a review request after it was already sent'},
-  // Blending Department board
-  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage', label:'Create batches, drag cards, advance stage, use timer controls'},
+  // Blending Department board (Mixing and Filling)
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_create_batch', label:'Create new batches (+ New batch)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_move_stage', label:'Move batches between stages (drag a card, Next stage button)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_details', label:'Edit a batch\'s details (batch number, quantity, priority, machine, formulation code)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_variations', label:'Add, edit and remove a batch\'s variations (product, fragrance, quantity, unit)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_qc', label:'Type the QC readings (pH, viscosity, notes) on the 1st / 2nd / 3rd QC cards'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_qc_checks', label:'Tick the QC checks (Color, Fragrance, Viscosity) on the QC cards'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_delete_batch', label:'Delete a batch (asks for the password again)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage_stages', label:'Manage the Mixing and Filling stages (Manage Lists button: add, rename, reorder, delete)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_print_sticker', label:'Print the 50 x 50 mm vessel sticker (Print Vessel Sticker, and the question after a batch is transferred)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_print_sheet', label:'Print a batch\'s batch sheet from Mixing and Filling (Print batch sheet in the batch window)'},
-  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_qc', label:'Type the 1st QC readings (pH, viscosity, notes) on a batch, even without the permission to create / move batches'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_view_batch_page', label:'Open the Batch Verification page (what the QR code on a vessel sticker opens)'},
-  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_view', label:'Open and print the Color sheets (Color sheets button on Mixing and Filling)'},
-  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_edit', label:'Edit, add and delete Color sheets'},
-  // Costing & Recipe / Production Guide
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_view', label:'Open the Color sheets (Color sheets button on Mixing and Filling)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_print', label:'Print a Color sheet'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_edit', label:'Edit a Color sheet (rows, colours, wording)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_add', label:'Add a new Color sheet'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_delete', label:'Delete a Color sheet (the Delete button is on its edit page, so it also needs Edit)'},
+  // Production Guide (the running batches)
+  {dept:'guide', deptLabel:'Production Guide', id:'guide_run_steps', label:'Run a batch: Next step, Previous step, Finish (and the Next step button on a "Time\'s up" card)'},
+  {dept:'guide', deptLabel:'Production Guide', id:'guide_prep_checks', label:'Tick the preparation checks and type the readings on a running batch'},
+  {dept:'guide', deptLabel:'Production Guide', id:'guide_timer', label:'Use the Timer on a running batch (start, pause, stop)'},
+  {dept:'guide', deptLabel:'Production Guide', id:'guide_stop_batch', label:'Stop a running batch'},
+  {dept:'guide', deptLabel:'Production Guide', id:'guide_delete_batch', label:'Delete a running batch card (three dots; asks for the password)'},
+  // Batch sheets (page "Batch sheets")
+  {dept:'batchsheets', deptLabel:'Batch sheets', id:'batchsheets_start_batch', label:'Start the batch (from a Batch sheet card or page)'},
+  {dept:'batchsheets', deptLabel:'Batch sheets', id:'batchsheets_assign_machine', label:'Choose the machine a batch sheet runs on (Batch sheets cards)'},
+  {dept:'batchsheets', deptLabel:'Batch sheets', id:'costing_edit_steps', label:'Edit a batch sheet\'s steps inline (and its batch number / size)'},
+  {dept:'batchsheets', deptLabel:'Batch sheets', id:'costing_create_recipe', label:'Create new batch sheets / recipes'},
+  {dept:'batchsheets', deptLabel:'Batch sheets', id:'costing_delete_recipe', label:'Delete a batch sheet / recipe'},
+  // Costing & Recipe
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit', label:'View and edit costing sheets'},
   {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_manage_templates', label:'Open and edit a product\'s Process template (Costing)'},
-  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_create_recipe', label:'Create new recipes'},
-  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_recipe', label:'Delete a recipe'},
-  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_edit_steps', label:'Edit recipe steps inline'},
-  {dept:'costing', deptLabel:'Costing & Recipe', id:'batchsheets_assign_machine', label:'Choose the machine a batch sheet runs on (Batch sheets cards)'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_transfer_to_sheets', label:'Transfer to batch sheets (button on the Process template page)'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_products', label:'Delete costing products (one, or several selected)'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_versions', label:'Delete costing versions (and delete them permanently from the Archive)'},
+  {dept:'costing', deptLabel:'Costing & Recipe', id:'costing_delete_rows', label:'Delete rows on a costing sheet (raw materials, fixed costs)'},
   // R&D
-  {dept:'rnd', deptLabel:'R&D', id:'rnd_manage', label:'Create/advance projects, manage chemists, mark attendance'},
-  {dept:'rnd', deptLabel:'R&D', id:'rnd_delete', label:'Delete a project or chemist'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_create_projects', label:'Add products to develop (+ Add product)'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_advance', label:'Move projects between stages (drag a card, Next stage)'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_edit_projects', label:'Edit a project in its window'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_add_chemists', label:'Add chemists (+ Add chemist)'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_edit_chemists', label:'Edit a chemist\'s details'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_mark_attendance', label:'Mark a chemist\'s attendance (Attendance button)'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_view_locations', label:'See where chemists logged in and out (location column and map links)'},
+  {dept:'rnd', deptLabel:'R&D', id:'rnd_delete', label:'Delete a project, a chemist or an attendance line'},
   // Complaints
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_view_ongoing', label:'See ongoing complaints only (read only: no archive, no logging, no editing)'},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_manage', label:'Open and work on complaints'},
@@ -5446,30 +5477,103 @@ const PERMISSION_REGISTRY = [
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_bulk_delete', label:'Bulk-select and delete complaints'},
   {dept:'complaints', deptLabel:'Complaints', id:'complaints_reset_archive', label:'Reset (wipe) the entire complaints archive'},
   // Staff
-  {dept:'staff', deptLabel:'Staff', id:'staff_manage', label:'Add, edit and remove staff and categories'},
-  // Team chat
+  {dept:'staff', deptLabel:'Staff', id:'staff_add', label:'Add staff (+ Add staff)'},
+  {dept:'staff', deptLabel:'Staff', id:'staff_edit', label:'Edit a staff member (details and photo)'},
+  {dept:'staff', deptLabel:'Staff', id:'staff_delete', label:'Remove a staff member'},
+  {dept:'staff', deptLabel:'Staff', id:'staff_categories', label:'Manage the staff categories (Manage categories)'},
+  // Attendance
+  {dept:'attendance', deptLabel:'Attendance', id:'attendance_view_all', label:'See everyone\'s attendance (Records, Staff) instead of only the personal check-in page'},
+  {dept:'attendance', deptLabel:'Attendance', id:'attendance_approve_requests', label:'Approve or reject attendance edit requests (and get their alert)'},
+  {dept:'attendance', deptLabel:'Attendance', id:'attendance_delete_entries', label:'Delete an attendance record'},
+  {dept:'attendance', deptLabel:'Attendance', id:'attendance_print', label:'Print an attendance sheet'},
+  // GMP checklists
+  {dept:'gmp', deptLabel:'GMP checklists', id:'gmp_delete', label:'Delete a GMP log entry or calibration record'},
   // Customers
-  {dept:'customers', deptLabel:'Customers', id:'customers_manage', label:'Import, add, edit and delete customers'},
+  {dept:'customers', deptLabel:'Customers', id:'customers_add', label:'Add a customer'},
+  {dept:'customers', deptLabel:'Customers', id:'customers_edit', label:'Edit a customer (and the sales person colours)'},
+  {dept:'customers', deptLabel:'Customers', id:'customers_delete', label:'Delete customers (one, or several selected)'},
+  {dept:'customers', deptLabel:'Customers', id:'customers_import', label:'Import customers from a CSV file (and see the CSV format)'},
+  {dept:'customers', deptLabel:'Customers', id:'customers_export', label:'Export customers to a CSV file'},
+  {dept:'customers', deptLabel:'Customers', id:'customers_columns', label:'Choose which customer columns show'},
   // Suppliers
-  {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_manage', label:'Import, add, edit and delete suppliers'},
-  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_manage', label:'Import, add, edit and delete items'},
+  {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_add', label:'Add a supplier'},
+  {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_edit', label:'Edit a supplier'},
+  {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_delete', label:'Delete suppliers (one, or several selected)'},
+  {dept:'suppliers', deptLabel:'Suppliers', id:'suppliers_import', label:'Import suppliers from a CSV file'},
+  // Item List
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_add', label:'Add an item'},
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_edit', label:'Edit an item'},
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_delete', label:'Delete items (one, or several selected)'},
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_import', label:'Import items from a CSV file (and see the CSV format)'},
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_export', label:'Export items to a CSV file'},
+  {dept:'itemlist', deptLabel:'Item List', id:'itemlist_columns', label:'Choose which item columns show'},
   // Customer ratings
   {dept:'ratings', deptLabel:'Customer ratings', id:'ratings_bulk_delete', label:'Bulk-select and delete ratings'},
   // Branding
   {dept:'branding', deptLabel:'Branding', id:'branding_manage', label:'Upload, edit and delete brand assets'},
-  // Settings
+  // Settings (the Settings page, then each panel inside it). User account setup, User roles, User role permission and Backup & export stay Admin-only on purpose:
+  // they are where access itself is granted and where every record can be exported.
   {dept:'settings', deptLabel:'Settings', id:'settings_access', label:'Open the Settings page'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_complaint_access', label:'Panel: Complaint access'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_sidebar_order', label:'Panel: Sidebar order (menu names and order)'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_template', label:'Panel: Template customization (logo and brand pictures)'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_prints', label:'Panel: Prints edits (batch sticker, order print, batch sheet, attendance sheet, colour sheets)'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_login_page', label:'Panel: Login panel customization'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_appearance', label:'Panel: Appearance (colours and theme)'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_mobile', label:'Panel: Mobile appearance'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_alert_sounds', label:'Panel: Machine alert sounds'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_login_activity', label:'Panel: Login activity (who signed in, when, from where)'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_login_activity_delete', label:'Delete a line of the Login activity list'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_sms', label:'Panel: SMS settings (the wording customers are texted)'},
   // Notes & reminders — a personal sticky-note + reminder widget (floating button, bottom
   // right), not tied to any one page, so it gets its own department here rather than living
   // under an existing page's permissions.
   {dept:'notes', deptLabel:'Notes & reminders', id:'notes_access', label:'Can use the personal notes & reminders widget'},
 ];
+/* ===================== DEFAULTS for permissions added after a role was saved (owner, 2026-11-22: "add every possibility of setting feature to the settings ... so no need to ask from you") =====================
+   A saved role never holds a key that did not exist when it was last saved, and "absent" used to mean OFF. Every permission that was SPLIT out of a bigger one, or that used to be hard-coded to Admin / Sub Admin, therefore has a DEFAULT used only while
+   the role has no saved value for it: {inherit:'old id'} = whatever the old, bigger switch said (the old ids stay readable here even though they are no longer in the list above), {roles:[...]} = exactly those roles (what the hard-coded check allowed),
+   {page:'orders'} = every role that has that page. So nobody gained or lost anything when the switches were added; the live role records were ALSO written explicitly (see CLAUDE.md) so Settings shows the real ticks, and from then on a flipped
+   switch is a saved value that always wins. A NEW permission = add it to the list above AND give it a default here (or it is OFF for everyone but Admin). */
+const PERMISSION_DEFAULTS = {};
+(function(){
+  const inh = (from, ids)=>ids.forEach(id=>{ PERMISSION_DEFAULTS[id] = {inherit:from}; });
+  const roles = (list, ids)=>ids.forEach(id=>{ PERMISSION_DEFAULTS[id] = {roles:list}; });
+  const AS = ['Admin','Sub Admin'];
+  inh('blending_manage', ['blending_create_batch','blending_move_stage','blending_edit_details','blending_edit_variations','guide_run_steps','guide_prep_checks','guide_timer','guide_stop_batch','batchsheets_start_batch']);
+  inh('blending_manage', ['blending_edit_qc']);   // the QC readings could always be typed by whoever could manage the board
+  inh('blending_edit_qc', ['blending_qc_checks']);
+  inh('colorsheets_view', ['colorsheets_print']);
+  inh('colorsheets_edit', ['colorsheets_add','colorsheets_delete']);
+  roles(['Admin'], ['blending_delete_batch','guide_delete_batch','costing_delete_products','costing_delete_versions','costing_delete_rows','gmp_delete','settings_login_activity_delete']);
+  roles(AS, ['orders_color_tags','boxcount_edit_any','boxcount_delete','boxcount_alert','attendance_view_all','attendance_approve_requests','attendance_delete_entries','attendance_print','rnd_edit_chemists','rnd_view_locations']);
+  roles(AS, ['orders_boxcount_history']);   // previous days' box counts used to be hard-coded to Admin + Sub Admin (other roles had the switch); a role with a saved value keeps it
+  PERMISSION_DEFAULTS.boxcount_use = {page:'orders'};
+  inh('costing_edit', ['costing_transfer_to_sheets']);
+  inh('rnd_manage', ['rnd_create_projects','rnd_advance','rnd_edit_projects','rnd_add_chemists','rnd_mark_attendance']);
+  inh('staff_manage', ['staff_add','staff_edit','staff_delete','staff_categories']);
+  inh('customers_manage', ['customers_add','customers_edit','customers_delete','customers_import','customers_export','customers_columns']);
+  inh('suppliers_manage', ['suppliers_add','suppliers_edit','suppliers_delete','suppliers_import']);
+  inh('itemlist_manage', ['itemlist_add','itemlist_edit','itemlist_delete','itemlist_import','itemlist_export','itemlist_columns']);
+  inh('settings_access', ['settings_complaint_access','settings_sidebar_order','settings_template','settings_prints','settings_login_page','settings_appearance','settings_mobile','settings_alert_sounds','settings_login_activity','settings_sms']);
+})();
+// R&D Officer chemists always keep what they need to do their job (see roleCan): the old umbrella plus everything split out of it.
+const RND_OFFICER_FLOOR = ['rnd_manage','notes_access','rnd_create_projects','rnd_advance','rnd_edit_projects','rnd_add_chemists','rnd_mark_attendance'];
 // Every legacy or custom role, seeded to match exactly what that role could already do before this
 // permission system existed — a pure data snapshot of the hardcoded isAdmin()/isPacking()/etc.
 // checks at the time this was built, so turning it on changes nothing until an Admin edits a role.
-function buildRolePermissions(trueIds){
+function buildRolePermissions(trueIds, roleName, pages){
   const perms = {};
-  PERMISSION_REGISTRY.forEach(p=>{ perms[p.id] = trueIds.includes(p.id); });
+  // a permission the list does not name gets its DEFAULT (see PERMISSION_DEFAULTS), not a plain false: the split-out permissions follow the old bigger switch
+  const val = id=>{
+    if(trueIds.includes(id)) return true;
+    const d = PERMISSION_DEFAULTS[id]; if(!d) return false;
+    if(d.inherit) return val(d.inherit);
+    if(d.roles) return d.roles.includes(roleName);
+    if(d.page) return (pages||[]).includes(d.page);
+    return false;
+  };
+  PERMISSION_REGISTRY.forEach(p=>{ perms[p.id] = val(p.id); });
   return perms;
 }
 const ALL_PERMISSION_IDS = PERMISSION_REGISTRY.map(p=>p.id);
@@ -5495,7 +5599,7 @@ function roleCan(role, permId){
   // Same guarantee as pagesForRole() above: an R&D Officer chemist always needs to manage their
   // own products/chemists/attendance and the notes widget, regardless of what a Settings record
   // for this exact name does or doesn't grant.
-  if(role === 'R&D Officer' && (permId === 'rnd_manage' || permId === 'notes_access')) return true;
+  if(role === 'R&D Officer' && RND_OFFICER_FLOOR.includes(permId)) return true;
   // Same pattern, for Sub Admin's drag-and-drop on the Orders board specifically — explicitly
   // requested as a guarantee, independent of whatever state.userRoles' Sub Admin record does or
   // doesn't currently hold (a Settings save that hasn't landed, a role record that hasn't
@@ -5512,9 +5616,29 @@ function roleCan(role, permId){
     // custom.permissions, so an absent key means "didn't exist yet," not "explicitly denied" —
     // only a key that's actually present and false means someone deliberately unchecked it.
     if(role === 'Admin' && !(custom.permissions && permId in custom.permissions)) return true;
-    return !!(custom.permissions && custom.permissions[permId]);
+    if(custom.permissions && permId in custom.permissions) return !!custom.permissions[permId];   // a saved value (ticked OR unticked) always wins
+    return permDefault(role, permId);
   }
-  return (LEGACY_ROLE_PERMISSIONS[role]||[]).includes(permId);
+  return (LEGACY_ROLE_PERMISSIONS[role]||[]).includes(permId) || permDefault(role, permId);
+}
+// What a role gets for a permission it has no saved value for (see PERMISSION_DEFAULTS).
+function permDefault(role, permId){
+  const d = PERMISSION_DEFAULTS[permId]; if(!d) return false;
+  if(d.inherit) return roleCan(role, d.inherit);
+  if(d.roles) return d.roles.includes(role);
+  if(d.page) return pagesForRole(role).includes(d.page);
+  return false;
+}
+function can(id){ return !!state.session && roleCan(state.session.role, id); }
+// The value the Settings -> User role permission panel shows for a role record: its saved value, else the default (Admin: on).
+function rolePermEffective(r, id){
+  if(r.permissions && id in r.permissions) return !!r.permissions[id];
+  if(r.name==='Admin') return true;
+  const d = PERMISSION_DEFAULTS[id]; if(!d) return false;
+  if(d.inherit) return rolePermEffective(r, d.inherit);
+  if(d.roles) return d.roles.includes(r.name);
+  if(d.page) return (r.pages||[]).includes(d.page);
+  return false;
 }
 // Groups PERMISSION_REGISTRY into department sub-sections, in registry order, for the Settings →
 // User roles edit form's checklist.
@@ -5537,6 +5661,7 @@ const ROLE_PERM_PAGE_DEPT = {
   orders:'orders', orderinquiry:'orderinquiry', blending:'blendingboard', costing:'costing',
   rnd:'rnd', complaints:'complaints', staff:'staff', chat:'chat', customers:'customers',
   suppliers:'suppliers', itemlist:'itemlist', ratings:'ratings', settings:'settings',
+  recipes:'guide', recipelibrary:'batchsheets', attendance:'attendance', gmp:'gmp',
 };
 // Departments with real permissions but no page of their own to hang off (Branding is edited from
 // Settings -> Appearance, Notes is a floating widget, neither is in ASSIGNABLE_ROLE_PAGES) -- listed
@@ -5615,7 +5740,7 @@ function renderRolePermissionBody(r){
       <div class="role-perm-sub">
         ${items.map(p=>`
         <label class="toggle-row role-perm-sub-row">
-          <input type="checkbox" class="toggle-input" data-rp-permission="${p.id}" ${permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
+          <input type="checkbox" class="toggle-input" data-rp-permission="${p.id}" ${rolePermEffective(r, p.id)?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
         </label>`).join('')}
       </div>` : ''}
     </div>`;
@@ -5634,7 +5759,7 @@ function renderRolePermissionBody(r){
       <div class="role-perm-sub">
         ${items.map(p=>`
         <label class="toggle-row role-perm-sub-row">
-          <input type="checkbox" class="toggle-input" data-rp-permission="${p.id}" ${permissions[p.id]?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
+          <input type="checkbox" class="toggle-input" data-rp-permission="${p.id}" ${rolePermEffective(r, p.id)?'checked':''}><span class="toggle-track"></span> ${esc(p.label)}
         </label>`).join('')}
       </div>` : ''}
     </div>`;
@@ -6101,7 +6226,20 @@ const BLEND_STAGE_STYLE = {
   dispatched:{c:'var(--s-delivered)', bg:'var(--s-delivered-soft)'}
 };
 const BLEND_NEXT_ACTION_LABEL = {0:'Send to 1st QC (Base)',1:'Approve — start mixing',2:'Send to 2nd QC',3:'Approve — start filling',4:'Send to 3rd QC',5:'Approve — dispatch to stock'};
-function canManageBlendBoard(){ return !!state.session && roleCan(state.session.role, 'blending_manage'); }
+// Every Blending / Production Guide action has its OWN permission (owner, 2026-11-22). The old single switch `blending_manage` is retired: it only remains as the default for the finer ones (see PERMISSION_DEFAULTS).
+function canCreateBlendBatch(){ return !!state.session && roleCan(state.session.role, 'blending_create_batch'); }
+function canMoveBlendStage(){ return !!state.session && roleCan(state.session.role, 'blending_move_stage'); }
+function canEditBlendDetails(){ return !!state.session && roleCan(state.session.role, 'blending_edit_details'); }
+function canEditBlendVariations(){ return !!state.session && roleCan(state.session.role, 'blending_edit_variations'); }
+function canTickBlendQc(){ return !!state.session && roleCan(state.session.role, 'blending_qc_checks'); }
+function canDeleteBlendBatch(){ return !!state.session && roleCan(state.session.role, 'blending_delete_batch'); }
+function canSaveBlendWindow(){ return canEditBlendDetails() || canEditBlendVariations() || canEditBlendQc() || canTickBlendQc(); }
+function canGuideRun(){ return !!state.session && roleCan(state.session.role, 'guide_run_steps'); }
+function canGuidePrepChecks(){ return !!state.session && roleCan(state.session.role, 'guide_prep_checks'); }
+function canGuideTimer(){ return !!state.session && roleCan(state.session.role, 'guide_timer'); }
+function canGuideStop(){ return !!state.session && roleCan(state.session.role, 'guide_stop_batch'); }
+function canDeleteGuideBatch(){ return !!state.session && roleCan(state.session.role, 'guide_delete_batch'); }
+function canStartBatchRun(){ return !!state.session && roleCan(state.session.role, 'batchsheets_start_batch'); }
 /* ===================== Mixing and Filling: editable stages (owner, 2026-11-22: "add more and edit the existing stages, add manage list like the packing department") =====================
    The seven stages above are only the STARTING list (and the key every older batch was saved under: a batch saved before this change has just a number, `stage`, which always meant
    BLEND_STAGE_KEYS[stage]). The live list is app_data key `blendStages` = [{key, label, color?}] (Manage Lists button, permission `blending_manage_stages`); when it is empty or missing the
@@ -6159,10 +6297,10 @@ function blendPlaceInStage(b, st, idx){
   if(!Array.isArray(b.history)) b.history = [];
   b.history.push(blendHistoryEntry(st, idx));
 }
-function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < blendStageList().length-1; }
+function canAdvanceBlend(stageIdx){ return canMoveBlendStage() && stageIdx < blendStageList().length-1; }
 function canPrintBlendSticker(){ return !!state.session && roleCan(state.session.role, 'blending_print_sticker'); }
 function canPrintBlendSheet(){ return !!state.session && roleCan(state.session.role, 'blending_print_sheet'); }
-function canEditBlendQc(){ return !!state.session && (roleCan(state.session.role, 'blending_edit_qc') || canManageBlendBoard()); }
+function canEditBlendQc(){ return !!state.session && roleCan(state.session.role, 'blending_edit_qc'); }
 function canViewBatchPage(){ return !!state.session && roleCan(state.session.role, 'blending_view_batch_page'); }
 function canManageBlendStages(){ return !!state.session && roleCan(state.session.role, 'blending_manage_stages'); }
 // "Approve — start mixing" style wording is kept only while both stages still have their starting names and neighbours; anything edited reads "Move to <stage>".
@@ -6214,8 +6352,15 @@ function migrateRndProjectStages(){
   // here would skip that protection for exactly the kind of overwrite it exists to prevent.
   if(rndMigrated) save('rndProjects').catch(e=>console.error('rnd stage migration failed', e));
 }
-function canManageRnd(){ return !!state.session && roleCan(state.session.role, 'rnd_manage'); }
-function canAdvanceRnd(stageIdx){ return canManageRnd() && stageIdx < RND_STAGES.length-1; }
+// Every R&D action has its own permission (owner, 2026-11-22); the old single `rnd_manage` is only the default for the five that were split out of it (see PERMISSION_DEFAULTS).
+function canCreateRndProject(){ return !!state.session && roleCan(state.session.role, 'rnd_create_projects'); }
+function canMoveRnd(){ return !!state.session && roleCan(state.session.role, 'rnd_advance'); }
+function canEditRndProject(){ return !!state.session && roleCan(state.session.role, 'rnd_edit_projects'); }
+function canAddRndChemist(){ return !!state.session && roleCan(state.session.role, 'rnd_add_chemists'); }
+function canEditRndChemist(){ return !!state.session && roleCan(state.session.role, 'rnd_edit_chemists'); }
+function canMarkRndAttendance(){ return !!state.session && roleCan(state.session.role, 'rnd_mark_attendance'); }
+function canViewRndLocations(){ return !!state.session && roleCan(state.session.role, 'rnd_view_locations'); }
+function canAdvanceRnd(stageIdx){ return canMoveRnd() && stageIdx < RND_STAGES.length-1; }
 
 /* ===================== GMP checklists ===================== */
 // GMP "Checklists" — live, fillable monthly cleaning checklists (built from the factory's own
@@ -7430,11 +7575,11 @@ async function loadAll(){
   const userRolesNeverSaved = loadedValues[SYNCED_KEYS.indexOf('userRoles')] == null;
   if(isAdmin() && userRolesNeverSaved && state.userRoles.length===0){
     state.userRoles = [
-      {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS.Admin)},
-      {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'])},
-      {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints'], permissions:buildRolePermissions(['complaints_manage','complaints_edit_after_1hr'])},
-      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes','recipelibrary'], permissions:buildRolePermissions(['blending_manage'])},
-      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders for packing and dispatch.', status:'Active', pages:['orders'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'])},
+      {id:uid('ROLE'), name:'Admin', description:'Full access to every page and setting.', status:'Active', pages:[...ROLE_PAGES.Admin], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS.Admin, 'Admin', ROLE_PAGES.Admin)},
+      {id:uid('ROLE'), name:'Sub Admin', description:'Broad access across orders, blending, customers and complaints.', status:'Active', pages:[...ROLE_PAGES['Sub Admin']], locked:true, permissions:buildRolePermissions(LEGACY_ROLE_PERMISSIONS['Sub Admin'], 'Sub Admin', ROLE_PAGES['Sub Admin'])},
+      {id:uid('ROLE'), name:'Customer care representative', description:'Handles customer orders and complaints.', status:'Active', pages:['dashboard','complaints'], permissions:buildRolePermissions(['complaints_manage','complaints_edit_after_1hr'], 'Customer care representative', ['dashboard','complaints'])},
+      {id:uid('ROLE'), name:'Production Executive', description:'Runs blending and production.', status:'Active', pages:['blendingdept','blending','recipes','recipelibrary'], permissions:buildRolePermissions(['blending_manage'], 'Production Executive', ['blendingdept','blending','recipes','recipelibrary'])},
+      {id:uid('ROLE'), name:'Dispatch officer', description:'Manages orders for packing and dispatch.', status:'Active', pages:['orders'], permissions:buildRolePermissions(['orders_advance','orders_edit_tracking_only'], 'Dispatch officer', ['orders'])},
     ];
     saveQuietly('userRoles').catch(()=>{});
   } else if(state.userRoles.some(r=>!r.permissions)){
@@ -7449,7 +7594,7 @@ async function loadAll(){
     state.userRoles = state.userRoles.map(r=>{
       if(r.permissions) return r;
       const trueIds = LEGACY_ROLE_PERMISSIONS[r.name] || NEW_ROLE_DEFAULTS[r.name] || [];
-      return {...r, permissions: buildRolePermissions(trueIds)};
+      return {...r, permissions: buildRolePermissions(trueIds, r.name, r.pages||[])};
     });
     saveQuietly('userRoles').catch(()=>{});
   }
@@ -7502,7 +7647,7 @@ async function loadAll(){
       return r;
     });
     if(!state.userRoles.some(r=>r.name==='Driver')){
-      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name:'Driver', description:'Delivery lorry driver: sees only his own run.', status:'Active', pages:['driverrun'], permissions:buildRolePermissions([])}];
+      state.userRoles = [...state.userRoles, {id:uid('ROLE'), name:'Driver', description:'Delivery lorry driver: sees only his own run.', status:'Active', pages:['driverrun'], permissions:buildRolePermissions([], 'Driver', ['driverrun'])}];
       lorryChanged = true;
     }
     if(lorryChanged) saveQuietly('userRoles').catch(()=>{});
@@ -8357,14 +8502,13 @@ function isAdmin(){ return state.session && state.session.role === 'Admin'; }
 // message for everyone) were asked as a fixed rule for exactly these two roles, not something
 // meant to be reconfigurable per custom role.
 function isAdminOrSubAdmin(){ return !!state.session && (state.session.role==='Admin' || state.session.role==='Sub Admin'); }
-function canManageColorTags(){ return isAdminOrSubAdmin(); }
+function canManageColorTags(){ return !!state.session && roleCan(state.session.role, 'orders_color_tags'); }
 // Any Admin can view/edit a costing product's versions, but only these two named admins
 // can actually delete a product, version, or raw material row from it.
-function isCostingSuperAdmin(){
-  if(!isAdmin()) return false;
-  const name = ((state.session && state.session.name) || '').trim().toLowerCase();
-  return name==='vihanga' || name==='rumesh';
-}
+// Deleting in Costing: three separate permissions (owner, 2026-11-22). They used to be hard-coded to two named Admin accounts (Vihanga, Rumesh), which are also the only two Admins, so by default only Admin has them.
+function canDeleteCostingProducts(){ return !!state.session && roleCan(state.session.role, 'costing_delete_products'); }
+function canDeleteCostingVersions(){ return !!state.session && roleCan(state.session.role, 'costing_delete_versions'); }
+function canDeleteCostingRows(){ return !!state.session && roleCan(state.session.role, 'costing_delete_rows'); }
 function canManageComplaints(){ return !!state.session && roleCan(state.session.role, 'complaints_manage'); }
 // Ongoing = not yet Resolved / Closed. A role with complaints_view_ongoing and WITHOUT complaints_manage
 // gets the trimmed Complaints page: only these statuses, no archive, no logging, no customer link, no
@@ -9270,6 +9414,7 @@ function attachBlendVariationHandlers(){
 }
 async function createBlendBatch(e){
   e.preventDefault();
+  if(!canCreateBlendBatch()) return;
   const f = e.target;
   syncBlendVarDraftFromDOM();
   const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId==='new' ? state._blendVarDraft.rows : []);
@@ -9296,7 +9441,7 @@ async function advanceBlendBatch(id){
   if(i >= list.length-1 || !canAdvanceBlend(i)) return;
   const next = list[i+1];
   const openForm = document.getElementById('form-blend-edit');
-  if(openForm && openForm.dataset.batchId===id && canEditBlendQc()) applyBlendEditForm(openForm, b);   // whatever is typed in the open window is kept, then the batch moves on
+  if(openForm && openForm.dataset.batchId===id && canSaveBlendWindow()) applyBlendEditForm(openForm, b);   // whatever is typed in the open window is kept, then the batch moves on
   blendPlaceInStage(b, next, i+1);
   if(!(await save('blendBatches'))) return;
   logActivity(`Moved blend batch ${b.batchNo} to ${next.label}`);
@@ -9305,8 +9450,8 @@ async function advanceBlendBatch(id){
 async function submitBlendEdit(e){
   e.preventDefault();
   const f = e.target; const id = f.dataset.batchId;
-  const b = byId(state.blendBatches, id); if(!b || !canEditBlendQc()) return;
-  const onlyQc = !canManageBlendBoard();   // may only type the QC readings: nothing else on the batch changes
+  const b = byId(state.blendBatches, id); if(!b || !canSaveBlendWindow()) return;
+  const onlyQc = !canEditBlendDetails() && !canEditBlendVariations();   // may only type / tick the QC cards: nothing else on the batch changes
   applyBlendEditForm(f, b);
   if(!(await save('blendBatches'))) return;
   closeModal();
@@ -9314,7 +9459,7 @@ async function submitBlendEdit(e){
   else { logActivity(`Edited blend batch ${b.batchNo}`); showToast('Batch updated'); }
 }
 async function moveBlendToStage(id, stageKey){
-  const b = byId(state.blendBatches, id); if(!b || !canManageBlendBoard()) return;
+  const b = byId(state.blendBatches, id); if(!b || !canMoveBlendStage()) return;
   const list = blendStageList(), idx = list.findIndex(x=>x.key===stageKey);
   if(idx<0 || blendStageKeyOf(b, list)===stageKey) return;
   blendPlaceInStage(b, list[idx], idx);
@@ -9324,13 +9469,13 @@ async function moveBlendToStage(id, stageKey){
 }
 // Only an Admin can delete a batch, and has to type their password again (owner, 2026-11-22). The check is repeated here, not only on the button.
 function deleteBlendBatch(id){
-  if(!isAdmin()) { showToast('Only an Admin can delete a batch'); return; }
+  if(!canDeleteBlendBatch()) { showToast('You do not have permission to delete a batch'); return; }
   const b = byId(state.blendBatches, id); if(!b) return;
   openConfirmModal({
     title: 'Delete batch', danger: true, confirmLabel: 'Delete', requirePassword: true,
     message: `Delete batch ${b.batchNo||b.id}${b.product?' ('+stripTags(b.product).trim()+')':''}? This cannot be undone. Type your password to confirm.`,
     onConfirm: async ()=>{
-      if(!isAdmin()) return;
+      if(!canDeleteBlendBatch()) return;
       state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
       if(!(await save('blendBatches'))) return;
       logActivity(`Deleted blend batch ${b.batchNo}`);
@@ -9493,6 +9638,7 @@ function rndNextSampleCode(){
 }
 async function createRndProject(e){
   e.preventDefault();
+  if(!canCreateRndProject()) return;
   const f = e.target;
   const project = {
     id: uid('RND'),
@@ -9526,7 +9672,7 @@ async function advanceRndProject(id){
 async function submitRndEdit(e){
   e.preventDefault();
   const f = e.target; const id = f.dataset.projectId;
-  const p = byId(state.rndProjects, id); if(!p) return;
+  const p = byId(state.rndProjects, id); if(!p || !canEditRndProject()) return;
   Object.assign(p, {
     name: f.name.value.trim() || p.name,
     priority: f.priority.value,
@@ -9545,7 +9691,7 @@ function applyRndBoardOrder(orderedIds){
 }
 function rndOrderOf(p){ return p.rndOrder!=null ? p.rndOrder : new Date(p.createdAt).getTime(); }
 async function moveRndToStage(id, newStage, orderedIds){
-  const p = byId(state.rndProjects, id); if(!p || !canManageRnd()) return;
+  const p = byId(state.rndProjects, id); if(!p || !canMoveRnd()) return;
   if(p.stage===newStage){
     // Same column — this is a pure drag-to-reorder, not a stage change.
     if(orderedIds){ applyRndBoardOrder(orderedIds); await save('rndProjects'); }
@@ -9602,6 +9748,7 @@ async function submitRndChemistForm(e){
   e.preventDefault();
   const f = e.target;
   const editId = f.dataset.editId;
+  if(editId ? !canEditRndChemist() : !canAddRndChemist()) return;
   const name = f.name.value.trim(); if(!name) return;
   if(editId){
     const c = byId(state.rndChemists, editId); if(!c) return;
@@ -9698,7 +9845,7 @@ function locPinIcon(){ return '<span class="loc-dot-wrap"><span class="loc-dot-r
 // call site, kept for safety/back-compat) still fetches fresh; null means the modal's own fetch
 // failed, which this still records as a locationless attendance mark rather than fetching again.
 async function rndMarkLogin(chemistId, date, preLoc){
-  if(!canManageRnd()) return;
+  if(!canMarkRndAttendance()) return;
   const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
   let rec = rndAttRecFor(chemistId, date);
   if(rndAttLoginAt(rec)){ showToast(chemist.name+' is already logged in for that day'); return; }
@@ -9720,7 +9867,7 @@ async function rndMarkLogin(chemistId, date, preLoc){
   if(ok) showToast(chemist.name+' logged in'+(loc?'':' (location unavailable)'));
 }
 async function rndMarkLogout(chemistId, date, preLoc){
-  if(!canManageRnd()) return;
+  if(!canMarkRndAttendance()) return;
   const chemist = byId(state.rndChemists, chemistId); if(!chemist) return;
   const rec = rndAttRecFor(chemistId, date);
   if(!rndAttLoginAt(rec)){ showToast('Log in first before marking logout'); return; }
@@ -10910,9 +11057,10 @@ function renderItemListPage(){
     if(categoryF && !(i.category||'').toLowerCase().includes(categoryF)) return false;
     return true;
   });
-  const canManage = state.session && roleCan(state.session.role, 'itemlist_manage');
+  const cAdd=can('itemlist_add'), cEdit=can('itemlist_edit'), cDel=can('itemlist_delete'), cImp=can('itemlist_import'), cExp=can('itemlist_export'), cCol=can('itemlist_columns');
+  const canManage = cAdd||cEdit||cDel||cImp||cExp||cCol, cAct = cEdit||cDel;   // each action has its own permission (owner, 2026-11-22)
   const visibleCols = ITEM_COLUMN_DEFS.filter(d=>itemColVisible(d.key));
-  const colCount = (canManage?1:0) + 1 + visibleCols.length + (canManage?1:0);
+  const colCount = (cDel?1:0) + 1 + visibleCols.length + (cAct?1:0);
   return `
   <div class="stat-grid" style="max-width:220px;">
     <div class="stat-card"><div class="label">Total items</div><div class="value"><span class="stat-num" data-target="${state.inventoryItems.length}">${state.inventoryItems.length}</span></div></div>
@@ -10921,17 +11069,17 @@ function renderItemListPage(){
     <div></div>
     ${canManage ? `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      ${state.selectedItems.size>0 ? `
+      ${(cDel && state.selectedItems.size>0) ? `
       <span class="hint">${state.selectedItems.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-items">Delete selected</button>
       ` : ''}
-      <button class="btn" id="btn-item-columns">▤ Columns</button>
-      <button class="btn" id="btn-item-csv-format">CSV Format</button>
+      ${cCol ? `<button class="btn" id="btn-item-columns">▤ Columns</button>` : ''}
+      ${cImp ? `<button class="btn" id="btn-item-csv-format">CSV Format</button>
       <label class="btn" style="cursor:pointer;">⬆ Import CSV
         <input type="file" id="item-import-input" accept=".csv,text/csv" style="display:none;">
-      </label>
-      <button class="btn" id="btn-export-items-csv">⬇ Export CSV</button>
-      <button class="btn btn-primary" id="btn-new-item">+ Add item</button>
+      </label>` : ''}
+      ${cExp ? `<button class="btn" id="btn-export-items-csv">⬇ Export CSV</button>` : ''}
+      ${cAdd ? `<button class="btn btn-primary" id="btn-new-item">+ Add item</button>` : ''}
     </div>` : ''}
   </div>
   <div class="panel">
@@ -10940,25 +11088,25 @@ function renderItemListPage(){
     <table class="data-table">
       <thead>
         <tr>
-          ${canManage?`<th style="width:36px;"><input type="checkbox" id="item-select-all"></th>`:''}
-          <th>Raw Material</th>${visibleCols.map(d=>`<th>${esc(d.label)}</th>`).join('')}${canManage?'<th>Actions</th>':''}
+          ${cDel?`<th style="width:36px;"><input type="checkbox" id="item-select-all"></th>`:''}
+          <th>Raw Material</th>${visibleCols.map(d=>`<th>${esc(d.label)}</th>`).join('')}${cAct?'<th>Actions</th>':''}
         </tr>
         <tr class="col-filter-row">
-          ${canManage?'<th></th>':''}
+          ${cDel?'<th></th>':''}
           <th><input class="col-filter-input" id="item-filter-name" placeholder="Search…" value="${escAttr(state.filters.itemSearch||'')}"></th>
           ${visibleCols.map(d=>`<th>${d.key==='category'?`<input class="col-filter-input" id="item-filter-category" placeholder="Search…" value="${escAttr(state.filters.itemCategoryFilter||'')}">`:''}</th>`).join('')}
-          ${canManage?'<th></th>':''}
+          ${cAct?'<th></th>':''}
         </tr>
       </thead>
       <tbody>
         ${rows.length===0 ? `<tr><td colspan="${colCount}"><div class="empty-state">No items match your filters.</div></td></tr>` : rows.map(i=>`
-        <tr class="${canManage?'clickable':''}" ${canManage?`data-item-row="${i.id}"`:''}>
-          ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="item-select-row" data-item-id="${i.id}" ${state.selectedItems.has(i.id)?'checked':''}></td>`:''}
+        <tr class=\"${cEdit?'clickable':''}\" ${cEdit?`data-item-row=\"${i.id}\"`:''}>
+          ${cDel?`<td onclick="event.stopPropagation()"><input type="checkbox" class="item-select-row" data-item-id="${i.id}" ${state.selectedItems.has(i.id)?'checked':''}></td>`:''}
           <td>${esc(i.name)}</td>
           ${visibleCols.map(d=>`<td>${d.cell(i)}</td>`).join('')}
-          ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
-            <button class="btn btn-sm" data-edit-item="${i.id}">Edit</button>
-            <button class="btn btn-sm btn-danger" data-delete-item="${i.id}">Delete</button>
+          ${cAct?`<td class="row-actions" onclick="event.stopPropagation()">
+            ${cEdit?`<button class="btn btn-sm" data-edit-item="${i.id}">Edit</button>`:''}
+            ${cDel?`<button class="btn btn-sm btn-danger" data-delete-item="${i.id}">Delete</button>`:''}
           </td>`:''}
         </tr>`).join('')}
       </tbody>
@@ -10966,17 +11114,17 @@ function renderItemListPage(){
     </div>
     <div class="rnd-mobile-cards">
       ${rows.length===0 ? `<div class="empty-state">No items match your filters.</div>` : rows.map(i=>`
-      <div class="list-card" ${canManage?`data-item-row="${i.id}"`:''}>
+      <div class="list-card" ${cEdit?`data-item-row="${i.id}"`:''}>
         <div class="list-card-top">
-          ${canManage?`<input type="checkbox" class="item-select-row" data-item-id="${i.id}" onclick="event.stopPropagation()" ${state.selectedItems.has(i.id)?'checked':''}>`:''}
+          ${cDel?`<input type="checkbox" class="item-select-row" data-item-id="${i.id}" onclick="event.stopPropagation()" ${state.selectedItems.has(i.id)?'checked':''}>`:''}
           <span class="list-card-title">${esc(i.name)}</span>
         </div>
         <div class="list-card-fields">
           ${visibleCols.map(d=>`<div class="list-card-field"><span class="list-card-label">${esc(d.label)}</span><span>${d.cell(i)}</span></div>`).join('')}
         </div>
-        ${canManage?`<div class="list-card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-sm" data-edit-item="${i.id}">Edit</button>
-          <button class="btn btn-sm btn-danger" data-delete-item="${i.id}">Delete</button>
+        ${cAct?`<div class="list-card-actions" onclick="event.stopPropagation()">
+          ${cEdit?`<button class="btn btn-sm" data-edit-item="${i.id}">Edit</button>`:''}
+          ${cDel?`<button class="btn btn-sm btn-danger" data-delete-item="${i.id}">Delete</button>`:''}
         </div>`:''}
       </div>`).join('')}
     </div>`}
@@ -13680,7 +13828,7 @@ function initialPageForLogin(role){
 // creation or role-creation UI was needed for this. Admin/Sub Admin instead see every staff
 // member's log here, read-only plus delete.
 function renderAttendancePage(){
-  return isAdminOrSubAdmin() ? renderAttendanceAdminView() : renderAttendanceCheckinView();
+  return can('attendance_view_all') ? renderAttendanceAdminView() : renderAttendanceCheckinView();
 }
 // Hub -> staff list -> one staff's monthly report, same drill-down shape as GMP's hub/section
 // pattern -- kept as plain in-memory state (no hash routing) since this is a small, self-contained
@@ -13715,11 +13863,11 @@ function renderAttendanceAdminView(){
         <span class="landing-card-icon landing-card-icon-blue">${cardDuotoneIcon('staff')}</span>
         <span>Records</span>
       </button>
-      <button type="button" class="landing-card" data-att-edit-requests-open>
+      ${can('attendance_approve_requests') ? `<button type="button" class="landing-card" data-att-edit-requests-open>
         ${pendingEdits ? `<span class="landing-card-badge">${pendingEdits}</span>` : ''}
         <span class="landing-card-icon landing-card-icon-orange">${cardDuotoneIcon('edit')}</span>
         <span>Edit Requests</span>
-      </button>
+      </button>` : ''}
     </div>
   </div>`;
 }
@@ -13820,7 +13968,7 @@ function renderAttendanceStaffReport(staffName){
   const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">—</span>`;
   return `
   <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-    <button type="button" class="btn btn-sm" data-att-print-staff="${escAttr(staffName)}">🖨 Print attendance sheet</button>
+    ${can('attendance_print') ? `<button type="button" class="btn btn-sm" data-att-print-staff="${escAttr(staffName)}">🖨 Print attendance sheet</button>` : ''}
   </div>
   <div class="panel">
     <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -13849,8 +13997,8 @@ function renderAttendanceStaffReport(staffName){
             <td>${locLink(inE)}</td>
             <td>${locLink(outE)}</td>
             <td style="text-align:right;white-space:nowrap;">
-              ${inE?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;">🗑</button>`:''}
-              ${outE?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;">🗑</button>`:''}
+              ${(inE && can('attendance_delete_entries'))?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;">🗑</button>`:''}
+              ${(outE && can('attendance_delete_entries'))?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;">🗑</button>`:''}
             </td>
           </tr>`;
         }).join('')}
@@ -13868,13 +14016,13 @@ function renderAttendanceStaffReport(staffName){
               <span class="rnd-att-pill rnd-att-pill-in">Check In</span>
               <span class="hint">${inE?fmtTimeOnly(inE.at):'—'}</span>
               ${inE ? locLink(inE) : ''}
-              ${inE?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}
+              ${(inE && can('attendance_delete_entries'))?`<button type="button" class="btn-text" data-delete-att="${inE.id}" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="rnd-att-pill rnd-att-pill-out">Check Out</span>
               <span class="hint">${outE?fmtTimeOnly(outE.at):'—'}</span>
               ${outE ? locLink(outE) : ''}
-              ${outE?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}
+              ${(outE && can('attendance_delete_entries'))?`<button type="button" class="btn-text" data-delete-att="${outE.id}" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}
             </div>
           </div>
         </div>`;
@@ -14093,6 +14241,7 @@ async function submitAttendanceEditRequest(e){
 // Never deletes the request record either way -- same no-data-loss rule as everything else here;
 // a rejected request just stays visible as rejected in the Edit Requests list.
 async function resolveAttendanceEditRequest(id, approve){
+  if(!can('attendance_approve_requests')) return;
   const req = (state.attendanceEditRequests||[]).find(r=>r.id===id);
   if(!req || req.status!=='pending') return;
   const reviewer = state.session.staffName || state.session.name;
@@ -14117,7 +14266,7 @@ async function resolveAttendanceEditRequest(id, approve){
 // state._attEditAlert the same way checkBoxCountAlert does, so the panel's contents don't shift
 // under the Admin's eyes if another request arrives while it's still open.
 function checkAttEditAlert(){
-  if(!state.session || !isAdminOrSubAdmin() || state._attEditAlert) return;
+  if(!state.session || !can('attendance_approve_requests') || state._attEditAlert) return;
   const pending = (state.attendanceEditRequests||[]).filter(r=>r.status==='pending');
   if(pending.length) state._attEditAlert = pending;
 }
@@ -14174,6 +14323,7 @@ function fmtOtMinutes(mins){
 // currently showing, so printing always reflects exactly what's on screen.
 // Reuses #print-area (see its own CSS comment) the same way printBatchSheet does.
 async function printAttendanceSheet(staffName){
+  if(!can('attendance_print')) return;
   await ensureFullNames();
   const ym = state._attRecordsMonth || todayStr().slice(0,7);
   const area = document.getElementById('print-area');
@@ -14467,7 +14617,7 @@ async function submitAttendanceCapture(){
   if(ok) showToast(type==='in' ? 'Checked in' : 'Checked out');
 }
 function deleteAttendanceEntry(id){
-  if(!isAdminOrSubAdmin()) return;
+  if(!can('attendance_delete_entries')) return;
   const a = (state.tempAttendance||[]).find(x=>x.id===id);
   openConfirmModal({
     title: 'Delete attendance record', danger: true, confirmLabel: 'Delete', requirePassword: true,
@@ -16416,7 +16566,7 @@ function renderOrdersPage(){
       ${canManageLists ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
-      <button type="button" class="btn-text" id="btn-box-count" style="font-size:12px;color:var(--muted);">📦 Box Count</button>
+      ${canUseBoxCount() ? `<button type="button" class="btn-text" id="btn-box-count" style="font-size:12px;color:var(--muted);">📦 Box Count</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
     </div>
@@ -16516,14 +16666,16 @@ function boxCountRefreshRow(row){
 // Admin/Sub Admin can fix any entry; whoever originally logged it can fix their own typo too,
 // same shape as the complaint "assigned to me" carve-out — without needing an Admin on hand for
 // something as small as a wrong Qty.
+function canUseBoxCount(){ return !!state.session && roleCan(state.session.role, 'boxcount_use'); }
+function canDeleteBoxCount(){ return !!state.session && roleCan(state.session.role, 'boxcount_delete'); }
 function canEditBoxCount(b){
-  if(isAdminOrSubAdmin()) return true;
+  if(state.session && roleCan(state.session.role, 'boxcount_edit_any')) return true;
   const me = state.session && (state.session.staffName || state.session.name);
-  return !!(me && b.enteredBy===me);
+  return !!(me && b.enteredBy===me && canUseBoxCount());   // whoever logged an entry can fix their own
 }
 // Previous days' box counts (owner, 2026-11-18): Admin and Sub Admin always; any other role when the Admin turns on
 // "See previous days' box counts" in Settings -> User role permission. Past days are VIEW ONLY (no add / edit / delete).
-function canViewBoxCountHistory(){ return !!state.session && (isAdminOrSubAdmin() || roleCan(state.session.role, 'orders_boxcount_history')); }
+function canViewBoxCountHistory(){ return !!state.session && roleCan(state.session.role, 'orders_boxcount_history'); }
 function bcShiftDay(key, delta){
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key||''); if(!m) return todayStr();
   return localDateKey(new Date(+m[1], +m[2]-1, +m[3]+delta, 12));
@@ -16569,7 +16721,7 @@ function boxCountSavedRowHtml(b, readOnly){
       </div>
     </div>`;
   }
-  const canBulk = isAdminOrSubAdmin();
+  const canBulk = canDeleteBoxCount();
   const checked = (state._boxCountSelected||[]).includes(b.id);
   return `
   <div class="bc-card${checked?' sel':''}">
@@ -16578,7 +16730,7 @@ function boxCountSavedRowHtml(b, readOnly){
     </div>
     <div style="display:flex;gap:2px;flex:none;">
       ${canEditBoxCount(b) ? `<button type="button" class="btn-text" data-edit-box-count="${b.id}" style="flex:none;color:var(--muted);padding:5px;" aria-label="Edit">${BOX_COUNT_ICON_EDIT}</button>` : ''}
-      ${isAdminOrSubAdmin() ? `<button type="button" class="btn-text" data-delete-box-count="${b.id}" style="color:#C15B4E;flex:none;padding:5px;" aria-label="Delete">${BOX_COUNT_ICON_DELETE}</button>` : ''}
+      ${canDeleteBoxCount() ? `<button type="button" class="btn-text" data-delete-box-count="${b.id}" style="color:#C15B4E;flex:none;padding:5px;" aria-label="Delete">${BOX_COUNT_ICON_DELETE}</button>` : ''}
     </div>
   </div>`;
 }
@@ -16600,7 +16752,7 @@ function toggleBoxCountSelectAll(){
 }
 function deleteSelectedBoxCounts(){
   const ids = state._boxCountSelected||[];
-  if(!ids.length) return;
+  if(!ids.length || !canDeleteBoxCount()) return;
   openConfirmModal({
     title: 'Delete box counts', danger: true, confirmLabel: 'Delete', requirePassword: true,
     message: `Delete ${ids.length} selected box count ${ids.length===1?'entry':'entries'}? This cannot be undone.`,
@@ -16685,7 +16837,7 @@ function boxCountModal(){
       <div class="bc-saved" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
           <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">${isPast?'Saved on this day':'Saved today'} ${todays.length?`(${todays.length})`:''}</div>
-          ${(!isPast && isAdminOrSubAdmin() && todays.length>0) ? `
+          ${(!isPast && canDeleteBoxCount() && todays.length>0) ? `
           <div style="display:flex;align-items:center;gap:10px;">
             ${selectedCount>0 ? `<button type="button" class="btn-text" id="btn-box-count-delete-selected" style="color:#C15B4E;font-size:11.5px;font-weight:700;">Delete selected (${selectedCount})</button>` : ''}
             <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);cursor:pointer;">
@@ -16705,6 +16857,7 @@ function boxCountModal(){
 }
 async function submitBoxCount(e){
   e.preventDefault();
+  if(!canUseBoxCount()) return;
   const rows = [...document.querySelectorAll('#box-count-tbody .box-count-row')];
   const recs = [];
   for(const row of rows){
@@ -16721,7 +16874,7 @@ async function submitBoxCount(e){
   if(ok) showToast(recs.length>1 ? `${recs.length} box counts saved` : 'Box count saved');
 }
 function deleteBoxCountEntry(id){
-  if(!isAdminOrSubAdmin()) return;
+  if(!canDeleteBoxCount()) return;
   const b = (state.boxCounts||[]).find(x=>x.id===id);
   openConfirmModal({
     title: 'Delete box count', danger: true, confirmLabel: 'Delete', requirePassword: true,
@@ -16737,7 +16890,7 @@ function deleteBoxCountEntry(id){
 // the Admin's eyes if another entry arrives while it's still open -- that one shows up as a
 // second alert right after this one closes, instead of silently appending to an open panel.
 function checkBoxCountAlert(){
-  if(!state.session || !isAdminOrSubAdmin() || state._boxCountAlert) return;
+  if(!state.session || !roleCan(state.session.role, 'boxcount_alert') || state._boxCountAlert) return;
   const pending = (state.boxCounts||[]).filter(b=>!b.ackedByAdmin);
   if(pending.length) state._boxCountAlert = pending;
 }
@@ -16946,11 +17099,11 @@ function renderOrdersMobileQueue(active, archived){
     <div class="oq-ctl">
       <div class="oq-bar">
         <label class="oq-search">${OQ_ICON.search}<input id="oq-search" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Search orders" value="${escAttr(q)}">${q?`<button type="button" class="oq-x" data-oq-clear aria-label="Clear search">&times;</button>`:''}</label>
-        <button type="button" class="oq-ibtn oq-ibtn-primary" data-oq-boxcount aria-label="Box Count" title="Box Count">${OQ_ICON.box}</button>
+        ${canUseBoxCount() ? `<button type="button" class="oq-ibtn oq-ibtn-primary" data-oq-boxcount aria-label="Box Count" title="Box Count">${OQ_ICON.box}</button>` : ''}
         <button type="button" class="oq-ibtn" id="btn-oq-more" aria-label="More actions" aria-haspopup="menu" aria-expanded="${moreOpen?'true':'false'}">${OQ_ICON.dots}</button>
         ${moreOpen ? `
         <div class="oq-menu" role="menu">
-          <button type="button" class="oq-menu-item" role="menuitem" data-oq-boxcount>${OQ_ICON.box}<span>Box Count</span></button>
+          ${canUseBoxCount() ? `<button type="button" class="oq-menu-item" role="menuitem" data-oq-boxcount>${OQ_ICON.box}<span>Box Count</span></button>` : ''}
           <button type="button" class="oq-menu-item" role="menuitem" data-orders-view="archive">${OQ_ICON.archive}<span>Archive${archived.length?` (${archived.length})`:''}</span></button>
           ${canCreate ? lines.map(l=>`<button type="button" class="oq-menu-item" role="menuitem" data-new-order-courier="${escAttr(l.key)}"><span>+ New order &middot; ${esc(l.label)}</span></button>`).join('') : ''}
           ${canManageLists ? `<button type="button" class="oq-menu-item" role="menuitem" data-oq-manage-lines><span>&#9881; Manage lists</span></button>` : ''}
@@ -17395,13 +17548,13 @@ function renderBlendingBoardPage(){
     </div>
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
       ${canViewColorSheets() ? `<button type="button" class="btn" id="btn-open-colorsheets">&#127912; Color sheets</button>` : ''}
-      ${canManageBlendBoard() ? `<button class="btn btn-primary" id="btn-new-blend">+ New batch</button>` : ''}
+      ${canCreateBlendBatch() ? `<button class="btn btn-primary" id="btn-new-blend">+ New batch</button>` : ''}
     </div>
   </div>
   ${state.blendBatches.length===0 ? `
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No batches on the board yet.</p>
-      ${canManageBlendBoard() ? `<button class="btn btn-primary" id="btn-new-blend-2">+ Add the first batch</button>` : ''}
+      ${canCreateBlendBatch() ? `<button class="btn btn-primary" id="btn-new-blend-2">+ Add the first batch</button>` : ''}
     </div>
   ` : `
   <div class="board blend-board">
@@ -17461,7 +17614,7 @@ function renderBlendCard(b, isFinal){
   const prod = stripTags(b.product||'').trim();
   const sinceTxt = isFinal ? '' : blendWaitText(blendStageSince(b));
   return `
-  <div class="card bcard" draggable="${canManageBlendBoard()?'true':'false'}" data-blend="${b.id}" style="--pri:${BLEND_PRIORITY_COLOR[priority]};">
+  <div class="card bcard" draggable="${canMoveBlendStage()?'true':'false'}" data-blend="${b.id}" style="--pri:${BLEND_PRIORITY_COLOR[priority]};">
     <div class="bcard-top"><span class="bcard-title" title="${escAttr(prod)}">${esc(prod||'Batch')}</span><span class="pill pill-${priority.toLowerCase()}">${priority}</span></div>
     <div class="bcard-ids"><span class="bcard-no">${esc(b.batchNo||b.id)}</span>${code ? `<span class="bcard-code" title="Formulation code">${esc(code)}</span>` : ''}</div>
     <div class="bcard-chips">
@@ -17497,6 +17650,9 @@ const COLORSHEET_THEMES = [
 ];
 function canViewColorSheets(){ return !!state.session && (roleCan(state.session.role, 'colorsheets_view') || roleCan(state.session.role, 'colorsheets_edit')); }
 function canEditColorSheets(){ return !!state.session && roleCan(state.session.role, 'colorsheets_edit'); }
+function canPrintColorSheets(){ return !!state.session && roleCan(state.session.role, 'colorsheets_print'); }
+function canAddColorSheets(){ return !!state.session && roleCan(state.session.role, 'colorsheets_add'); }
+function canDeleteColorSheets(){ return !!state.session && roleCan(state.session.role, 'colorsheets_delete'); }
 function colorSheetById(id){ return byId(state.colorSheets||[], id); }
 function newColorRow(){ return {id:uid('CR'), product:'', lines:[]}; }
 function newColorLine(){ return {id:uid('CL'), color:'', qty:''}; }
@@ -17554,11 +17710,11 @@ function renderColorSheetsPage(){
     <div class="toolbar">
       <div class="hint" style="font-weight:600;color:var(--ink);">Color sheets</div>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        ${canEditColorSheets() ? `<button type="button" class="btn btn-primary" id="btn-colorsheet-new">+ Add color sheet</button>` : ''}
+        ${canAddColorSheets() ? `<button type="button" class="btn btn-primary" id="btn-colorsheet-new">+ Add color sheet</button>` : ''}
         <button type="button" class="btn" id="btn-colorsheets-close">Close</button>
       </div>
     </div>
-    ${list.length===0 ? `<div class="empty-state">No color sheets yet.${canEditColorSheets() ? ' Use "+ Add color sheet" to create the first one.' : ''}</div>` : `
+    ${list.length===0 ? `<div class="empty-state">No color sheets yet.${canAddColorSheets() ? ' Use "+ Add color sheet" to create the first one.' : ''}</div>` : `
     <div class="landing-section">
       <div class="landing-grid">
         ${list.map(s=>`
@@ -17577,7 +17733,7 @@ function colorSheetViewPageHtml(sh){
     <div class="toolbar">
       <div class="hint" style="font-weight:600;color:var(--ink);">Color sheets &middot; ${esc(sh.name)}</div>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn" data-colorsheet-print="${escAttr(sh.id)}">&#128424; Print</button>
+        ${canPrintColorSheets() ? `<button type="button" class="btn" data-colorsheet-print="${escAttr(sh.id)}">&#128424; Print</button>` : ''}
         ${canEditColorSheets() ? `<button type="button" class="btn btn-primary" id="btn-colorsheet-edit">Edit</button>` : ''}
         <button type="button" class="btn" id="btn-colorsheets-close">Close</button>
       </div>
@@ -17605,7 +17761,7 @@ function colorSheetEditPageHtml(d){
     <div class="toolbar">
       <div class="hint" style="font-weight:600;color:var(--ink);">Editing &middot; ${esc(d.name||'Color sheet')}</div>
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-danger" id="btn-colorsheet-delete">Delete sheet</button>
+        ${canDeleteColorSheets() ? `<button type="button" class="btn btn-danger" id="btn-colorsheet-delete">Delete sheet</button>` : ''}
         <button type="button" class="btn" id="btn-colorsheet-cancel">Cancel</button>
         <button type="button" class="btn btn-primary" id="btn-colorsheet-save">Save</button>
       </div>
@@ -17737,7 +17893,7 @@ async function saveColorSheet(){
   render();
 }
 function deleteColorSheet(){
-  const d = state._colorSheetDraft, sh = d && colorSheetById(d.id); if(!sh || !canEditColorSheets()) return;
+  const d = state._colorSheetDraft, sh = d && colorSheetById(d.id); if(!sh || !canDeleteColorSheets()) return;
   openConfirmModal({
     title:'Delete color sheet', danger:true, confirmLabel:'Delete',
     message:`Delete the "${esc(sh.name)}" color sheet? This cannot be undone.`,
@@ -17753,7 +17909,7 @@ function deleteColorSheet(){
   });
 }
 async function submitColorSheetNew(e){
-  e.preventDefault(); if(!canEditColorSheets()) return;
+  e.preventDefault(); if(!canAddColorSheets()) return;
   const f = e.target;
   const name = String(f.elements['sheetName'].value||'').trim();
   if(!name){ showToast('Enter the product name'); return; }
@@ -17773,7 +17929,7 @@ async function submitColorSheetNew(e){
   startColorSheetEdit();   // opens straight into editing so the rows can be filled in
 }
 function printColorSheet(id){
-  const sh = colorSheetById(id); if(!sh || !canViewColorSheets()) return;
+  const sh = colorSheetById(id); if(!sh || !canPrintColorSheets()) return;
   const area = document.getElementById('print-area'); if(!area) return;
   // A4 with no page margin: the logo block sits flush with the top edge like the original sheet (this @page lives only as long as this print content).
   area.innerHTML = `<style>@page{size:A4;margin:0;} html,body{background:#fff !important;}</style><div class="cs-print">${colorSheetPaperHtml(sh)}</div>`;
@@ -17786,7 +17942,7 @@ function attachColorSheetHandlers(){
   document.querySelectorAll('[data-colorsheet-print]').forEach(b=>b.addEventListener('click', ()=>printColorSheet(b.dataset.colorsheetPrint)));
   document.querySelectorAll('#btn-colorsheets-close').forEach(b=>b.addEventListener('click', closeColorSheetsView));
   if(byIdEl('btn-open-colorsheets')) byIdEl('btn-open-colorsheets').onclick = openColorSheets;
-  if(byIdEl('btn-colorsheet-new')) byIdEl('btn-colorsheet-new').onclick = ()=>{ if(canEditColorSheets()) openModal('colorsheetnew'); };
+  if(byIdEl('btn-colorsheet-new')) byIdEl('btn-colorsheet-new').onclick = ()=>{ if(canAddColorSheets()) openModal('colorsheetnew'); };
   if(byIdEl('form-colorsheet-new')) byIdEl('form-colorsheet-new').addEventListener('submit', submitColorSheetNew);
   if(byIdEl('btn-colorsheet-edit')) byIdEl('btn-colorsheet-edit').onclick = startColorSheetEdit;
   if(byIdEl('btn-colorsheet-cancel')) byIdEl('btn-colorsheet-cancel').onclick = cancelColorSheetEdit;
@@ -17822,12 +17978,12 @@ function renderRndPage(){
       <button type="button" class="tab rnd-tab-attendance ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">${icon('clock')}Attendance</button>
     </div>
     ${view==='chemists'
-      ? (canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
+      ? (canAddRndChemist() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
       : `
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
         <button type="button" class="rnd-outcome-label rnd-outcome-success" data-rnd-outcome-view="success">✓ Success · ${successCount}</button>
         <button type="button" class="rnd-outcome-label rnd-outcome-quarantined" data-rnd-outcome-view="quarantined">⚠ Quarantined · ${quarantinedCount}</button>
-        ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd">+ Add product</button>` : ''}
+        ${canCreateRndProject() ? `<button class="btn btn-primary" id="btn-new-rnd">+ Add product</button>` : ''}
       </div>`}
   </div>
   </div>
@@ -17838,8 +17994,8 @@ function renderRndPage(){
         <button type="button" class="tab rnd-tab-attendance ${view==='chemists'?'active':''}" data-rnd-view-mode="chemists">${icon('clock')}Attendance</button>
       </div>
       ${view==='chemists'
-        ? (canManageRnd() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-chemist-m" aria-label="Add chemist">+</button>` : '')
-        : (canManageRnd() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-m" aria-label="Add product">+</button>` : '')}
+        ? (canAddRndChemist() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-chemist-m" aria-label="Add chemist">+</button>` : '')
+        : (canCreateRndProject() ? `<button type="button" class="rnd-mobile-fab-inline" id="btn-new-rnd-m" aria-label="Add product">+</button>` : '')}
     </div>
     ${view!=='chemists' ? `
     <div class="rnd-mobile-stats">
@@ -17857,7 +18013,7 @@ function renderRndPage(){
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No products yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add a product you want developed or improved — your chemist picks it up from the list, with a dated log and a target date.</div>
-      ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-2">+ Add the first product</button>` : ''}
+      ${canCreateRndProject() ? `<button class="btn btn-primary" id="btn-new-rnd-2">+ Add the first product</button>` : ''}
       ${!isAdmin() ? `<div class="hint" style="margin-top:14px;max-width:360px;">Expecting to see products someone else already added? The database only shows this role what Settings → User roles has granted it — ask your Admin to open this role there and click Save again (even if nothing looks changed), so its access is pushed through.</div>` : ''}
     </div>
   ` : `
@@ -17920,7 +18076,7 @@ function renderRndOutcomeView(kind){
 }
 function renderRndCard(p){
   return `
-  <div class="card" draggable="${canManageRnd()?'true':'false'}" data-rnd="${p.id}" ${canManageRnd()?'style="cursor:grab;"':''}>
+  <div class="card" draggable="${canMoveRnd()?'true':'false'}" data-rnd="${p.id}" ${canMoveRnd()?'style="cursor:grab;"':''}>
     <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
     ${p.outcome==='quarantined' && p.quarantineReason ? `<div class="hint" style="margin-top:4px;">${esc(p.quarantineReason)}</div>` : ''}
   </div>`;
@@ -17933,7 +18089,7 @@ function renderRndChemistsTab(){
     <div class="empty-state">
       <p style="font-size:15px;margin-bottom:14px;">No chemists added yet.</p>
       <div class="hint" style="margin-bottom:14px;">Add your visiting chemists here, then mark their attendance each time they come in.</div>
-      ${canManageRnd() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist-2">+ Add the first chemist</button>` : ''}
+      ${canAddRndChemist() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist-2">+ Add the first chemist</button>` : ''}
     </div>`;
   }
   const canDeleteAtt = !!state.session && roleCan(state.session.role, 'rnd_delete');
@@ -17954,8 +18110,8 @@ function renderRndChemistsTab(){
             <td>${last?fmtDateTime(rndAttLoginAt(last)):'Never'}</td>
             <td style="white-space:nowrap;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
-                ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
-                ${isAdminOrSubAdmin() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
+                ${canMarkRndAttendance() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
+                ${canEditRndChemist() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
               </div>
             </td>
           </tr>`;
@@ -17977,10 +18133,10 @@ function renderRndChemistsTab(){
             <span>Visits: <b>${rndAttendanceCountThisMonth(c.id)}</b></span>
             <span>Last: <b>${last?fmtDateTime(rndAttLoginAt(last)):'Never'}</b></span>
           </div>
-          ${canManageRnd() || isAdminOrSubAdmin() ? `
+          ${canMarkRndAttendance() || canEditRndChemist() ? `
           <div class="rnd-chemist-card-actions">
-            ${canManageRnd() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
-            ${isAdminOrSubAdmin() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
+            ${canMarkRndAttendance() ? `<button type="button" class="btn btn-sm" data-open-rnd-attendance="${c.id}">Attendance</button>` : ''}
+            ${canEditRndChemist() ? `<button type="button" class="btn btn-sm" data-edit-rnd-chemist="${c.id}">Edit</button>` : ''}
           </div>` : ''}
         </div>`;
       }).join('')}
@@ -18003,11 +18159,11 @@ function renderRndChemistsTab(){
           <div class="rnd-att-month-label">${esc(fmtMonthLabel(ym))}</div>
           <div class="rnd-desktop-table">
           <table class="data-table">
-            <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th>${isAdminOrSubAdmin() ? '<th>Location</th>' : ''}<th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Chemist</th><th>Login</th><th>Logout</th>${canViewRndLocations() ? '<th>Location</th>' : ''}<th></th></tr></thead>
             <tbody>
               ${entries.map(a=>{
                 const inAt = rndAttLoginAt(a);
-                const locCell = isAdminOrSubAdmin() ? `<td>
+                const locCell = canViewRndLocations() ? `<td>
                   ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}In</a>` : ''}
                   ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Out</a>` : ''}
                   ${!a.loginLat && !a.logoutLat ? '<span class="hint">—</span>' : ''}
@@ -18033,7 +18189,7 @@ function renderRndChemistsTab(){
                   <span class="rnd-att-pill rnd-att-pill-in">In ${inAt?fmtTimeOnly(inAt):'—'}</span>
                   <span class="rnd-att-pill rnd-att-pill-out">Out ${a.logoutAt?fmtTimeOnly(a.logoutAt):'—'}</span>
                 </div>
-                ${isAdminOrSubAdmin() && (a.loginLat || a.logoutLat) ? `
+                ${canViewRndLocations() && (a.loginLat || a.logoutLat) ? `
                 <div style="display:flex;gap:10px;margin-top:6px;">
                   ${a.loginLat ? `<a href="${rndMapsLink(a.loginLat,a.loginLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Login location</a>` : ''}
                   ${a.logoutLat ? `<a href="${rndMapsLink(a.logoutLat,a.logoutLng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}Logout location</a>` : ''}
@@ -18184,10 +18340,11 @@ function renderCustomersPage(){
     return true;
   });
   const active = state.customers.filter(c=>c.status==='Active').length;
-  const canManage = state.session && roleCan(state.session.role, 'customers_manage');
+  const cAdd=can('customers_add'), cEdit=can('customers_edit'), cDel=can('customers_delete'), cImp=can('customers_import'), cExp=can('customers_export'), cCol=can('customers_columns');
+  const canManage = cAdd||cEdit||cDel||cImp||cExp||cCol, cAct = cEdit||cDel;   // each action has its own permission (owner, 2026-11-22)
   const visibleCols = CUSTOMER_COLUMN_DEFS.filter(d=>customerColVisible(d.key));
   const filterCtx = {phoneF, typeF, allTypes, salesmanF, allSalesmen, statusF};
-  const colCount = (canManage?1:0) + 1 + visibleCols.length + (canManage?1:0);
+  const colCount = (cDel?1:0) + 1 + visibleCols.length + (cAct?1:0);
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="label">Total customers</div><div class="value"><span class="stat-num" data-target="${state.customers.length}">${state.customers.length}</span></div></div>
@@ -18198,18 +18355,18 @@ function renderCustomersPage(){
     <div></div>
     ${canManage ? `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      ${state.selectedCustomers.size>0 ? `
+      ${(cDel && state.selectedCustomers.size>0) ? `
       <span class="hint">${state.selectedCustomers.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-customers">Delete selected</button>
       ` : ''}
-      <button class="btn" id="btn-customer-columns">▤ Columns</button>
-      <button class="btn" id="btn-customer-csv-format">CSV Format</button>
+      ${cCol ? `<button class="btn" id="btn-customer-columns">▤ Columns</button>` : ''}
+      ${cImp ? `<button class="btn" id="btn-customer-csv-format">CSV Format</button>
       <label class="btn" style="cursor:pointer;">⬆ Import CSV
         <input type="file" id="customer-import-input" accept=".csv,text/csv" style="display:none;">
-      </label>
-      <button class="btn" id="btn-export-customers-csv">⬇ Export CSV</button>
-      <button class="btn" id="btn-salesperson-colors">🎨 Sales person colors</button>
-      <button class="btn btn-primary" id="btn-new-customer">+ Add customer</button>
+      </label>` : ''}
+      ${cExp ? `<button class="btn" id="btn-export-customers-csv">⬇ Export CSV</button>` : ''}
+      ${cEdit ? `<button class="btn" id="btn-salesperson-colors">🎨 Sales person colors</button>` : ''}
+      ${cAdd ? `<button class="btn btn-primary" id="btn-new-customer">+ Add customer</button>` : ''}
     </div>` : ''}
   </div>
   <div class="panel">
@@ -18218,25 +18375,25 @@ function renderCustomersPage(){
     <table class="data-table">
       <thead>
         <tr>
-          ${canManage?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
-          <th>Name</th>${visibleCols.map(d=>`<th>${esc(d.label)}</th>`).join('')}${canManage?'<th>Actions</th>':''}
+          ${cDel?`<th style="width:36px;"><input type="checkbox" id="customer-select-all"></th>`:''}
+          <th>Name</th>${visibleCols.map(d=>`<th>${esc(d.label)}</th>`).join('')}${cAct?'<th>Actions</th>':''}
         </tr>
         <tr class="col-filter-row">
-          ${canManage?'<th></th>':''}
+          ${cDel?'<th></th>':''}
           <th><input class="col-filter-input" id="customer-filter-name" placeholder="Search…" value="${escAttr(state.filters.customerSearch||'')}"></th>
           ${visibleCols.map(d=>`<th>${d.filter?d.filter(filterCtx):''}</th>`).join('')}
-          ${canManage?'<th></th>':''}
+          ${cAct?'<th></th>':''}
         </tr>
       </thead>
       <tbody>
         ${rows.length===0 ? `<tr><td colspan="${colCount}"><div class="empty-state">No customers match your filters.</div></td></tr>` : rows.map(c=>`
-        <tr class="${canManage?'clickable':''}" ${canManage?`data-customer-row="${c.id}"`:''}>
-          ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
+        <tr class=\"${cEdit?'clickable':''}\" ${cEdit?`data-customer-row=\"${c.id}\"`:''}>
+          ${cDel?`<td onclick="event.stopPropagation()"><input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" ${state.selectedCustomers.has(c.id)?'checked':''}></td>`:''}
           <td>${esc(c.name)}</td>
           ${visibleCols.map(d=>`<td>${d.cell(c)}</td>`).join('')}
-          ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
-            <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
-            <button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>
+          ${cAct?`<td class="row-actions" onclick="event.stopPropagation()">
+            ${cEdit?`<button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>`:''}
+            ${cDel?`<button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>`:''}
           </td>`:''}
         </tr>`).join('')}
       </tbody>
@@ -18244,17 +18401,17 @@ function renderCustomersPage(){
     </div>
     <div class="rnd-mobile-cards">
       ${rows.length===0 ? `<div class="empty-state">No customers match your filters.</div>` : rows.map(c=>`
-      <div class="list-card" ${canManage?`data-customer-row="${c.id}"`:''}>
+      <div class="list-card" ${cEdit?`data-customer-row="${c.id}"`:''}>
         <div class="list-card-top">
-          ${canManage?`<input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" onclick="event.stopPropagation()" ${state.selectedCustomers.has(c.id)?'checked':''}>`:''}
+          ${cDel?`<input type="checkbox" class="customer-select-row" data-customer-id="${c.id}" onclick="event.stopPropagation()" ${state.selectedCustomers.has(c.id)?'checked':''}>`:''}
           <span class="list-card-title">${esc(c.name)}</span>
         </div>
         <div class="list-card-fields">
           ${visibleCols.map(d=>`<div class="list-card-field"><span class="list-card-label">${esc(d.label)}</span><span>${d.cell(c)}</span></div>`).join('')}
         </div>
-        ${canManage?`<div class="list-card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>
-          <button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>
+        ${cAct?`<div class="list-card-actions" onclick="event.stopPropagation()">
+          ${cEdit?`<button class="btn btn-sm" data-edit-customer="${c.id}">Edit</button>`:''}
+          ${cDel?`<button class="btn btn-sm btn-danger" data-delete-customer="${c.id}">Delete</button>`:''}
         </div>`:''}
       </div>`).join('')}
     </div>`}
@@ -18274,7 +18431,8 @@ function renderSuppliersPage(){
     return true;
   });
   const active = state.suppliers.filter(s=>s.status==='Active').length;
-  const canManage = state.session && roleCan(state.session.role, 'suppliers_manage');
+  const cAdd=can('suppliers_add'), cEdit=can('suppliers_edit'), cDel=can('suppliers_delete'), cImp=can('suppliers_import');
+  const canManage = cAdd||cEdit||cDel||cImp, cAct = cEdit||cDel;   // each action has its own permission (owner, 2026-11-22)
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="label">Total suppliers</div><div class="value"><span class="stat-num" data-target="${state.suppliers.length}">${state.suppliers.length}</span></div></div>
@@ -18285,14 +18443,14 @@ function renderSuppliersPage(){
     <div></div>
     ${canManage ? `
     <div style="display:flex;gap:8px;align-items:center;">
-      ${state.selectedSuppliers.size>0 ? `
+      ${(cDel && state.selectedSuppliers.size>0) ? `
       <span class="hint">${state.selectedSuppliers.size} selected</span>
       <button type="button" class="btn btn-sm btn-danger" id="btn-delete-selected-suppliers">Delete selected</button>
       ` : ''}
-      <label class="btn" style="cursor:pointer;">⬆ Import CSV
+      ${cImp ? `<label class="btn" style="cursor:pointer;">⬆ Import CSV
         <input type="file" id="supplier-csv-input" accept=".csv,text/csv" style="display:none;">
-      </label>
-      <button class="btn btn-primary" id="btn-new-supplier">+ Add supplier</button>
+      </label>` : ''}
+      ${cAdd ? `<button class="btn btn-primary" id="btn-new-supplier">+ Add supplier</button>` : ''}
     </div>` : ''}
   </div>
   <div class="panel">
@@ -18301,11 +18459,11 @@ function renderSuppliersPage(){
     <table class="data-table">
       <thead>
         <tr>
-          ${canManage?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
-          <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${canManage?'<th>Actions</th>':''}
+          ${cDel?`<th style="width:36px;"><input type="checkbox" id="supplier-select-all"></th>`:''}
+          <th>Name</th><th>Vendor ID</th><th>Status</th><th>Added</th>${cAct?'<th>Actions</th>':''}
         </tr>
         <tr class="col-filter-row">
-          ${canManage?'<th></th>':''}
+          ${cDel?'<th></th>':''}
           <th><input class="col-filter-input" id="supplier-filter-name" placeholder="Search…" value="${escAttr(state.filters.supplierSearch||'')}"></th>
           <th><input class="col-filter-input" id="supplier-filter-vendorid" placeholder="Search…" value="${escAttr(state.filters.supplierVendorIdFilter||'')}"></th>
           <th><select class="col-filter-select" id="supplier-filter-status">
@@ -18313,19 +18471,19 @@ function renderSuppliersPage(){
             <option value="Active" ${statusF==='Active'?'selected':''}>Active</option>
             <option value="Inactive" ${statusF==='Inactive'?'selected':''}>Inactive</option>
           </select></th>
-          <th></th>${canManage?'<th></th>':''}
+          <th></th>${cAct?'<th></th>':''}
         </tr>
       </thead>
       <tbody>
-        ${rows.length===0 ? `<tr><td colspan="${canManage?6:4}"><div class="empty-state">No suppliers match your filters.</div></td></tr>` : rows.map(s=>`
-        <tr class="${canManage?'clickable':''}" ${canManage?`data-supplier-row="${s.id}"`:''}>
-          ${canManage?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
+        ${rows.length===0 ? `<tr><td colspan="${4+(cDel?1:0)+(cAct?1:0)}"><div class="empty-state">No suppliers match your filters.</div></td></tr>` : rows.map(s=>`
+        <tr class=\"${cEdit?'clickable':''}\" ${cEdit?`data-supplier-row=\"${s.id}\"`:''}>
+          ${cDel?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
           <td>${esc(s.name)}</td><td>${esc(s.vendorId)||'—'}</td>
           <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></td>
           <td>${fmtDate(s.createdAt)}</td>
-          ${canManage?`<td class="row-actions" onclick="event.stopPropagation()">
-            <button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>
-            <button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>
+          ${cAct?`<td class="row-actions" onclick="event.stopPropagation()">
+            ${cEdit?`<button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>`:''}
+            ${cDel?`<button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>`:''}
           </td>`:''}
         </tr>`).join('')}
       </tbody>
@@ -18333,9 +18491,9 @@ function renderSuppliersPage(){
     </div>
     <div class="rnd-mobile-cards">
       ${rows.length===0 ? `<div class="empty-state">No suppliers match your filters.</div>` : rows.map(s=>`
-      <div class="list-card" ${canManage?`data-supplier-row="${s.id}"`:''}>
+      <div class="list-card" ${cEdit?`data-supplier-row="${s.id}"`:''}>
         <div class="list-card-top">
-          ${canManage?`<input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" onclick="event.stopPropagation()" ${state.selectedSuppliers.has(s.id)?'checked':''}>`:''}
+          ${cDel?`<input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" onclick="event.stopPropagation()" ${state.selectedSuppliers.has(s.id)?'checked':''}>`:''}
           <span class="list-card-title">${esc(s.name)}</span>
         </div>
         <div class="list-card-fields">
@@ -18343,9 +18501,9 @@ function renderSuppliersPage(){
           <div class="list-card-field"><span class="list-card-label">Status</span><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></div>
           <div class="list-card-field"><span class="list-card-label">Added</span><span>${fmtDate(s.createdAt)}</span></div>
         </div>
-        ${canManage?`<div class="list-card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>
-          <button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>
+        ${cAct?`<div class="list-card-actions" onclick="event.stopPropagation()">
+          ${cEdit?`<button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>`:''}
+          ${cDel?`<button class="btn btn-sm btn-danger" data-delete-supplier="${s.id}">Delete</button>`:''}
         </div>`:''}
       </div>`).join('')}
     </div>`}
@@ -18458,7 +18616,7 @@ function renderGmpLogSection(defId){
           ${cols.map(c=>`<td>${esc(gmpLogSummaryCell(c, e.data, e.at))}</td>`).join('')}
           <td class="row-actions">
             <button class="btn btn-sm" data-gmp-log-open="${e.id}" data-gmp-log-def="${defId}">Open</button>
-            ${isAdmin()?`<button class="btn btn-sm btn-danger" data-gmp-log-delete="${e.id}">Delete</button>`:''}
+            ${can('gmp_delete')?`<button class="btn btn-sm btn-danger" data-gmp-log-delete="${e.id}">Delete</button>`:''}
           </td>
         </tr>`).join('')}
       </tbody>
@@ -18490,7 +18648,7 @@ function renderGmpCalibrationRegistry(){
           <td>${pill}</td>
           <td class="row-actions">
             <button class="btn btn-sm" data-gmp-cal-edit="${r.id}">Edit</button>
-            ${isAdmin()?`<button class="btn btn-sm btn-danger" data-gmp-cal-delete="${r.id}">Delete</button>`:''}
+            ${can('gmp_delete')?`<button class="btn btn-sm btn-danger" data-gmp-cal-delete="${r.id}">Delete</button>`:''}
           </td>
         </tr>`;}).join('')}
       </tbody>
@@ -18640,7 +18798,7 @@ function gmpLogEntryModal(defId, entryId){
         ${def.fields.map(f=>gmpFieldHtml(f, entry?entry.data:null)).join('')}
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          ${entry&&isAdmin()?`<button type="button" class="btn btn-danger" id="btn-gmp-log-delete-inline" data-id="${entry.id}">Delete</button>`:''}
+          ${entry&&can('gmp_delete')?`<button type="button" class="btn btn-danger" id="btn-gmp-log-delete-inline" data-id="${entry.id}">Delete</button>`:''}
           <button type="submit" class="btn btn-primary">${entry?'Save changes':'Add entry'}</button>
         </div>
       </form>
@@ -18669,7 +18827,7 @@ function calibrationInstrumentModal(id){
         <div class="field"><label>Next Calibration Submission Date</label><input type="date" name="calSubmission" value="${r?escAttr(r.nextSubmission||''):''}"></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
-          ${r&&isAdmin()?`<button type="button" class="btn btn-danger" id="btn-gmp-cal-delete-inline" data-id="${r.id}">Delete</button>`:''}
+          ${r&&can('gmp_delete')?`<button type="button" class="btn btn-danger" id="btn-gmp-cal-delete-inline" data-id="${r.id}">Delete</button>`:''}
           <button type="submit" class="btn btn-primary">${r?'Save changes':'Add instrument'}</button>
         </div>
       </form>
@@ -19182,8 +19340,8 @@ function renderStaffPage(){
     ...(uncategorized.length ? [{key:'', label:'Uncategorized', members:uncategorized}] : [])];
   return `
   <div class="toolbar">
-    ${(state.session && roleCan(state.session.role, 'staff_manage')) ? `<button type="button" class="btn-text" id="btn-manage-staff-categories">⚙ Manage categories</button>` : '<div></div>'}
-    ${(state.session && roleCan(state.session.role, 'staff_manage')) ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
+    ${can('staff_categories') ? `<button type="button" class="btn-text" id="btn-manage-staff-categories">⚙ Manage categories</button>` : '<div></div>'}
+    ${can('staff_add') ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
   </div>
   ${state.staff.length===0 ? `<div class="panel"><div class="empty-state">No staff added yet.</div></div>` :
     groups.map(g=>`
@@ -19192,20 +19350,20 @@ function renderStaffPage(){
       ${g.members.length===0 ? `<div class="empty-state">No one in this category yet.</div>` : `
       <div class="rnd-desktop-table">
       <table class="data-table">
-        <thead><tr><th>Photo</th><th>Name</th><th>Title</th>${(state.session && roleCan(state.session.role, 'staff_manage'))?'<th>Actions</th>':''}</tr></thead>
+        <thead><tr><th>Photo</th><th>Name</th><th>Title</th>${(can('staff_edit') || can('staff_delete'))?'<th>Actions</th>':''}</tr></thead>
         <tbody>
           ${g.members.map(s=>`
           <tr>
             <td>${staffAvatarHtml(s.name, 40)}</td>
             <td>${esc(s.name)}</td>
             <td>${s.title ? esc(s.title) : '<span class="hint">—</span>'}</td>
-            ${(state.session && roleCan(state.session.role, 'staff_manage'))?`<td class="row-actions">
-              <button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
+            ${(can('staff_edit') || can('staff_delete'))?`<td class="row-actions">
+              ${can('staff_edit') ? `<button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
               <label class="btn btn-sm" style="cursor:pointer;">${s.photo?'Change photo':'Add photo'}
                 <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
               </label>
-              ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}">Remove photo</button>`:''}
-              <button class="btn btn-sm btn-danger" data-remove-staff="${s.id}">Remove</button>
+              ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}">Remove photo</button>`:''}` : ''}
+              ${can('staff_delete') ? `<button class="btn btn-sm btn-danger" data-remove-staff="${s.id}">Remove</button>` : ''}
             </td>`:''}
           </tr>`).join('')}
         </tbody>
@@ -19221,14 +19379,14 @@ function renderStaffPage(){
           <div class="list-card-fields">
             <div class="list-card-field"><span class="list-card-label">Title</span><span>${s.title ? esc(s.title) : '<span class="hint">—</span>'}</span></div>
           </div>
-          ${(state.session && roleCan(state.session.role, 'staff_manage'))?`
+          ${(can('staff_edit') || can('staff_delete'))?`
           <div class="list-card-actions" style="flex-wrap:wrap;">
-            <button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
+            ${can('staff_edit') ? `<button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
             <label class="btn btn-sm" style="cursor:pointer;flex:1;text-align:center;">${s.photo?'Change photo':'Add photo'}
               <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
             </label>
-            ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}" style="flex-basis:100%;">Remove photo</button>`:''}
-            <button class="btn btn-sm btn-danger" data-remove-staff="${s.id}" style="flex-basis:100%;">Remove</button>
+            ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}" style="flex-basis:100%;">Remove photo</button>`:''}` : ''}
+            ${can('staff_delete') ? `<button class="btn btn-sm btn-danger" data-remove-staff="${s.id}" style="flex-basis:100%;">Remove</button>` : ''}
           </div>` : ''}
         </div>`).join('')}
       </div>`}
@@ -20701,21 +20859,21 @@ function renderSettingsPage(){
   // one permission hand itself (or anyone) broader access. Every other panel follows settings_access.
   const canSettings = !!state.session && roleCan(state.session.role, 'settings_access');
   const jumpCards = orderedSettingsJumpCards([
-    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints', adminOnly:false},
-    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard', adminOnly:false},
-    {id:'settings-template-customization', label:'Template customization', icon:'settings', adminOnly:false},
-    {id:'settings-print-edits', label:'Prints edits', icon:'flask', adminOnly:false},
-    {id:'settings-login-customization', label:'Login panel customization', icon:'star', adminOnly:false},
-    {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false},
-    {id:'settings-mobile-appearance', label:'Mobile appearance', icon:'star', adminOnly:false},
-    {id:'settings-timer-alert-sound', label:'Machine alert sounds', icon:'headset', adminOnly:false},
+    {id:'settings-complaint-access', label:'Complaint access', icon:'complaints', adminOnly:false, perm:'settings_complaint_access'},
+    {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard', adminOnly:false, perm:'settings_sidebar_order'},
+    {id:'settings-template-customization', label:'Template customization', icon:'settings', adminOnly:false, perm:'settings_template'},
+    {id:'settings-print-edits', label:'Prints edits', icon:'flask', adminOnly:false, perm:'settings_prints'},
+    {id:'settings-login-customization', label:'Login panel customization', icon:'star', adminOnly:false, perm:'settings_login_page'},
+    {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false, perm:'settings_appearance'},
+    {id:'settings-mobile-appearance', label:'Mobile appearance', icon:'star', adminOnly:false, perm:'settings_mobile'},
+    {id:'settings-timer-alert-sound', label:'Machine alert sounds', icon:'headset', adminOnly:false, perm:'settings_alert_sounds'},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers', adminOnly:true},
     {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
     {id:'settings-role-permissions', label:'User role permission', icon:'fingerprint', adminOnly:true},
-    {id:'settings-login-activity', label:'Login activity', icon:'search', adminOnly:false},
-    {id:'settings-sms-settings', label:'SMS settings', icon:'send', adminOnly:false},
+    {id:'settings-login-activity', label:'Login activity', icon:'search', adminOnly:false, perm:'settings_login_activity'},
+    {id:'settings-sms-settings', label:'SMS settings', icon:'send', adminOnly:false, perm:'settings_sms'},
     {id:'settings-backup', label:'Backup & export', icon:'list', adminOnly:true},
-  ].filter(c => c.adminOnly ? isAdmin() : (isAdmin() || canSettings)));
+  ].filter(c => c.adminOnly ? isAdmin() : (isAdmin() || (canSettings && can(c.perm)))));   // each panel has its own switch (default: whoever has settings_access)
   const openId = jumpCards.some(c=>c.id===state._settingsOpenPanel) ? state._settingsOpenPanel : null;
   const renderOpenPanel = openId ? SETTINGS_PANEL_RENDERERS[openId] : null;
   // Same hub/drill-down pattern as GMP (renderGmpPage/renderGmpHub): clicking a card replaces the
@@ -21236,7 +21394,7 @@ function renderLoginActivityPanel(){
       ${entries.length===0 ? `<div class="empty-state" style="padding:20px;">No logins recorded yet.</div>` : `
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
       <table class="data-table" style="margin:0;">
-        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>IP</th><th>Device</th>${isAdmin()?'<th></th>':''}</tr></thead>
+        <thead style="position:sticky;top:0;background:var(--surface,#fff);z-index:1;"><tr><th>Name</th><th>Access</th><th>When</th><th>IP</th><th>Device</th>${can('settings_login_activity_delete')?'<th></th>':''}</tr></thead>
         <tbody>
           ${entries.slice(0,100).map(e=>`
           <tr>
@@ -21245,7 +21403,7 @@ function renderLoginActivityPanel(){
             <td>${fmtDateTime(e.at)}</td>
             <td>${e.ip ? esc(e.ip) : '<span class="hint">—</span>'}</td>
             <td>${esc(deviceSummaryFromUserAgent(e.userAgent))}</td>
-            ${isAdmin()?`<td><button type="button" class="btn btn-sm btn-danger" data-delete-login="${e.id}">🗑️</button></td>`:''}
+            ${can('settings_login_activity_delete')?`<td><button type="button" class="btn btn-sm btn-danger" data-delete-login="${e.id}">🗑️</button></td>`:''}
           </tr>`).join('')}
         </tbody>
       </table>
@@ -21254,6 +21412,7 @@ function renderLoginActivityPanel(){
   </div>`;
 }
 function deleteLoginEntry(id){
+  if(!can('settings_login_activity_delete')) return;
   openConfirmModal({
     title: 'Delete this sign-in record?', danger: true, confirmLabel: 'Delete',
     message: "This removes it from the login activity log. It doesn't log anyone out or change their access.",
@@ -21589,7 +21748,7 @@ function renderBatchInstructionLinesHtml(lines, style){
     </div>`).join('')}
   </div>`;
 }
-function openInstructionStyleModal(){ if(canManageBlendBoard()) openModal('instructionstyle'); }
+function openInstructionStyleModal(){ if(canGuideRun()) openModal('instructionstyle'); }
 // Fixed sample text for the picker's live previews — same wording used throughout this feature's
 // own design exploration, so what's shown here matches what was actually compared and picked.
 const INSTRUCTION_PREVIEW_STEP = {ingredient:'Add Water 75Kg, Start the Heater\nThen Add EDTA, SLES\nWait until Dissolves all the SLES'};
@@ -21620,7 +21779,7 @@ function renderInstructionStyleModal(){
   </div>`;
 }
 async function applyInstructionStyle(id){
-  if(!canManageBlendBoard()) return;
+  if(!canGuideRun()) return;
   if(!BATCH_INSTRUCTION_STYLES.find(s=>s.id===id)) return;
   state.batchDisplay = {instructionStyle:id};
   openModal(null);
@@ -21639,7 +21798,7 @@ function batchTempGlowClass(temp){
 }
 function batchStepChecklistHtml(step, key){
   if(step.type!=='preparation') return '';
-  const canEdit = canManageBlendBoard();
+  const canEdit = canGuidePrepChecks();
   return `<div class="batch-prep-checklist">${(step.checklist||[]).map(c=> c.kind==='field'
     ? `<div class="bpc-row bpc-field">
         <label for="batch-field-${c.id}">${esc(c.label)}:</label>
@@ -21659,7 +21818,7 @@ function batchStepChecklistHtml(step, key){
 // the same as every other batch-run mutation (pause/next/etc.) — so they end up in
 // finishBatchIntoBlendingBoard's productionSteps snapshot and the physical printed record.
 async function updateBatchPrepFieldValue(key, stepId, checklistId, value){
-  if(!canManageBlendBoard()) return;
+  if(!canGuidePrepChecks()) return;
   const b = state[key]; if(!b) return;
   const step = b.steps.find(s=>s.id===stepId); if(!step || step.type!=='preparation') return;
   const item = (step.checklist||[]).find(c=>c.id===checklistId); if(!item) return;
@@ -21667,7 +21826,7 @@ async function updateBatchPrepFieldValue(key, stepId, checklistId, value){
   await saveActiveBatchVerified(key);
 }
 async function updateBatchPrepChecked(key, stepId, checklistId, checked){
-  if(!canManageBlendBoard()) return;
+  if(!canGuidePrepChecks()) return;
   const b = state[key]; if(!b) return;
   const step = b.steps.find(s=>s.id===stepId); if(!step || step.type!=='preparation') return;
   const item = (step.checklist||[]).find(c=>c.id===checklistId); if(!item) return;
@@ -21847,7 +22006,7 @@ function stopBatchTicker(){
 function timerAlertCardsHtml(alerts){
   state._alertSilenced = state._alertSilenced || {};
   state._alertSeen = state._alertSeen || {};
-  const canRun = canManageBlendBoard();
+  const canRun = canGuideRun();
   return alerts.map(a=>{
     const b = a.b, step = b.steps[b.currentStep];
     const silenced = state._alertSilenced[a.key]===a.sid;
@@ -21875,7 +22034,7 @@ function timerAlertsVisible(){
 }
 function timerAlertsSig(alerts){
   state._alertSilenced = state._alertSilenced || {};
-  return alerts.map(a=>a.key+':'+a.sid+':'+(state._alertSilenced[a.key]===a.sid?'s':'')+':'+(canManageBlendBoard()?'m':'')).join('|');
+  return alerts.map(a=>a.key+':'+a.sid+':'+(state._alertSilenced[a.key]===a.sid?'s':'')+':'+(canGuideRun()?'m':'')).join('|');
 }
 // The container drawn by render() on the Production Guide; the tick swaps its cards only when the set of alerts changes.
 function timerAlertsHtml(){
@@ -22277,6 +22436,7 @@ function deleteRecipe(id){
 // Returns true when the batch was started.
 async function startBatch(recipeId, extra){
   const r = byId(state.recipes, recipeId); if(!r) return false;
+  if(!canStartBatchRun()){ showToast('You do not have permission to start a batch'); return false; }
   if(!r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return false; }
   if(batchSlotBusy(r.machine||'')){ showToast(batchBusyMessage(r.machine||'')); return false; }
   extra = extra || {};
@@ -22352,7 +22512,7 @@ async function saveBatchTimerChange(key, b, before){
 }
 async function startBatchTimer(key, minutes){
   key = resolveBatchKey(key); if(!key) return;
-  const b = state[key]; if(!b || !canManageBlendBoard()) return;
+  const b = state[key]; if(!b || !canGuideTimer()) return;
   const mins = Number(minutes);
   if(!(mins>0) || mins>600){ showToast('Type the minutes, for example 12'); return; }
   const before = b.timer || null;
@@ -22365,7 +22525,7 @@ async function startBatchTimer(key, minutes){
 }
 async function toggleBatchTimerPause(key){
   key = resolveBatchKey(key); if(!key) return;
-  const b = state[key]; const t = batchTimerOf(b); if(!t || !canManageBlendBoard() || batchTimerEnded(b)) return;
+  const b = state[key]; const t = batchTimerOf(b); if(!t || !canGuideTimer() || batchTimerEnded(b)) return;
   const before = {...t};
   if(t.pausedRemaining!=null){ b.timer = {...t, endsAt: new Date(Date.now()+t.pausedRemaining*1000).toISOString(), pausedRemaining: null}; }
   else { b.timer = {...t, pausedRemaining: Math.max(0, Math.round(batchTimerRemaining(b))), endsAt: null}; }
@@ -22374,7 +22534,7 @@ async function toggleBatchTimerPause(key){
 }
 async function stopBatchTimer(key){
   key = resolveBatchKey(key); if(!key) return;
-  const b = state[key]; if(!b || !batchTimerOf(b) || !canManageBlendBoard()) return;
+  const b = state[key]; if(!b || !batchTimerOf(b) || !canGuideTimer()) return;
   const before = b.timer;
   stopAlertSound(key);
   b.timer = null;
@@ -22383,6 +22543,7 @@ async function stopBatchTimer(key){
 }
 async function nextBatchStep(key){
   key = resolveBatchKey(key); if(!key) return;
+  if(!canGuideRun()) return;
   const b = state[key]; if(!b) return;
   stopAlertSound(key);   // moving on by hand ends the alert for the step that just finished
   // Finish batch on the last step asks its question AT ONCE, whatever the timer is doing (running, paused or already at 00:00) (owner, 2026-11-22:
@@ -22398,6 +22559,7 @@ async function nextBatchStep(key){
 }
 async function prevBatchStep(key){
   key = resolveBatchKey(key); if(!key) return;
+  if(!canGuideRun()) return;
   const b = state[key]; if(!b || b.currentStep<=0) return;
   stopAlertSound(key);
   if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
@@ -22463,6 +22625,7 @@ async function removeBatchFromGuide(key, doneMessage){
 }
 function stopBatch(key){
   key = resolveBatchKey(key); if(!key) return;
+  if(!canGuideStop()) return;
   const b0 = state[key];
   openConfirmModal({
     title: 'Stop batch', danger: true, confirmLabel: 'Stop batch',
@@ -22475,14 +22638,14 @@ function stopBatch(key){
 function deleteGuideBatch(key){
   key = resolveBatchKey(key); if(!key) return;
   state._btMenuOpen = null;
-  if(!isAdmin()){ showToast('Only an Admin can delete a batch'); render(); return; }
+  if(!canDeleteGuideBatch()){ showToast('You do not have permission to delete a batch'); render(); return; }
   const b = state[key]; if(!b){ render(); return; }
   const name = stripTags(b.productName || b.recipeName || 'this batch').trim();
   openConfirmModal({
     title: 'Delete batch', danger: true, confirmLabel: 'Delete', requirePassword: true,
     message: `Delete ${name}${b.batchNo ? ' ('+b.batchNo+')' : ''}${b.machine ? ' on '+b.machine : ''}? It disappears from the Production Guide for everyone and is NOT sent to Mixing and Filling. This cannot be undone. Type your password to confirm.`,
     onConfirm: ()=>{
-      if(!isAdmin()) return;
+      if(!canDeleteGuideBatch()) return;
       logActivity(`Deleted the running batch "${name}"${b.batchNo ? ' ('+b.batchNo+')' : ''}${b.machine ? ' on '+b.machine : ''} from the Production Guide`);
       removeBatchFromGuide(key, 'Batch deleted');   // not returned, see stopBatch
     },
@@ -22581,7 +22744,7 @@ function clearBatchSheetRunFields(recipeId){
   save('recipes').catch(e=>console.error('clearing the batch number / size failed', e));
 }
 async function startBatchFromCard(recipeId){
-  const r = byId(state.recipes, recipeId); if(!r || !canManageBlendBoard()) return;
+  const r = byId(state.recipes, recipeId); if(!r || !canStartBatchRun()) return;
   state._recipeMenuOpen = null;
   if(batchSlotBusy(r.machine||'')){ showToast(batchBusyMessage(r.machine||'')); render(); return; }
   // The size box is emptied after every start, so a sheet with no saved size cannot be started from the card: open the sheet to type it.
@@ -22592,7 +22755,7 @@ async function startBatchFromCard(recipeId){
 function renderRecipeLibraryPage(){
   if(state._batchSheetId && byId(state.recipes, state._batchSheetId)) return renderBatchSheetPage(state._batchSheetId);
   const canMachine = canAssignMachine();
-  const canStart = canManageBlendBoard();
+  const canStart = canStartBatchRun();
   const canDelete = !!(state.session && roleCan(state.session.role, 'costing_delete_recipe'));
   const hasMenu = canMachine || canStart || canDelete;   // each item inside is shown only to roles allowed to do it
   return `
@@ -22686,7 +22849,7 @@ function costingProductIcon(name){
 }
 function renderCostingProductGrid(){
   const admin = !!state.session && roleCan(state.session.role, 'costing_edit');
-  const canDelete = isCostingSuperAdmin();
+  const canDelete = canDeleteCostingProducts();
   const sel = (canDelete && state._costSel && state._costSel.on) ? state._costSel : null;
   const products = state.costingProducts;
   return `
@@ -22717,7 +22880,7 @@ function renderCostingProductGrid(){
         <div class="rc-meta">${verCount} version${verCount===1?'':'s'}</div>
         ${(admin && !sel) ? `<div style="margin-top:8px;display:flex;gap:8px;">
           <button type="button" class="btn btn-sm" data-edit-costing-product="${p.id}" onclick="event.stopPropagation()">Edit</button>
-          ${isCostingSuperAdmin() ? `<button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button>` : ''}
+          ${canDeleteCostingProducts() ? `<button type="button" class="btn btn-sm btn-danger" data-delete-costing-product="${p.id}" onclick="event.stopPropagation()">Delete</button>` : ''}
         </div>` : ''}
       </div>`;
     }).join('')}
@@ -22743,7 +22906,7 @@ function costingDuplicateIds(){
 }
 function costingDeleteSelected(){
   const sel = state._costSel;
-  if(!sel || !sel.ids.length || !isCostingSuperAdmin()) return;
+  if(!sel || !sel.ids.length || !canDeleteCostingProducts()) return;
   const items = sel.ids.map(id=>byId(state.costingProducts, id)).filter(Boolean);
   if(!items.length) return;
   const withVersions = items.filter(p=>(p.versions||[]).length > 0);
@@ -22810,7 +22973,7 @@ function renderCostingVersionsList(product){
           <td>${esc(v.editedBy||v.createdBy||'—')}</td>
           ${admin?`<td class="row-actions" onclick="event.stopPropagation()">
             <button type="button" class="btn btn-sm" data-rename-costing-version="${v.id}">Rename</button>
-            ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version="${v.id}">Delete</button>`:''}
+            ${canDeleteCostingVersions()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version="${v.id}">Delete</button>`:''}
           </td>`:''}
         </tr>`; }).join('')}
       </tbody>
@@ -22839,7 +23002,7 @@ function renderCostingVersionsArchive(product){
           <td>${esc(v.archivedBy||'—')}</td>
           ${admin?`<td class="row-actions">
             <button type="button" class="btn btn-sm" data-restore-costing-version="${v.id}">Restore</button>
-            ${isCostingSuperAdmin()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version-permanent="${v.id}">Delete permanently</button>`:''}
+            ${canDeleteCostingVersions()?`<button type="button" class="btn btn-sm btn-danger" data-delete-costing-version-permanent="${v.id}">Delete permanently</button>`:''}
           </td>`:''}
         </tr>`).join('')}
       </tbody>
@@ -23025,7 +23188,7 @@ function renderCostingProductSheet(product, version){
             const cellStyle = col ? ` style="background:${col}33;"` : '';
             return `<td class="cst-amt cst-group-start" data-mat="${m.id}" data-size="${sz}"${cellStyle}>${amt.toFixed(3)}</td><td class="cst-cost" data-mat="${m.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
           }).join('')}
-          ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
+          ${canDeleteCostingRows()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-material="${m.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
         </tr>`;
         }).join('')}
       </tbody>
@@ -23056,7 +23219,7 @@ function renderCostingProductSheet(product, version){
             const cellStyle = col ? ` style="background:${col}33;"` : '';
             return `<td class="cst-group-start"${cellStyle}>${admin?`<input id="cst-fc-qty-${item.id}-${sz}" class="cst-fc-field" type="number" min="0" step="0.001" data-fcfield="qty" data-fc="${item.id}" data-size="${sz}" value="${qty==null?'':qty}" style="width:64px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font:inherit;">`:(qty==null?'—':qty)}</td><td class="cst-fc-cost" data-fc="${item.id}" data-size="${sz}"${cellStyle}>Rs. ${cost.toFixed(2)}</td>`;
           }).join('')}
-          ${isCostingSuperAdmin()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-fixedcost="${item.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
+          ${canDeleteCostingRows()?`<td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-delete-costing-fixedcost="${item.id}">Delete</button></td>`:(admin?`<td></td>`:'')}
         </tr>`).join('')}
         <tr class="cst-foot-row">
           <td></td><td>Sub Total</td><td></td><td></td><td></td>
@@ -23271,18 +23434,16 @@ function renderActiveBatchCard(key, b){
       <span class="bt-recipe">${esc(b.recipeName)}</span>
       <span class="bt-head-r">
         <span class="bt-dot ${dotClass}"></span>
-        ${isAdmin() ? `<button type="button" class="rc-dots bt-dots" data-bt-menu="${key}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${state._btMenuOpen===key}" title="More"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
+        ${canDeleteGuideBatch() ? `<button type="button" class="rc-dots bt-dots" data-bt-menu="${key}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${state._btMenuOpen===key}" title="More"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
       </span>
     </div>
-    ${(isAdmin() && state._btMenuOpen===key) ? `<div class="rc-menu bt-menu" role="menu"><button type="button" role="menuitem" class="rc-menu-item rc-menu-danger" data-bt-act="delete" data-bt-key="${key}">${TRASH_ICON_SVG}<span>Delete</span></button></div>` : ''}
+    ${(canDeleteGuideBatch() && state._btMenuOpen===key) ? `<div class="rc-menu bt-menu" role="menu"><button type="button" role="menuitem" class="rc-menu-item rc-menu-danger" data-bt-act="delete" data-bt-key="${key}">${TRASH_ICON_SVG}<span>Delete</span></button></div>` : ''}
     ${b.machine ? `<div class="bt-machine">${machineChipHtml(b.machine)}</div>` : ''}
     <div class="bt-ended-tag">⏰ Time's up</div>
     ${bodyHtml}
     <div class="bt-actions">
-      ${canManageBlendBoard() ? `
-      <button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>
-      <button class="btn" data-bt-act="stop" data-bt-key="${key}">Stop</button>
-      ` : ''}
+      ${canGuideRun() ? `<button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
+      ${canGuideStop() ? `<button class="btn" data-bt-act="stop" data-bt-key="${key}">Stop</button>` : ''}
     </div>
   </div>`;
 }
@@ -23318,7 +23479,7 @@ function batchRunSheetHtml(b){
 // then the timer card (label, big digits, Stop) with an animated ring and a pause / play button. Choosing a time starts the countdown at once.
 function batchTimerPanelHtml(key, b){
   const t = batchTimerOf(b);
-  const canRun = canManageBlendBoard();
+  const canRun = canGuideTimer();
   const rem = t ? batchTimerRemaining(b) : 0;
   const paused = !!(t && t.pausedRemaining!=null);
   const ended = batchTimerEnded(b);
@@ -23416,11 +23577,11 @@ function renderBatchFocusOverlay(){
         ${renderBatchInstructionHtml(step, null, b.batchSizeKg)}
         ${facts ? `<div class="bf-facts">${facts}</div>` : ''}
       `}
-      ${canManageBlendBoard() ? `
+      ${(canGuideRun() || canGuideStop()) ? `
       <div class="bf-controls">
-        ${b.currentStep>0 ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
-        <button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>
-        <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">Stop batch</button>
+        ${(canGuideRun() && b.currentStep>0) ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
+        ${canGuideRun() ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
+        ${canGuideStop() ? `<button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">Stop batch</button>` : ''}
       </div>` : ''}
     </div>
       <div class="bf-right-col">
@@ -23638,7 +23799,7 @@ function ptPhraseCardHtml(s, ord){
 // size, adds it to Batch sheets (state.recipes) and opens that page.
 async function transferProcessToBatchSheets(){
   const product = (state.costingProducts||[]).find(p=>p.id===state._costingOpenProductId);
-  if(!product || !(state.session && roleCan(state.session.role, 'costing_edit'))) return;
+  if(!product || !(state.session && roleCan(state.session.role, 'costing_transfer_to_sheets'))) return;
   if(state._costingDirty){ showToast('Save the process template first, then transfer.'); return; }
   const version = costingActiveVersion(product);
   if(!version){ showToast('Choose an Active version first.'); return; }
@@ -23714,7 +23875,7 @@ function renderProcessTemplatePage(product){
     <div class="toolbar">
       <div class="hint" style="font-weight:600;color:var(--ink);">${esc(product.name)} \u2014 Process template</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        ${(state.session && roleCan(state.session.role, 'costing_edit')) ? `<button type="button" class="btn btn-sm" data-transfer-process-template title="Create a batch sheet from the active version and this process template">Transfer to batch sheets</button>` : ''}
+        ${(state.session && roleCan(state.session.role, 'costing_transfer_to_sheets')) ? `<button type="button" class="btn btn-sm" data-transfer-process-template title="Create a batch sheet from the active version and this process template">Transfer to batch sheets</button>` : ''}
         <button type="button" class="btn btn-sm" data-cancel-process-template>Cancel</button>
         <button type="button" class="btn btn-primary btn-sm" data-save-process-template>Save</button>
       </div>
@@ -23999,7 +24160,7 @@ function recipeBatchSheetInner(recipeId, asPage){
       <div class="modal-actions" style="justify-content:center;margin-top:22px;flex-wrap:wrap;">
         <button type="button" class="btn" id="${asPage?'btn-close-batchsheet':'btn-cancel-modal'}">Close</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
-        ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?(r.machine ? esc(r.machine)+' is busy' : 'Batch running'):'Start the batch'}</button>` : ''}
+        ${canStartBatchRun() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?(r.machine ? esc(r.machine)+' is busy' : 'Batch running'):'Start the batch'}</button>` : ''}
       </div>`;
   return `
   ${asPage ? '<div id="batchsheet-page" class="bsmc-page bs2">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
@@ -25732,8 +25893,8 @@ function blendQcSections(b){
     return {key, label: list[si].label, stageIdx: si, state: cur===si ? 'current' : (cur>si ? 'done' : 'earlier'), q};
   }).filter(Boolean).sort((a,c)=>a.stageIdx-c.stageIdx);
 }
-function blendQcCardHtml(s, b, canEdit){
-  const at = canEdit ? '' : 'readonly', dis = canEdit ? '' : 'disabled';
+function blendQcCardHtml(s, b, canEdit, canTick){
+  const at = canEdit ? '' : 'readonly', dis = canTick ? '' : 'disabled';
   const draft = (state._blendQcChecks && state._blendQcChecks.forId===b.id) ? state._blendQcChecks.vals : {};
   const pill = s.state==='current' ? '<span class="bw-pill bw-pill-cur">Current stage</span>' : s.state==='done' ? '<span class="bw-pill bw-pill-done">Done</span>' : '<span class="bw-pill">Saved earlier</span>';
   const n = 'qc_'+s.key+'_';
@@ -25744,7 +25905,7 @@ function blendQcCardHtml(s, b, canEdit){
       <div class="field"><label>pH</label><input name="${n}ph" value="${escAttr(s.q.ph)}" placeholder="e.g. 5.8" autocomplete="off" ${at}></div>
       <div class="field"><label>Viscosity</label><input name="${n}viscosity" value="${escAttr(s.q.viscosity)}" placeholder="e.g. 4500 cP" autocomplete="off" ${at}></div>
       <div class="field bw-qc-ck"><label>Checked</label>
-        <div class="bw-qc-checks">${BLEND_QC_CHECKS.map(c=>{ const k = s.key+'.'+c.id; const on = (k in draft) ? !!draft[k] : s.q.checks[c.id]; return `<label class="qc-chk${canEdit?'':' dis'}"><input type="checkbox" class="bw-qc-chk" name="${n}chk_${c.id}" data-qc-k="${k}" ${on?'checked':''} ${dis}><span>${c.label}</span></label>`; }).join('')}</div>
+        <div class="bw-qc-checks">${BLEND_QC_CHECKS.map(c=>{ const k = s.key+'.'+c.id; const on = (k in draft) ? !!draft[k] : s.q.checks[c.id]; return `<label class="qc-chk${canTick?'':' dis'}"><input type="checkbox" class="bw-qc-chk" name="${n}chk_${c.id}" data-qc-k="${k}" ${on?'checked':''} ${dis}><span>${c.label}</span></label>`; }).join('')}</div>
       </div>
       <div class="field bw-qc-notes"><label>Notes</label><textarea name="${n}notes" rows="2" ${at} placeholder="Shown on the page the sticker's QR code opens">${escBody(s.q.notes)}</textarea></div>
     </div>
@@ -25753,24 +25914,32 @@ function blendQcCardHtml(s, b, canEdit){
 }
 // Copy what is typed in the open batch window onto the batch (Save, and "Next stage", which must not lose what was typed). A person who may only type QC readings changes nothing else.
 function applyBlendEditForm(f, b){
-  if(canManageBlendBoard()){
-    syncBlendVarDraftFromDOM();
-    const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===b.id ? state._blendVarDraft.rows : blendVariationRows(b));
+  // Each PART of the window has its own permission (owner, 2026-11-22): details, variations, QC readings, QC ticks. A part the person may not change is left exactly as it is.
+  if(canEditBlendDetails()){
     Object.assign(b, {
       batchNo: f.batchNo.value.trim() || b.batchNo,
       qty: f.qty.value.trim(),
       priority: PRIORITIES.includes(f.priority.value) ? f.priority.value : (b.priority || 'Medium'),
       machine: BATCH_MACHINES.some(m=>m.id===f.machine.value) ? f.machine.value : '',
-      formulationCode: f.formulationCode.value.trim(),
-      variations: rows, variation: blendVariationsText(rows)
+      formulationCode: f.formulationCode.value.trim()
     });
   }
+  if(canEditBlendVariations()){
+    syncBlendVarDraftFromDOM();
+    const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===b.id ? state._blendVarDraft.rows : blendVariationRows(b));
+    Object.assign(b, {variations: rows, variation: blendVariationsText(rows)});
+  }
+  const mayType = canEditBlendQc(), mayTick = canTickBlendQc();
+  if(!mayType && !mayTick) return;
   const qc = Object.assign({}, b.qc || {});
   BLEND_QC_KEYS.forEach(key=>{
     const ph = f.elements['qc_'+key+'_ph']; if(!ph) return;   // that section is not on screen
     const g = n=>f.elements['qc_'+key+'_'+n];
     const prev = blendQcOf(b, key);
-    const next = {ph: ph.value.trim(), viscosity: g('viscosity').value.trim(), notes: g('notes').value.trim(), checks: {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked}};
+    const next = {
+      ph: mayType ? ph.value.trim() : prev.ph, viscosity: mayType ? g('viscosity').value.trim() : prev.viscosity, notes: mayType ? g('notes').value.trim() : prev.notes,
+      checks: mayTick ? {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked} : {...prev.checks}
+    };
     const same = next.ph===prev.ph.trim() && next.viscosity===prev.viscosity.trim() && next.notes===prev.notes.trim() && BLEND_QC_CHECKS.every(c=>next.checks[c.id]===prev.checks[c.id]);
     if(same && !(b.qc && b.qc[key])) return;   // nothing typed, nothing saved before
     next.by = same ? prev.by : (state.session && state.session.name) || ''; next.at = same ? prev.at : new Date().toISOString();
@@ -25788,9 +25957,9 @@ function renderBlendDrawer(id){
   const stages = blendStageList(), idx = blendStageIdx(b, stages);
   const style = blendStageStyle(stages[idx], idx);
   const canAdv = canAdvanceBlend(idx);
-  const ro = !canManageBlendBoard();
+  const ro = !canEditBlendDetails(), roVar = !canEditBlendVariations();   // details and variations are separate permissions
   const roAttr = ro ? 'readonly' : '';
-  const qcCan = canEditBlendQc(), qcAttr = qcCan ? '' : 'readonly';   // a person who may only type the QC readings can still do that
+  const qcCan = canEditBlendQc(), qcTick = canTickBlendQc(), canSave = canSaveBlendWindow();
   const priority = PRIORITIES.includes(b.priority) ? b.priority : 'Medium';
   const d = blendVarDraft(id, b);
   const nextLabel = blendNextActionLabel(b);
@@ -25821,7 +25990,7 @@ function renderBlendDrawer(id){
       <div class="bw-run-arrow" aria-hidden="true">→</div>
       <div class="bw-run-r"><span>Completed</span><b>${fmtDateTime(b.completedAt)}</b>${b.completedBy?`<i>by ${esc(b.completedBy)}</i>`:''}</div>
     </div>` : ''}
-    ${ro ? `<div class="bw-hint" style="margin:0 0 12px;">View only.</div>` : ''}
+    ${!canSave ? `<div class="bw-hint" style="margin:0 0 12px;">View only.</div>` : ''}
     <form id="form-blend-edit" data-batch-id="${b.id}">
       <section class="bw-card">
         <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.details}</span>Batch details</div></div>
@@ -25839,9 +26008,9 @@ function renderBlendDrawer(id){
         </div>
       </section>
 
-      ${blendVariationsSectionHtml(d, ro, b)}
+      ${blendVariationsSectionHtml(d, roVar, b)}
 
-      ${blendQcSections(b).map(sec=>blendQcCardHtml(sec, b, qcCan)).join('')}
+      ${blendQcSections(b).map(sec=>blendQcCardHtml(sec, b, qcCan, qcTick)).join('')}
 
       <section class="bw-card">
         <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.history}</span>History${hist.length ? `<span class="bv-count">${hist.length}</span>` : ''}</div></div>
@@ -25852,11 +26021,11 @@ function renderBlendDrawer(id){
         <div class="bw-foot-l">
           ${printSheet ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-blend-sheet" title="Prints the batch, formulation code, variations and a sign-off line for every stage">${BW_ICONS.print}<span class="bw-t-long">Print batch sheet</span><span class="bw-t-short">Sheet</span></button>` : ''}
           ${printSticker ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-vessel-sticker" data-sticker-var="">${BV_ICON_TAG}<span class="bw-t-long">Print Vessel Sticker</span><span class="bw-t-short">Sticker</span></button>` : ''}
-          ${isAdmin() ? `<button type="button" class="btn btn-sm btn-danger bw-btn" id="btn-delete-blend" title="Admin only — asks for your password">${TRASH_ICON_SVG}<span>Delete</span></button>` : ''}
+          ${canDeleteBlendBatch() ? `<button type="button" class="btn btn-sm btn-danger bw-btn" id="btn-delete-blend" title="Asks for your password">${TRASH_ICON_SVG}<span>Delete</span></button>` : ''}
         </div>
         <div class="bw-foot-r">
-          ${!ro && canAdv && nextLabel ? `<button type="button" class="btn" id="btn-advance-blend">${esc(nextLabel)}</button>` : ''}
-          ${(!ro || qcCan) ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
+          ${canAdv && nextLabel ? `<button type="button" class="btn" id="btn-advance-blend">${esc(nextLabel)}</button>` : ''}
+          ${canSave ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>
       </div>
     </form>
@@ -25896,7 +26065,7 @@ function renderRndDrawer(id){
   const p = byId(state.rndProjects,id); if(!p) return '';
   const key = RND_STAGE_KEYS[p.stage]; const style = RND_STAGE_STYLE[key] || RND_STAGE_STYLE[RND_STAGE_KEYS[0]];
   const canAdv = canAdvanceRnd(p.stage);
-  const ro = !canManageRnd();
+  const ro = !canEditRndProject();
   const roAttr = ro ? 'readonly' : '';
   const log = Array.isArray(p.log) ? p.log : [];
   return `
@@ -27105,7 +27274,7 @@ function attachShellHandlers(){
     state._oqLine = btn.dataset.oqLine;
     render();
   }));
-  document.querySelectorAll('[data-oq-boxcount]').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqMoreOpen = false; openModal('boxcount'); }));
+  document.querySelectorAll('[data-oq-boxcount]').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqMoreOpen = false; if(canUseBoxCount()) openModal('boxcount'); }));
   // Search the queue (view state only). Re-draws as you type (the typed text and cursor are put back by render()), a little after the last key.
   if(byIdEl('oq-search')){
     let t = null;
@@ -27203,7 +27372,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-rename-nav-item]').forEach(b=>b.addEventListener('click', ()=>renameNavItem(b.dataset.renameNavItem)));
 
   // Box Count (daily packing log)
-  if(byIdEl('btn-box-count')) byIdEl('btn-box-count').onclick = ()=>openModal('boxcount');
+  if(byIdEl('btn-box-count')) byIdEl('btn-box-count').onclick = ()=>{ if(canUseBoxCount()) openModal('boxcount'); };
   if(byIdEl('form-box-count')) byIdEl('form-box-count').addEventListener('submit', submitBoxCount);
   if(byIdEl('btn-box-count-add-row')) byIdEl('btn-box-count-add-row').onclick = ()=>{
     const tbody = byIdEl('box-count-tbody'); if(!tbody) return;
@@ -27729,7 +27898,7 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-delete-selected-customers')) byIdEl('btn-delete-selected-customers').onclick = ()=>{
-    if(!state.session || !roleCan(state.session.role, 'customers_manage')) return;
+    if(!can('customers_delete')) return;
     const n = state.selectedCustomers.size;
     openConfirmModal({
       title: 'Delete customers', danger: true, confirmLabel: 'Delete',
@@ -27861,7 +28030,7 @@ function attachShellHandlers(){
     });
   }
   if(byIdEl('btn-delete-selected-suppliers')) byIdEl('btn-delete-selected-suppliers').onclick = ()=>{
-    if(!state.session || !roleCan(state.session.role, 'suppliers_manage')) return;
+    if(!can('suppliers_delete')) return;
     const n = state.selectedSuppliers.size;
     openConfirmModal({
       title: 'Delete suppliers', danger: true, confirmLabel: 'Delete',
@@ -28206,6 +28375,7 @@ function attachShellHandlers(){
     render();
   }));
   document.querySelectorAll('[data-delete-costing-product]').forEach(b=>b.addEventListener('click', ()=>{
+    if(!canDeleteCostingProducts()) return;
     const product = byId(state.costingProducts, b.dataset.deleteCostingProduct);
     openConfirmModal({
       title: 'Delete product', danger: true, confirmLabel: 'Delete', requirePassword: true,
@@ -28286,6 +28456,7 @@ function attachShellHandlers(){
   });
   document.querySelectorAll('[data-transfer-process-template]').forEach(b=>b.addEventListener('click', transferProcessToBatchSheets));
   document.querySelectorAll('[data-delete-costing-version]').forEach(b=>b.addEventListener('click', ()=>{
+    if(!canDeleteCostingVersions()) return;
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     const version = product && (product.versions||[]).find(v=>v.id===b.dataset.deleteCostingVersion);
     openConfirmModal({
@@ -28316,6 +28487,7 @@ function attachShellHandlers(){
     render();
   }));
   document.querySelectorAll('[data-delete-costing-version-permanent]').forEach(b=>b.addEventListener('click', ()=>{
+    if(!canDeleteCostingVersions()) return;
     const product = state.costingProducts.find(p=>p.id===state._costingOpenProductId);
     const version = product && (product.versions||[]).find(v=>v.id===b.dataset.deleteCostingVersionPermanent);
     openConfirmModal({
@@ -28340,6 +28512,7 @@ function attachShellHandlers(){
     render();
   };
   document.querySelectorAll('[data-delete-costing-material]').forEach(b=>b.addEventListener('click', ()=>{
+    if(!canDeleteCostingRows()) return;
     openConfirmModal({
       title: 'Delete raw material', danger: true, confirmLabel: 'Delete', requirePassword: true,
       message: 'Delete this raw material row?',
@@ -28362,6 +28535,7 @@ function attachShellHandlers(){
     render();
   };
   document.querySelectorAll('[data-delete-costing-fixedcost]').forEach(b=>b.addEventListener('click', ()=>{
+    if(!canDeleteCostingRows()) return;
     openConfirmModal({
       title: 'Delete fixed cost', danger: true, confirmLabel: 'Delete', requirePassword: true,
       message: 'Delete this fixed cost row?',

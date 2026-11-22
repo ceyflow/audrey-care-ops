@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122154743">
+<meta name="app-build" content="20261122155605">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7133,7 +7133,7 @@ async function loadAll(){
   // from the last visit (audrey_signoff); the full check against the role record still runs after loading.
   if(state.session && signedOffByTimeLimit()){
     state.session = null; try{ localStorage.setItem('audrey_session', 'null'); }catch(e){}
-    if(supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
+    signOutThisDevice();
   }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
   // it's created — that restore isn't finished yet the instant the page loads. Without waiting
@@ -7183,7 +7183,7 @@ async function loadAll(){
         const prof = await supabaseFetchProfile(_authSession.user.id);
         if(prof && prof.active === false){
           state.session = null; saveSession();
-          supabaseClient.auth.signOut().catch(()=>{});
+          signOutThisDevice();
         } else if(prof && prof.role && prof.role !== state.session.role){
           // only the saved copy changes: saveSession() would restart the inactivity clock
           state.session = {...state.session, role: prof.role};
@@ -7924,6 +7924,15 @@ async function pingServerLastSeen(){
     await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', user.id);
   }catch(e){ console.error('last_seen heartbeat failed', e); }
 }
+/* ===================== Signing out ends ONLY this device (owner, 2026-11-22: "sudden logouts automatically even when I actively work") =====================
+   ROOT CAUSE (seen in the live auth logs): supabase-js signOut() with no argument is scope "global" - every /auth/v1/logout the app sent was `?scope=global`, which revokes the person's sessions on EVERY device. So a phone or a second tab
+   that signed itself off for inactivity (or at boot after sitting idle for hours), or a plain Log out anywhere, threw the same account out of the computer where they were busy working; that computer then failed its next refresh
+   (`refresh_token_not_found` / `session_not_found` in the logs) and showed "Your sign-in expired", and its own clean-up sign-out (also global) could even kill a login made in the meantime. The app now ALWAYS signs out with scope "local":
+   only this browser's login ends, and other devices keep working. NEVER call supabaseClient.auth.signOut() without {scope:'local'} (an Admin-side "sign this person out everywhere" would be a separate, deliberate feature). */
+function signOutThisDevice(){
+  if(!supabaseClient) return Promise.resolve();
+  try{ return Promise.resolve(supabaseClient.auth.signOut({scope:'local'})).catch(()=>{}); }catch(e){ return Promise.resolve(); }
+}
 // Signs the person out cleanly (their notifications on this phone are switched off first) and says why, so they can sign in again.
 let _expiredSignInHandling = false;
 async function handleExpiredSignIn(){
@@ -8477,12 +8486,12 @@ async function confirmLoginV2(){
   // an Admin can change. It is never taken from this browser or from the (public-facing) account list, and this
   // browser never writes it: the old "fix my own access level after sign-in" step is gone.
   if(!profile){
-    await supabaseClient.auth.signOut().catch(()=>{});
+    await signOutThisDevice();
     fail('This sign-in is not set up for the app yet — contact your Admin.');
     return;
   }
   if(profile.active === false){
-    await supabaseClient.auth.signOut().catch(()=>{});
+    await signOutThisDevice();
     fail('This account has been deactivated — contact your Admin.');
     return;
   }
@@ -8552,7 +8561,7 @@ async function logOut(){
   state._deferredLoaded = {};
   state._myProfile = null; state._fullNames = null; state._headerMenuOpen = false; state._profileTab = null;
   await saveSession();
-  if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
+  if(state.auth.migratedToSupabaseAuth && supabaseClient) signOutThisDevice();
   render();
 }
 /* ===================== Browser Back / Forward walks EVERY screen step (owner, 2026-11-21) =====================
@@ -29164,19 +29173,27 @@ function scheduleSignOffTimer(){
 // until it slept. Throttled to once per 10s rather than every mousemove — localStorage writes are
 // synchronous and this doesn't need sub-10-second precision.
 let _lastPersistedActivityWriteAt = 0;
-['mousemove','keydown','mousedown','click','scroll','touchstart'].forEach(evt=>{
+let _lastActivityHandledAt = 0;
+// Every kind of real use counts (owner, 2026-11-22): the old list missed scrolling inside a panel (a scroll event does not bubble, so it needs the capture phase), the mouse wheel, a finger drag, typing that does not
+// fire keydown (voice / paste / autofill = input) and pen / touch pointers. The timer is only re-armed once a second (its callback re-checks the real time, so it stays exact); the stamp itself is always fresh.
+[['mousemove',false],['keydown',false],['mousedown',false],['pointerdown',false],['click',false],['touchstart',false],['touchmove',false],['wheel',false],['input',false],['scroll',true]].forEach(([evt, cap])=>{
   document.addEventListener(evt, ()=>{
-    _lastActivityAt = Date.now();
-    if(state.session){
-      scheduleSignOffTimer();
-      if(_lastActivityAt - _lastPersistedActivityWriteAt >= 10000){
-        persistLastActivity();
-        _lastPersistedActivityWriteAt = _lastActivityAt;
-      }
-      pingServerLastSeen();
+    const now = Date.now();
+    _lastActivityAt = now;
+    if(!state.session) return;
+    if(now - _lastActivityHandledAt < 1000) return;
+    _lastActivityHandledAt = now;
+    scheduleSignOffTimer();
+    if(now - _lastPersistedActivityWriteAt >= 10000){
+      persistLastActivity();
+      _lastPersistedActivityWriteAt = now;
     }
-  }, {passive:true});
+    pingServerLastSeen();
+  }, {passive:true, capture:cap});
 });
+// The moment of the last real activity: this page's own clock AND the copy kept in localStorage (other tabs, a page that was frozen). If the stored copy cannot be written (full / blocked storage) this page's own
+// clock still counts, so a person who is busy is never signed off because a stored number went stale.
+function lastActivityAt(){ const p = getPersistedLastActivity(); return Math.max(p==null ? 0 : p, _lastActivityAt); }
 // A phone lock or app-switch backgrounds the tab without reloading it, and without firing the
 // setTimeout above — mobile OSes suspend JS timers while backgrounded — so a session already
 // past its role's inactivity window can still be sitting on screen when the tab comes back to
@@ -29185,11 +29202,11 @@ let _lastPersistedActivityWriteAt = 0;
 function checkInactivityOnForeground(){
   if(!state.session) return;
   const mins = roleSignOffMinutes(state.session.role);
-  const lastActivity = getPersistedLastActivity();
-  if(mins>0 && lastActivity!=null && (Date.now()-lastActivity) >= mins*60*1000){
+  const lastActivity = lastActivityAt();
+  if(mins>0 && (Date.now()-lastActivity) >= mins*60*1000){
     signOffForInactivity();
   } else {
-    if(lastActivity!=null) _lastActivityAt = lastActivity;
+    _lastActivityAt = lastActivity;
     scheduleSignOffTimer();
     pingServerLastSeen();
   }
@@ -29203,8 +29220,7 @@ window.addEventListener('focus', ()=>{ checkInactivityOnForeground(); });
 setInterval(()=>{
   if(!state.session) return;
   const mins = roleSignOffMinutes(state.session.role);
-  const last = getPersistedLastActivity();
-  if(mins>0 && last!=null && (Date.now()-last) >= mins*60*1000){ signOffForInactivity(); }
+  if(mins>0 && (Date.now()-lastActivityAt()) >= mins*60*1000){ signOffForInactivity(); }
 }, 3000);
 loadAll();
 </script>

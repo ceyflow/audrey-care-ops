@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122142638">
+<meta name="app-build" content="20261122144050">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2505,6 +2505,11 @@ html{ visibility:hidden; }
   .batch-tile.bt-clickable{cursor:pointer;transition:box-shadow .18s ease,border-color .15s ease;}
   .batch-tile.bt-clickable:hover{border-color:var(--accent);box-shadow:0 10px 24px rgba(20,25,20,.12);}
   .batch-tile.bt-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .batch-tile .bt-head-r{display:flex;align-items:center;gap:6px;flex:none;}
+  .batch-tile .bt-dots{margin:-6px -8px -6px 0;}
+  .batch-tile .bt-menu{top:42px;right:12px;min-width:150px;}
+  .batch-tile .bt-menu .rc-menu-danger{border-top:none;margin-top:0;border-radius:9px;}
+  .batch-tile .bt-menu .rc-menu-danger:hover{background:#FDECEA;}
   .batch-tile .bt-timer{display:inline-flex;align-items:center;gap:7px;margin:8px 0 2px;padding:5px 13px 5px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);font:700 18px 'Poppins',sans-serif;font-variant-numeric:tabular-nums;line-height:1.1;}
   .batch-tile .bt-timer .clk{width:16px;height:16px;flex:none;}
   .batch-tile .bt-timer.done{background:#FFF1D6;color:#8A5200;animation:pulse-dot-lite 1.4s infinite;}
@@ -2518,40 +2523,63 @@ html{ visibility:hidden; }
   .bf-timer-btn .bf-timer-mini{font:700 14px 'Poppins',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent-dark);}
   .bf-timer-btn.ended{border-color:#E39A1C;background:#FFF1D6;color:#8A5200;animation:pulse-dot-lite 1.4s infinite;}
   .bf-timer-btn.ended .clk,.bf-timer-btn.ended .bf-timer-mini{color:#8A5200;}
-  /* the digital clock that opens from the Timer button (like the reference picture): quick times + three dots, then the timer card with an animated ring */
-  .bf-tpop{position:absolute;right:0;top:calc(100% + 10px);z-index:31;width:min(392px,calc(100vw - 36px));box-sizing:border-box;padding:18px;border-radius:26px;background:linear-gradient(160deg,var(--accent-soft) 0%,#F7FAF8 100%);border:1px solid #D8E3DA;box-shadow:0 26px 60px rgba(20,40,28,.24);}
-  .bf-tchips{display:flex;gap:10px;margin:0 0 14px;}
-  .bf-tchip{flex:1;min-width:0;padding:10px 8px;border-radius:12px;border:none;background:rgba(255,255,255,.92);color:var(--accent-dark);font:600 14px 'Inter',system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(20,40,28,.1);transition:background .15s,color .15s,transform .15s;}
-  .bf-tchip:hover{background:#fff;transform:translateY(-1px);}
-  .bf-tchip.on{background:var(--accent-dark);color:#fff;}
+  /* the digital clock that opens from the Timer button (owner, 2026-11-22: built from the reference picture, then "improve the design of the timer itself"): a title row, quick times + the three dots,
+     then a round dial (animated arc, big digits, the time it ends) with Pause / Stop under it. Every colour comes from the palette. */
+  .bf-tpop{position:absolute;right:0;top:calc(100% + 12px);z-index:31;width:min(384px,calc(100vw - 36px));box-sizing:border-box;padding:16px 16px 18px;border-radius:28px;background:linear-gradient(165deg,var(--accent-soft) 0%,#FBFDFC 62%);border:1px solid rgba(var(--accent-rgb),.16);box-shadow:0 30px 70px -18px rgba(20,40,28,.34),0 2px 0 rgba(255,255,255,.8) inset;transform-origin:calc(100% - 52px) -10px;}
+  .bf-thead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 12px;}
+  .bf-ttitle{display:inline-flex;align-items:center;gap:8px;font:700 15px 'Poppins',sans-serif;color:var(--accent-dark);}
+  .bf-ttitle .clk{width:18px;height:18px;}
+  .bf-tstate{padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.85);font:600 11.5px 'Inter',system-ui,sans-serif;color:#5B6E61;box-shadow:0 1px 2px rgba(20,40,28,.08);}
+  .bf-tchips{display:flex;gap:8px;margin:0 0 12px;}
+  .bf-tchip{flex:1;min-width:0;padding:10px 6px;border-radius:14px;border:1px solid transparent;background:rgba(255,255,255,.9);color:var(--accent-dark);font:600 14px 'Inter',system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 3px rgba(20,40,28,.1);transition:background .18s,color .18s,transform .18s,box-shadow .18s;}
+  .bf-tchip:hover{background:#fff;transform:translateY(-1px);box-shadow:0 4px 10px rgba(20,40,28,.12);}
+  .bf-tchip:active{transform:scale(.96);}
+  .bf-tchip.on{background:var(--accent-dark);color:#fff;box-shadow:0 6px 14px rgba(var(--accent-rgb),.35);}
   .bf-tchip.bf-tdots{flex:0 0 46px;display:grid;place-items:center;padding:8px 0;}
-  .bf-tcustom{display:flex;gap:8px;margin:0 0 14px;}
-  .bf-tcustom input{flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid #CFDDD3;background:#fff;font:600 16px 'Inter',system-ui,sans-serif;color:#15201A;}
-  .bf-tcustom input:focus{outline:none;border-color:var(--accent-dark);}
-  .bf-tcard{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 18px 18px 22px;border-radius:26px;background:#fff;box-shadow:0 6px 18px rgba(20,40,28,.1);}
-  .bf-tcard-l{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
-  .bf-tlabel{display:flex;align-items:baseline;gap:8px;font:600 16px 'Inter',system-ui,sans-serif;color:var(--accent-dark);}
-  .bf-tstate{font-size:11.5px;font-weight:600;color:#7A8C7F;}
-  .bf-tdigits{font:700 clamp(40px,5vw,52px) 'Poppins',sans-serif;font-variant-numeric:tabular-nums;line-height:1;color:var(--accent-dark);}
-  .bf-tcard:not(.ended) .bf-tdigits:not([data-cd]){color:#B8C4BC;}
-  .bf-tstop{margin-top:4px;padding:9px 30px;border:none;border-radius:12px;background:var(--accent-dark);color:#fff;font:700 15px 'Inter',system-ui,sans-serif;cursor:pointer;}
-  .bf-tstop:hover{filter:brightness(.9);}
-  .bf-tring{position:relative;flex:none;width:104px;height:104px;border:none;padding:0;background:transparent;color:var(--accent-dark);}
-  button.bf-tring{cursor:pointer;border-radius:30px;}
-  button.bf-tring:hover .bf-tring-ico{transform:scale(1.08);}
-  .bf-tring svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
-  .bf-tring-track{fill:none;stroke:var(--accent-soft);stroke-width:7;}
-  .bf-tring-arc{fill:none;stroke:var(--accent-dark);stroke-width:7;stroke-linecap:round;stroke-dasharray:100 100;}
-  .bf-tring-ico{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;transition:transform .15s ease;}
-  .bf-tring.idle{opacity:.55;}
-  .bf-tcard.low .bf-tring-arc{stroke:#E39A1C;} .bf-tcard.low .bf-tdigits{color:#C77B10;}
-  .bf-tcard.paused .bf-tdigits{opacity:.6;}
-  .bf-tcard.ended .bf-tring-track{stroke:#F2C77A;} .bf-tcard.ended .bf-tdigits{color:#C77B10;} .bf-tcard.ended .bf-tstate{color:#8A5200;font-weight:800;}
+  .bf-tcustom{display:flex;gap:8px;margin:0 0 12px;}
+  .bf-tcustom input{flex:1;min-width:0;padding:10px 14px;border-radius:14px;border:1px solid #CFDDD3;background:#fff;font:600 16px 'Inter',system-ui,sans-serif;color:#15201A;}
+  .bf-tcustom input:focus{outline:none;border-color:var(--accent-dark);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.15);}
+  .bf-tcard{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 16px 16px;border-radius:24px;background:#fff;box-shadow:0 8px 24px rgba(20,40,28,.1);}
+  .bf-tdial{position:relative;width:176px;height:176px;}
+  .bf-tdial svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible;}
+  .bf-tring-track{fill:none;stroke:var(--accent-soft);stroke-width:8;}
+  .bf-tring-arc{fill:none;stroke:url(#bf-tgrad);stroke-width:8;stroke-linecap:round;stroke-dasharray:100 100;}
+  .bf-tcard.has .bf-tring-arc{filter:drop-shadow(0 0 5px rgba(var(--accent-rgb),.4));}
+  .bf-tdial-in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+  .bf-tdigits{font:700 42px 'Poppins',sans-serif;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.01em;color:var(--accent-dark);}
+  .bf-tdigits.long{font-size:32px;}
+  .bf-tcard:not(.has) .bf-tdigits{color:#C3CEC7;}
+  .bf-tcap{font:500 12px 'Inter',system-ui,sans-serif;color:#7A8C7F;}
+  .bf-tactions{display:flex;gap:10px;width:100%;}
+  .bf-tbtn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:14px;border:1px solid #D8E3DA;background:#fff;color:var(--accent-dark);font:700 14px 'Inter',system-ui,sans-serif;cursor:pointer;transition:background .18s,transform .18s,box-shadow .18s;}
+  .bf-tbtn svg{width:15px;height:15px;flex:none;}
+  .bf-tbtn:hover{background:var(--accent-soft);}
+  .bf-tbtn:active{transform:scale(.97);}
+  .bf-tbtn.stop{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;box-shadow:0 6px 14px rgba(var(--accent-rgb),.3);}
+  .bf-tbtn.stop:hover{filter:brightness(.92);background:var(--accent-dark);}
+  .bf-tcard.low .bf-tring-arc{stroke:#E39A1C;filter:drop-shadow(0 0 5px rgba(227,154,28,.5));} .bf-tcard.low .bf-tdigits{color:#C77B10;}
+  .bf-tcard.paused .bf-tdigits{opacity:.55;} .bf-tcard.paused .bf-tring-arc{opacity:.5;}
+  .bf-tcard.ended .bf-tring-track{stroke:#F6D79B;} .bf-tcard.ended .bf-tring-arc{opacity:0;} .bf-tcard.ended .bf-tdigits{color:#C77B10;} .bf-tcard.ended .bf-tcap{color:#8A5200;font-weight:700;}
+  .bf-tpop:has(.bf-tcard.ended) .bf-tstate{background:#FFF1D6;color:#8A5200;font-weight:800;}
   @media (prefers-reduced-motion:no-preference){
-    .bf-tring-arc{transition:stroke-dashoffset 1s linear,stroke .3s ease;}
-    .bf-tpop{animation:bf-tpop-in .2s cubic-bezier(.2,.8,.2,1);transform-origin:top right;}
-    @keyframes bf-tpop-in{from{opacity:0;transform:translateY(-8px) scale(.96);}to{opacity:1;transform:none;}}
-    .bf-tcard.ended .bf-tdigits,.bf-tcard.ended .bf-tring-ico{animation:pulse-dot-lite 1.4s infinite;}
+    .bf-tring-arc{transition:stroke-dashoffset 1s linear,stroke .3s ease,opacity .3s ease;}
+    .bf-tpop.anim{animation:bf-tpop-in .42s cubic-bezier(.2,.9,.25,1) both;}
+    .bf-tpop.closing{animation:bf-tpop-out .17s cubic-bezier(.4,0,1,1) forwards;pointer-events:none;}
+    .bf-tpop.anim .bf-thead{animation:bf-trise .4s .05s cubic-bezier(.2,.9,.25,1) both;}
+    .bf-tpop.anim .bf-tchip{animation:bf-trise .4s cubic-bezier(.2,.9,.25,1) both;}
+    .bf-tpop.anim .bf-tchip:nth-child(1){animation-delay:.07s;} .bf-tpop.anim .bf-tchip:nth-child(2){animation-delay:.11s;} .bf-tpop.anim .bf-tchip:nth-child(3){animation-delay:.15s;} .bf-tpop.anim .bf-tchip:nth-child(4){animation-delay:.19s;}
+    .bf-tpop.anim .bf-tcard{animation:bf-trise .5s .12s cubic-bezier(.2,.9,.25,1) both;}
+    .bf-tpop.anim .bf-tdial svg{animation:bf-tdial-in .8s .2s cubic-bezier(.2,.9,.25,1) both;}
+    .bf-timer-btn.anim .clk{animation:bf-clk-spin .55s cubic-bezier(.2,.9,.25,1);}
+    .bf-timer-btn:active{transform:scale(.96);}
+    .bf-tcard.ended .bf-tdigits{animation:pulse-dot-lite 1.4s infinite;}
+    .bf-tcard.ended .bf-tdial{animation:bf-tring-ping 1.6s ease-out infinite;border-radius:50%;}
+    @keyframes bf-tpop-in{0%{opacity:0;transform:translateY(-12px) scale(.9);}60%{opacity:1;transform:translateY(2px) scale(1.012);}100%{opacity:1;transform:none;}}
+    @keyframes bf-tpop-out{to{opacity:0;transform:translateY(-8px) scale(.94);}}
+    @keyframes bf-trise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+    @keyframes bf-tdial-in{from{opacity:0;transform:rotate(-140deg) scale(.82);}to{opacity:1;transform:rotate(-90deg);}}
+    @keyframes bf-clk-spin{from{transform:rotate(-200deg) scale(.7);}to{transform:none;}}
+    @keyframes bf-tring-ping{0%{box-shadow:0 0 0 0 rgba(227,154,28,.38);}100%{box-shadow:0 0 0 22px rgba(227,154,28,0);}}
   }
   /* less noise: temperature / amount are two quiet pills, not two big cards */
   .bf-facts{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;}
@@ -21452,6 +21480,7 @@ function batchTimerRemaining(b){
 }
 const BATCH_TIMER_PRESETS = [5, 10, 15];   // minutes; the three dots next to them let a person type any other time
 const CLOCK_ICON_SVG = '<svg class="clk" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const TRASH_ICON_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
 const DOTS_ICON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
 const PAUSE_ICON_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4.4" height="15" rx="1.4"/><rect x="13.6" y="4.5" width="4.4" height="15" rx="1.4"/></svg>';
 const PLAY_ICON_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M8 4.8v14.4a1 1 0 0 0 1.5.86l12-7.2a1 1 0 0 0 0-1.72l-12-7.2A1 1 0 0 0 8 4.8z"/></svg>';
@@ -21482,11 +21511,10 @@ async function migrateLegacyRunningBatch(){
   return false;
 }
 // [{key, b}] for every batch still on screen, Machine 1, 2, 3 first and a batch with no machine last. A 'completed' leftover counts as nothing (see isBatchDisplayActive).
-// A batch whose last step was finished but that was NOT transferred to Mixing and Filling (the "No" of askFinishTransfer) has status 'finished': it stays on the Production Guide (and keeps its machine busy) with a
-// "Transfer to Mixing and Filling" button, its timer / alerts are off (they only act on 'running'), and the big screen shows its done view. ('completed' is the older leftover that counts as nothing.)
-function batchIsDone(b){ return !!b && (b.status==='finished' || b.status==='completed'); }
+// There is NO "finished but not transferred" state any more (owner, 2026-11-22: "if click No, just stay exactly like that, don't even show this"): No to the transfer question changes nothing.
+// A batch an earlier version left in the old 'finished' state is simply a running batch on its last step again (normalised here, so every screen and every device sees the same).
 function runningBatches(){
-  return BATCH_SLOT_KEYS.filter(k=>state[k] && state[k].status!=='completed').map(k=>({key:k, b:state[k]}));
+  return BATCH_SLOT_KEYS.filter(k=>state[k] && state[k].status!=='completed').map(k=>{ const b = state[k]; if(b.status==='finished') b.status = 'running'; return {key:k, b}; });
 }
 function isBatchDisplayActive(){ return runningBatches().length>0; }
 // Is a batch already running on this machine? A batch with no machine shares the original 'activeBatch' slot, so that slot being taken blocks it too.
@@ -21516,7 +21544,7 @@ function resolveBatchKey(key){
 function batchStepSid(b){ const t = batchTimerOf(b); return b.id+':'+(t ? t.id : ''); }
 // The batch's timer reached 00:00 (a paused timer never ends). The batch stays where it is: a person presses Next / Finish when ready.
 function batchTimerEnded(b){
-  if(!b || batchIsDone(b)) return false;
+  if(!b) return false;
   const t = batchTimerOf(b); if(!t || t.pausedRemaining!=null) return false;
   return batchTimerRemaining(b)<=0;
 }
@@ -21536,7 +21564,7 @@ function batchTimerAlerts(){
 let _batchWakeLock = null;
 async function ensureBatchWakeLock(){
   if(!('wakeLock' in navigator)) return;
-  const shouldHold = runningBatches().some(x=>!batchIsDone(x.b)) && state.page==='recipes' && document.visibilityState==='visible';
+  const shouldHold = runningBatches().length>0 && state.page==='recipes' && document.visibilityState==='visible';
   if(shouldHold && !_batchWakeLock){
     try{
       _batchWakeLock = await navigator.wakeLock.request('screen');
@@ -21570,7 +21598,7 @@ function batchTick(){
   runningBatches().forEach(({key,b})=>{
     const tile = document.querySelector('[data-bt-key="'+key+'"]');
     const t = batchTimerOf(b);
-    if(!t || batchIsDone(b)){ if(tile) tile.classList.remove('bt-ended'); return; }
+    if(!t){ if(tile) tile.classList.remove('bt-ended'); return; }
     const remaining = batchTimerRemaining(b);
     const paused = t.pausedRemaining!=null;
     const ended = !paused && remaining<=0;
@@ -21659,8 +21687,7 @@ document.addEventListener('click', e=>{
   if(!state._bfTimerOpen) return;
   const t = e.target;
   if(t && t.closest && t.closest('#bf-timer-pop, #btn-batch-focus-timer')) return;
-  state._bfTimerOpen = false; state._bfTimerCustom = false;
-  render();
+  closeBatchTimerPanel();
 });
 // One delegated listener (the cards are swapped in and out by the tick).
 document.addEventListener('click', e=>{
@@ -22116,7 +22143,7 @@ async function saveBatchTimerChange(key, b, before){
 }
 async function startBatchTimer(key, minutes){
   key = resolveBatchKey(key); if(!key) return;
-  const b = state[key]; if(!b || batchIsDone(b) || !canManageBlendBoard()) return;
+  const b = state[key]; if(!b || !canManageBlendBoard()) return;
   const mins = Number(minutes);
   if(!(mins>0) || mins>600){ showToast('Type the minutes, for example 12'); return; }
   const before = b.timer || null;
@@ -22151,7 +22178,7 @@ async function nextBatchStep(key){
   stopAlertSound(key);   // moving on by hand ends the alert for the step that just finished
   // Finish batch on the last step asks its question AT ONCE, whatever the timer is doing (running, paused or already at 00:00) (owner, 2026-11-22:
   // "can finish the batch even during the countdown, and the message should pop up quickly"): the "is this still the same batch?" check used to come
-  // first, so the popup waited for a server round trip. That check still runs when Yes / No is answered (transferFinishedBatch / markBatchFinishedNotTransferred).
+  // first, so the popup waited for a server round trip. That check still runs when Yes is answered (transferFinishedBatch).
   if(b.currentStep >= b.steps.length-1){ askFinishTransfer(key); return; }
   if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
   b.currentStep += 1;
@@ -22171,7 +22198,8 @@ async function prevBatchStep(key){
 }
 /* Finishing a batch (owner, 2026-11-22: "when finishing a batch dont auto push to mixing and filling stage, ask ... yes or no, if yes ask 'Need to print the batch sticker' yes or no, if yes sticker print option appear").
    Finish -> "Transfer it to Mixing and Filling?"  Yes: the batch is added to Mixing and Filling (finishBatchIntoBlendingBoard), then "Need to print the batch sticker?"  Yes: the vessel sticker print view opens.
-   No (transfer): the batch is marked finished and STAYS on the Production Guide (its card gets a "Transfer to Mixing and Filling" button, so nothing is lost); until it is transferred it keeps its machine busy. A finished batch has NO Dismiss button, on the card or on the big screen (owner, 2026-11-22): the only way off the Production Guide is Transfer.
+   No: NOTHING changes (owner, 2026-11-22: "if click No, just stay exactly like that, don't even show this"): the question closes and the batch stays a normal running batch on its last step, Finish is still there.
+   (Before, No turned the card into a "finished" card with a Transfer button; that state is gone, see runningBatches.)
    Both questions are `sticky`: a click on the dim background does not answer them. */
 function askFinishTransfer(key){
   key = resolveBatchKey(key); if(!key) return;
@@ -22181,7 +22209,6 @@ function askFinishTransfer(key){
     title: 'Batch finished', sticky: true, confirmLabel: 'Yes', cancelLabel: 'No',
     message: `${name}${b.batchNo ? ' ('+b.batchNo+')' : ''} is finished. Do you want to transfer it to Mixing and Filling?`,
     onConfirm: ()=>transferFinishedBatch(key),
-    onCancel: ()=>markBatchFinishedNotTransferred(key),
   });
 }
 async function transferFinishedBatch(key){
@@ -22189,16 +22216,6 @@ async function transferFinishedBatch(key){
   const b = state[key]; if(!b) return;
   if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
   await finishBatchIntoBlendingBoard(b, key);
-}
-async function markBatchFinishedNotTransferred(key){
-  key = resolveBatchKey(key); if(!key) return;
-  const b = state[key]; if(!b) return;
-  stopAlertSound(key);
-  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
-  b.status = 'finished'; b.timer = null;
-  await saveActiveBatchVerified(key);
-  render();
-  showToast('Batch finished. It stays on the Production Guide until you transfer it to Mixing and Filling.', 7000);
 }
 function askPrintVesselSticker(batchId){
   if(!canPrintBlendSticker()) return;   // a role without the sticker switch is not asked
@@ -22209,39 +22226,57 @@ function askPrintVesselSticker(batchId){
     onConfirm: ()=>{ setTimeout(()=>openVesselSticker(batchId), 0); },
   });
 }
-function stopBatch(key){
-  key = resolveBatchKey(key); if(!key) return;
-  const isDone = batchIsDone(state[key]);
-  const doStop = async ()=>{
-    const b = state[key];
-    stopAlertSound(key);
-    if(b && !await verifyActiveBatchStillCurrent(key, b.id)){
-      // Someone already ended ours — possibly started a different one. Don't blindly null that
-      // out; just drop our own stale copy.
-      dropStaleActiveBatch(key, 'This batch was already ended elsewhere');
-      return;
-    }
-    state[key] = null;
-    const ok = await saveActiveBatchVerified(key);
-    if(!runningBatches().length){ stopBatchTicker(); state.batchFocusMode = false; }
-    state.batchFocusKey = null;
+// Takes a batch off the Production Guide AT ONCE (owner, 2026-11-22: "when stop, the production guide will go to start quickly"): the card is gone, the big screen closes and the
+// page shows the start of the Production Guide before anything is sent; the server work follows in the background. The slot is only cleared when it still holds THIS batch (someone
+// else may have ended it, or started another one on that machine, meanwhile); if the save fails the card comes back with a message. Used by Stop (everyone who runs batches) and Delete (Admin).
+async function removeBatchFromGuide(key, doneMessage){
+  const b = state[key]; if(!b) return;
+  stopAlertSound(key);
+  state[key] = null; state.batchFocusKey = null; state.batchFocusMode = false;
+  state._bfTimerOpen = false; state._bfTimerCustom = false; state._btMenuOpen = null;
+  if(!runningBatches().length) stopBatchTicker();
+  render();
+  const same = await verifyActiveBatchStillCurrent(key, b.id);
+  if(!same){
+    // already ended elsewhere (or another batch took its place): show what the server really has
+    const server = await kvGet(key).catch(()=>null);
+    state[key] = (server && server.id!==b.id) ? server : null;
     render();
-    if(!ok) return;
-    showToast('Batch stopped');
-  };
-  if(isDone){
-    openConfirmModal({
-      title: 'Dismiss this finished batch?', danger: true, confirmLabel: 'Dismiss', cancelLabel: 'Keep it',
-      message: 'This batch was NOT transferred to Mixing and Filling. If you dismiss it, its run record is lost. Dismiss it anyway?',
-      onConfirm: doStop,
-    });
+    showToast('This batch was already ended elsewhere');
     return;
   }
+  if(!(await saveActiveBatchVerified(key))){
+    if(!state[key]){ state[key] = b; if(state.page==='recipes') startBatchTicker(); render(); }
+    showToast('Could not stop the batch: the connection failed. It is back on the screen, try again.', 6000);
+    return;
+  }
+  showToast(doneMessage);
+}
+function stopBatch(key){
+  key = resolveBatchKey(key); if(!key) return;
   const b0 = state[key];
   openConfirmModal({
     title: 'Stop batch', danger: true, confirmLabel: 'Stop batch',
     message: `Stop ${b0 && b0.machine ? 'the batch on '+b0.machine : 'this batch'}${b0 && (b0.recipeName||b0.productName) ? ' ("'+(b0.recipeName||b0.productName)+'")' : ''}? Everyone watching will lose the live timer.`,
-    onConfirm: doStop,
+    onConfirm: ()=>{ removeBatchFromGuide(key, 'Batch stopped'); },   // NOT returned: the confirm window waits for what onConfirm returns, and the server work must not hold it open
+  });
+}
+// Delete (owner, 2026-11-22: three dots at the upper right of a Production Guide card -> Delete, "only admin can delete"): ADMIN ONLY, checked here as well as on the menu, and the
+// password again (same as deleting a batch on Mixing and Filling). The batch just disappears from the Production Guide for everyone; nothing is sent to Mixing and Filling.
+function deleteGuideBatch(key){
+  key = resolveBatchKey(key); if(!key) return;
+  state._btMenuOpen = null;
+  if(!isAdmin()){ showToast('Only an Admin can delete a batch'); render(); return; }
+  const b = state[key]; if(!b){ render(); return; }
+  const name = stripTags(b.productName || b.recipeName || 'this batch').trim();
+  openConfirmModal({
+    title: 'Delete batch', danger: true, confirmLabel: 'Delete', requirePassword: true,
+    message: `Delete ${name}${b.batchNo ? ' ('+b.batchNo+')' : ''}${b.machine ? ' on '+b.machine : ''}? It disappears from the Production Guide for everyone and is NOT sent to Mixing and Filling. This cannot be undone. Type your password to confirm.`,
+    onConfirm: ()=>{
+      if(!isAdmin()) return;
+      logActivity(`Deleted the running batch "${name}"${b.batchNo ? ' ('+b.batchNo+')' : ''}${b.machine ? ' on '+b.machine : ''} from the Production Guide`);
+      removeBatchFromGuide(key, 'Batch deleted');   // not returned, see stopBatch
+    },
   });
 }
 // Called only after the person answered Yes to "transfer it to Mixing and Filling?" (askFinishTransfer): turns the finished run into a real batch on the Blending board,
@@ -22309,7 +22344,7 @@ function setBatchFocusKey(key){ state.batchFocusKey = key; state.batchFocusMode 
 // stays small even once several batches can run side by side.
 function renderRecipesPage(){
   const list = runningBatches();
-  if(list.length) return `<div class="batch-tiles">${list.map(x=>renderActiveBatchCard(x.key, x.b)).join('')}</div>`;
+  if(list.length) return `${state._btMenuOpen ? '<div class="rc-menu-backdrop" id="bt-menu-backdrop"></div>' : ''}<div class="batch-tiles">${list.map(x=>renderActiveBatchCard(x.key, x.b)).join('')}</div>`;
   return `<div class="empty-state">No batch running right now. Open a sheet in <a href="#" data-nav="recipelibrary">Batch sheets</a> and start one from its Batch sheet to see it here. Batches on different machines can run at the same time.</div>`;
 }
 // Machines a batch sheet can run on (owner, 2026-11-21): chosen from the three-dots menu on a card, saved on the recipe (r.machine),
@@ -22975,14 +23010,14 @@ function batchStepLabels(steps){
   let ph = 0, pr = 0;
   return (steps||[]).map(s=> s.type==='preparation' ? {prep:true, text:'Preparation '+(++pr)} : {prep:false, text:'Phrase '+letterLabel(ph++)});
 }
-function batchStepsListHtml(b, isDone){
+function batchStepsListHtml(b){
   const labels = batchStepLabels(b.steps);
   return `<div class="batch-steplist">
     ${b.steps.map((s,i)=>{
-      const cls = i<b.currentStep || isDone ? 'done' : (i===b.currentStep ? 'current' : '');
+      const cls = i<b.currentStep ? 'done' : (i===b.currentStep ? 'current' : '');
       const checks = s.type==='preparation' ? (s.checklist||[]).map(c=> c.kind==='field' ? (String(c.label||'').trim() + (c.value ? ': '+c.value : '')) : String(c.text||'').trim()).filter(Boolean) : [];
       return `<div class="bs-row ${cls}">
-        <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
+        <span class="bs-num">${i<b.currentStep ? '✓' : (i+1)}</span>
         <span class="bs-body">
           <span class="bs-cap">${esc(labels[i].text)}</span>
           <span class="bs-text">${esc(batchStepLabel(s, b.batchSizeKg))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
@@ -22995,23 +23030,16 @@ function batchStepsListHtml(b, isDone){
 }
 function renderActiveBatchCard(key, b){
   const step = b.steps[b.currentStep];
-  const isDone = batchIsDone(b);
   const batchBit = [b.batchNo?('Batch '+esc(b.batchNo)):'', b.qty?esc(b.qty):'', b.variation?esc(b.variation):''].filter(Boolean).join(' · ');
-  let dotClass = 'temp-green', accentClass = '';
-  if(!isDone){
-    dotClass = batchTempGlowClass(step.temperature);
-    if(dotClass==='temp-yellow') accentClass = 'bt-temp-yellow';
-    else if(dotClass==='temp-red') accentClass = 'bt-temp-red';
-  }
+  let accentClass = '';
+  const dotClass = batchTempGlowClass(step.temperature);
+  if(dotClass==='temp-yellow') accentClass = 'bt-temp-yellow';
+  else if(dotClass==='temp-red') accentClass = 'bt-temp-red';
   const ended = batchTimerEnded(b);
   // the manual Timer (set on the big screen): a small digital clock on the card while one is counting down
-  const tmr = !isDone ? batchTimerOf(b) : null;
+  const tmr = batchTimerOf(b);
   const timerPillHtml = tmr ? `<div class="bt-timer${ended?' done':''}${tmr.pausedRemaining!=null?' paused':''}">${CLOCK_ICON_SVG}<span data-cd="${key}" class="bt-timer-time${ended?' done':''}">${formatCountdown(batchTimerRemaining(b))}</span></div>` : '';
-  const bodyHtml = isDone ? `
-      <div class="bt-countdown">✓</div>
-      <div class="bt-headline">All ${b.steps.length} steps done 🎉</div>
-      <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Started by ${esc(b.startedBy)}</div>
-    ` : step.type==='preparation' ? (()=>{
+  const bodyHtml = step.type==='preparation' ? (()=>{
       const total = (step.checklist||[]).length;
       const ready = (step.checklist||[]).filter(c=> c.kind==='field' ? !!c.value : c.checked).length;
       return `
@@ -23032,15 +23060,19 @@ function renderActiveBatchCard(key, b){
   <div class="batch-card batch-tile bt-clickable ${accentClass}${ended?' bt-ended':''}" data-bt-key="${key}" data-bt-open="${key}" tabindex="0" title="Open the full screen">
     <div class="bt-head">
       <span class="bt-recipe">${esc(b.recipeName)}</span>
-      <span class="bt-dot ${dotClass}"></span>
+      <span class="bt-head-r">
+        <span class="bt-dot ${dotClass}"></span>
+        ${isAdmin() ? `<button type="button" class="rc-dots bt-dots" data-bt-menu="${key}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${state._btMenuOpen===key}" title="More"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
+      </span>
     </div>
+    ${(isAdmin() && state._btMenuOpen===key) ? `<div class="rc-menu bt-menu" role="menu"><button type="button" role="menuitem" class="rc-menu-item rc-menu-danger" data-bt-act="delete" data-bt-key="${key}">${TRASH_ICON_SVG}<span>Delete</span></button></div>` : ''}
     ${b.machine ? `<div class="bt-machine">${machineChipHtml(b.machine)}</div>` : ''}
     <div class="bt-ended-tag">⏰ Time's up</div>
     ${bodyHtml}
     <div class="bt-actions">
       ${canManageBlendBoard() ? `
-      ${!isDone ? `<button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
-      ${isDone ? `<button class="btn btn-primary" data-bt-act="transfer" data-bt-key="${key}">Transfer to Mixing and Filling</button>` : `<button class="btn" data-bt-act="stop" data-bt-key="${key}">Stop</button>`}
+      <button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>
+      <button class="btn" data-bt-act="stop" data-bt-key="${key}">Stop</button>
       ` : ''}
     </div>
   </div>`;
@@ -23053,7 +23085,7 @@ function batchRunSheetHtml(b){
   const mats = Array.isArray(b.materials) ? b.materials : (r ? (r.materials||[]) : []);
   if(!mats.length) return '';
   const kg = Number(b.batchSizeKg)||0;
-  const step = batchIsDone(b) ? null : b.steps[b.currentStep];
+  const step = b.steps[b.currentStep];
   const inStep = new Set(stepRawLines(step, kg).map(l=>String(l.name).trim().toLowerCase()));
   const totalPct = recipeMaterialsTotalPercent(mats);
   return `
@@ -23083,45 +23115,72 @@ function batchTimerPanelHtml(key, b){
   const ended = batchTimerEnded(b);
   const total = t ? Number(t.totalSec) : 0;
   const frac = t ? Math.max(0, Math.min(1, rem/total)) : 0;
-  const ringBtn = canRun && t && !ended;
-  const ring = `<svg viewBox="0 0 100 100" aria-hidden="true"><rect class="bf-tring-track" x="6" y="6" width="88" height="88" rx="28" pathLength="100"/><rect class="bf-tring-arc" data-tring="${key}" x="6" y="6" width="88" height="88" rx="28" pathLength="100" style="stroke-dashoffset:${(100*(1-frac)).toFixed(2)};"/></svg><span class="bf-tring-ico">${ended ? '⏰' : (paused ? PLAY_ICON_SVG : (t ? PAUSE_ICON_SVG : CLOCK_ICON_SVG.replace('width="18" height="18"','width="30" height="30"')))}</span>`;
+  const low = !!(t && !paused && !ended && rem<=10);
+  const stateText = t ? (ended ? "Time's up" : (paused ? 'Paused' : 'Counting down')) : 'Pick a time';
+  // the line under the digits: when the timer will end (a running timer), or what to do
+  const endAt = (t && !paused && !ended) ? new Date(t.endsAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+  const caption = !t ? (canRun ? 'Choose a time above' : 'No timer running') : (ended ? 'Stop or move on' : (paused ? 'Paused' : 'Ends at '+endAt));
   return `
-  <div class="bf-tpop" id="bf-timer-pop" role="dialog" aria-label="Timer">
+  <div class="bf-tpop${state._bfTimerFresh?' anim':''}" id="bf-timer-pop" role="dialog" aria-label="Timer">
+    <div class="bf-thead"><span class="bf-ttitle">${CLOCK_ICON_SVG}Timer</span><span class="bf-tstate" data-tstate="${key}">${stateText}</span></div>
     ${canRun ? `
     <div class="bf-tchips">
       <button type="button" class="bf-tchip bf-tdots${state._bfTimerCustom?' on':''}" id="btn-bf-tcustom" title="Type your own time" aria-label="Type your own time">${DOTS_ICON_SVG}</button>
       ${BATCH_TIMER_PRESETS.map(m=>`<button type="button" class="bf-tchip${t && total===m*60?' on':''}" data-bf-tmin="${m}">${m} mins</button>`).join('')}
     </div>
     ${state._bfTimerCustom ? `<form class="bf-tcustom" id="form-bf-tcustom"><input type="number" id="bf-tcustom-min" min="0.1" max="600" step="any" inputmode="decimal" placeholder="Minutes" aria-label="Minutes" value="${escAttr(state._bfTimerTyped||'')}" oninput="state._bfTimerTyped=this.value"><button type="submit" class="btn btn-primary btn-sm">Start</button></form>` : ''}` : ''}
-    <div class="bf-tcard${ended?' ended':''}${paused?' paused':''}${t && !paused && !ended && rem<=10 ? ' low':''}">
-      <div class="bf-tcard-l">
-        <div class="bf-tlabel">Timer<span class="bf-tstate" data-tstate="${key}">${t ? (ended ? "Time's up" : (paused ? 'Paused' : 'Counting down')) : 'Pick a time'}</span></div>
-        <div class="bf-tdigits${ended?' done':''}"${t ? ` data-cd="${key}"` : ''}>${t ? formatCountdown(rem) : '00:00'}</div>
-        ${t && canRun ? `<button type="button" class="bf-tstop" id="btn-bf-tstop">Stop</button>` : ''}
+    <div class="bf-tcard${ended?' ended':''}${paused?' paused':''}${low?' low':''}${t?' has':''}">
+      <div class="bf-tdial">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <defs><linearGradient id="bf-tgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-dark)"/></linearGradient></defs>
+          <circle class="bf-tring-track" cx="60" cy="60" r="52"/>
+          <circle class="bf-tring-arc" data-tring="${key}" cx="60" cy="60" r="52" pathLength="100" style="stroke-dashoffset:${(100*(1-frac)).toFixed(2)};"/>
+        </svg>
+        <div class="bf-tdial-in">
+          <div class="bf-tdigits${total>=3600?' long':''}"${t ? ` data-cd="${key}"` : ''}>${t ? formatCountdown(rem) : '00:00'}</div>
+          <div class="bf-tcap">${caption}</div>
+        </div>
       </div>
-      ${ringBtn ? `<button type="button" class="bf-tring" id="btn-bf-tring" title="${paused?'Resume':'Pause'}" aria-label="${paused?'Resume the timer':'Pause the timer'}">${ring}</button>` : `<div class="bf-tring${t?'':' idle'}">${ring}</div>`}
+      ${(t && canRun) ? `<div class="bf-tactions">
+        ${ended ? '' : `<button type="button" class="bf-tbtn" id="btn-bf-tring" aria-label="${paused?'Resume the timer':'Pause the timer'}">${paused ? PLAY_ICON_SVG : PAUSE_ICON_SVG}<span>${paused?'Resume':'Pause'}</span></button>`}
+        <button type="button" class="bf-tbtn stop" id="btn-bf-tstop">Stop</button>
+      </div>` : ''}
     </div>
   </div>`;
+}
+// Opens / closes the Timer panel with a smooth animation (a redraw rebuilds the page, so the opening animation is only played on the opening draw, and closing plays it out before the panel is removed).
+function openBatchTimerPanel(){
+  state._bfTimerOpen = true; state._bfTimerCustom = false; state._bfTimerFresh = true;
+  render();
+  state._bfTimerFresh = false;   // later redraws (a started timer, the tick) must not replay the entrance
+}
+function closeBatchTimerPanel(){
+  state._bfTimerCustom = false;
+  const pop = document.getElementById('bf-timer-pop');
+  if(!state._bfTimerOpen || !pop){ state._bfTimerOpen = false; render(); return; }
+  if(pop.classList.contains('closing')) return;
+  pop.classList.add('closing');
+  const fin = ()=>{ if(!state._bfTimerOpen) return; state._bfTimerOpen = false; render(); };
+  setTimeout(fin, (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches) ? 0 : 170);
 }
 function renderBatchFocusOverlay(){
   const entry = batchFocusEntry();
   if(!entry) return '';
   const key = entry.key, b = entry.b;
   const all = runningBatches();
-  const isDone = batchIsDone(b);
   const step = b.steps[b.currentStep];
   const progressPct = Math.round((b.currentStep / b.steps.length) * 100);
-  const tmr = !isDone ? batchTimerOf(b) : null;
+  const tmr = batchTimerOf(b);
   const tEnded = batchTimerEnded(b);
-  const timerBtn = !isDone ? `<button type="button" class="bf-timer-btn${tmr?' on':''}${tEnded?' ended':''}${state._bfTimerOpen?' open':''}" id="btn-batch-focus-timer" data-tbtn="${key}" aria-expanded="${state._bfTimerOpen?'true':'false'}" title="Timer">${CLOCK_ICON_SVG}<span>Timer</span>${tmr ? `<b class="bf-timer-mini" data-cd="${key}">${formatCountdown(batchTimerRemaining(b))}</b>` : ''}</button>` : '';
+  const timerBtn = `<button type="button" class="bf-timer-btn${tmr?' on':''}${tEnded?' ended':''}${state._bfTimerOpen?' open':''}${state._bfTimerFresh?' anim':''}" id="btn-batch-focus-timer" data-tbtn="${key}" aria-expanded="${state._bfTimerOpen?'true':'false'}" title="Timer">${CLOCK_ICON_SVG}<span>Timer</span>${tmr ? `<b class="bf-timer-mini" data-cd="${key}">${formatCountdown(batchTimerRemaining(b))}</b>` : ''}</button>`;
   // temperature / amount of this step as two quiet pills (they used to be two big cards)
-  const facts = (!isDone && step) ? [
+  const facts = step ? [
     step.temperature ? `<span class="bf-fact ${batchTempGlowClass(step.temperature)}"><i></i>Temperature <b>${esc(String(step.temperature))}°C</b></span>` : '',
     step.amount ? `<span class="bf-fact"><i></i>Amount <b>${esc(step.amount)}</b></span>` : '',
   ].filter(Boolean).join('') : '';
   return `
   <div class="batch-focus" data-bf-key="${key}">
-    <div class="batch-focus-progress"><div class="batch-focus-progress-fill" style="width:${isDone?100:progressPct}%;"></div></div>
+    <div class="batch-focus-progress"><div class="batch-focus-progress-fill" style="width:${progressPct}%;"></div></div>
     <div class="batch-focus-body">
     <div class="bf-main-col">
       ${all.length>1 ? `<div class="bf-switch" role="tablist" aria-label="Running batches">${all.map(x=>`<button type="button" role="tab" class="bf-switch-btn${x.key===key?' on':''}${batchTimerEnded(x.b)?' ended':''}" data-bf-switch="${x.key}" aria-selected="${x.key===key}">${x.b.machine ? `<i style="background:${machineColor(x.b.machine)};"></i>${esc(x.b.machine)}` : esc(x.b.recipeName||'Batch')}${batchTimerEnded(x.b) ? ' ⏰' : ''}</button>`).join('')}</div>` : ''}
@@ -23129,18 +23188,15 @@ function renderBatchFocusOverlay(){
         <div>
           <div class="bf-recipe">${esc(b.recipeName)}</div>
           ${b.machine ? `<div class="bf-machine">${machineChipHtml(b.machine)}</div>` : ''}
-          ${!isDone ? `<div class="bf-step-of"><span class="bf-phrase-tag">${esc(batchStepLabels(b.steps)[b.currentStep].text)}</span>Step ${b.currentStep+1} of ${b.steps.length}</div>` : ''}
+          <div class="bf-step-of"><span class="bf-phrase-tag">${esc(batchStepLabels(b.steps)[b.currentStep].text)}</span>Step ${b.currentStep+1} of ${b.steps.length}</div>
         </div>
         <div class="bf-head-actions">
           ${timerBtn}
           <button class="batch-focus-close" id="btn-batch-focus-close">✕ Close</button>
-          ${(state._bfTimerOpen && !isDone) ? batchTimerPanelHtml(key, b) : ''}
+          ${state._bfTimerOpen ? batchTimerPanelHtml(key, b) : ''}
         </div>
       </div>
-      ${isDone ? `
-        <div class="bf-ingredient">All done 🎉</div>
-        <div class="bf-amount" style="margin-top:12px;">${b.steps.length} of ${b.steps.length} steps complete</div>
-      ` : step.type==='preparation' ? `
+      ${step.type==='preparation' ? `
         <div class="bf-ingredient">${esc(step.name)||'Preparation / Checking'}</div>
         <div class="bf-main bf-main-solo">
           <div class="bf-main-label">Checklist</div>
@@ -23153,16 +23209,16 @@ function renderBatchFocusOverlay(){
       `}
       ${canManageBlendBoard() ? `
       <div class="bf-controls">
-        ${!isDone && b.currentStep>0 ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
-        ${!isDone ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
-        ${isDone ? `<button class="btn btn-primary" id="btn-batch-focus-transfer">Transfer to Mixing and Filling</button>` : `<button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">Stop batch</button>`}
+        ${b.currentStep>0 ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
+        <button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>
+        <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">Stop batch</button>
       </div>` : ''}
     </div>
       <div class="bf-right-col">
         ${batchRunSheetHtml(b)}
         <div class="bf-steps-card">
           <div class="bf-main-label">All steps</div>
-          ${batchStepsListHtml(b, isDone)}
+          ${batchStepsListHtml(b)}
         </div>
       </div>
     </div>
@@ -28112,13 +28168,15 @@ function attachShellHandlers(){
     e.stopPropagation();   // a button on the card is not a click on the card (which opens the full screen)
     const k = btn.dataset.btKey, act = btn.dataset.btAct;
     if(act==='next') nextBatchStep(k);
-    else if(act==='stop') stopBatch(k); else if(act==='transfer') transferFinishedBatch(k);
+    else if(act==='stop') stopBatch(k); else if(act==='delete') deleteGuideBatch(k);
   }));
   // A whole Production Guide card opens its full screen (owner, 2026-11-22: the little full-screen icon is gone).
   document.querySelectorAll('[data-bt-open]').forEach(card=>{
-    card.addEventListener('click', e=>{ if(e.target.closest('.bt-actions')) return; setBatchFocusKey(card.dataset.btOpen); });
+    card.addEventListener('click', e=>{ if(e.target.closest('.bt-actions, .bt-dots, .bt-menu')) return; setBatchFocusKey(card.dataset.btOpen); });
     card.addEventListener('keydown', e=>{ if((e.key==='Enter' || e.key===' ') && e.target===card){ e.preventDefault(); setBatchFocusKey(card.dataset.btOpen); } });
   });
+  document.querySelectorAll('[data-bt-menu]').forEach(btn=>btn.addEventListener('click', e=>{ e.stopPropagation(); state._btMenuOpen = state._btMenuOpen===btn.dataset.btMenu ? null : btn.dataset.btMenu; render(); }));
+  if(byIdEl('bt-menu-backdrop')) byIdEl('bt-menu-backdrop').onclick = ()=>{ state._btMenuOpen = null; render(); };
   document.querySelectorAll('[data-bf-switch]').forEach(btn=>btn.addEventListener('click', ()=>setBatchFocusKey(btn.dataset.bfSwitch)));
   const focusKey = ()=>{ const e = batchFocusEntry(); return e ? e.key : null; };
   if(byIdEl('btn-batch-focus-close')) byIdEl('btn-batch-focus-close').onclick = ()=>toggleBatchFocus();
@@ -28131,7 +28189,7 @@ function attachShellHandlers(){
     } }
   if(byIdEl('btn-batch-focus-prev')) byIdEl('btn-batch-focus-prev').onclick = ()=>prevBatchStep(focusKey());
   // The Timer button + its digital clock (batchTimerPanelHtml): the panel is a view state of this device, the timer itself belongs to the batch.
-  if(byIdEl('btn-batch-focus-timer')) byIdEl('btn-batch-focus-timer').onclick = ()=>{ state._bfTimerOpen = !state._bfTimerOpen; state._bfTimerCustom = false; render(); };
+  if(byIdEl('btn-batch-focus-timer')) byIdEl('btn-batch-focus-timer').onclick = ()=>{ if(state._bfTimerOpen) closeBatchTimerPanel(); else openBatchTimerPanel(); };
   document.querySelectorAll('[data-bf-tmin]').forEach(btn=>btn.addEventListener('click', ()=>startBatchTimer(focusKey(), Number(btn.dataset.bfTmin))));
   if(byIdEl('btn-bf-tcustom')) byIdEl('btn-bf-tcustom').onclick = ()=>{ state._bfTimerCustom = !state._bfTimerCustom; render(); const i = byIdEl('bf-tcustom-min'); if(i) i.focus(); };
   if(byIdEl('form-bf-tcustom')) byIdEl('form-bf-tcustom').addEventListener('submit', e=>{ e.preventDefault(); const v = byIdEl('bf-tcustom-min').value; state._bfTimerTyped = ''; startBatchTimer(focusKey(), v); });
@@ -28139,7 +28197,6 @@ function attachShellHandlers(){
   if(byIdEl('btn-bf-tring')) byIdEl('btn-bf-tring').onclick = ()=>toggleBatchTimerPause(focusKey());
   if(byIdEl('btn-batch-focus-next')) byIdEl('btn-batch-focus-next').onclick = ()=>nextBatchStep(focusKey());
   if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = ()=>stopBatch(focusKey());
-  if(byIdEl('btn-batch-focus-transfer')) byIdEl('btn-batch-focus-transfer').onclick = ()=>transferFinishedBatch(focusKey());
 
   // Chat
   attachChat2Handlers();
@@ -28761,7 +28818,7 @@ function attachShellHandlers(){
 }
 
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape' && state.batchFocusMode){ if(state._bfTimerOpen){ state._bfTimerOpen = false; state._bfTimerCustom = false; } else { state.batchFocusMode = false; } render(); }
+  if(e.key==='Escape' && state.batchFocusMode){ if(state._bfTimerOpen){ closeBatchTimerPanel(); } else { state.batchFocusMode = false; render(); } }
   if(e.key==='Escape' && state._moreFabOpen){ state._moreFabOpen = false; render(); }
 });
 // A native date input only opens its picker when you click its small calendar-icon segment —

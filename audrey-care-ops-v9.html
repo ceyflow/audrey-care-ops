@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122154743">
+<meta name="app-build" content="20261122160326">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2765,12 +2765,44 @@ html{ visibility:hidden; }
     .order-drawer #btn-advance{flex:1 1 auto;order:2;min-height:56px;border-radius:16px;border:none;background:var(--oq-fill);color:#fff;font-size:16px;font-weight:700;padding:0 14px;}
     .order-drawer #btn-advance ~ button[type="submit"]{order:1;flex:0 0 96px;background:#fff;color:var(--oq-fill);border:1.5px solid var(--oq-fill);}
   }
-  /* ---- Phone Box Count (A3 of the Packing redesign) ----
-     Above 760px the .bc-f / .bc-stepper wrappers are display:contents (invisible) and every
-     phone-only piece is display:none, so desktop keeps its single-row layout untouched. Below it,
-     the window becomes a full-screen page: totals, one roomy card per customer, a pinned Save bar. */
-  .bc-lab, .bc-seg, .bc-step, .bc-back, .bc-totals{display:none;}
-  .bc-f, .bc-stepper{display:contents;}
+  /* ---- Box Count: one card per customer with a quantity for EACH box type (owner, 2026-11-22: "need several box types per customer"; phone layout from A3 of the Packing redesign) ----
+     Desktop: customer name on top, five small number boxes (Large / Medium / Small / Soap / Sample), a live "Total N boxes" and the weight. Phone: the window is a full-screen page, each type is a
+     big tile with a - / + stepper (two per line), and Save is pinned at the bottom. The - / + buttons and the "Customer" label exist only on a phone. */
+  .bc-lab, .bc-back, .bc-totals, .bc-step{display:none;}
+  .bc-stepper{display:contents;}
+  .bc-row{position:relative;border:1px solid var(--border);background:var(--bg);border-radius:14px;padding:11px 12px 12px;margin-bottom:10px;}
+  .bc-row-top{display:flex;align-items:center;gap:6px;}
+  .bc-f-cust{flex:1;min-width:0;}
+  .bc-row input[name="customerName"], .bc-edit input[name="customerName"]{width:100%;box-sizing:border-box;border:1px solid var(--border);background:#fff;border-radius:11px;padding:10px 12px;font-size:13.5px;}
+  .bc-row .box-count-remove-row{flex:none;border:none;background:none;color:var(--muted);font-size:14px;cursor:pointer;padding:6px;}
+  .bc-types{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:9px;}
+  .bc-t{min-width:0;}
+  .bc-tl{display:block;margin:0 0 3px;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);text-align:center;}
+  .bc-t input{width:100%;box-sizing:border-box;border:1px solid var(--border);background:#fff;border-radius:10px;padding:9px 2px;font-size:15px;font-weight:700;text-align:center;-moz-appearance:textfield;}
+  .bc-t input::-webkit-outer-spin-button,.bc-t input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .bc-t.on .bc-tl{color:var(--accent-dark);}
+  .bc-t.on input{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
+  .bc-row-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;}
+  .bc-row-total{font-size:12.5px;font-weight:700;color:var(--muted);}
+  .bc-row-total.on{color:var(--accent-dark);}
+  .bc-kg{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin:0;}
+  .bc-kg input{width:74px;box-sizing:border-box;border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 6px;font-size:13px;text-align:center;}
+  .bc-card{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;}
+  .bc-card.sel{background:var(--accent-soft);border-color:var(--accent);}
+  .bc-card-main{display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1;}
+  .bc-card-main-in{min-width:0;flex:1;}
+  .bc-card-name{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:700;}
+  .bc-card-cust{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .bc-card-total{flex:none;font-size:11px;font-weight:700;color:var(--accent-dark);background:var(--accent-soft);border-radius:999px;padding:1px 9px;}
+  .bc-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+  .bc-pill{display:inline-flex;gap:4px;align-items:baseline;font-size:11.5px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:2px 9px;color:var(--ink);white-space:nowrap;}
+  .bc-pill b{font-weight:800;}
+  .bc-card-meta{color:var(--muted);font-size:11px;margin-top:6px;}
+  .bc-edit{display:block;}
+  .bc-edit-in{display:flex;flex-direction:column;gap:2px;}
+  .bc-edit-btns{display:flex;gap:6px;}
+  .bc-bytype{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:0 0 10px;}
+  .bc-bytype-l{font-size:11.5px;font-weight:700;color:var(--ink);margin-right:2px;}
   @media (max-width:760px){
     .overlay.bc-overlay{padding:0;align-items:stretch;justify-content:stretch;overflow:hidden;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;}
     .modal.bc-modal{max-width:none !important;width:100%;height:100%;max-height:none;margin:0;border:none;border-radius:0;box-shadow:none;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;padding:calc(14px + env(safe-area-inset-top)) 16px 0;display:flex;flex-direction:column;overflow-y:auto;}
@@ -2783,28 +2815,26 @@ html{ visibility:hidden; }
     .bc-totals div + div{border-left:1px solid var(--border);}
     .bc-totals b{display:block;font-size:22px;line-height:28px;font-weight:700;color:var(--ink);}
     .bc-totals span{font-size:12px;line-height:16px;font-weight:500;color:#55675B;}
-    .bc-modal #box-count-tbody{order:2;max-height:none !important;overflow:visible !important;margin-top:12px !important;}
-    .bc-modal .box-count-row{position:relative;display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px !important;align-items:start !important;padding:14px !important;margin-bottom:12px;background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
-    .bc-modal .bc-f{display:block;position:relative;min-width:0;}
-    .bc-modal .bc-f-cust, .bc-modal .bc-f-size{grid-column:1 / -1;}
+    .bc-modal #box-count-tbody{order:2;max-height:none !important;overflow:visible !important;margin-top:12px !important;padding:0 !important;}
+    .bc-modal .bc-row{padding:14px;margin-bottom:12px;background:#fff;border:none;border-radius:20px;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 6px 14px rgba(19,32,30,.05);}
     .bc-modal .bc-lab{display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ink);}
-    .bc-modal .bc-f-cust .bc-lab{padding-right:44px;}
-    .bc-modal input[name="customerName"], .bc-modal input[name="totalKg"]{width:100% !important;box-sizing:border-box;min-height:48px;border:1.5px solid var(--border) !important;border-radius:12px !important;padding:0 14px !important;font-size:16px !important;background:var(--bg) !important;}
-    .bc-modal input[name="totalKg"]{text-align:left !important;font-weight:700;font-size:18px !important;}
-    /* The real <select> stays in the form (so "required" still validates and its message can point at
-       it) but is visually replaced by the three buttons below. */
-    .bc-modal select[name="boxType"]{position:absolute;left:0;right:0;bottom:0;width:auto !important;height:48px;opacity:0;pointer-events:none;}
-    /* Five types (Large / Medium / Small / Soap / Sample): three buttons on the first line, two wider ones filling the second. */
-    .bc-seg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}
-    .bc-seg-btn{grid-column:span 2;}
-    .bc-seg-btn:nth-child(n+4){grid-column:span 3;}
-    .bc-seg-btn{min-height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--ink);font-size:15px;font-weight:600;}
-    .bc-seg-btn[aria-pressed="true"]{background:var(--oq-fill);border-color:var(--oq-fill);color:#fff;font-weight:700;}
-    .bc-stepper{display:flex;align-items:center;height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;}
-    .bc-step{display:flex;flex:none;align-items:center;justify-content:center;width:44px;height:100%;border:none;background:none;color:var(--ink);}
-    .bc-modal .bc-stepper input[name="boxCount"]{flex:1 1 0 !important;min-width:0;width:0 !important;height:100%;border:none !important;background:transparent !important;padding:0 !important;font-size:20px !important;font-weight:700;text-align:center;-moz-appearance:textfield;}
-    .bc-modal .box-count-remove-row{position:absolute;top:2px;right:2px;width:44px;height:44px;padding:0 !important;font-size:16px !important;}
+    .bc-modal .bc-row-top{align-items:flex-end;}
+    .bc-modal .bc-row input[name="customerName"]{min-height:48px;border:1.5px solid var(--border);border-radius:12px;padding:0 14px;font-size:16px;background:var(--bg);}
+    .bc-modal .bc-row .box-count-remove-row{width:44px;height:48px;padding:0;font-size:16px;}
     .bc-modal .box-count-row:only-child .box-count-remove-row{display:none;}
+    .bc-modal .bc-types{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px;margin-top:14px;}
+    .bc-modal .bc-tl{text-align:left;margin-bottom:6px;font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);}
+    .bc-modal .bc-stepper{display:flex;align-items:center;height:48px;border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;}
+    .bc-modal .bc-t.on .bc-stepper{border-color:var(--oq-fill);background:var(--accent-soft);}
+    .bc-modal .bc-step{display:flex;flex:none;align-items:center;justify-content:center;width:44px;height:100%;border:none;background:none;color:var(--ink);}
+    .bc-modal .bc-t input{flex:1 1 0;min-width:0;width:0;height:100%;border:none;background:transparent;padding:0;font-size:20px;font-weight:700;text-align:center;}
+    .bc-modal .bc-t.on input{color:var(--ink);}
+    .bc-modal .bc-row-foot{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px;}
+    .bc-modal .bc-row-total{order:2;font-size:14px;}
+    .bc-modal .bc-kg{display:block;font-size:13px;font-weight:600;color:var(--ink);}
+    .bc-modal .bc-kg span{display:block;margin-bottom:6px;}
+    .bc-modal .bc-kg input{width:100%;min-height:48px;border:1.5px solid var(--border);border-radius:12px;padding:0 14px;font-size:18px;font-weight:700;text-align:left;background:var(--bg);}
+    .bc-modal .bc-edit .bc-edit-btns .btn{min-height:44px;}
     .bc-modal #btn-box-count-add-row{order:3;display:flex;align-items:center;justify-content:center;min-height:52px;margin:0 0 4px !important;border:1.5px dashed var(--oq-fill);border-radius:16px;color:var(--oq-fill);font-size:15px !important;font-weight:600;text-decoration:none;}
     .bc-modal .bc-saved{order:4;margin-top:10px !important;padding-top:6px !important;border-top:none !important;margin-bottom:16px;}
     .bc-modal .bc-saved-list{max-height:none !important;overflow:visible !important;}
@@ -7133,7 +7163,7 @@ async function loadAll(){
   // from the last visit (audrey_signoff); the full check against the role record still runs after loading.
   if(state.session && signedOffByTimeLimit()){
     state.session = null; try{ localStorage.setItem('audrey_session', 'null'); }catch(e){}
-    if(supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
+    signOutThisDevice();
   }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
   // it's created — that restore isn't finished yet the instant the page loads. Without waiting
@@ -7183,7 +7213,7 @@ async function loadAll(){
         const prof = await supabaseFetchProfile(_authSession.user.id);
         if(prof && prof.active === false){
           state.session = null; saveSession();
-          supabaseClient.auth.signOut().catch(()=>{});
+          signOutThisDevice();
         } else if(prof && prof.role && prof.role !== state.session.role){
           // only the saved copy changes: saveSession() would restart the inactivity clock
           state.session = {...state.session, role: prof.role};
@@ -7924,6 +7954,15 @@ async function pingServerLastSeen(){
     await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', user.id);
   }catch(e){ console.error('last_seen heartbeat failed', e); }
 }
+/* ===================== Signing out ends ONLY this device (owner, 2026-11-22: "sudden logouts automatically even when I actively work") =====================
+   ROOT CAUSE (seen in the live auth logs): supabase-js signOut() with no argument is scope "global" - every /auth/v1/logout the app sent was `?scope=global`, which revokes the person's sessions on EVERY device. So a phone or a second tab
+   that signed itself off for inactivity (or at boot after sitting idle for hours), or a plain Log out anywhere, threw the same account out of the computer where they were busy working; that computer then failed its next refresh
+   (`refresh_token_not_found` / `session_not_found` in the logs) and showed "Your sign-in expired", and its own clean-up sign-out (also global) could even kill a login made in the meantime. The app now ALWAYS signs out with scope "local":
+   only this browser's login ends, and other devices keep working. NEVER call supabaseClient.auth.signOut() without {scope:'local'} (an Admin-side "sign this person out everywhere" would be a separate, deliberate feature). */
+function signOutThisDevice(){
+  if(!supabaseClient) return Promise.resolve();
+  try{ return Promise.resolve(supabaseClient.auth.signOut({scope:'local'})).catch(()=>{}); }catch(e){ return Promise.resolve(); }
+}
 // Signs the person out cleanly (their notifications on this phone are switched off first) and says why, so they can sign in again.
 let _expiredSignInHandling = false;
 async function handleExpiredSignIn(){
@@ -8477,12 +8516,12 @@ async function confirmLoginV2(){
   // an Admin can change. It is never taken from this browser or from the (public-facing) account list, and this
   // browser never writes it: the old "fix my own access level after sign-in" step is gone.
   if(!profile){
-    await supabaseClient.auth.signOut().catch(()=>{});
+    await signOutThisDevice();
     fail('This sign-in is not set up for the app yet — contact your Admin.');
     return;
   }
   if(profile.active === false){
-    await supabaseClient.auth.signOut().catch(()=>{});
+    await signOutThisDevice();
     fail('This account has been deactivated — contact your Admin.');
     return;
   }
@@ -8552,7 +8591,7 @@ async function logOut(){
   state._deferredLoaded = {};
   state._myProfile = null; state._fullNames = null; state._headerMenuOpen = false; state._profileTab = null;
   await saveSession();
-  if(state.auth.migratedToSupabaseAuth && supabaseClient) supabaseClient.auth.signOut().catch(()=>{});
+  if(state.auth.migratedToSupabaseAuth && supabaseClient) signOutThisDevice();
   render();
 }
 /* ===================== Browser Back / Forward walks EVERY screen step (owner, 2026-11-21) =====================
@@ -8733,7 +8772,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._blendQcChecks = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; state._blendStagesDraft = null; state._blendStageBlock = null; state._blendVarDraft = null; render(); }
+function closeModal(){ state.modal = null; state._bcRows = null; state._blendQcChecks = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; state._blendStagesDraft = null; state._blendStageBlock = null; state._blendVarDraft = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -12844,14 +12883,8 @@ function restoreOpenFormFields(snapshots){
       }
     }
   });
-  // Phone Box Count: the Large/Medium/Small buttons only mirror the (hidden) <select>, whose value was
-  // just restored above -- re-derive which button is pressed so a re-render never un-highlights it.
-  document.querySelectorAll('.box-count-row').forEach(syncBoxCountSizeButtons);
-}
-function syncBoxCountSizeButtons(row){
-  const sel = row.querySelector('select[name="boxType"]');
-  if(!sel) return;
-  row.querySelectorAll('.bc-seg-btn').forEach(b=>b.setAttribute('aria-pressed', b.dataset.bcSize===sel.value ? 'true' : 'false'));
+  // Box Count: the typed quantities are back, so bring each card's "Total N boxes" and tile highlights in step with them.
+  document.querySelectorAll('.bc-modal .box-count-row').forEach(boxCountRefreshRow);
 }
 // Tracks which page last had its entrance animation played, so cards/stat boxes only
 // fade+slide in on an actual navigation — not on every re-render a keystroke or realtime
@@ -16408,46 +16441,77 @@ function renderOrdersPage(){
 // in its own soft card instead of a hairline-divided list — see boxCountSavedRowHtml below.
 const BOX_COUNT_ICON_EDIT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 const BOX_COUNT_ICON_DELETE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>`;
-// Each field sits in a .bc-f wrapper that is display:contents above 760px, so on desktop the four
-// inputs are laid out exactly as before (one flex row). On phones (see .bc-modal in the CSS) the same
-// wrappers become a roomy card: labels, a Large/Medium/Small button group that fills in the hidden
-// <select> below it, and a -/+ stepper around the quantity box. The real inputs (name, required,
-// min/step) are untouched, so submitBoxCount() reads exactly what it always did.
 // The box types a count can be logged against (owner, 2026-11-21: Soap and Sample added to Large / Medium / Small).
 // The saved value is just this word (b.boxType), so every entry saved before still reads correctly. Used by the
 // entry row, the phone buttons and the edit row, so a type is added in ONE place.
 const BOX_COUNT_TYPES = ['Large','Medium','Small','Soap','Sample'];
-function boxCountRowHtml(){
-  return `
-  <div class="box-count-row" style="display:flex;gap:7px;align-items:center;padding:4px 0;">
-    <div class="bc-f bc-f-cust">
-      <span class="bc-lab">Customer</span>
-      <input name="customerName" required autocomplete="off" placeholder="Customer" style="flex:1;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:13px;">
-    </div>
-    <div class="bc-f bc-f-size">
-      <span class="bc-lab">Box type</span>
-      <select name="boxType" required style="width:92px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;border-radius:12px;padding:10px 6px;">
-        <option value="">Select</option>
-        ${BOX_COUNT_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('')}
-      </select>
-      <div class="bc-seg" role="group" aria-label="Box type">
-        ${BOX_COUNT_TYPES.map(t=>`<button type="button" class="bc-seg-btn" data-bc-size="${t}" aria-pressed="false">${t}</button>`).join('')}
-      </div>
-    </div>
-    <div class="bc-f bc-f-qty">
-      <span class="bc-lab">Boxes</span>
+/* Several box types per customer (owner, 2026-11-22: "each customer ... not only one box type need several ex - Sample Customer - Large - 2, Medium 1, Soap Box 3, Sample 1").
+   ONE entry = one customer + a quantity for each box type they got + optional total kg. SAVED as {id, date, customerName, boxes:[{type, qty}], boxCount (= the total of all types), boxType (the single type, or a readable
+   summary such as "Large 2, Medium 1" for several: kept only so an older open page still shows something sensible), totalKg, enteredBy, at, ackedByAdmin}. Entries saved before this have NO `boxes` (one boxType + boxCount):
+   ALWAYS read an entry through boxCountItems() / boxCountTotal() / boxCountSummaryText(), never b.boxType directly. The day totals still add up `boxCount`, so nothing else changed. */
+function boxCountItems(b){
+  const order = t=>{ const i = BOX_COUNT_TYPES.indexOf(t); return i<0 ? 99 : i; };
+  let items;
+  if(Array.isArray(b.boxes) && b.boxes.length) items = b.boxes.filter(x=>x && x.type && Number(x.qty)>0).map(x=>({type:String(x.type), qty:Number(x.qty)}));
+  else items = (b.boxType && Number(b.boxCount)>0) ? [{type:String(b.boxType), qty:Number(b.boxCount)}] : [];
+  return items.sort((x,y)=>order(x.type)-order(y.type));
+}
+function boxCountTotal(b){ const t = boxCountItems(b).reduce((n,x)=>n+x.qty, 0); return t || Number(b.boxCount) || 0; }
+function boxCountSummaryText(b){ return boxCountItems(b).map(x=>x.type+' '+x.qty).join(', '); }
+// The fields that describe the boxes of an entry, built from [{type, qty}] (used by Save and by the edit row).
+function boxCountFields(items, totalKg){
+  const order = t=>{ const i = BOX_COUNT_TYPES.indexOf(t); return i<0 ? 99 : i; };
+  const boxes = items.filter(x=>x.qty>0).map(x=>({type:x.type, qty:x.qty})).sort((x,y)=>order(x.type)-order(y.type));
+  return {boxes, boxCount: boxes.reduce((n,x)=>n+x.qty, 0), boxType: boxes.length===1 ? boxes[0].type : boxes.map(x=>x.type+' '+x.qty).join(', '), totalKg};
+}
+function boxCountPillsHtml(b){ return boxCountItems(b).map(x=>`<span class="bc-pill"><b>${x.qty}</b> ${esc(x.type)}</span>`).join(''); }
+function boxCountBoxesWord(n){ return n+' box'+(n===1?'':'es'); }
+// One typing tile per box type: a label, the quantity (blank = none), and on a phone a - / + stepper around it.
+function boxCountTypeTilesHtml(idPrefix, qtyOf){
+  return `<div class="bc-types">${BOX_COUNT_TYPES.map(t=>{
+    const q = qtyOf ? qtyOf(t) : 0;
+    return `<div class="bc-t${q>0?' on':''}">
+      <label class="bc-tl" for="${idPrefix}-${t}">${esc(t)}</label>
       <div class="bc-stepper">
-        <button type="button" class="bc-step" data-bc-step="-1" aria-label="One fewer box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
-        <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" placeholder="Qty" style="width:52px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;text-align:center;border-radius:12px;padding:10px 4px;">
-        <button type="button" class="bc-step" data-bc-step="1" aria-label="One more box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" class="bc-step" data-bc-step="-1" aria-label="One fewer ${escAttr(t)} box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <input id="${idPrefix}-${t}" data-bc-type="${escAttr(t)}" type="number" min="0" step="1" inputmode="numeric" autocomplete="off" placeholder="0" value="${q>0?q:''}" aria-label="${escAttr(t)} boxes">
+        <button type="button" class="bc-step" data-bc-step="1" aria-label="One more ${escAttr(t)} box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
+    </div>`; }).join('')}</div>`;
+}
+// One card per customer. The rows are numbered by id (state._bcRows) so that every typed box has its OWN id: render() puts typed text back by id, which keeps a half-filled
+// list safe when another person's entry arrives and the window is redrawn.
+function boxCountRowHtml(rid){
+  return `
+  <div class="box-count-row bc-row" data-bc-row="${rid}">
+    <div class="bc-row-top">
+      <div class="bc-f bc-f-cust">
+        <label class="bc-lab" for="bc-${rid}-c">Customer</label>
+        <input id="bc-${rid}-c" name="customerName" autocomplete="off" placeholder="Customer name">
+      </div>
+      <button type="button" class="box-count-remove-row" aria-label="Remove this customer">✕</button>
     </div>
-    <div class="bc-f bc-f-kg">
-      <span class="bc-lab">Total weight (kg)</span>
-      <input name="totalKg" type="number" min="0" step="0.01" autocomplete="off" placeholder="Kg" style="width:52px;flex:none;border:1px solid var(--border);background:var(--bg);font-size:12px;text-align:center;border-radius:12px;padding:10px 4px;">
+    ${boxCountTypeTilesHtml('bc-'+rid+'-q')}
+    <div class="bc-row-foot">
+      <div class="bc-row-total" data-bc-total>No boxes yet</div>
+      <label class="bc-kg"><span>Total weight (kg)</span><input id="bc-${rid}-kg" name="totalKg" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" placeholder="Kg"></label>
     </div>
-    <button type="button" class="box-count-remove-row" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;flex:none;padding:4px;" aria-label="Remove row">✕</button>
   </div>`;
+}
+// Reads one card (a new row or the edit row of a saved entry).
+function boxCountReadRow(row){
+  const customerName = (row.querySelector('[name="customerName"]').value||'').trim();
+  const items = [...row.querySelectorAll('input[data-bc-type]')].map(el=>({type:el.dataset.bcType, qty: Math.max(0, parseInt(el.value,10)||0)})).filter(x=>x.qty>0);
+  const kgRaw = (row.querySelector('[name="totalKg"]').value||'').trim();
+  const kgN = parseFloat(kgRaw);
+  return {customerName, items, totalKg: (kgRaw!=='' && isFinite(kgN) && kgN>=0) ? kgN : null, blank: !customerName && !items.length && kgRaw===''};
+}
+// "Total 7 boxes" under each card, and the tile highlight, kept in step with what is typed (no redraw, so typing is never interrupted).
+function boxCountRefreshRow(row){
+  let total = 0;
+  row.querySelectorAll('.bc-t').forEach(t=>{ const q = Math.max(0, parseInt(t.querySelector('input').value,10)||0); total += q; t.classList.toggle('on', q>0); });
+  const el = row.querySelector('[data-bc-total]');
+  if(el){ el.textContent = total ? 'Total ' + boxCountBoxesWord(total) : 'No boxes yet'; el.classList.toggle('on', total>0); }
 }
 // Admin/Sub Admin can fix any entry; whoever originally logged it can fix their own typo too,
 // same shape as the complaint "assigned to me" carve-out — without needing an Admin on hand for
@@ -16466,7 +16530,7 @@ function bcShiftDay(key, delta){
 }
 // Typing in today's rows then jumping to another day would throw that work away -- so it is blocked until saved or cleared.
 function boxCountFormDirty(){
-  return [...document.querySelectorAll('#box-count-tbody .box-count-row')].some(row=>['customerName','boxType','boxCount','totalKg'].some(n=>{ const el=row.querySelector('[name="'+n+'"]'); return el && String(el.value||'').trim()!==''; }));
+  return [...document.querySelectorAll('#box-count-tbody .box-count-row')].some(row=>!boxCountReadRow(row).blank);
 }
 function boxCountGoToDate(key){
   const today = todayStr();
@@ -16479,32 +16543,38 @@ function boxCountGoToDate(key){
   const dp = document.getElementById('bc-date-pick'); if(dp) dp.value = key || today;
 }
 function boxCountSavedRowHtml(b, readOnly){
-  if(readOnly){
-    return `
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;">
-    <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(b.boxType)} \u00d7 ${b.boxCount}${b.totalKg!=null?` \u2014 ${b.totalKg}kg`:''} \u2014 ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
-  </div>`;
-  }
+  const total = boxCountTotal(b);
+  const meta = `${b.totalKg!=null ? b.totalKg+' kg — ' : ''}${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}`;
+  const body = `
+      <div class="bc-card-main-in">
+        <div class="bc-card-name"><span class="bc-card-cust">${esc(b.customerName)}</span><span class="bc-card-total">${boxCountBoxesWord(total)}</span></div>
+        <div class="bc-pills">${boxCountPillsHtml(b)}</div>
+        <div class="bc-card-meta">${meta}</div>
+      </div>`;
+  if(readOnly) return `<div class="bc-card"><div class="bc-card-main">${body}</div></div>`;
   if(state._boxCountEditId===b.id){
+    const q = {}; boxCountItems(b).forEach(x=>{ q[x.type] = x.qty; });
     return `
-    <div class="box-count-row" data-box-count-edit-row="${b.id}" style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:9px 10px;margin-bottom:8px;">
-      <input name="customerName" required autocomplete="off" value="${escAttr(b.customerName)}" style="flex:1;min-width:0;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 9px;font-size:12.5px;">
-      <select name="boxType" required style="width:80px;flex:none;border:1px solid var(--border);background:#fff;font-size:11.5px;border-radius:6px;padding:7px 4px;">
-        ${BOX_COUNT_TYPES.map(t=>`<option value="${t}" ${b.boxType===t?'selected':''}>${t}</option>`).join('')}
-      </select>
-      <input name="boxCount" type="number" min="1" step="1" required autocomplete="off" value="${b.boxCount}" style="width:44px;flex:none;border:1px solid var(--border);background:#fff;font-size:11.5px;text-align:center;border-radius:6px;padding:7px 2px;">
-      <input name="totalKg" type="number" min="0" step="0.01" autocomplete="off" value="${b.totalKg!=null?b.totalKg:''}" placeholder="Kg" style="width:48px;flex:none;border:1px solid var(--border);background:#fff;font-size:11.5px;text-align:center;border-radius:6px;padding:7px 2px;">
-      <button type="button" data-save-box-count-edit="${b.id}" style="border:none;background:none;color:var(--accent-dark);font-size:14px;cursor:pointer;flex:none;padding:4px;" aria-label="Save">✓</button>
-      <button type="button" data-cancel-box-count-edit style="border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;flex:none;padding:4px;" aria-label="Cancel">✕</button>
+    <div class="box-count-row bc-card bc-edit" data-box-count-edit-row="${b.id}">
+      <div class="bc-edit-in">
+        <input id="bce-${b.id}-c" name="customerName" autocomplete="off" value="${escAttr(b.customerName)}" placeholder="Customer name" aria-label="Customer">
+        ${boxCountTypeTilesHtml('bce-'+b.id, t=>q[t]||0)}
+        <div class="bc-row-foot">
+          <label class="bc-kg"><span>Total weight (kg)</span><input id="bce-${b.id}-kg" name="totalKg" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" value="${b.totalKg!=null?b.totalKg:''}" placeholder="Kg"></label>
+          <div class="bc-edit-btns">
+            <button type="button" class="btn btn-sm btn-primary" data-save-box-count-edit="${b.id}">Save</button>
+            <button type="button" class="btn btn-sm" data-cancel-box-count-edit>Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>`;
   }
   const canBulk = isAdminOrSubAdmin();
   const checked = (state._boxCountSelected||[]).includes(b.id);
   return `
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;background:${checked?'var(--accent-soft)':'var(--bg)'};border:1px solid ${checked?'var(--accent)':'var(--border)'};border-radius:12px;padding:11px 13px;margin-bottom:8px;">
-    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-      ${canBulk ? `<input type="checkbox" data-select-box-count="${b.id}" ${checked?'checked':''} aria-label="Select ${escAttr(b.customerName)}" style="flex:none;width:16px;height:16px;accent-color:var(--accent);">` : ''}
-      <div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.customerName)}</div><div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(b.boxType)} × ${b.boxCount}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div></div>
+  <div class="bc-card${checked?' sel':''}">
+    <div class="bc-card-main">
+      ${canBulk ? `<input type="checkbox" data-select-box-count="${b.id}" ${checked?'checked':''} aria-label="Select ${escAttr(b.customerName)}" style="flex:none;width:16px;height:16px;margin-top:2px;accent-color:var(--accent);">` : ''}${body}
     </div>
     <div style="display:flex;gap:2px;flex:none;">
       ${canEditBoxCount(b) ? `<button type="button" class="btn-text" data-edit-box-count="${b.id}" style="flex:none;color:var(--muted);padding:5px;" aria-label="Edit">${BOX_COUNT_ICON_EDIT}</button>` : ''}
@@ -16546,15 +16616,13 @@ function cancelEditBoxCount(){ state._boxCountEditId = null; renderKeepModalScro
 async function saveEditBoxCount(id){
   const row = document.querySelector(`[data-box-count-edit-row="${id}"]`);
   if(!row) return;
-  const customerName = row.querySelector('[name="customerName"]').value.trim();
-  const boxType = row.querySelector('[name="boxType"]').value;
-  const boxCount = parseInt(row.querySelector('[name="boxCount"]').value, 10);
-  const totalKgRaw = row.querySelector('[name="totalKg"]').value.trim();
-  if(!customerName || !boxType || !boxCount || boxCount<1) return;
+  const r = boxCountReadRow(row);
+  if(!r.customerName){ showToast('Type the customer name'); const el = row.querySelector('[name="customerName"]'); if(el) el.focus(); return; }
+  if(!r.items.length){ showToast('Add at least one box type'); const el = row.querySelector('input[data-bc-type]'); if(el) el.focus(); return; }
   const b = (state.boxCounts||[]).find(x=>x.id===id);
   if(!b) return;
-  b.customerName = customerName; b.boxType = boxType; b.boxCount = boxCount;
-  b.totalKg = totalKgRaw ? parseFloat(totalKgRaw) : null;
+  b.customerName = r.customerName;
+  Object.assign(b, boxCountFields(r.items, r.totalKg));
   state._boxCountEditId = null;
   renderKeepModalScroll();
   const ok = await save('boxCounts');
@@ -16568,7 +16636,7 @@ function boxCountModal(){
   const todays = (state.boxCounts||[]).filter(b=>b.date===viewDate).sort((a,b)=>new Date(b.at)-new Date(a.at));
   // Recent days that have entries (shortcuts), newest first, today excluded.
   const dayTotals = {};
-  (state.boxCounts||[]).forEach(b=>{ if(b.date && b.date<today) dayTotals[b.date] = (dayTotals[b.date]||0) + (Number(b.boxCount)||0); });
+  (state.boxCounts||[]).forEach(b=>{ if(b.date && b.date<today) dayTotals[b.date] = (dayTotals[b.date]||0) + boxCountTotal(b); });
   const recentDays = Object.keys(dayTotals).sort().reverse().slice(0,7);
   const viewLabel = isPast ? fmtDate(viewDate+'T12:00:00') : 'Today, ' + fmtDate(new Date().toISOString());
   const histBar = !canHist ? '' : `
@@ -16585,11 +16653,14 @@ function boxCountModal(){
   const allSelected = todays.length>0 && todays.every(b=>(state._boxCountSelected||[]).includes(b.id));
   // Phone-only totals strip: what has already gone out today.
   const bcCustomers = new Set(todays.map(b=>String(b.customerName==null ? '' : b.customerName).trim().toLowerCase())).size;
-  const bcBoxes = todays.reduce((s,b)=>s+(Number(b.boxCount)||0), 0);
+  const bcBoxes = todays.reduce((s,b)=>s+boxCountTotal(b), 0);
+  const byType = {}; todays.forEach(b=>boxCountItems(b).forEach(x=>{ byType[x.type] = (byType[x.type]||0) + x.qty; }));
+  const byTypeHtml = Object.keys(byType).sort((x,y)=>{ const i = t=>{ const k = BOX_COUNT_TYPES.indexOf(t); return k<0?99:k; }; return i(x)-i(y); }).map(t=>`<span class="bc-pill"><b>${byType[t]}</b> ${esc(t)}</span>`).join('');
+  if(!state._bcRows || !state._bcRows.length) state._bcRows = [uid('BCR')];
   const bcKg = Math.round(todays.reduce((s,b)=>s+(Number(b.totalKg)||0), 0)*10)/10;
   return `
   <div class="overlay bc-overlay" id="overlay">
-    <div class="modal bc-modal" style="max-width:420px;">
+    <div class="modal bc-modal" style="max-width:480px;">
       <div class="bc-head">
         <button type="button" class="bc-back" data-bc-close aria-label="Back to board"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <div>
@@ -16604,8 +16675,8 @@ function boxCountModal(){
       </div>
       ${isPast ? `<div class="modal-actions" style="margin-top:14px;"><button type="button" class="btn" id="btn-cancel-modal">Close</button><button type="button" class="btn btn-primary" data-bc-today>Back to today</button></div>` : `
       <form id="form-box-count">
-        <div id="box-count-tbody" style="max-height:360px;overflow-y:auto;margin-top:8px;">${boxCountRowHtml()}</div>
-        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:10px;font-size:12px;"><span class="od-d-only">+ Add row</span><span class="od-m-only">+ Add another customer</span></button>
+        <div id="box-count-tbody" style="max-height:380px;overflow-y:auto;margin-top:10px;padding:2px 2px 0;">${state._bcRows.map(rid=>boxCountRowHtml(rid)).join('')}</div>
+        <button type="button" class="btn-text" id="btn-box-count-add-row" style="margin-top:6px;font-size:12.5px;font-weight:600;">+ Add another customer</button>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save all</button>
@@ -16624,7 +16695,8 @@ function boxCountModal(){
           </div>` : ''}
         </div>
         ${todays.length===0 ? `<div class="hint" style="font-size:12.5px;">${isPast?'No box counts were logged on this day.':'Nothing logged yet today.'}</div>` : `
-        <div class="bc-saved-list" style="max-height:260px;overflow-y:auto;">
+        ${byTypeHtml ? `<div class="bc-bytype" aria-label="Boxes by type"><span class="bc-bytype-l">${boxCountBoxesWord(bcBoxes)}</span>${byTypeHtml}</div>` : ''}
+        <div class="bc-saved-list" style="max-height:280px;overflow-y:auto;">
           ${todays.map(b=>boxCountSavedRowHtml(b, isPast)).join('')}
         </div>`}
       </div>
@@ -16636,16 +16708,13 @@ async function submitBoxCount(e){
   const rows = [...document.querySelectorAll('#box-count-tbody .box-count-row')];
   const recs = [];
   for(const row of rows){
-    const customerName = row.querySelector('[name="customerName"]').value.trim();
-    const boxType = row.querySelector('[name="boxType"]').value;
-    const boxCount = parseInt(row.querySelector('[name="boxCount"]').value, 10);
-    const totalKgRaw = row.querySelector('[name="totalKg"]').value.trim();
-    const totalKg = totalKgRaw ? parseFloat(totalKgRaw) : null;
-    if(!customerName && !boxType && !boxCount && !totalKgRaw) continue; // skip a row left completely blank
-    if(!customerName || !boxType || !boxCount || boxCount<1) return; // a partially-filled row blocks save, same as a normal required-field form
-    recs.push({id: uid('BOX'), date: todayStr(), customerName, boxType, boxCount, totalKg, enteredBy: (state.session.staffName||state.session.name), at: new Date().toISOString(), ackedByAdmin: false});
+    const r = boxCountReadRow(row);
+    if(r.blank) continue;   // a card left completely empty is skipped
+    if(!r.customerName){ showToast('Type the customer name'); const el = row.querySelector('[name="customerName"]'); if(el){ el.focus(); try{ el.scrollIntoView({block:'center'}); }catch(e2){} } return; }
+    if(!r.items.length){ showToast('Add at least one box type for ' + r.customerName); const el = row.querySelector('input[data-bc-type]'); if(el){ el.focus(); try{ el.scrollIntoView({block:'center'}); }catch(e2){} } return; }
+    recs.push({id: uid('BOX'), date: todayStr(), customerName: r.customerName, ...boxCountFields(r.items, r.totalKg), enteredBy: (state.session.staffName||state.session.name), at: new Date().toISOString(), ackedByAdmin: false});
   }
-  if(!recs.length) return;
+  if(!recs.length){ showToast('Type a customer and at least one box type first'); return; }
   state.boxCounts = [...recs, ...(state.boxCounts||[])];
   closeModal();
   const ok = await save('boxCounts');
@@ -16656,7 +16725,7 @@ function deleteBoxCountEntry(id){
   const b = (state.boxCounts||[]).find(x=>x.id===id);
   openConfirmModal({
     title: 'Delete box count', danger: true, confirmLabel: 'Delete', requirePassword: true,
-    message: `Delete the ${b?b.boxType:'box'} × ${b?b.boxCount:''} entry for ${b?b.customerName:'this customer'}? This cannot be undone.`,
+    message: `Delete the ${b?boxCountSummaryText(b)||'box':'box'} entry for ${b?b.customerName:'this customer'}? This cannot be undone.`,
     onConfirm: async ()=>{
       state.boxCounts = state.boxCounts.filter(x=>x.id!==id);
       await save('boxCounts');
@@ -16712,7 +16781,8 @@ function renderBoxCountAlert(){
         ${entries.map(b=>`
         <div style="border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
           <div style="font-weight:600;font-size:13.5px;">${esc(b.customerName)}</div>
-          <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">${esc(b.boxType)} × ${b.boxCount}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — by ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div>
+          <div class="bc-pills" style="margin-top:6px;">${boxCountPillsHtml(b)}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:5px;">${boxCountBoxesWord(boxCountTotal(b))}${b.totalKg!=null?` — ${b.totalKg}kg`:''} — by ${esc(b.enteredBy)}, ${fmtTimeOnly(b.at)}</div>
         </div>`).join('')}
       </div>
       <button type="button" class="btn btn-primary" id="btn-dismiss-box-count-alert" style="width:100%;">Close</button>
@@ -27078,12 +27148,15 @@ function attachShellHandlers(){
   if(byIdEl('form-box-count')) byIdEl('form-box-count').addEventListener('submit', submitBoxCount);
   if(byIdEl('btn-box-count-add-row')) byIdEl('btn-box-count-add-row').onclick = ()=>{
     const tbody = byIdEl('box-count-tbody'); if(!tbody) return;
+    const rid = uid('BCR');
+    (state._bcRows || (state._bcRows = [])).push(rid);   // remembered, so a redraw of the window keeps this card
     const tpl = document.createElement('div');
-    tpl.innerHTML = boxCountRowHtml();
+    tpl.innerHTML = boxCountRowHtml(rid);
     const row = tpl.firstElementChild;
     tbody.appendChild(row);
-    const first = row.querySelector('[name="customerName"]'); if(first) first.focus();
+    const first = row.querySelector('[name="customerName"]'); if(first){ first.focus(); try{ row.scrollIntoView({block:'nearest'}); }catch(e){} }
   };
+  document.querySelectorAll('.bc-modal .box-count-row').forEach(boxCountRefreshRow);   // after a redraw the typed quantities are back: bring the totals and highlights in step
   // Delegated on the row container (not bound per-row) so a row added later by "+ Add row"
   // already has a working remove button with no extra wiring step.
   document.querySelectorAll('[data-bc-close]').forEach(b=>b.addEventListener('click', closeModal));
@@ -27093,26 +27166,24 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-bc-today]').forEach(b=>b.addEventListener('click', ()=>boxCountGoToDate(null)));
   if(byIdEl('bc-date-pick')) byIdEl('bc-date-pick').addEventListener('change', e=>boxCountGoToDate(e.target.value));
   if(byIdEl('box-count-tbody')) byIdEl('box-count-tbody').addEventListener('click', (e)=>{
-    // Phone-only controls (see boxCountRowHtml): they just fill in the real inputs, nothing else.
+    // Phone - / + buttons (see boxCountTypeTilesHtml): they just fill in the real quantity box.
     const stepBtn = e.target.closest('.bc-step');
     if(stepBtn){
-      const input = stepBtn.closest('.bc-stepper').querySelector('input[name="boxCount"]');
+      const input = stepBtn.closest('.bc-stepper').querySelector('input');
       const next = Math.max(0, (parseInt(input.value, 10) || 0) + parseInt(stepBtn.dataset.bcStep, 10));
       input.value = next ? String(next) : '';
-      return;
-    }
-    const segBtn = e.target.closest('.bc-seg-btn');
-    if(segBtn){
-      const row = segBtn.closest('.box-count-row');
-      row.querySelector('select[name="boxType"]').value = segBtn.dataset.bcSize;
-      syncBoxCountSizeButtons(row);
+      boxCountRefreshRow(stepBtn.closest('.box-count-row'));
       return;
     }
     const btn = e.target.closest('.box-count-remove-row'); if(!btn) return;
     const tbody = byIdEl('box-count-tbody');
-    if(tbody.querySelectorAll('.box-count-row').length<=1) return; // always leave at least one row
-    btn.closest('.box-count-row').remove();
+    if(tbody.querySelectorAll('.box-count-row').length<=1) return; // always leave at least one card
+    const row = btn.closest('.box-count-row');
+    state._bcRows = (state._bcRows||[]).filter(r=>r!==row.dataset.bcRow);
+    row.remove();
   });
+  // Typing a quantity updates that card's total and highlight at once (nothing is redrawn).
+  document.querySelectorAll('.bc-modal').forEach(m=>m.addEventListener('input', e=>{ const row = e.target.closest && e.target.closest('.box-count-row'); if(row && e.target.matches('input[data-bc-type]')) boxCountRefreshRow(row); }));
   document.querySelectorAll('[data-delete-box-count]').forEach(b=>b.addEventListener('click', ()=>deleteBoxCountEntry(b.dataset.deleteBoxCount)));
   document.querySelectorAll('[data-edit-box-count]').forEach(b=>b.addEventListener('click', ()=>startEditBoxCount(b.dataset.editBoxCount)));
   document.querySelectorAll('[data-save-box-count-edit]').forEach(b=>b.addEventListener('click', ()=>saveEditBoxCount(b.dataset.saveBoxCountEdit)));
@@ -29164,19 +29235,27 @@ function scheduleSignOffTimer(){
 // until it slept. Throttled to once per 10s rather than every mousemove — localStorage writes are
 // synchronous and this doesn't need sub-10-second precision.
 let _lastPersistedActivityWriteAt = 0;
-['mousemove','keydown','mousedown','click','scroll','touchstart'].forEach(evt=>{
+let _lastActivityHandledAt = 0;
+// Every kind of real use counts (owner, 2026-11-22): the old list missed scrolling inside a panel (a scroll event does not bubble, so it needs the capture phase), the mouse wheel, a finger drag, typing that does not
+// fire keydown (voice / paste / autofill = input) and pen / touch pointers. The timer is only re-armed once a second (its callback re-checks the real time, so it stays exact); the stamp itself is always fresh.
+[['mousemove',false],['keydown',false],['mousedown',false],['pointerdown',false],['click',false],['touchstart',false],['touchmove',false],['wheel',false],['input',false],['scroll',true]].forEach(([evt, cap])=>{
   document.addEventListener(evt, ()=>{
-    _lastActivityAt = Date.now();
-    if(state.session){
-      scheduleSignOffTimer();
-      if(_lastActivityAt - _lastPersistedActivityWriteAt >= 10000){
-        persistLastActivity();
-        _lastPersistedActivityWriteAt = _lastActivityAt;
-      }
-      pingServerLastSeen();
+    const now = Date.now();
+    _lastActivityAt = now;
+    if(!state.session) return;
+    if(now - _lastActivityHandledAt < 1000) return;
+    _lastActivityHandledAt = now;
+    scheduleSignOffTimer();
+    if(now - _lastPersistedActivityWriteAt >= 10000){
+      persistLastActivity();
+      _lastPersistedActivityWriteAt = now;
     }
-  }, {passive:true});
+    pingServerLastSeen();
+  }, {passive:true, capture:cap});
 });
+// The moment of the last real activity: this page's own clock AND the copy kept in localStorage (other tabs, a page that was frozen). If the stored copy cannot be written (full / blocked storage) this page's own
+// clock still counts, so a person who is busy is never signed off because a stored number went stale.
+function lastActivityAt(){ const p = getPersistedLastActivity(); return Math.max(p==null ? 0 : p, _lastActivityAt); }
 // A phone lock or app-switch backgrounds the tab without reloading it, and without firing the
 // setTimeout above — mobile OSes suspend JS timers while backgrounded — so a session already
 // past its role's inactivity window can still be sitting on screen when the tab comes back to
@@ -29185,11 +29264,11 @@ let _lastPersistedActivityWriteAt = 0;
 function checkInactivityOnForeground(){
   if(!state.session) return;
   const mins = roleSignOffMinutes(state.session.role);
-  const lastActivity = getPersistedLastActivity();
-  if(mins>0 && lastActivity!=null && (Date.now()-lastActivity) >= mins*60*1000){
+  const lastActivity = lastActivityAt();
+  if(mins>0 && (Date.now()-lastActivity) >= mins*60*1000){
     signOffForInactivity();
   } else {
-    if(lastActivity!=null) _lastActivityAt = lastActivity;
+    _lastActivityAt = lastActivity;
     scheduleSignOffTimer();
     pingServerLastSeen();
   }
@@ -29203,8 +29282,7 @@ window.addEventListener('focus', ()=>{ checkInactivityOnForeground(); });
 setInterval(()=>{
   if(!state.session) return;
   const mins = roleSignOffMinutes(state.session.role);
-  const last = getPersistedLastActivity();
-  if(mins>0 && last!=null && (Date.now()-last) >= mins*60*1000){ signOffForInactivity(); }
+  if(mins>0 && (Date.now()-lastActivityAt()) >= mins*60*1000){ signOffForInactivity(); }
 }, 3000);
 loadAll();
 </script>

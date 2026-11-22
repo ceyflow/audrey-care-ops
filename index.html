@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122023000">
+<meta name="app-build" content="20261122031500">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1578,16 +1578,20 @@ html{ visibility:hidden; }
   .bv-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
   .bv-head label{margin:0;}
   .bv-list{display:flex;flex-direction:column;gap:8px;}
-  .bv-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.35fr) minmax(0,.65fr) 74px 30px;gap:8px;align-items:end;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .bv-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.35fr) minmax(0,.65fr) 74px auto;gap:8px;align-items:end;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
   .bv-cell{min-width:0;}
   .bv-cell label{display:block;font-size:10.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
   .bv-cell input,.bv-cell select{width:100%;min-width:0;height:36px;box-sizing:border-box;}
+  .bv-btns{display:flex;align-items:flex-end;gap:2px;}
+  .bv-st:hover{background:var(--accent-soft);color:var(--accent-dark);}
+  .vs-preview{display:flex;justify-content:center;padding:16px;background:var(--bg);border-radius:12px;margin:6px 0 10px;}
+  .vs-preview-card{zoom:2.4;box-shadow:0 1px 6px rgba(20,25,20,.25);background:#fff;}
   .bv-x{width:30px;height:34px;border:none;background:none;color:var(--muted);font-size:14px;cursor:pointer;border-radius:8px;}
   .bv-x:hover{background:#FCEEEB;color:#C15B4E;}
   @media (max-width:640px){
     .bv-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
     .bv-row .bv-p,.bv-row .bv-f{grid-column:1 / -1;}
-    .bv-row .bv-x{grid-column:2;justify-self:end;}
+    .bv-row .bv-btns{grid-column:2;justify-self:end;}
   }
   .bv-dropdown{z-index:3000;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 26px rgba(20,25,20,.18);max-height:240px;overflow-y:auto;}
   .bv-opt{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:13px;cursor:pointer;}
@@ -1600,6 +1604,32 @@ html{ visibility:hidden; }
   .bst-color::-webkit-color-swatch-wrapper{padding:0;} .bst-color::-webkit-color-swatch{border:none;border-radius:50%;}
   .bst-color::-moz-color-swatch{border:none;border-radius:50%;}
 
+  /* ---------------- Batch Verification view (vessel sticker QR code) ---------------- */
+  .bvw-page{max-width:640px;margin:0 auto;padding:max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;}
+  .bvw-head{text-align:center;padding:6px 0 2px;}
+  .bvw-logo{display:block;margin:0 auto 6px;max-height:54px;max-width:60%;object-fit:contain;}
+  .bvw-co{font-family:'Fraunces',Georgia,serif;font-size:21px;font-weight:600;}
+  .bvw-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:0 1px 2px rgba(19,32,30,.04),0 8px 22px rgba(19,32,30,.06);}
+  .bvw-top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .bvw-k{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .bvw-id{font-size:26px;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere;}
+  .bvw-badge{display:inline-block;font-size:14px;font-weight:700;padding:7px 14px;border-radius:999px;text-align:center;}
+  .bvw-prod{font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-.015em;margin:2px 0 4px;overflow-wrap:anywhere;}
+  .bvw-var{font-size:20px;font-weight:700;color:var(--accent-dark);margin-bottom:6px;}
+  .bvw-kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:9px 0;border-top:1px solid var(--border);font-size:16px;}
+  .bvw-kv span{color:var(--muted);flex:none;}
+  .bvw-kv b{font-weight:700;text-align:right;overflow-wrap:anywhere;}
+  .bvw-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 10px;border-top:1px solid var(--border);font-size:16px;border-radius:8px;}
+  .bvw-row i{font-style:normal;color:var(--muted);margin-left:8px;font-size:14px;}
+  .bvw-row.on{background:var(--accent-soft);}
+  .bvw-qc{display:inline-block;font-size:16px;font-weight:700;padding:6px 12px;border-radius:999px;margin-bottom:8px;}
+  .bvw-qc.ok{background:#E4F8EA;color:#1F6B3F;} .bvw-qc.wait{background:#FDF3D8;color:#8A6500;} .bvw-qc.idle{background:var(--bg);color:var(--muted);}
+  .bvw-notes{border-top:1px solid var(--border);padding-top:10px;font-size:15px;line-height:1.45;}
+  .bvw-notes p{margin:0 0 6px;white-space:pre-wrap;}
+  .bvw-big{font-size:22px;font-weight:700;margin-bottom:6px;}
+  .bvw-foot{text-align:center;}
+  .bvw-actions{display:flex;justify-content:center;}
+  .bvw-actions .btn{min-height:46px;padding:0 22px;font-size:15px;}
   /* ---------------- Overlay / Modal ---------------- */
   @keyframes overlay-fade{from{opacity:0;}to{opacity:1;}}
   @keyframes modal-pop{from{opacity:0;transform:scale(.94) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
@@ -6605,6 +6635,13 @@ function personIcon(){
   return `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></svg>`;
 }
 
+// A scanned vessel sticker opens <site>/batch/<id> (GitHub Pages serves 404.html, which forwards to /?batch=<id>): make it the in-app route #batch/<id>[/<variation id>] before the state below is built.
+(function(){
+  try{
+    const q = new URLSearchParams(location.search); const id = q.get('batch') || q.get('vessel');
+    if(id){ const v = q.get('v'); history.replaceState(null, '', location.pathname + '#batch/' + encodeURIComponent(id) + (v ? '/' + encodeURIComponent(v) : '')); }
+  }catch(e){}
+})();
 let state = {
   session: null,
   orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [], inventoryItems: [],
@@ -6688,11 +6725,14 @@ let state = {
   // page is allowed to see, fetched via a SECURITY DEFINER RPC that looks it up server-side.
   trackQuery: '', trackedOrderId: null, trackError: '', _publicOrder: null,
   boardMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='board',
+  batchMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='batch',   // the read-only Batch Verification view a vessel sticker's QR code opens (needs sign-in)
   complaintMode: ((location.hash||'').replace('#','').split('/')[0]||'').toLowerCase()==='complaint',
   publicComplaintId: null, publicComplaintError: '',
 };
 const _trackRequestedId = ((location.hash||'').replace('#','').split('/')[1]) ? decodeURIComponent((location.hash||'').replace('#','').split('/')[1]) : null;
 const _complaintRequestedId = _trackRequestedId;
+const _batchRequestedId = _trackRequestedId;
+const _batchRequestedVar = ((location.hash||'').replace('#','').split('/')[2]) ? decodeURIComponent((location.hash||'').replace('#','').split('/')[2]) : null;
 
 /* ===================== Storage ===================== */
 // Appended directly to <body>, as a sibling of #app rather than inside it, so it survives
@@ -7396,7 +7436,7 @@ async function loadAll(){
   // Sidebar links carry their page as a URL hash (e.g. #orders) so right-click / ctrl-click /
   // middle-click "open in new tab" opens straight to that page instead of always landing on
   // the default one.
-  if(state.session && !state.trackMode && !state.boardMode && !state.complaintMode){
+  if(state.session && !state.trackMode && !state.boardMode && !state.complaintMode && !state.batchMode){
     const hashParts = (location.hash||'').replace('#','').split('/');
     const hashPage = (hashParts[0]||'').toLowerCase();
     if(hashPage && pageAllowed(hashPage)) state.page = hashPage;
@@ -8333,7 +8373,7 @@ function navFromHash(){
 }
 const _navKeys = {};   // history position -> screen key, for the entries made during this page visit (see navBackIfParent)
 function navCommit(){
-  if(!state.session || !state.loaded || state.trackMode || state.boardMode || state.complaintMode || state._showWelcome) return;
+  if(!state.session || !state.loaded || state.trackMode || state.boardMode || state.complaintMode || state.batchMode || state._showWelcome) return;
   const snap = navSnapshot();
   const key = JSON.stringify(snap);
   const hs = history.state;
@@ -8808,7 +8848,7 @@ function syncBlendVarDraftFromDOM(){
     if(u!==null) r.unit = u;
   });
 }
-function blendVariationRowHtml(r, ro){
+function blendVariationRowHtml(r, ro, saved){
   const dis = ro ? 'disabled' : '';
   return `
   <div class="bv-row" id="bv-row-${r.id}" data-frag-id="${escAttr(r.fragranceId||'')}">
@@ -8816,15 +8856,18 @@ function blendVariationRowHtml(r, ro){
     <div class="bv-cell bv-f"><label>Fragrance</label><input id="bv-frag-${r.id}" class="bv-in" data-bv-pick="frag" value="${escAttr(r.fragrance)}" placeholder="Type to search the Item List" autocomplete="off" ${dis}></div>
     <div class="bv-cell bv-q"><label>Quantity</label><input id="bv-qty-${r.id}" class="bv-in" value="${escAttr(r.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" ${dis}></div>
     <div class="bv-cell bv-u"><label>Unit</label><select id="bv-unit-${r.id}" class="bv-in" ${dis}><option value="">—</option>${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-    ${ro ? '' : `<button type="button" class="bv-x" data-bv-del="${r.id}" title="Remove this variation" aria-label="Remove this variation">✕</button>`}
+    <span class="bv-btns">
+      ${saved ? `<button type="button" class="bv-x bv-st" data-sticker-var="${r.id}" title="Print the vessel sticker for this variation" aria-label="Print the vessel sticker for this variation">🏷</button>` : ''}
+      ${ro ? '' : `<button type="button" class="bv-x" data-bv-del="${r.id}" title="Remove this variation" aria-label="Remove this variation">✕</button>`}
+    </span>
   </div>`;
 }
-function blendVariationsSectionHtml(d, ro){
+function blendVariationsSectionHtml(d, ro, savedBatch){
   return `
   <div class="field bv-wrap">
     <div class="bv-head"><label>Variations</label>${ro ? '' : `<button type="button" class="btn btn-sm" id="btn-bv-add">+ Add variation</button>`}</div>
     <div class="hint" style="margin-bottom:8px;">One row per variation: the product, its fragrance (type a name such as <i>aloevera</i> and pick the item from the Item List) and the quantity.</div>
-    <div class="bv-list">${d.rows.length ? d.rows.map(r=>blendVariationRowHtml(r, ro)).join('') : `<div class="hint">No variations.</div>`}</div>
+    <div class="bv-list">${d.rows.length ? d.rows.map(r=>blendVariationRowHtml(r, ro, !!(savedBatch && blendVariationRows(savedBatch).some(x=>x.id===r.id)))).join('') : `<div class="hint">No variations.</div>`}</div>
     <div id="bv-dropdown" class="bv-dropdown" style="display:none;"></div>
   </div>`;
 }
@@ -8934,6 +8977,7 @@ async function submitBlendEdit(e){
     priority: PRIORITIES.includes(f.priority.value) ? f.priority.value : (b.priority || 'Medium'),
     machine: BATCH_MACHINES.some(m=>m.id===f.machine.value) ? f.machine.value : '',
     formulationCode: f.formulationCode.value.trim(),
+    qcPH: f.qcPH.value.trim(), qcViscosity: f.qcViscosity.value.trim(), qcNotes: f.qcNotes.value.trim(),
     variations: rows, variation: blendVariationsText(rows)
   });
   if(!(await save('blendBatches'))) return;
@@ -12591,6 +12635,7 @@ function renderInner(){
     app.innerHTML = renderLogin() + (state.toast ? renderToast() : ''); attachLoginHandlers(); return;
   }
   if(state._showWelcome){ app.innerHTML = renderWelcomeScreen(state._showWelcome); return; }
+  if(state.batchMode){ app.innerHTML = renderBatchVerifyPage(); attachBatchVerifyHandlers(); return; }
   if(!pageAllowed(state.page)){ state.page = (mySessionPages()||['dashboard'])[0] || 'dashboard'; state._navReplace = true; }
   // While the crop/resize modal is open, ignore background re-render triggers (realtime updates,
   // chat polling, toast timers, etc.) so they don't tear down the crop canvas mid-interaction.
@@ -16836,6 +16881,82 @@ function renderOrderInquiryPage(){
   `;
 }
 
+/* ===================== Batch Verification view: what a vessel sticker's QR code opens (owner, 2026-11-22) =====================
+   Route <site>/batch/<batch record id>[?v=<variation id>] -> (404.html) -> /?batch=.. -> #batch/<id>[/<variation id>]. READ ONLY, and it needs a SIGN-IN: it shows formulation variations, operators and QC readings, so it is
+   not a public page. Someone signed out sees the normal sign-in page first and lands here afterwards; a role that cannot read the Mixing and Filling data (blendBatches) gets "not found or no access". It shows the
+   same facts as the sticker (product, parent batch, machine, MFD, size; a variation sticker shows that variation's size), then variations, who started / completed it and when, the 1st QC (Base) status
+   (worked out from the stage list: in 1st QC = Pending, past it = Approved with when and by whom, before it = not reached yet), the pH / viscosity / notes typed in the batch window, and the live stage as a badge. */
+function batchVerifyQc1(b){
+  const list = blendStageList(); const qi = list.findIndex(x=>x.key==='qc1'); if(qi<0) return null;
+  const cur = blendStageIdx(b, list);
+  if(cur<qi) return {tone:'idle', text:'Not reached yet'};
+  if(cur===qi) return {tone:'wait', text:'Pending'};
+  const hist = (Array.isArray(b.history) ? b.history : []).filter(Boolean);
+  const leftAt = hist.filter(h=>{ const k = h.stageKey || BLEND_STAGE_KEYS[h.stage]; const hi = list.findIndex(x=>x.key===k); return hi>qi; })[0];
+  return {tone:'ok', text:'Approved' + (leftAt && leftAt.at ? ' · '+fmtDateTime(leftAt.at)+(leftAt.by ? ' · '+leftAt.by : '') : '')};
+}
+function renderBatchVerifyPage(){
+  const id = _batchRequestedId || '';
+  const b = (state.blendBatches||[]).find(x=>x.id===id) || (state.blendBatches||[]).find(x=>x.batchNo===id) || null;
+  const logo = batchSheetLogo();
+  const head = `<div class="bvw-head">${logo ? `<img class="bvw-logo" src="${escAttr(logo)}" alt="">` : ''}<div class="bvw-co">Audrey Care (Pvt) Ltd</div></div>`;
+  if(!b){
+    return `<div class="bvw-page">${head}<div class="bvw-card"><div class="bvw-big">Batch not found</div><div class="hint">This batch may have been deleted, or your sign-in cannot see Mixing and Filling.</div></div>
+      <div class="bvw-actions"><button type="button" class="btn btn-primary" id="btn-bvw-open">Open the app</button></div></div>`;
+  }
+  const stages = blendStageList(), idx = blendStageIdx(b, stages), style = blendStageStyle(stages[idx], idx);
+  const rows = blendVariationRows(b).filter(r=>r.product||r.fragrance||r.qty);
+  const v = _batchRequestedVar ? rows.find(r=>r.id===_batchRequestedVar) : null;
+  const qc1 = batchVerifyQc1(b);
+  const kv = (k, val)=>`<div class="bvw-kv"><span>${esc(k)}</span><b>${val ? esc(val) : '—'}</b></div>`;
+  const noteTexts = [b.notes, b.qcNotes].map(x=>String(x||'').trim()).filter(Boolean);
+  const created = ((b.history||[])[0]) || {};
+  return `
+  <div class="bvw-page">
+    ${head}
+    <div class="bvw-card bvw-top">
+      <div><div class="bvw-k">Batch</div><div class="bvw-id">${esc(b.batchNo||b.id)}</div></div>
+      <span class="bvw-badge" style="background:${style.bg};color:${style.c};">${esc(stages[idx].label)}</span>
+    </div>
+    <div class="bvw-card">
+      <div class="bvw-k">Sticker details${v ? ' · variation sticker' : ''}</div>
+      <div class="bvw-prod">${esc(stickerProductName(b) || 'Batch')}</div>
+      ${v ? `<div class="bvw-var">${esc(v.product||v.fragrance||'Variation')}</div>` : ''}
+      ${kv('Parent Batch', b.batchNo)}
+      ${kv('Machine No.', b.machine)}
+      ${kv('MFD Date & Time', fmtDateTime(b.completedAt || b.createdAt))}
+      ${kv('Batch Size', stickerBatchSize(b, v, b.qty))}
+    </div>
+    <div class="bvw-card">
+      <div class="bvw-k">Variations</div>
+      ${rows.length ? rows.map(r=>`<div class="bvw-row${v&&v.id===r.id?' on':''}"><span><b>${esc(r.product||'—')}</b>${r.fragrance?`<i>${esc(r.fragrance)}</i>`:''}</span><b>${r.qty ? esc(r.qty+(r.unit?' '+r.unit:'')) : '—'}</b></div>`).join('') : `<div class="hint">No variations recorded.</div>`}
+    </div>
+    <div class="bvw-card">
+      <div class="bvw-k">Production</div>
+      ${b.startedAt ? kv('Started', fmtDateTime(b.startedAt)+(b.startedBy ? ' · '+b.startedBy : '')) : kv('Created', fmtDateTime(b.createdAt)+(created.by ? ' · '+created.by : ''))}
+      ${b.completedAt ? kv('Completed', fmtDateTime(b.completedAt)+(b.completedBy ? ' · '+b.completedBy : '')) : ''}
+      ${batchFormulationCode(b) ? kv('Formulation code', batchFormulationCode(b)) : ''}
+    </div>
+    <div class="bvw-card">
+      <div class="bvw-k">1st QC (Base)</div>
+      ${qc1 ? `<div class="bvw-qc ${qc1.tone}">${esc(qc1.text)}</div>` : ''}
+      ${kv('pH', b.qcPH)}
+      ${kv('Viscosity', b.qcViscosity)}
+      ${noteTexts.length ? `<div class="bvw-notes">${noteTexts.map(t=>`<p>${esc(t)}</p>`).join('')}</div>` : ''}
+    </div>
+    <div class="bvw-foot hint">Read-only view · Audrey Care (Pvt) Ltd</div>
+    <div class="bvw-actions"><button type="button" class="btn btn-primary" id="btn-bvw-open">Open the app</button></div>
+  </div>`;
+}
+function exitBatchMode(){
+  state.batchMode = false;
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  goTo(pageAllowed('blending') ? 'blending' : ((mySessionPages()||['dashboard'])[0] || 'dashboard'));
+}
+function attachBatchVerifyHandlers(){
+  const b = document.getElementById('btn-bvw-open'); if(b) b.onclick = exitBatchMode;
+}
+
 /* ===================== Blending Department landing ===================== */
 function renderBlendingDeptPage(){
   const cards = [
@@ -20915,6 +21036,9 @@ async function migrateLegacyRunningBatch(){
   return false;
 }
 // [{key, b}] for every batch still on screen, Machine 1, 2, 3 first and a batch with no machine last. A 'completed' leftover counts as nothing (see isBatchDisplayActive).
+// A batch whose last step was finished but that was NOT transferred to Mixing and Filling (the "No" of askFinishTransfer) has status 'finished': it stays on the Production Guide (and keeps its machine busy) with a
+// "Transfer to Mixing and Filling" button, its timer / alerts are off (they only act on 'running'), and the big screen shows its done view. ('completed' is the older leftover that counts as nothing.)
+function batchIsDone(b){ return !!b && (b.status==='finished' || b.status==='completed'); }
 function runningBatches(){
   return BATCH_SLOT_KEYS.filter(k=>state[k] && state[k].status!=='completed').map(k=>({key:k, b:state[k]}));
 }
@@ -20966,7 +21090,7 @@ function batchTimerAlerts(){
 let _batchWakeLock = null;
 async function ensureBatchWakeLock(){
   if(!('wakeLock' in navigator)) return;
-  const shouldHold = isBatchDisplayActive() && state.page==='recipes' && document.visibilityState==='visible';
+  const shouldHold = runningBatches().some(x=>!batchIsDone(x.b)) && state.page==='recipes' && document.visibilityState==='visible';
   if(shouldHold && !_batchWakeLock){
     try{
       _batchWakeLock = await navigator.wakeLock.request('screen');
@@ -21551,8 +21675,8 @@ async function nextBatchStep(key){
     // look at b.status, and nothing renders between these two lines). That doubled both the wait
     // and the odds of hitting a transient save failure on "Finish batch" — reported live as a
     // spurious "Could not save activeBatch" toast right after a batch had, in fact, finished fine.
-    b.status = 'completed';
-    await finishBatchIntoBlendingBoard(b, key);
+    // Pressing Finish on the last step no longer moves the batch to Mixing and Filling by itself (owner, 2026-11-22): it asks first.
+    askFinishTransfer(key);
     return;
   }
   b.currentStep += 1;
@@ -21586,9 +21710,48 @@ async function restartCurrentStep(key){
   b.remainingSecondsWhenPaused = null;
   await saveActiveBatchVerified(key); render();
 }
+/* Finishing a batch (owner, 2026-11-22: "when finishing a batch dont auto push to mixing and filling stage, ask ... yes or no, if yes ask 'Need to print the batch sticker' yes or no, if yes sticker print option appear").
+   Finish -> "Transfer it to Mixing and Filling?"  Yes: the batch is added to Mixing and Filling (finishBatchIntoBlendingBoard), then "Need to print the batch sticker?"  Yes: the vessel sticker print view opens.
+   No (transfer): the batch is marked finished and STAYS on the Production Guide (its card gets a "Transfer to Mixing and Filling" button, so nothing is lost); until it is transferred or dismissed it keeps its machine busy.
+   Both questions are `sticky`: a click on the dim background does not answer them. */
+function askFinishTransfer(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b) return;
+  const name = stripTags(b.productName || b.recipeName || 'This batch').trim();
+  openConfirmModal({
+    title: 'Batch finished', sticky: true, confirmLabel: 'Yes', cancelLabel: 'No',
+    message: `${name}${b.batchNo ? ' ('+b.batchNo+')' : ''} is finished. Do you want to transfer it to Mixing and Filling?`,
+    onConfirm: ()=>transferFinishedBatch(key),
+    onCancel: ()=>markBatchFinishedNotTransferred(key),
+  });
+}
+async function transferFinishedBatch(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b) return;
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
+  await finishBatchIntoBlendingBoard(b, key);
+}
+async function markBatchFinishedNotTransferred(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b) return;
+  stopAlertSound(key);
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
+  b.status = 'finished';
+  await saveActiveBatchVerified(key);
+  render();
+  showToast('Batch finished. It stays on the Production Guide until you transfer it to Mixing and Filling.', 7000);
+}
+function askPrintVesselSticker(batchId){
+  openConfirmModal({
+    title: 'Batch sticker', sticky: true, confirmLabel: 'Yes', cancelLabel: 'No',
+    message: 'Need to print the batch sticker?',
+    // opened a moment later: closing this question afterwards would otherwise close the window opened inside it
+    onConfirm: ()=>{ setTimeout(()=>openVesselSticker(batchId), 0); },
+  });
+}
 function stopBatch(key){
   key = resolveBatchKey(key); if(!key) return;
-  const isDone = state[key] && state[key].status==='completed';
+  const isDone = batchIsDone(state[key]);
   const doStop = async ()=>{
     const b = state[key];
     stopAlertSound(key);
@@ -21606,7 +21769,14 @@ function stopBatch(key){
     if(!ok) return;
     showToast('Batch stopped');
   };
-  if(isDone){ doStop(); return; }
+  if(isDone){
+    openConfirmModal({
+      title: 'Dismiss this finished batch?', danger: true, confirmLabel: 'Dismiss', cancelLabel: 'Keep it',
+      message: 'This batch was NOT transferred to Mixing and Filling. If you dismiss it, its run record is lost. Dismiss it anyway?',
+      onConfirm: doStop,
+    });
+    return;
+  }
   const b0 = state[key];
   openConfirmModal({
     title: 'Stop batch', danger: true, confirmLabel: 'Stop batch',
@@ -21614,8 +21784,8 @@ function stopBatch(key){
     onConfirm: doStop,
   });
 }
-// Finishing a recipe's step timer feeds it into the Blending board as a real batch,
-// then takes everyone watching straight there — no manual "Dismiss" click needed (unless other machines are still running: then it stays on the Production Guide).
+// Called only after the person answered Yes to "transfer it to Mixing and Filling?" (askFinishTransfer): turns the finished run into a real batch on the Blending board,
+// then takes everyone watching there (unless other machines are still running: then it stays on the Production Guide) and asks about the sticker.
 async function finishBatchIntoBlendingBoard(b, key){
   // Snapshot the production run onto the board card itself (not just a recipeId reference) so
   // the documented batch sheet stays accurate for physical record-keeping even if the recipe is
@@ -21663,6 +21833,7 @@ async function finishBatchIntoBlendingBoard(b, key){
     goTo('blending');
   }
   showToast('Batch complete — added to Mixing and Filling: '+batch.product);
+  askPrintVesselSticker(batch.id);
 }
 function toggleBatchFocus(key){
   if(state.batchFocusMode){ state.batchFocusMode = false; }
@@ -22342,7 +22513,7 @@ function batchStepsListHtml(b, isDone){
 }
 function renderActiveBatchCard(key, b){
   const step = b.steps[b.currentStep];
-  const isDone = b.status==='completed';
+  const isDone = batchIsDone(b);
   const batchBit = [b.batchNo?('Batch '+esc(b.batchNo)):'', b.qty?esc(b.qty):'', b.variation?esc(b.variation):''].filter(Boolean).join(' · ');
   let dotClass = 'temp-green', accentClass = '';
   if(!isDone){
@@ -22390,6 +22561,7 @@ function renderActiveBatchCard(key, b){
       ${!isDone && b.status==='running' ? `<button class="btn" data-bt-act="pause" data-bt-key="${key}">Pause</button>` : ''}
       ${!isDone && b.status==='paused' ? `<button class="btn" data-bt-act="resume" data-bt-key="${key}">Resume</button>` : ''}
       ${!isDone ? `<button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
+      ${isDone ? `<button class="btn btn-primary" data-bt-act="transfer" data-bt-key="${key}">Transfer to Mixing and Filling</button>` : ''}
       <button class="btn" data-bt-act="stop" data-bt-key="${key}">${isDone?'Dismiss':'Stop'}</button>
       ` : ''}
       <button class="btn bt-expand" data-bt-act="focus" data-bt-key="${key}" title="Big screen — full detail, all steps & more controls">⛶</button>
@@ -22411,7 +22583,7 @@ function batchRunSheetHtml(b){
   const mats = Array.isArray(b.materials) ? b.materials : (r ? (r.materials||[]) : []);
   if(!mats.length) return '';
   const kg = Number(b.batchSizeKg)||0;
-  const step = b.status==='completed' ? null : b.steps[b.currentStep];
+  const step = batchIsDone(b) ? null : b.steps[b.currentStep];
   const inStep = new Set(stepRawLines(step, kg).map(l=>String(l.name).trim().toLowerCase()));
   const totalPct = recipeMaterialsTotalPercent(mats);
   return `
@@ -22436,7 +22608,7 @@ function renderBatchFocusOverlay(){
   if(!entry) return '';
   const key = entry.key, b = entry.b;
   const all = runningBatches();
-  const isDone = b.status==='completed';
+  const isDone = batchIsDone(b);
   const step = b.steps[b.currentStep];
   const remaining = isDone ? 0 : batchRemainingSeconds(b);
   const progressPct = Math.round((b.currentStep / b.steps.length) * 100);
@@ -22490,6 +22662,7 @@ function renderBatchFocusOverlay(){
         ${!isDone && b.currentStep>0 ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
         ${!isDone ? `<button class="btn" id="btn-batch-focus-restart">Restart step timer</button>` : ''}
         ${!isDone ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
+        ${isDone ? `<button class="btn btn-primary" id="btn-batch-focus-transfer">Transfer to Mixing and Filling</button>` : ''}
         <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
       </div>` : ''}
     </div>
@@ -23445,6 +23618,121 @@ function printDocumentedBatchSheet(batchId){
     formulationCode:code, priority:fv('priority', b.priority)||'Medium', showVariations:true, variations:rows, showStages:true, stageRows, currentStageKey:blendStageKeyOf(b)});
   waitForPrintAreaImages(area).then(()=>window.print());
 }
+/* ===================== Vessel sticker: 50 x 50 mm label with a QR code (owner, 2026-11-22) =====================
+   Prints ONLY, top to bottom: the product name (large, bold, top left), Parent Batch, Machine No., MFD Date & Time, Batch Size (just the size: a pack breakdown such as "(40 x 5L cans)" is dropped), an empty
+   writing space (about 10 mm, no lines or boxes, for a marker), the QR code (14 x 14 mm with a white quiet zone) and "Audrey Care (Pvt) Ltd" under it. The QR holds <this site>/batch/<batch record id> (a variation sticker adds ?v=<variation id>),
+   which opens the read-only Batch Verification view (renderBatchVerifyPage); GitHub Pages serves 404.html for that path and it forwards to the app. The QR is drawn from the MIT-licensed qrcode-generator 1.4.4 (kept as the real file
+   assets/vendor/qrcode-generator-1.4.4.js, loaded only when a sticker is made) as an SVG so the squares stay sharp at any printer resolution. The 50 mm page size is added as a <style> only for the moment of the sticker print and removed
+   afterwards, so every A4 print keeps its own page size. No separate permission: like "Print batch sheet", anyone who can open the batch can print its sticker. */
+let _qrLibPromise = null;
+function ensureQrLib(){
+  if(typeof qrcode==='function') return Promise.resolve(true);
+  if(_qrLibPromise) return _qrLibPromise;
+  _qrLibPromise = new Promise(res=>{
+    const sc = document.createElement('script'); sc.src = 'assets/vendor/qrcode-generator-1.4.4.js';
+    sc.onload = ()=>res(typeof qrcode==='function'); sc.onerror = ()=>{ _qrLibPromise = null; res(false); };
+    document.head.appendChild(sc);
+  });
+  return _qrLibPromise;
+}
+function qrSvgHtml(text){
+  const qr = qrcode(0, 'M'); qr.addData(text, 'Byte'); qr.make();
+  const n = qr.getModuleCount(); let d = '';
+  for(let r=0;r<n;r++){ let c = 0; while(c<n){ if(qr.isDark(r,c)){ const st = c; while(c<n && qr.isDark(r,c)) c++; d += `M${st} ${r}h${c-st}v1h-${c-st}z`; } else c++; } }
+  return `<svg class="vs-qr" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code"><path d="${d}" fill="#000"/></svg>`;
+}
+// "Shower Gel — Version 1" -> "Shower Gel": a sticker shows the product, not the costing version.
+function stickerProductName(b){
+  const n = stripTags(String(b.recipeName || b.product || '')).trim();
+  return n.replace(/\s*[—–-]\s*version\s*\d+.*$/i, '').trim() || n;
+}
+function stickerBatchSize(b, v, qtyText){
+  if(v) return v.qty ? v.qty + (v.unit ? ' '+v.unit : '') : '';
+  let q = String(qtyText!=null ? qtyText : (b.qty||'')).replace(/\s*\([^)]*\)/g, '').trim();   // no pack breakdown
+  if(!q && Number(b.batchSizeKg)>0) q = fmtQty(b.batchSizeKg)+' kg';
+  return q;
+}
+function batchPublicUrl(b, v){ return location.origin + '/batch/' + encodeURIComponent(b.id) + (v ? '?v='+encodeURIComponent(v.id) : ''); }
+// What is typed in the open batch window (even unsaved) wins over the saved batch, like the batch sheet print does.
+function blendWindowValues(b){
+  const f = document.getElementById('form-blend-edit');
+  const open = !!(f && f.dataset.batchId===b.id);
+  if(!open) return {batchNo:b.batchNo, qty:b.qty, machine:b.machine||'', rows:blendCleanVariations(blendVariationRows(b))};
+  syncBlendVarDraftFromDOM();
+  return {batchNo:f.elements.batchNo.value.trim()||b.batchNo, qty:f.elements.qty.value, machine:f.elements.machine.value||'',
+          rows:blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===b.id ? state._blendVarDraft.rows : blendVariationRows(b))};
+}
+function vesselStickerData(b, varId){
+  const w = blendWindowValues(b);
+  const v = varId ? w.rows.find(r=>r.id===varId) || blendVariationRows(b).find(r=>r.id===varId) || null : null;
+  return {
+    name1: stickerProductName(b), name2: v ? (v.product||'') : '',
+    batchNo: w.batchNo||'', machine: w.machine||'', mfd: fmtDateTime(b.completedAt || b.createdAt),
+    size: stickerBatchSize(b, v, w.qty), qr: qrSvgHtml(batchPublicUrl(b, v)),
+  };
+}
+function vesselStickerHtml(d){
+  const line = (k,v)=>`<div class="vs-l"><span>${esc(k)}</span> <b>${v ? esc(v) : '—'}</b></div>`;
+  return `
+  <div class="vsticker">
+  <style>
+    .vsticker{width:50mm;height:50mm;box-sizing:border-box;padding:1.6mm 2.2mm 1.2mm;background:#fff;color:#000;font-family:'Inter',Arial,Helvetica,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;page-break-inside:avoid;}
+    .vsticker *{box-sizing:border-box;margin:0;padding:0;}
+    .vsticker .vs-name{height:7.6mm;flex:none;font-size:10.5pt;font-weight:800;line-height:1;letter-spacing:-.01em;text-align:left;overflow:hidden;}
+    .vsticker .vs-name .one{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;}
+    .vsticker .vs-name .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .vsticker .vs-l{flex:none;height:2.55mm;font-size:6.3pt;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .vsticker .vs-l b{font-weight:800;}
+    .vsticker .vs-write{flex:none;height:10.5mm;}
+    .vsticker .vs-qrbox{flex:none;width:16mm;height:16mm;margin:0 auto;padding:1mm;background:#fff;}
+    .vsticker .vs-qr{display:block;width:14mm;height:14mm;}
+    .vsticker .vs-co{flex:none;text-align:center;font-size:6pt;font-weight:700;line-height:1;margin-top:.4mm;white-space:nowrap;}
+  </style>
+    <div class="vs-name">${d.name2 ? `<div class="ln">${esc(d.name1)}</div><div class="ln">${esc(d.name2)}</div>` : `<div class="one">${esc(d.name1||'Batch')}</div>`}</div>
+    ${line('Parent Batch:', d.batchNo)}${line('Machine No.:', d.machine)}${line('MFD Date & Time:', d.mfd)}${line('Batch Size:', d.size)}
+    <div class="vs-write"></div>
+    <div class="vs-qrbox">${d.qr}</div>
+    <div class="vs-co">Audrey Care (Pvt) Ltd</div>
+  </div>`;
+}
+async function printVesselSticker(batchId, varId){
+  const b = byId(state.blendBatches, batchId); if(!b) return;
+  if(!(await ensureQrLib())){ showToast('The QR code could not be made. Check the connection and try again.', 6000); return; }
+  const area = document.getElementById('print-area'); if(!area) return;
+  area.innerHTML = vesselStickerHtml(vesselStickerData(b, varId||''));
+  const st = document.createElement('style'); st.id = 'vessel-sticker-page'; st.textContent = '@page{size:50mm 50mm;margin:0}';
+  document.head.appendChild(st);
+  let cleaned = false;
+  const clean = ()=>{ if(cleaned) return; cleaned = true; st.remove(); window.removeEventListener('afterprint', clean); };
+  window.addEventListener('afterprint', clean); setTimeout(clean, 120000);
+  logActivity(`Printed vessel sticker for batch ${b.batchNo}${varId ? ' (a variation)' : ''}`);
+  window.print();
+}
+// The sticker print view: a window with the label at about twice its real size and a Print button. Opened by the "Need to print the batch sticker?" question.
+async function openVesselSticker(batchId, varId){
+  if(!byId(state.blendBatches, batchId)) return;
+  if(!(await ensureQrLib())){ showToast('The QR code could not be made. Check the connection and try again.', 6000); return; }
+  openModal('vesselsticker:'+batchId+(varId ? ':'+varId : ''));
+}
+function vesselStickerModal(batchId, varId){
+  const b = byId(state.blendBatches, batchId); if(!b) return '';
+  const rows = blendVariationRows(b).filter(r=>r.product||r.fragrance||r.qty);
+  const v = varId ? rows.find(r=>r.id===varId) : null;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:440px;">
+      <h2>Vessel sticker</h2>
+      <div class="sub">50 mm × 50 mm label · batch ${esc(b.batchNo||b.id)}</div>
+      ${rows.length ? `<div class="field"><label>Sticker for</label><select id="vs-pick"><option value="">The whole batch</option>${rows.map(r=>`<option value="${escAttr(r.id)}" ${v&&v.id===r.id?'selected':''}>${esc(r.product||r.fragrance||'Variation')}${r.qty?' — '+esc(r.qty+(r.unit?' '+r.unit:'')):''}</option>`).join('')}</select></div>` : ''}
+      <div class="vs-preview"><div class="vs-preview-card">${vesselStickerHtml(vesselStickerData(b, v ? v.id : ''))}</div></div>
+      <div class="hint" style="text-align:center;">The QR code opens this batch's page. In the print window choose the 50 × 50 mm label size.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btn-vs-close">Close</button>
+        <button type="button" class="btn btn-primary" id="btn-vs-print">Print sticker</button>
+      </div>
+    </div>
+  </div>`;
+}
 async function saveBatchSheetSteps(recipeId){
   syncDraftStepFieldsFromDOM();
   const d = state._recipeDraft;
@@ -23567,6 +23855,7 @@ function renderModal(){
   if(type==='profiledetails') return profileDetailsModal();
   if(type==='lineblocked') return lineBlockedModal();
   if(type==='manageblendstages') return manageBlendStagesModal();
+  if(type==='vesselsticker') return vesselStickerModal(id, parts[2]||'');
   if(type==='blendstageblocked') return blendStageBlockedModal();
   if(type==='activitylog') return activityLogModal();
   return '';
@@ -24075,7 +24364,7 @@ function confirmActionModal(){
       <div class="hint" id="confirm-action-password-error" style="color:var(--danger);"></div>
       ` : ''}
       <div class="modal-actions">
-        <button type="button" class="btn" id="btn-cancel-confirm-action">Cancel</button>
+        <button type="button" class="btn" id="btn-cancel-confirm-action">${esc(c.cancelLabel||'Cancel')}</button>
         <button type="button" class="btn ${c.danger?'btn-danger':'btn-primary'}" id="btn-confirm-action">${esc(c.confirmLabel||'OK')}</button>
       </div>
     </div>
@@ -24499,7 +24788,10 @@ function renderBlendDrawer(id){
         <div><div class="hint">Started</div><div style="font-weight:600;">${fmtDateTime(b.startedAt)}</div>${b.startedBy?`<div class="hint">by ${esc(b.startedBy)}</div>`:''}</div>
         <div style="text-align:right;"><div class="hint">Completed</div><div style="font-weight:600;">${fmtDateTime(b.completedAt)}</div>${b.completedBy?`<div class="hint">by ${esc(b.completedBy)}</div>`:''}</div>
       </div>` : `<div class="hint">Printed sheet: batch, formulation code, variations and a sign-off line for every stage.</div>`}
-      <button type="button" class="btn btn-sm" style="margin-top:10px;" id="btn-print-blend-sheet">🖨 Print batch sheet</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <button type="button" class="btn btn-sm" id="btn-print-blend-sheet">🖨 Print batch sheet</button>
+        <button type="button" class="btn btn-sm" id="btn-print-vessel-sticker" data-sticker-var="">🏷 Print Vessel Sticker</button>
+      </div>
     </div>
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
@@ -24521,7 +24813,13 @@ function renderBlendDrawer(id){
         ${!b.formulationCode && code ? `<div class="hint">Shown as <b>${esc(code)}</b> (made from the batch sheet's name). Type your own to replace it.</div>` : ''}
       </div>
 
-      ${blendVariationsSectionHtml(d, ro)}
+      ${blendVariationsSectionHtml(d, ro, b)}
+
+      <div class="field-row">
+        <div class="field"><label>1st QC · pH</label><input name="qcPH" value="${escAttr(b.qcPH||'')}" placeholder="e.g. 5.8" autocomplete="off" ${roAttr}></div>
+        <div class="field"><label>1st QC · Viscosity</label><input name="qcViscosity" value="${escAttr(b.qcViscosity||'')}" placeholder="e.g. 4500 cP" autocomplete="off" ${roAttr}></div>
+      </div>
+      <div class="field"><label>QC / blending notes</label><textarea name="qcNotes" ${roAttr} placeholder="Shown on the page the sticker's QR code opens">${escBody(b.qcNotes||'')}</textarea></div>
 
       <div class="field"><label>History</label>
         <div class="timeline">${(Array.isArray(b.history)?b.history:[]).filter(Boolean).map(h=>`<div class="item">${esc(blendHistoryLabel(h))} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
@@ -26211,6 +26509,10 @@ function attachShellHandlers(){
   if(byIdEl('btn-print-blend-sheet')) byIdEl('btn-print-blend-sheet').onclick = ()=>{ const id=state.modal.split(':')[1]; printDocumentedBatchSheet(id); };
   attachManageBlendStagesHandlers();
   attachBlendVariationHandlers();
+  document.querySelectorAll('[data-sticker-var]').forEach(btn=>btn.addEventListener('click', ()=>{ const id = (state.modal||'').split(':')[1]; if(id) printVesselSticker(id, btn.dataset.stickerVar||''); }));
+  if(byIdEl('btn-vs-close')) byIdEl('btn-vs-close').onclick = closeModal;
+  if(byIdEl('btn-vs-print')) byIdEl('btn-vs-print').onclick = ()=>{ const parts = (state.modal||'').split(':'); printVesselSticker(parts[1], parts[2]||''); };
+  if(byIdEl('vs-pick')) byIdEl('vs-pick').onchange = ()=>{ const id = (state.modal||'').split(':')[1]; openModal('vesselsticker:'+id+(byIdEl('vs-pick').value ? ':'+byIdEl('vs-pick').value : '')); };
   document.querySelectorAll('[data-blend-mobile-tab]').forEach(btn=>btn.addEventListener('click', ()=>{ state._blendMobileStage = btn.dataset.blendMobileTab; render(); }));
 
   // R&D board
@@ -27111,7 +27413,9 @@ function attachShellHandlers(){
   });
   if(byIdEl('btn-confirm-action')) byIdEl('btn-confirm-action').onclick = runConfirmedAction;
   if(byIdEl('btn-cancel-confirm-action')) byIdEl('btn-cancel-confirm-action').onclick = ()=>{
-    closeOverlayModal(state._confirmAction && state._confirmAction._returnTo);
+    const c = state._confirmAction;
+    closeOverlayModal(c && c._returnTo);
+    if(c && c.onCancel) c.onCancel();   // e.g. the "No" of a Yes / No question
   };
   if(byIdEl('form-prompt-action')) byIdEl('form-prompt-action').addEventListener('submit', async (e)=>{
     e.preventDefault();
@@ -27182,7 +27486,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-bt-act]').forEach(btn=>btn.addEventListener('click', ()=>{
     const k = btn.dataset.btKey, act = btn.dataset.btAct;
     if(act==='pause') pauseBatch(k); else if(act==='resume') resumeBatch(k); else if(act==='next') nextBatchStep(k);
-    else if(act==='stop') stopBatch(k); else if(act==='focus') toggleBatchFocus(k);
+    else if(act==='stop') stopBatch(k); else if(act==='focus') toggleBatchFocus(k); else if(act==='transfer') transferFinishedBatch(k);
   }));
   document.querySelectorAll('[data-bf-switch]').forEach(btn=>btn.addEventListener('click', ()=>setBatchFocusKey(btn.dataset.bfSwitch)));
   const focusKey = ()=>{ const e = batchFocusEntry(); return e ? e.key : null; };
@@ -27194,6 +27498,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-batch-focus-restart')) byIdEl('btn-batch-focus-restart').onclick = ()=>restartCurrentStep(focusKey());
   if(byIdEl('btn-batch-focus-next')) byIdEl('btn-batch-focus-next').onclick = ()=>nextBatchStep(focusKey());
   if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = ()=>stopBatch(focusKey());
+  if(byIdEl('btn-batch-focus-transfer')) byIdEl('btn-batch-focus-transfer').onclick = ()=>transferFinishedBatch(focusKey());
 
   // Chat
   attachChat2Handlers();
@@ -27342,6 +27647,7 @@ function attachShellHandlers(){
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
     if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('blend:'))) return;
+    if(state.modal==='confirmaction' && state._confirmAction && state._confirmAction.sticky) return;   // a Yes / No question that needs an answer: only its own two buttons close it
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

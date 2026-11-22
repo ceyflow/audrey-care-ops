@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122160326">
+<meta name="app-build" content="20261122161216">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3996,12 +3996,12 @@ function dallyAiEnabled(){ return !!(state.dallySettings && state.dallySettings.
 const DEFAULT_BATCH_SHEET_TEMPLATE = {
   showLogo:true, showDate:true, showBatchNo:true, showDescription:true,
   showPH:true, showFooter:true, footerText:'Audrey Care (Pvt) Ltd.',
-  showVariations:true, showPrep:true, showStages:true,   // the parts added 2026-11-22: Variations, Preparation checking, stage-by-stage sign-off table (each switchable)
+  showVariations:true, showPrep:true, showQc:true, showStages:true,   // the parts added 2026-11-22: Variations, Preparation checking, stage-by-stage sign-off table (each switchable)
   headerColor:'#ECECE6', fontSize:'medium',
   trailingSectionOrder:['ph','footer'],
   // logo, words and spaces (Settings -> Prints edits); every value is what the sheet always used
   logoMode:'company', logoUrl:'', logoH:112, logoAlign:'center',
-  wCompany:'Audrey Care (Pvt) Ltd.', wDoc:'Batch Sheet', wProduct:'Product', wBatchNo:'Batch number', wVariations:'Variations', wMaterials:'Raw materials', wPrep:'Preparation checking', wStages:'Stage by stage \u2014 floor sign-off',
+  wCompany:'Audrey Care (Pvt) Ltd.', wDoc:'Batch Sheet', wProduct:'Product', wBatchNo:'Batch number', wVariations:'Variations', wMaterials:'Raw materials', wPrep:'Preparation checking', wQc:'QC details', wStages:'Stage by stage \u2014 floor sign-off',
   padX:24, padY:10, secGap:14, rowPad:6,
 };
 function batchSheetTemplate(){ return {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})}; }
@@ -19979,6 +19979,8 @@ function batchSheetTemplatePreviewData(){
       {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},   // phrases are not printed
     ], standardPH:'5.5 - 6.5', formulationCode:'SR-V1', priority:'Medium',
     showVariations:true, variations:[{product:'Aloevera', fragrance:'Aloe Green', qty:'40', unit:'5L cans'},{product:'Cucumber', fragrance:'Alo Cucumber', qty:'25', unit:'kg'}],
+    qc:[{key:'qc1', label:'1st QC (Base)', ph:'5.8', viscosity:'4500 cP', notes:'Color matches the standard', checks:{color:true, fragrance:true, viscosity:false}, by:'QC officer', at:'2026-10-12T09:40:00.000Z'},
+        {key:'qc2', label:'2nd QC', ph:'', viscosity:'', notes:'', checks:{color:false, fragrance:false, viscosity:false}, by:'', at:''}],
     showStages:true, stageRows:{}, currentStageKey:'qc1'};
 }
 // The whole printed sheet as one small thumbnail for Settings -> Prints edits -> Batch sheet (a long sheet continues onto a second page when printed).
@@ -19994,7 +19996,7 @@ function renderBatchSheetTemplateBody(){
   const zoom = BATCH_SHEET_FONT_SCALE[tpl.fontSize] || 1;
   return `
     <div class="pe-bs">
-      <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the sheet printed from the batch window on Mixing and Filling (and the blank pre-run form) use this. It prints, top to bottom: batch details, raw materials, variations, preparation checking, then the stage sign-off table and the sign-off lines. The mixing phrases are not printed. The logo, words and spaces are below.</div>
+      <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the sheet printed from the batch window on Mixing and Filling (and the blank pre-run form) use this. It prints, top to bottom: batch details, raw materials, variations, preparation checking, QC details (1st QC and 2nd QC), then the stage sign-off table and the sign-off lines. The mixing phrases are not printed. The logo, words and spaces are below.</div>
 
       <div class="hint" style="margin-bottom:8px;">Preview — the whole sheet, drawn with sample data. A long sheet continues onto a second page when printed.</div>
       <div id="bsp-preview" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;">${batchSheetTemplatePreviewHtml(tpl)}</div>
@@ -20026,6 +20028,11 @@ function renderBatchSheetTemplateBody(){
           <div class="field">
             <label><input type="checkbox" name="showPrep" ${tpl.showPrep!==false?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show preparation checking</label>
           </div>
+          <div class="field">
+            <label><input type="checkbox" name="showQc" ${tpl.showQc!==false?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show QC details</label>
+          </div>
+        </div>
+        <div class="field-row">
           <div class="field">
             <label><input type="checkbox" name="showStages" ${tpl.showStages!==false?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show stage sign-off table</label>
           </div>
@@ -20094,6 +20101,7 @@ function syncBatchSheetTemplateDraftFromDOM(){
   d.showPH = form.showPH.checked;
   d.showVariations = form.showVariations.checked;
   d.showPrep = form.showPrep.checked;
+  d.showQc = form.showQc.checked;
   d.showStages = form.showStages.checked;
   d.showFooter = form.showFooter.checked;
   d.footerText = form.footerText.value;
@@ -24165,6 +24173,43 @@ function batchPrepPrintHtml(steps, title){
         : `<tr><td colspan="2">${esc(c.text)}</td><td class="chk">${box(!!c.checked)}</td></tr>`).join('')}</tbody>
     </table>`).join('')}`;
 }
+// QC DETAILS as printed (owner, 2026-11-22: "in batch sheet print should include 1st QC and 2nd QC details too"): one table, a row per QC stage (1st QC, 2nd QC, and a 3rd QC when the batch has reached it or holds readings) with the pH and
+// viscosity readings, the Color / Fragrance / Viscosity tick boxes, who recorded it and when, and a line for its notes. A stage that has nothing recorded yet prints EMPTY cells and empty boxes, so the floor can write it in by hand.
+// `rows` come from blendQcPrintRows() (what is typed in the open batch window, else what is saved).
+function batchQcPrintHtml(rows, title){
+  const list = (rows||[]).filter(Boolean);
+  if(!list.length) return '';
+  const box = on => `<span class="bsp-box${on?' on':''}">${on?'✓':''}</span>`;
+  const body = list.map(r=>`
+        <tr><td class="c-st">${esc(r.label)}</td><td class="num">${r.ph ? esc(r.ph) : ''}</td><td class="num">${r.viscosity ? esc(r.viscosity) : ''}</td><td class="chk">${box(!!(r.checks && r.checks.color))}</td><td class="chk">${box(!!(r.checks && r.checks.fragrance))}</td><td class="chk">${box(!!(r.checks && r.checks.viscosity))}</td><td class="by">${r.by ? esc(r.by)+(r.at ? '<br><i>'+esc(fmtDateTime(r.at))+'</i>' : '') : ''}</td></tr>
+        <tr class="bsp-qc-note"><td colspan="7"><span>Notes:</span> ${r.notes ? esc(r.notes) : ''}</td></tr>`).join('');
+  return `
+    <div class="bsp-qcwrap"><div class="bsp-sec">${esc(title || 'QC details')}</div>
+    <table class="bsp-mats bsp-qc">
+      <thead>
+        <tr><th rowspan="2" class="c-st">Stage</th><th colspan="2" class="grp">Readings</th><th colspan="3" class="grp">Checked</th><th rowspan="2" class="by">Recorded by</th></tr>
+        <tr><th class="num" style="text-transform:none;">pH</th><th class="num">Viscosity</th><th class="chk">Color</th><th class="chk">Fragrance</th><th class="chk">Viscosity</th></tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+}
+// The QC stages to print for a batch: 1st QC and 2nd QC always (empty when nothing is recorded yet), a 3rd QC only once the batch reached it or it holds readings; a stage removed in Manage Lists is left out.
+// What is TYPED in the open batch window (even unsaved) wins over what is saved, like every other printed field.
+function blendQcPrintRows(b, form){
+  const list = blendStageList(), cur = blendStageIdx(b, list);
+  const open = !!(form && form.dataset.batchId===b.id);
+  return BLEND_QC_KEYS.map(key=>{
+    const si = list.findIndex(x=>x.key===key); if(si<0) return null;
+    let q = blendQcOf(b, key);
+    const phEl = open && form.elements['qc_'+key+'_ph'];
+    if(phEl){
+      const g = n=>form.elements['qc_'+key+'_'+n];
+      q = {...q, ph: phEl.value.trim(), viscosity: g('viscosity').value.trim(), notes: g('notes').value.trim(), checks: {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked}};
+    }
+    if(key==='qc3' && !(cur>=si || blendQcHasData(q))) return null;
+    return {key, label: list[si].label, ph:q.ph, viscosity:q.viscosity, notes:q.notes, checks:q.checks, by:q.by, at:q.at};
+  }).filter(Boolean);
+}
 // The variations as printed (owner, 2026-11-22: "the exact same structured variation quantities, units"): one row per variation with product, fragrance, quantity and unit, the same four columns
 // as on the board window, and a total per unit. With nothing recorded it prints three empty lines for the floor to fill in by hand.
 function batchVariationsPrintHtml(rows, title){
@@ -24279,6 +24324,19 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp table.bsp-stg td.c-st{font-weight:600;}
     .bsp table.bsp-stg td{white-space:nowrap;}
     .bsp table.bsp-stg td.c-st i{font-style:normal;font-weight:400;color:#6B7570;font-size:10px;}
+    .bsp .bsp-qcwrap{break-inside:avoid;page-break-inside:avoid;}
+    .bsp table.bsp-qc{font-size:11.5px;}
+    .bsp table.bsp-qc th{text-align:center;}
+    .bsp table.bsp-qc th.c-st,.bsp table.bsp-qc th.by{text-align:left;}
+    .bsp table.bsp-qc th.grp{border-bottom:1px solid #9AA39C;}
+    .bsp table.bsp-qc td{height:26px;vertical-align:middle;}
+    .bsp table.bsp-qc td.c-st{font-weight:700;white-space:nowrap;width:118px;}
+    .bsp table.bsp-qc td.num{text-align:center;font-weight:600;}
+    .bsp table.bsp-qc td.chk,.bsp table.bsp-qc th.chk{width:58px;text-align:center;}
+    .bsp table.bsp-qc td.by{width:128px;font-size:10px;line-height:1.3;}
+    .bsp table.bsp-qc td.by i{font-style:normal;color:#6B7570;}
+    .bsp table.bsp-qc tr.bsp-qc-note td{height:24px;font-size:11px;border-bottom:1.5px solid #9AA39C;}
+    .bsp table.bsp-qc tr.bsp-qc-note td span{color:#6B7570;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.03em;}
     .bsp table.bsp-prep{margin:0 0 8px;break-inside:avoid;page-break-inside:avoid;}
     .bsp table.bsp-prep td.val{width:130px;font-weight:700;}
     .bsp table.bsp-prep td.chk,.bsp table.bsp-prep th.chk{width:54px;text-align:center;}
@@ -24303,6 +24361,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     </table>` : ''}
     ${(d.showVariations && tpl.showVariations!==false) ? batchVariationsPrintHtml(d.variations, tpl.wVariations) : ''}
     ${tpl.showPrep!==false ? batchPrepPrintHtml(steps, tpl.wPrep) : ''}
+    ${(d.qc && tpl.showQc!==false) ? batchQcPrintHtml(d.qc, tpl.wQc) : ''}
     ${d.mode==='record' ? '' : batchQaBeforeHtml()}
     ${trailing}
     ${(d.showStages && tpl.showStages!==false) ? batchStageSignoffHtml({...d, stageTitle: tpl.wStages}) : ''}
@@ -24382,7 +24441,7 @@ function printDocumentedBatchSheet(batchId){
   area.innerHTML = batchSheetPrintHtml({mode:'record', product:stripTags(b.recipeName||b.product||'').trim(), machine:fv('machine', b.machine)||'', batchNo:fv('batchNo', b.batchNo)||b.batchNo, batchSizeKg:b.batchSizeKg, qtyText:fv('qty', b.qty),
     dateText:fmtDate(b.completedAt||b.createdAt), startedAt:b.startedAt, startedBy:b.startedBy, completedAt:b.completedAt, completedBy:b.completedBy, createdAt:b.createdAt, createdBy:((b.history||[])[0]||{}).by,
     materials:b.materials||[], steps:b.productionSteps||[], combineNote:b.combineNote, standardPH:b.standardPH,
-    formulationCode:code, priority:fv('priority', b.priority)||'Medium', showVariations:true, variations:rows, showStages:true, stageRows, currentStageKey:blendStageKeyOf(b)});
+    formulationCode:code, priority:fv('priority', b.priority)||'Medium', showVariations:true, variations:rows, qc:blendQcPrintRows(b, f), showStages:true, stageRows, currentStageKey:blendStageKeyOf(b)});
   waitForPrintAreaImages(area).then(()=>window.print());
 }
 /* ===================== Prints edits: one definition per print (owner, 2026-11-22: "a card in settings named 'prints edits'... all should be able to adjust logos, template words, manage spaces by hand") =====================
@@ -24450,10 +24509,10 @@ const PRINT_DEFS = {
     ],
   },
   batchsheet: {
-    title:'Batch sheet', blurb:'The printed batch sheet, top to bottom: batch details, raw materials, variations, preparation checking, the stage sign-off table and the sign-off lines. The switches, colour, font and note order are in the first part; logo, words and spaces below.',
+    title:'Batch sheet', blurb:'The printed batch sheet, top to bottom: batch details, raw materials, variations, preparation checking, QC details, the stage sign-off table and the sign-off lines. The switches, colour, font and note order are in the first part; logo, words and spaces below.',
     groups:[
       {title:'Logo', fields:peLogoFields({mode:'company', h:112, unit:'px', min:20, max:240, step:1, align:'center'})},
-      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wDoc','Document title','Batch Sheet'), PE_TXT('wProduct','Product','Product'), PE_TXT('wBatchNo','Batch number','Batch number'), PE_TXT('wVariations','Variations heading','Variations'), PE_TXT('wMaterials','Raw materials heading','Raw materials'), PE_TXT('wPrep','Preparation checking heading','Preparation checking'), PE_TXT('wStages','Stage sign-off heading','Stage by stage — floor sign-off')]},
+      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wDoc','Document title','Batch Sheet'), PE_TXT('wProduct','Product','Product'), PE_TXT('wBatchNo','Batch number','Batch number'), PE_TXT('wVariations','Variations heading','Variations'), PE_TXT('wMaterials','Raw materials heading','Raw materials'), PE_TXT('wPrep','Preparation checking heading','Preparation checking'), PE_TXT('wQc','QC details heading','QC details'), PE_TXT('wStages','Stage sign-off heading','Stage by stage — floor sign-off')]},
       {title:'Spaces, by hand', fields:[PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('secGap','Space above each heading',14,'px',0,60,1), PE_NUM('rowPad','Height of each table row (padding)',6,'px',0,20,.5)]},
     ],
   },

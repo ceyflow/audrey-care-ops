@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122144050">
+<meta name="app-build" content="20261122151004">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1574,30 +1574,71 @@ html{ visibility:hidden; }
   .bcard-more{font-size:11px;color:var(--muted);}
   .bcard-foot{font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   @media (min-width:1151px){.blend-board{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));}}
+  /* ===== Batch window (Mixing and Filling) + variations (owner, 2026-11-22) ===== */
+  .bw-drawer{background:#F4F7F5;}
+  .bw-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px;}
+  .bw-run{display:flex;align-items:center;gap:14px;padding:12px 16px;margin:0 0 14px;background:#fff;border:1px solid var(--border);border-radius:14px;}
+  .bw-run > div:not(.bw-run-arrow){display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .bw-run span{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  .bw-run b{font-size:14px;font-weight:700;color:var(--ink);}
+  .bw-run i{font-style:normal;font-size:12px;color:var(--muted);}
+  .bw-run-arrow{flex:1;text-align:center;color:var(--muted);font-size:18px;}
+  .bw-run-r{text-align:right;align-items:flex-end;}
+  .bw-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px 18px;margin:0 0 14px;box-shadow:0 1px 2px rgba(20,30,25,.04);}
+  .bw-card .field{margin-bottom:12px;}
+  .bw-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .bw-card-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--ink);}
+  .bw-ico{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--accent-soft);color:var(--accent-dark);flex:none;}
+  .bw-hint{font-size:12px;color:var(--muted);line-height:1.45;margin:-4px 0 12px;}
+  .bv-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);}
+  .bw-footer{position:sticky;bottom:-28px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px -34px -28px;padding:14px 34px calc(14px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--border);box-shadow:0 -10px 24px -14px rgba(20,30,25,.25);}
+  .bw-foot-l,.bw-foot-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .bw-btn{display:inline-flex;align-items:center;gap:7px;}
+  .bw-btn svg{flex:none;}
+  .bw-t-short{display:none;}
+  @media (max-width:760px){ .bw-t-long{display:none;} .bw-t-short{display:inline;} .bw-footer .btn{padding-left:12px;padding-right:12px;} }
+  @media (max-width:760px){ .bw-footer{bottom:calc(-22px - env(safe-area-inset-bottom));margin:6px -22px calc(-22px - env(safe-area-inset-bottom));padding:12px 22px calc(12px + env(safe-area-inset-bottom));} .bw-run{flex-wrap:wrap;} }
   .bv-wrap{position:relative;}
-  .bv-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
-  .bv-head label{margin:0;}
-  .bv-list{display:flex;flex-direction:column;gap:8px;}
-  .bv-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.35fr) minmax(0,.65fr) 74px auto;gap:8px;align-items:end;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .bv-add{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;border:1px solid transparent;background:var(--accent-soft);color:var(--accent-dark);font:700 13px inherit;font-family:inherit;cursor:pointer;transition:background .15s,transform .15s,box-shadow .15s;}
+  .bv-add:hover{background:var(--accent-dark);color:#fff;box-shadow:0 6px 14px rgba(var(--accent-rgb),.28);}
+  .bv-add:active{transform:scale(.97);}
+  .bv-add-row{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:10px;padding:11px 14px;border-radius:12px;border:1.5px dashed #C9D6CD;background:transparent;color:var(--accent-dark);font:700 13px inherit;font-family:inherit;cursor:pointer;transition:background .15s,border-color .15s;}
+  .bv-add-row:hover{background:var(--accent-soft);border-color:var(--accent-dark);}
+  .bv-list{display:flex;flex-direction:column;gap:10px;}
+  .bv-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 10px 12px 12px;background:#FBFCFB;border:1px solid var(--border);border-radius:14px;transition:border-color .15s,box-shadow .15s;}
+  .bv-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.12);background:#fff;}
+  .bv-n{display:grid;place-items:center;width:26px;height:26px;margin-top:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:12px;font-weight:800;}
+  .bv-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.4fr) minmax(0,.7fr) 88px;gap:10px;min-width:0;}
   .bv-cell{min-width:0;}
-  .bv-cell label{display:block;font-size:10.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
-  .bv-cell input,.bv-cell select{width:100%;min-width:0;height:36px;box-sizing:border-box;}
-  .bv-btns{display:flex;align-items:flex-end;gap:2px;}
+  .bv-cell label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .bv-cell input,.bv-cell select{width:100%;min-width:0;height:38px;box-sizing:border-box;}
+  .bv-btns{display:flex;align-items:flex-start;gap:2px;margin-top:19px;}
+  .bv-x{display:grid;place-items:center;width:32px;height:38px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:9px;}
+  .bv-x:hover{background:#FCEEEB;color:#C15B4E;}
   .bv-st:hover{background:var(--accent-soft);color:var(--accent-dark);}
+  .bv-totals{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;margin-top:12px;padding:10px 14px;border-radius:12px;background:var(--accent-soft);}
+  .bv-tot-l{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);}
+  .bv-tot{display:inline-flex;align-items:baseline;gap:7px;}
+  .bv-tot b{font-size:15px;font-weight:800;color:var(--ink);}
+  .bv-tot i{font-style:normal;font-size:12px;color:var(--muted);}
+  .bv-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:22px 16px;border:1.5px dashed #C9D6CD;border-radius:14px;background:#FBFCFB;}
+  .bv-empty-t{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;}
   .vs-preview{display:flex;justify-content:center;padding:16px;background:var(--bg);border-radius:12px;margin:6px 0 10px;}
   .vs-preview-card{zoom:2.4;box-shadow:0 1px 6px rgba(20,25,20,.25);background:#fff;}
-  .bv-x{width:30px;height:34px;border:none;background:none;color:var(--muted);font-size:14px;cursor:pointer;border-radius:8px;}
-  .bv-x:hover{background:#FCEEEB;color:#C15B4E;}
-  @media (max-width:640px){
-    .bv-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
-    .bv-row .bv-p,.bv-row .bv-f{grid-column:1 / -1;}
-    .bv-row .bv-btns{grid-column:2;justify-self:end;}
+  @media (max-width:760px){
+    .bv-row{grid-template-columns:24px minmax(0,1fr) auto;gap:8px;padding:10px 8px 10px 10px;}
+    .bv-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+    .bv-grid .bv-p,.bv-grid .bv-f{grid-column:1 / -1;}
+    .bv-n{margin-top:20px;}
   }
-  .bv-dropdown{z-index:3000;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 26px rgba(20,25,20,.18);max-height:240px;overflow-y:auto;}
-  .bv-opt{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:13px;cursor:pointer;}
-  .bv-opt:hover{background:var(--bg);}
+  .bv-dropdown{z-index:3000;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(20,25,20,.22);max-height:300px;overflow-y:auto;padding:4px;}
+  .bv-grp{padding:8px 10px 4px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+  .bv-opt{display:flex;align-items:center;gap:8px;padding:9px 10px;font-size:13px;cursor:pointer;border-radius:8px;}
+  .bv-opt:hover,.bv-opt.on{background:var(--accent-soft);}
   .bv-opt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bv-opt mark{background:none;color:var(--accent-dark);font-weight:800;}
   .bv-opt i{font-style:normal;font-size:11px;color:var(--muted);}
+  .bv-opt.bv-new{color:var(--accent-dark);font-weight:700;border-top:1px solid var(--border);border-radius:0 0 8px 8px;margin-top:4px;}
   .bv-tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);}
   .bv-none{padding:10px 12px;font-size:12px;color:var(--muted);}
   .bst-color{width:26px;height:26px;padding:0;border:1px solid var(--border);border-radius:50%;background:none;cursor:pointer;flex:none;}
@@ -9029,35 +9070,67 @@ function syncBlendVarDraftFromDOM(){
     if(u!==null) r.unit = u;
   });
 }
-function blendVariationRowHtml(r, ro, saved){
+const BV_ICON_PLUS = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+const BV_ICON_TAG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.2"/></svg>';
+function blendVariationRowHtml(r, ro, saved, i){
   const dis = ro ? 'disabled' : '';
   return `
   <div class="bv-row" id="bv-row-${r.id}" data-frag-id="${escAttr(r.fragranceId||'')}">
-    <div class="bv-cell bv-p"><label>Product</label><input id="bv-prod-${r.id}" class="bv-in" data-bv-pick="prod" value="${escAttr(r.product)}" placeholder="e.g. Aloevera" autocomplete="off" ${dis}></div>
-    <div class="bv-cell bv-f"><label>Fragrance</label><input id="bv-frag-${r.id}" class="bv-in" data-bv-pick="frag" value="${escAttr(r.fragrance)}" placeholder="Type to search the Item List" autocomplete="off" ${dis}></div>
-    <div class="bv-cell bv-q"><label>Quantity</label><input id="bv-qty-${r.id}" class="bv-in" value="${escAttr(r.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" ${dis}></div>
-    <div class="bv-cell bv-u"><label>Unit</label><select id="bv-unit-${r.id}" class="bv-in" ${dis}><option value="">—</option>${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+    <span class="bv-n" aria-hidden="true">${(i||0)+1}</span>
+    <div class="bv-grid">
+      <div class="bv-cell bv-p"><label for="bv-prod-${r.id}">Product</label><input id="bv-prod-${r.id}" class="bv-in" data-bv-pick="prod" value="${escAttr(r.product)}" placeholder="e.g. Aloevera" autocomplete="off" ${dis}></div>
+      <div class="bv-cell bv-f"><label for="bv-frag-${r.id}">Fragrance</label><input id="bv-frag-${r.id}" class="bv-in" data-bv-pick="frag" value="${escAttr(r.fragrance)}" placeholder="Type to search the Item List" autocomplete="off" ${dis}></div>
+      <div class="bv-cell bv-q"><label for="bv-qty-${r.id}">Quantity</label><input id="bv-qty-${r.id}" class="bv-in" value="${escAttr(r.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" ${dis}></div>
+      <div class="bv-cell bv-u"><label for="bv-unit-${r.id}">Unit</label><select id="bv-unit-${r.id}" class="bv-in" ${dis}><option value="">—</option>${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+    </div>
     <span class="bv-btns">
-      ${(saved && canPrintBlendSticker()) ? `<button type="button" class="bv-x bv-st" data-sticker-var="${r.id}" title="Print the vessel sticker for this variation" aria-label="Print the vessel sticker for this variation">🏷</button>` : ''}
-      ${ro ? '' : `<button type="button" class="bv-x" data-bv-del="${r.id}" title="Remove this variation" aria-label="Remove this variation">✕</button>`}
+      ${(saved && canPrintBlendSticker()) ? `<button type="button" class="bv-x bv-st" data-sticker-var="${r.id}" title="Print the vessel sticker for this variation" aria-label="Print the vessel sticker for this variation">${BV_ICON_TAG}</button>` : ''}
+      ${ro ? '' : `<button type="button" class="bv-x bv-del" data-bv-del="${r.id}" title="Remove this variation" aria-label="Remove this variation">${TRASH_ICON_SVG}</button>`}
     </span>
   </div>`;
 }
+// "Total  120 kg · 40 × 5L cans = 200 L": the quantities of the rows added up per unit (a can unit also shows its litres).
+function blendVarTotalsHtml(rows){
+  const sums = new Map();
+  (rows||[]).forEach(r=>{ const n = parseFloat(String(r.qty||'').replace(',', '.')); if(!isFinite(n) || n<=0) return; const u = blendNormUnit(r.unit) || ''; sums.set(u, (sums.get(u)||0) + n); });
+  if(!sums.size) return '';
+  return [...sums.entries()].map(([u,n])=>{ const per = BLEND_UNIT_LITRES[u]; return per ? `<span class="bv-tot"><b>${esc(fmtQty(n*per))} L</b><i>${esc(fmtQty(n))} × ${esc(u)}</i></span>` : `<span class="bv-tot"><b>${esc(fmtQty(n))}${u?' '+esc(u):''}</b></span>`; }).join('');
+}
+function renderBlendVarTotals(){
+  const el = document.getElementById('bv-totals'); if(!el) return;
+  syncBlendVarDraftFromDOM();
+  const html = blendVarTotalsHtml(state._blendVarDraft && state._blendVarDraft.rows);
+  el.innerHTML = html ? `<span class="bv-tot-l">Total</span>${html}` : '';
+  el.style.display = html ? '' : 'none';
+}
 function blendVariationsSectionHtml(d, ro, savedBatch){
+  const rowsHtml = d.rows.map((r,i)=>blendVariationRowHtml(r, ro, !!(savedBatch && blendVariationRows(savedBatch).some(x=>x.id===r.id)), i)).join('');
+  const totals = blendVarTotalsHtml(d.rows);
   return `
-  <div class="field bv-wrap">
-    <div class="bv-head"><label>Variations</label>${ro ? '' : `<button type="button" class="btn btn-sm" id="btn-bv-add">+ Add variation</button>`}</div>
-    <div class="hint" style="margin-bottom:8px;">One row per variation: the product, its fragrance (type a name such as <i>aloevera</i> and pick the item from the Item List) and the quantity.</div>
-    <div class="bv-list">${d.rows.length ? d.rows.map(r=>blendVariationRowHtml(r, ro, !!(savedBatch && blendVariationRows(savedBatch).some(x=>x.id===r.id)))).join('') : `<div class="hint">No variations.</div>`}</div>
+  <section class="bv-wrap bw-card">
+    <div class="bw-card-head">
+      <div class="bw-card-title"><span class="bw-ico">${BW_ICONS.layers}</span>Variations${d.rows.length ? `<span class="bv-count">${d.rows.length}</span>` : ''}</div>
+      ${ro || !d.rows.length ? '' : `<button type="button" class="bv-add" id="btn-bv-add">${BV_ICON_PLUS}<span>Add variation</span></button>`}
+    </div>
+    <div class="bw-hint">One row per variation: the product, its fragrance and the quantity. Click the Product or Fragrance box to see suggestions.</div>
+    ${d.rows.length
+      ? `<div class="bv-list">${rowsHtml}</div>
+         <div class="bv-totals" id="bv-totals" ${totals?'':'style="display:none;"'}>${totals ? `<span class="bv-tot-l">Total</span>${totals}` : ''}</div>
+         ${ro ? '' : `<button type="button" class="bv-add-row" id="btn-bv-add2">${BV_ICON_PLUS}<span>Add another variation</span></button>`}`
+      : `<div class="bv-empty">
+           <div class="bv-empty-t">No variations yet</div>
+           <div class="bw-hint" style="margin:0 0 10px;">Split this batch into products with their own fragrance and quantity.</div>
+           ${ro ? '' : `<button type="button" class="bv-add" id="btn-bv-add">${BV_ICON_PLUS}<span>Add the first variation</span></button>`}
+         </div>`}
     <div id="bv-dropdown" class="bv-dropdown" style="display:none;"></div>
-  </div>`;
+  </section>`;
 }
 function addBlendVariationRow(){
   syncBlendVarDraftFromDOM();
   const d = state._blendVarDraft; if(!d) return;
   const r = blendNewVariation(); d.rows.push(r);
   render();
-  const el = document.getElementById('bv-prod-'+r.id); if(el) el.focus();
+  const el = document.getElementById('bv-prod-'+r.id); if(el){ el.focus(); try{ el.scrollIntoView({block:'nearest'}); }catch(e){} }
 }
 function removeBlendVariationRow(rowId){
   syncBlendVarDraftFromDOM();
@@ -9065,7 +9138,27 @@ function removeBlendVariationRow(rowId){
   d.rows = d.rows.filter(r=>r.id!==rowId);
   render();
 }
-// The suggestion list under a Product / Fragrance box. Picking an item fills the FRAGRANCE of that row (and remembers which Item List entry it was).
+// Suggestions for the PRODUCT box (owner, 2026-11-22: "when product type dont appear suggestions"): it used to search only the Item List, so a product name such as "aloevera" showed nothing at all.
+// Now: products used in earlier variations (most used first), the product names the system already knows (Costing products, Batch sheets, other batches), and the matching Item List names (which fill the FRAGRANCE, as before).
+function blendBaseProductName(name){ return stripTags(String(name||'')).replace(/\s*[—–-]\s*version\s*\d+.*$/i, '').trim(); }
+function blendProductSuggestions(typed){
+  const sq = x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const q = sq(typed);
+  const used = new Map();
+  (state.blendBatches||[]).forEach(bt=>blendVariationRows(bt).forEach(r=>{ const n = String(r.product||'').trim(); if(!n) return; const k = n.toLowerCase(); used.set(k, {name:n, n:(used.get(k)?used.get(k).n:0)+1}); }));
+  const usedList = [...used.values()].sort((a,b)=>b.n-a.n || a.name.localeCompare(b.name)).map(x=>x.name);
+  const known = [];
+  const addKnown = n=>{ n = blendBaseProductName(n); if(n && !known.some(k=>k.toLowerCase()===n.toLowerCase())) known.push(n); };
+  (state.costingProducts||[]).forEach(pr=>addKnown(pr && pr.name));
+  (state.recipes||[]).forEach(rc=>addKnown(rc && rc.name));
+  (state.blendBatches||[]).forEach(bt=>addKnown(bt && bt.product));
+  const match = list=>list.filter(n=>!q || sq(n).includes(q));
+  const usedM = match(usedList).slice(0,5);
+  const usedSet = new Set(usedM.map(n=>n.toLowerCase()));
+  return { used: usedM, known: match(known).filter(n=>!usedSet.has(n.toLowerCase())).slice(0,5), frag: q ? blendFragranceMatches(typed).slice(0,6) : [] };
+}
+// The suggestion list under a Product / Fragrance box. Picking a PRODUCT fills the Product box; picking an Item List entry fills the FRAGRANCE of that row (and remembers which Item List entry it was).
+// Arrow keys move through the list, Enter picks, Esc closes.
 function attachBlendVariationHandlers(){
   document.querySelectorAll('body > .bv-dropdown').forEach(x=>x.remove());   // the list from the previous redraw
   const wrap = document.querySelector('.bv-wrap'); if(!wrap) return;
@@ -9074,23 +9167,54 @@ function attachBlendVariationHandlers(){
   document.body.appendChild(dd);   // a window with backdrop-filter is the containing block of fixed children, which would misplace the list: it lives on <body>
   let activeRow = null;
   const hide = ()=>{ dd.style.display='none'; dd.innerHTML=''; activeRow = null; };
+  const hl = (name, typed)=>{ const i = typed ? name.toLowerCase().indexOf(typed.toLowerCase()) : -1; return i<0 ? esc(name) : esc(name.slice(0,i))+'<mark>'+esc(name.slice(i,i+typed.length))+'</mark>'+esc(name.slice(i+typed.length)); };
+  const optProd = (n, typed)=>`<div class="bv-opt" data-kind="prod" data-name="${escAttr(n)}"><span>${hl(n, typed)}</span></div>`;
+  const optFrag = (it, typed)=>`<div class="bv-opt" data-kind="frag" data-id="${escAttr(it.id||'')}" data-name="${escAttr(it.name)}"><span>${hl(it.name, typed)}</span>${blendIsFragranceItem(it)?'<b class="bv-tag">Fragrance</b>':''}${it.category?`<i>${esc(it.category)}</i>`:''}</div>`;
+  const grp = (title, body)=>body ? `<div class="bv-grp">${esc(title)}</div>${body}` : '';
+  const place = (input)=>{
+    const r = input.getBoundingClientRect();
+    dd.style.position = 'fixed'; dd.style.left = Math.max(8, Math.min(r.left, innerWidth - 340)) + 'px'; dd.style.width = Math.max(r.width, 320)+'px';
+    dd.style.display = 'block';
+    const h = dd.offsetHeight;
+    dd.style.top = ((r.bottom + 4 + h > innerHeight - 8 && r.top - 4 - h > 8) ? (r.top - 4 - h) : (r.bottom + 4)) + 'px';
+  };
   const show = (input)=>{
     const row = input.closest('.bv-row'); if(!row) return hide();
     const isFrag = input.dataset.bvPick==='frag';
     const typed = input.value.trim();
-    if(!typed) return hide();
-    const matches = blendFragranceMatches(typed);
-    if(!matches.length){
-      if(!isFrag) return hide();
-      activeRow = null;
-      dd.innerHTML = `<div class="bv-none">No item called “${esc(typed)}” in the Item List. Keep typing, or leave the name as it is.</div>`;
+    let html = '';
+    activeRow = row;
+    if(isFrag){
+      if(!typed){ activeRow = null; return hide(); }
+      const m = blendFragranceMatches(typed);
+      html = m.length ? grp('Item List', m.map(it=>optFrag(it, typed)).join('')) : `<div class="bv-none">No item called “${esc(typed)}” in the Item List. Keep typing, or leave the name as it is.</div>`;
     } else {
-      activeRow = row;
-      dd.innerHTML = matches.map(it=>`<div class="bv-opt" data-id="${escAttr(it.id||'')}" data-name="${escAttr(it.name)}"><span>${esc(it.name)}</span>${blendIsFragranceItem(it)?'<b class="bv-tag">Fragrance</b>':''}${it.category?`<i>${esc(it.category)}</i>`:''}</div>`).join('');
+      const g = blendProductSuggestions(typed);
+      html = grp('Used before', g.used.map(n=>optProd(n, typed)).join(''))
+           + grp('Products', g.known.map(n=>optProd(n, typed)).join(''))
+           + grp('Item List · fills Fragrance', g.frag.map(it=>optFrag(it, typed)).join(''));
+      if(typed && !g.used.some(n=>n.toLowerCase()===typed.toLowerCase())) html += `<div class="bv-opt bv-new" data-kind="new" data-name="${escAttr(typed)}"><span>Use “${esc(typed)}” as a new product</span></div>`;
+      if(!html){ activeRow = null; return hide(); }
     }
-    const r = input.getBoundingClientRect();
-    dd.style.position = 'fixed'; dd.style.left = r.left+'px'; dd.style.top = (r.bottom+4)+'px'; dd.style.width = Math.max(r.width, 320)+'px';
-    dd.style.display = 'block';
+    dd.innerHTML = html;
+    place(input);
+  };
+  const move = (delta)=>{
+    const opts = [...dd.querySelectorAll('.bv-opt')]; if(!opts.length) return;
+    let i = opts.findIndex(o=>o.classList.contains('on'));
+    opts.forEach(o=>o.classList.remove('on'));
+    i = i<0 ? (delta>0 ? 0 : opts.length-1) : (i + delta + opts.length) % opts.length;
+    opts[i].classList.add('on'); opts[i].scrollIntoView({block:'nearest'});
+  };
+  const choose = (opt)=>{
+    if(!opt || !activeRow) return;
+    const rid = activeRow.id.replace('bv-row-','');
+    const kind = opt.dataset.kind;
+    const prod = document.getElementById('bv-prod-'+rid), frag = document.getElementById('bv-frag-'+rid), qty = document.getElementById('bv-qty-'+rid);
+    if(kind==='prod' || kind==='new'){ if(prod) prod.value = opt.dataset.name; hide(); if(frag) frag.focus(); return; }
+    if(frag){ frag.value = opt.dataset.name; activeRow.dataset.fragId = opt.dataset.id || ''; }
+    hide();
+    if(qty) qty.focus();
   };
   wrap.querySelectorAll('.bv-in[data-bv-pick]').forEach(input=>{
     input.addEventListener('input', ()=>{
@@ -9098,20 +9222,20 @@ function attachBlendVariationHandlers(){
       show(input);
     });
     input.addEventListener('focus', ()=>show(input));
+    input.addEventListener('keydown', e=>{
+      const open = dd.style.display==='block';
+      if(e.key==='ArrowDown' || e.key==='ArrowUp'){ if(!open) show(input); move(e.key==='ArrowDown' ? 1 : -1); e.preventDefault(); }
+      else if(e.key==='Enter' && open){ const on = dd.querySelector('.bv-opt.on'); if(on){ e.preventDefault(); choose(on); } else hide(); }
+      else if(e.key==='Escape' && open){ e.preventDefault(); e.stopPropagation(); hide(); }
+    });
     // Hide shortly after leaving a box, unless focus went to another suggestion box (its own focus handler shows its list).
     input.addEventListener('blur', ()=>setTimeout(()=>{ const a = document.activeElement; if(!(a && a.dataset && a.dataset.bvPick)) hide(); }, 160));
   });
-  dd.addEventListener('mousedown', e=>{
-    const opt = e.target.closest('.bv-opt'); if(!opt || !activeRow) return;
-    e.preventDefault();
-    const rid = activeRow.id.replace('bv-row-','');
-    const frag = document.getElementById('bv-frag-'+rid);
-    if(frag){ frag.value = opt.dataset.name; activeRow.dataset.fragId = opt.dataset.id || ''; }
-    hide();
-    const qty = document.getElementById('bv-qty-'+rid); if(qty) qty.focus();
-  });
+  wrap.querySelectorAll('.bv-q input, .bv-u select').forEach(el=>{ el.addEventListener('input', renderBlendVarTotals); el.addEventListener('change', renderBlendVarTotals); });
+  dd.addEventListener('mousedown', e=>{ const opt = e.target.closest('.bv-opt'); if(!opt || !activeRow) return; e.preventDefault(); choose(opt); });
+  dd.addEventListener('mousemove', e=>{ const opt = e.target.closest('.bv-opt'); if(!opt) return; dd.querySelectorAll('.bv-opt.on').forEach(o=>o.classList.remove('on')); opt.classList.add('on'); });
   const drawer = wrap.closest('.drawer, .modal'); if(drawer) drawer.addEventListener('scroll', hide, {passive:true});
-  const add = document.getElementById('btn-bv-add'); if(add) add.onclick = addBlendVariationRow;
+  ['btn-bv-add','btn-bv-add2'].forEach(id=>{ const add = document.getElementById(id); if(add) add.onclick = addBlendVariationRow; });
   wrap.querySelectorAll('[data-bv-del]').forEach(b=>b.addEventListener('click', ()=>removeBlendVariationRow(b.dataset.bvDel)));
 }
 async function createBlendBatch(e){
@@ -25421,6 +25545,18 @@ function newBlendBatchModal(){
   </div>`;
 }
 
+// Small line icons for the section titles of the batch window.
+const BW_ICONS = {
+  details: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l1 2h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3z"/><path d="M9 12h6M9 16h4"/></svg>',
+  layers:  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg>',
+  qc:      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 15h9"/></svg>',
+  history: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  print:   '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7" rx="1"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg>',
+};
+// The batch window on Mixing and Filling (owner, 2026-11-22: "improve and organize this panel better, print buttons should go under near delete buttons"):
+// the hero, a chip row and a Started -> Completed strip on top; then one card per topic (Batch details, Variations, 1st QC, History); and a bottom bar that stays in view
+// while the window scrolls: Print batch sheet, Print Vessel Sticker and Delete on the left, Next stage and Save on the right. Every id / name the handlers use is unchanged.
+// It closes on a click outside it (the Panel closing Rule is NOT applied here, owner's decision).
 function renderBlendDrawer(id){
   const b = byId(state.blendBatches,id); if(!b) return '';
   const stages = blendStageList(), idx = blendStageIdx(b, stages);
@@ -25433,9 +25569,11 @@ function renderBlendDrawer(id){
   const d = blendVarDraft(id, b);
   const nextLabel = blendNextActionLabel(b);
   const code = batchFormulationCode(b);
+  const hist = (Array.isArray(b.history)?b.history:[]).filter(Boolean);
+  const printSheet = canPrintBlendSheet(), printSticker = canPrintBlendSticker();
   return `
   <div class="drawer-overlay" id="overlay"></div>
-  <div class="drawer">
+  <div class="drawer bw-drawer">
     <button class="drawer-close" id="btn-cancel-modal" aria-label="Close" style="color:#fff;">✕</button>
     <div class="drawer-hero">
       <div>
@@ -25445,59 +25583,63 @@ function renderBlendDrawer(id){
       </div>
       <div class="stat-chip"><div class="k">Days in pipeline</div><div class="v">${daysAgo(b.createdAt)}</div></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+    <div class="bw-chips">
       <span class="stage-badge" style="background:${style.bg};color:${style.c};">${esc(stages[idx].label)}</span>
       <span class="pill pill-${priority.toLowerCase()}">${priority} priority</span>
       ${b.machine ? machineChipHtml(b.machine) : ''}
       ${code ? `<span class="bcard-code" title="Formulation code">${esc(code)}</span>` : ''}
     </div>
-
-    <div class="field" style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;">
-      ${b.startedAt ? `
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div><div class="hint">Started</div><div style="font-weight:600;">${fmtDateTime(b.startedAt)}</div>${b.startedBy?`<div class="hint">by ${esc(b.startedBy)}</div>`:''}</div>
-        <div style="text-align:right;"><div class="hint">Completed</div><div style="font-weight:600;">${fmtDateTime(b.completedAt)}</div>${b.completedBy?`<div class="hint">by ${esc(b.completedBy)}</div>`:''}</div>
-      </div>` : `<div class="hint">Printed sheet: batch, formulation code, variations and a sign-off line for every stage.</div>`}
-      ${(canPrintBlendSheet() || canPrintBlendSticker()) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        ${canPrintBlendSheet() ? `<button type="button" class="btn btn-sm" id="btn-print-blend-sheet">🖨 Print batch sheet</button>` : ''}
-        ${canPrintBlendSticker() ? `<button type="button" class="btn btn-sm" id="btn-print-vessel-sticker" data-sticker-var="">🏷 Print Vessel Sticker</button>` : ''}
-      </div>` : ''}
-    </div>
-
-    ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
+    ${b.startedAt ? `
+    <div class="bw-run">
+      <div><span>Started</span><b>${fmtDateTime(b.startedAt)}</b>${b.startedBy?`<i>by ${esc(b.startedBy)}</i>`:''}</div>
+      <div class="bw-run-arrow" aria-hidden="true">→</div>
+      <div class="bw-run-r"><span>Completed</span><b>${fmtDateTime(b.completedAt)}</b>${b.completedBy?`<i>by ${esc(b.completedBy)}</i>`:''}</div>
+    </div>` : ''}
+    ${ro ? `<div class="bw-hint" style="margin:0 0 12px;">View only.</div>` : ''}
     <form id="form-blend-edit" data-batch-id="${b.id}">
-      <div class="field-row">
-        <div class="field"><label>Batch Number</label><input name="batchNo" value="${escAttr(b.batchNo)}" ${roAttr}></div>
-        <div class="field"><label>Quantity</label><input name="qty" value="${escAttr(b.qty)}" ${roAttr}></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Priority</label>
-          <select name="priority" ${ro?'disabled':''}>${PRIORITIES.map(p=>`<option ${priority===p?'selected':''}>${p}</option>`).join('')}</select>
+      <section class="bw-card">
+        <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.details}</span>Batch details</div></div>
+        <div class="field-row">
+          <div class="field"><label>Batch Number</label><input name="batchNo" value="${escAttr(b.batchNo)}" ${roAttr}></div>
+          <div class="field"><label>Quantity</label><input name="qty" value="${escAttr(b.qty)}" ${roAttr}></div>
         </div>
-        <div class="field"><label>Machine</label>
-          <select name="machine" ${ro?'disabled':''}>${blendMachineOptions(b.machine||'')}</select>
-          ${b.machine && b.recipeId ? `<div class="hint">Set from the batch sheet.</div>` : ''}
+        <div class="field-row">
+          <div class="field"><label>Priority</label>
+            <select name="priority" ${ro?'disabled':''}>${PRIORITIES.map(p=>`<option ${priority===p?'selected':''}>${p}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Machine</label>
+            <select name="machine" ${ro?'disabled':''}>${blendMachineOptions(b.machine||'')}</select>
+            ${b.machine && b.recipeId ? `<div class="hint">Set from the batch sheet.</div>` : ''}
+          </div>
         </div>
-      </div>
-      <div class="field"><label>Formulation code</label><input name="formulationCode" value="${escAttr(b.formulationCode||'')}" placeholder="${escAttr(code||'e.g. SG-V1')}" ${roAttr}>
-        ${!b.formulationCode && code ? `<div class="hint">Shown as <b>${esc(code)}</b> (made from the batch sheet's name). Type your own to replace it.</div>` : ''}
-      </div>
+        <div class="field" style="margin-bottom:0;"><label>Formulation code</label><input name="formulationCode" value="${escAttr(b.formulationCode||'')}" placeholder="${escAttr(code||'e.g. SG-V1')}" ${roAttr}>
+          ${!b.formulationCode && code ? `<div class="hint">Shown as <b>${esc(code)}</b> (made from the batch sheet's name). Type your own to replace it.</div>` : ''}
+        </div>
+      </section>
 
       ${blendVariationsSectionHtml(d, ro, b)}
 
-      <div class="field-row">
-        <div class="field"><label>1st QC · pH</label><input name="qcPH" value="${escAttr(b.qcPH||'')}" placeholder="e.g. 5.8" autocomplete="off" ${qcAttr}></div>
-        <div class="field"><label>1st QC · Viscosity</label><input name="qcViscosity" value="${escAttr(b.qcViscosity||'')}" placeholder="e.g. 4500 cP" autocomplete="off" ${qcAttr}></div>
-      </div>
-      <div class="field"><label>QC / blending notes</label><textarea name="qcNotes" ${qcAttr} placeholder="Shown on the page the sticker's QR code opens">${escBody(b.qcNotes||'')}</textarea></div>
+      <section class="bw-card">
+        <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.qc}</span>1st QC</div></div>
+        <div class="field-row">
+          <div class="field"><label>pH</label><input name="qcPH" value="${escAttr(b.qcPH||'')}" placeholder="e.g. 5.8" autocomplete="off" ${qcAttr}></div>
+          <div class="field"><label>Viscosity</label><input name="qcViscosity" value="${escAttr(b.qcViscosity||'')}" placeholder="e.g. 4500 cP" autocomplete="off" ${qcAttr}></div>
+        </div>
+        <div class="field" style="margin-bottom:0;"><label>QC / blending notes</label><textarea name="qcNotes" ${qcAttr} placeholder="Shown on the page the sticker's QR code opens">${escBody(b.qcNotes||'')}</textarea></div>
+      </section>
 
-      <div class="field"><label>History</label>
-        <div class="timeline">${(Array.isArray(b.history)?b.history:[]).filter(Boolean).map(h=>`<div class="item">${esc(blendHistoryLabel(h))} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
-      </div>
+      <section class="bw-card">
+        <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.history}</span>History${hist.length ? `<span class="bv-count">${hist.length}</span>` : ''}</div></div>
+        <div class="timeline">${hist.map(h=>`<div class="item">${esc(blendHistoryLabel(h))} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('') || '<div class="bw-hint" style="margin:0;">No history yet.</div>'}</div>
+      </section>
 
-      <div class="modal-actions" style="justify-content:space-between;">
-        <div>${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-blend" title="Admin only — asks for your password">Delete</button>` : ''}</div>
-        <div style="display:flex;gap:8px;">
+      <div class="bw-footer">
+        <div class="bw-foot-l">
+          ${printSheet ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-blend-sheet" title="Prints the batch, formulation code, variations and a sign-off line for every stage">${BW_ICONS.print}<span class="bw-t-long">Print batch sheet</span><span class="bw-t-short">Sheet</span></button>` : ''}
+          ${printSticker ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-vessel-sticker" data-sticker-var="">${BV_ICON_TAG}<span class="bw-t-long">Print Vessel Sticker</span><span class="bw-t-short">Sticker</span></button>` : ''}
+          ${isAdmin() ? `<button type="button" class="btn btn-sm btn-danger bw-btn" id="btn-delete-blend" title="Admin only — asks for your password">${TRASH_ICON_SVG}<span>Delete</span></button>` : ''}
+        </div>
+        <div class="bw-foot-r">
           ${!ro && canAdv && nextLabel ? `<button type="button" class="btn" id="btn-advance-blend">${esc(nextLabel)}</button>` : ''}
           ${(!ro || qcCan) ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>
@@ -28344,7 +28486,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('blend:'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('blend:new'))) return;   // 'blend:new' = the New batch form only: the batch window ('blend:<id>') closes on an outside click (owner, 2026-11-22: "dont apply panel closing rule here")
     if(state.modal==='confirmaction' && state._confirmAction && state._confirmAction.sticky) return;   // a Yes / No question that needs an answer: only its own two buttons close it
     closeModal();
   });

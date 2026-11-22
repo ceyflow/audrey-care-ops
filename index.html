@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122010705">
+<meta name="app-build" content="20261122023000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1553,6 +1553,52 @@ html{ visibility:hidden; }
   .card .unassigned{color:var(--clay);}
   .card .days{font-size:11px;color:var(--muted);}
   .card .pill{font-size:10px;padding:2px 8px;}
+
+  /* ---------------- Mixing and Filling: batch cards, variation rows, stage colour picker (owner, 2026-11-22) ---------------- */
+  .card.bcard{border-left:4px solid var(--pri,#E0A82E);border-radius:10px;padding:10px 12px 9px;display:flex;flex-direction:column;gap:6px;}
+  .bcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .bcard-title{font-weight:700;font-size:13.5px;line-height:1.28;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;}
+  .bcard-ids{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted);}
+  .bcard-no{font-variant-numeric:tabular-nums;font-weight:600;}
+  .bcard-code{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--ink);line-height:17px;}
+  .bcard-chips{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;}
+  .bcard-chips:empty{display:none;}
+  .bcard-qty{font-weight:700;}
+  .bcard-chips .rc-machine{font-size:11.5px;}
+  .bcard-vars{border-top:1px dashed var(--border);padding-top:6px;display:flex;flex-direction:column;gap:3px;}
+  .bcard-var{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;}
+  .bcard-var-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bcard-var-n b{font-weight:600;}
+  .bcard-var-n i{font-style:normal;color:var(--muted);margin-left:6px;}
+  .bcard-var-q{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .bcard-more{font-size:11px;color:var(--muted);}
+  .bcard-foot{font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  @media (min-width:1151px){.blend-board{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));}}
+  .bv-wrap{position:relative;}
+  .bv-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+  .bv-head label{margin:0;}
+  .bv-list{display:flex;flex-direction:column;gap:8px;}
+  .bv-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.35fr) minmax(0,.65fr) 74px 30px;gap:8px;align-items:end;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .bv-cell{min-width:0;}
+  .bv-cell label{display:block;font-size:10.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+  .bv-cell input,.bv-cell select{width:100%;min-width:0;height:36px;box-sizing:border-box;}
+  .bv-x{width:30px;height:34px;border:none;background:none;color:var(--muted);font-size:14px;cursor:pointer;border-radius:8px;}
+  .bv-x:hover{background:#FCEEEB;color:#C15B4E;}
+  @media (max-width:640px){
+    .bv-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+    .bv-row .bv-p,.bv-row .bv-f{grid-column:1 / -1;}
+    .bv-row .bv-x{grid-column:2;justify-self:end;}
+  }
+  .bv-dropdown{z-index:3000;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 26px rgba(20,25,20,.18);max-height:240px;overflow-y:auto;}
+  .bv-opt{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:13px;cursor:pointer;}
+  .bv-opt:hover{background:var(--bg);}
+  .bv-opt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bv-opt i{font-style:normal;font-size:11px;color:var(--muted);}
+  .bv-tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);}
+  .bv-none{padding:10px 12px;font-size:12px;color:var(--muted);}
+  .bst-color{width:26px;height:26px;padding:0;border:1px solid var(--border);border-radius:50%;background:none;cursor:pointer;flex:none;}
+  .bst-color::-webkit-color-swatch-wrapper{padding:0;} .bst-color::-webkit-color-swatch{border:none;border-radius:50%;}
+  .bst-color::-moz-color-swatch{border:none;border-radius:50%;}
 
   /* ---------------- Overlay / Modal ---------------- */
   @keyframes overlay-fade{from{opacity:0;}to{opacity:1;}}
@@ -3659,7 +3705,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // Separate keys instead of one array: every slot keeps the single-object save / verify code that was already hardened, and two tablets working on different
 // machines can never overwrite each other. A fourth machine needs its own key here (and in BATCH_MACHINES, PAGE_DATA_KEYS.recipes, role_data_access).
 const BATCH_SLOT_KEYS = ['activeBatchM1','activeBatchM2','activeBatchM3','activeBatch'];
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','blendStages','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -5091,7 +5137,7 @@ const PERMISSION_REGISTRY = [
   {dept:'orderinquiry', deptLabel:'Order inquiry', id:'orderinquiry_resend_review', label:'Resend a review request after it was already sent'},
   // Blending Department board
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage', label:'Create batches, drag cards, advance stage, use timer controls'},
-  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_delete', label:'Delete a batch'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage_stages', label:'Manage the Mixing and Filling stages (Manage Lists button: add, rename, reorder, delete)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_view', label:'Open and print the Color sheets (Color sheets button on Mixing and Filling)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_edit', label:'Edit, add and delete Color sheets'},
   // Costing & Recipe / Production Guide
@@ -5331,7 +5377,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 23;   // 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
+const PAGE_DATA_KEYS_VERSION = 24;   // 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
 // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
 // (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
@@ -5360,7 +5406,7 @@ const PAGE_DATA_KEYS = {
   deliveryruns: ['orders'],
   driverrun: [],
   blendingdept: [],
-  blending: ['blendBatches','colorSheets'],
+  blending: ['blendBatches','blendStages','colorSheets'],
   recipes: ['recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3'],
   costing: ['costingProducts','suppliers','recipes'],
   customers: ['customers','staff','salesPersonColors'],
@@ -5771,7 +5817,73 @@ const BLEND_STAGE_STYLE = {
 };
 const BLEND_NEXT_ACTION_LABEL = {0:'Send to 1st QC (Base)',1:'Approve — start mixing',2:'Send to 2nd QC',3:'Approve — start filling',4:'Send to 3rd QC',5:'Approve — dispatch to stock'};
 function canManageBlendBoard(){ return !!state.session && roleCan(state.session.role, 'blending_manage'); }
-function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < BLEND_STAGES.length-1; }
+/* ===================== Mixing and Filling: editable stages (owner, 2026-11-22: "add more and edit the existing stages, add manage list like the packing department") =====================
+   The seven stages above are only the STARTING list (and the key every older batch was saved under: a batch saved before this change has just a number, `stage`, which always meant
+   BLEND_STAGE_KEYS[stage]). The live list is app_data key `blendStages` = [{key, label, color?}] (Manage Lists button, permission `blending_manage_stages`); when it is empty or missing the
+   defaults apply, so a role that cannot read it still sees a working board. A batch now points at its stage by KEY (`b.stageKey`, kept next to the old number `b.stage` so an old cached page
+   still draws something), because the position of a stage changes when the list is edited. History entries carry `stageKey` + `stageLabel` the same way. The LAST stage in the list is the
+   finished one (nothing can be advanced past it, Dally does not count it as active). A stage that still holds batches cannot be deleted (Manage Lists lists them). Records here have `key`, not `id`,
+   on purpose: the merging save only diffs arrays whose records have an `id`, and a re-ordered list must be saved exactly as it is. */
+const BLEND_STAGE_PALETTE = ['#2E6FB7','#8A5CC2','#C2792B','#2E8B57','#C0496F','#3B8E9B','#8C7A2E','#5B6770'];
+function blendStageList(){
+  const saved = Array.isArray(state.blendStages) ? state.blendStages.filter(x=>x && x.key && String(x.label||'').trim()) : [];
+  if(saved.length>=2) return saved;
+  return BLEND_STAGES.map((label,i)=>({key:BLEND_STAGE_KEYS[i], label}));
+}
+// The stage colour as #rrggbb for the colour picker (a starting stage's colour comes from the theme palette, so it is read from the page).
+function blendStageHex(st, idx){
+  const c = blendStageStyle(st, idx).c;
+  const m = /^var\((--[a-z0-9-]+)\)$/.exec(c);
+  const v = m ? getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim() : c;
+  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : '#5B6770';
+}
+function blendStageStyle(st, idx){
+  if(st && /^#[0-9a-fA-F]{6}$/.test(st.color||'')) return {c:st.color, bg:st.color+'1f'};
+  if(st && BLEND_STAGE_STYLE[st.key]) return BLEND_STAGE_STYLE[st.key];
+  const col = BLEND_STAGE_PALETTE[(idx||0) % BLEND_STAGE_PALETTE.length];
+  return {c:col, bg:col+'1f'};
+}
+// The stage a batch is in, by key. A batch saved before stages were editable only has the old number (always the default list); a key that no longer exists falls back to the first stage.
+function blendStageKeyOf(b, list){
+  list = list || blendStageList();
+  if(b && b.stageKey && list.some(x=>x.key===b.stageKey)) return b.stageKey;
+  if(b && !b.stageKey){ const k = BLEND_STAGE_KEYS[b.stage]; if(k && list.some(x=>x.key===k)) return k; }
+  return list[0].key;
+}
+function blendStageIdx(b, list){ list = list || blendStageList(); return Math.max(0, list.findIndex(x=>x.key===blendStageKeyOf(b, list))); }
+function blendStageName(b){ const list = blendStageList(); return list[blendStageIdx(b, list)].label; }
+function blendIsFinal(b){ const list = blendStageList(); return blendStageIdx(b, list) >= list.length-1; }
+function blendBatchesInStage(key){ const list = blendStageList(); return (state.blendBatches||[]).filter(b=>blendStageKeyOf(b, list)===key); }
+// A history entry's stage name: the current name of its stage (so a rename shows everywhere), else what it was called when written.
+function blendHistoryLabel(h){
+  const key = h && (h.stageKey || BLEND_STAGE_KEYS[h.stage]);
+  const st = key && blendStageList().find(x=>x.key===key);
+  return (st && st.label) || (h && h.stageLabel) || BLEND_STAGES[h && h.stage] || '\u2014';
+}
+// When the batch entered the stage it is in now (the last history entry for that stage), for "in this stage for ...".
+function blendStageSince(b){
+  const key = blendStageKeyOf(b);
+  const hist = (Array.isArray(b.history) ? b.history : []).filter(Boolean);
+  for(let i=hist.length-1;i>=0;i--){ if((hist[i].stageKey || BLEND_STAGE_KEYS[hist[i].stage])===key && hist[i].at) return hist[i].at; }
+  return b.createdAt;
+}
+function blendHistoryEntry(st, idx){ return {stage:idx, stageKey:st.key, stageLabel:st.label, at:new Date().toISOString(), by:(state.session && state.session.name) || ''}; }
+// Puts a batch into a stage: key + the old number + one history entry (no save, no redraw).
+function blendPlaceInStage(b, st, idx){
+  b.stageKey = st.key; b.stage = idx;
+  if(!Array.isArray(b.history)) b.history = [];
+  b.history.push(blendHistoryEntry(st, idx));
+}
+function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < blendStageList().length-1; }
+function canManageBlendStages(){ return !!state.session && roleCan(state.session.role, 'blending_manage_stages'); }
+// "Approve — start mixing" style wording is kept only while both stages still have their starting names and neighbours; anything edited reads "Move to <stage>".
+function blendNextActionLabel(b){
+  const list = blendStageList(), i = blendStageIdx(b, list);
+  const cur = list[i], next = list[i+1]; if(!next) return '';
+  const di = BLEND_STAGE_KEYS.indexOf(cur.key);
+  if(di>=0 && BLEND_STAGE_KEYS[di+1]===next.key && cur.label===BLEND_STAGES[di] && next.label===BLEND_STAGES[di+1] && BLEND_NEXT_ACTION_LABEL[di]) return BLEND_NEXT_ACTION_LABEL[di];
+  return 'Move to '+next.label;
+}
 
 const RND_STAGES = ['R&D Trial List','On Trial & Formulating','Review','Completed'];
 const RND_STAGE_KEYS = ['idea','formulating','rndreview','delivered'];
@@ -6504,6 +6616,7 @@ let state = {
   attendanceEditRequests: [],
   _attEditAlert: null,
   blendBatches: [],
+  blendStages: [],
   rndProjects: [],
   rndChemists: [],
   rndAttendance: [],
@@ -8341,7 +8454,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; state._blendStagesDraft = null; state._blendStageBlock = null; state._blendVarDraft = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -8610,16 +8723,187 @@ function deleteOrder(id){
 }
 
 /* ===================== Blending board data ===================== */
+/* Variations on a batch (owner, 2026-11-22: "each product have spaces like product, fragrance, quantity"). A batch can be split into variations (e.g. Aloevera 40 kg, Lotus 10 kg):
+   b.variations = [{id, product, fragrance, fragranceId, qty, unit}]. The fragrance is picked from the Item List while typing (see blendFragranceMatches) or typed by hand when nothing matches.
+   b.variation (the old free-text field, one "Name - quantity" per line) is still written from the rows so older code, Dally and older cached pages keep working, and a batch that only has the
+   old text opens as rows (parseLegacyVariationText). b.priority (Low / Medium / High, like the Orders board), b.machine (copied from the batch sheet by finishBatchIntoBlendingBoard, editable) and
+   b.formulationCode (made from the batch sheet's name, e.g. "Shower Gel — Version 1" -> SG-V1, editable) sit next to them. */
+const BLEND_VAR_UNITS = ['kg','g','L','mL','pcs'];
+function blendNormUnit(u){ const k = String(u||'').trim().toLowerCase(); return ({kg:'kg', g:'g', l:'L', ml:'mL', pcs:'pcs'})[k] || ''; }
+function blendNewVariation(){ return {id:uid('VAR'), product:'', fragrance:'', fragranceId:'', qty:'', unit:'kg'}; }
+function parseLegacyVariationText(text){
+  return String(text||'').split(/\n|<br\s*\/?>/i).map(l=>l.trim()).filter(Boolean).map(line=>{
+    const m = line.match(/^(.*?)\s*[-–—:=]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|pcs)?\.?\s*$/i);
+    const r = blendNewVariation(); r.unit = '';
+    if(m){ r.product = m[1].trim(); r.qty = m[2].replace(',', '.'); r.unit = blendNormUnit(m[3]); }
+    else r.product = line;
+    return r;
+  });
+}
+function blendVariationRows(b){
+  if(b && Array.isArray(b.variations) && b.variations.length) return b.variations.filter(Boolean).map(v=>({id:v.id||uid('VAR'), product:v.product||'', fragrance:v.fragrance||'', fragranceId:v.fragranceId||'', qty:v.qty==null?'':String(v.qty), unit:blendNormUnit(v.unit)}));
+  return parseLegacyVariationText(b && b.variation);
+}
+// Rows worth keeping: at least one box filled in. Quantity is kept as typed text but trimmed.
+function blendCleanVariations(rows){
+  return (rows||[]).map(r=>({id:r.id||uid('VAR'), product:String(r.product||'').trim(), fragrance:String(r.fragrance||'').trim(), fragranceId:r.fragranceId||'', qty:String(r.qty==null?'':r.qty).trim(), unit:blendNormUnit(r.unit)}))
+    .filter(r=>r.product || r.fragrance || r.qty);
+}
+// "Aloevera · Aloe Vera Fragrance — 40 kg": the one-line form used by the card, Dally and the old text field.
+function blendVariationLine(r){
+  const qty = r.qty ? r.qty+(r.unit?' '+r.unit:'') : '';
+  return [[r.product, r.fragrance].filter(Boolean).join(' · '), qty].filter(Boolean).join(' — ');
+}
+function blendVariationsText(rows){ return (rows||[]).map(blendVariationLine).filter(Boolean).join('\n'); }
+// "Shower Gel — Version 1" -> SG-V1, "Shampoo — Version 2" -> SHA-V2, "Air Freshener" -> AF.
+function formulationCodeFor(name){
+  const n = stripTags(String(name||'')).trim(); if(!n) return '';
+  const ver = n.match(/version\s*(\d+)/i);
+  const base = n.replace(/\s*[—–-]\s*version\s*\d+.*$/i, '').trim();
+  const words = base.split(/\s+/).filter(Boolean);
+  const initials = (words.length>1 ? words.map(w=>w[0]).join('') : base.slice(0,3)).toUpperCase().replace(/[^A-Z0-9]/g,'');
+  return (initials || 'FRM') + (ver ? '-V'+ver[1] : '');
+}
+// Typed code first; otherwise one made from the batch sheet's name. A batch added by hand (no batch sheet) has none unless somebody types it.
+function batchFormulationCode(b){ return (b && String(b.formulationCode||'').trim()) || (b && b.recipeName ? formulationCodeFor(b.recipeName) : ''); }
+// The Item List names for the fragrance picker. Read through a read-only database function (id, name, codes, unit: no costs) so the Blending role can pick from the list
+// without being able to read costs or change the list (owner, 2026-11-22: "only view the items"). Falls back to the Item List the page already has.
+function blendInventoryOptions(){
+  if(Array.isArray(state._invNames)) return state._invNames;
+  return (state.inventoryItems||[]).filter(i=>i && i.name).map(i=>({id:i.id, name:i.name, category:i.category||'', shortCode:i.shortCode||'', uom:i.uom||''}));
+}
+async function ensureBlendInventoryNames(){
+  if(state._invNamesState) return;
+  state._invNamesState = 'loading';
+  try{
+    const { data, error } = await supabaseClient.rpc('inventory_item_names');
+    if(!error && Array.isArray(data)) state._invNames = data;
+    state._invNamesState = 'done';
+  }catch(e){ state._invNamesState = 'done'; }
+}
+const BLEND_FRAGRANCE_WORDS = /fragrance|perfume|parfum|aroma|scent|essence|flavou?r/i;
+function blendIsFragranceItem(it){ return BLEND_FRAGRANCE_WORDS.test(it.name||'') || BLEND_FRAGRANCE_WORDS.test(it.category||''); }
+// Items whose name (or item code) contains what was typed, ignoring spaces and punctuation ("aloevera" finds "Aloe Vera Fragrance"); fragrance-like items first.
+function blendFragranceMatches(typed){
+  const squash = x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const q = squash(typed); if(!q) return [];
+  return blendInventoryOptions()
+    .filter(it=>squash(it.name+' '+it.category+' '+it.shortCode).includes(q))
+    .sort((a,b)=> (blendIsFragranceItem(b)?1:0)-(blendIsFragranceItem(a)?1:0) || (squash(a.name).startsWith(q)?0:1)-(squash(b.name).startsWith(q)?0:1) || a.name.localeCompare(b.name))
+    .slice(0,8);
+}
+// The variation rows of the open "New batch" / batch window are a draft (the window is redrawn on every change); typed text is copied into it before each redraw and before saving.
+function blendVarDraft(forId, b){
+  if(!state._blendVarDraft || state._blendVarDraft.forId!==forId) state._blendVarDraft = {forId, rows: forId==='new' ? [blendNewVariation()] : blendVariationRows(b)};
+  return state._blendVarDraft;
+}
+function syncBlendVarDraftFromDOM(){
+  const d = state._blendVarDraft; if(!d) return;
+  d.rows.forEach(r=>{
+    const get = k=>{ const el = document.getElementById('bv-'+k+'-'+r.id); return el ? el.value : null; };
+    const p = get('prod'), f = get('frag'), q = get('qty'), u = get('unit');
+    if(p!==null) r.product = p;
+    if(f!==null){ r.fragrance = f; const row = document.getElementById('bv-row-'+r.id); if(row) r.fragranceId = row.dataset.fragId || ''; }
+    if(q!==null) r.qty = q;
+    if(u!==null) r.unit = u;
+  });
+}
+function blendVariationRowHtml(r, ro){
+  const dis = ro ? 'disabled' : '';
+  return `
+  <div class="bv-row" id="bv-row-${r.id}" data-frag-id="${escAttr(r.fragranceId||'')}">
+    <div class="bv-cell bv-p"><label>Product</label><input id="bv-prod-${r.id}" class="bv-in" data-bv-pick="prod" value="${escAttr(r.product)}" placeholder="e.g. Aloevera" autocomplete="off" ${dis}></div>
+    <div class="bv-cell bv-f"><label>Fragrance</label><input id="bv-frag-${r.id}" class="bv-in" data-bv-pick="frag" value="${escAttr(r.fragrance)}" placeholder="Type to search the Item List" autocomplete="off" ${dis}></div>
+    <div class="bv-cell bv-q"><label>Quantity</label><input id="bv-qty-${r.id}" class="bv-in" value="${escAttr(r.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" ${dis}></div>
+    <div class="bv-cell bv-u"><label>Unit</label><select id="bv-unit-${r.id}" class="bv-in" ${dis}><option value="">—</option>${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+    ${ro ? '' : `<button type="button" class="bv-x" data-bv-del="${r.id}" title="Remove this variation" aria-label="Remove this variation">✕</button>`}
+  </div>`;
+}
+function blendVariationsSectionHtml(d, ro){
+  return `
+  <div class="field bv-wrap">
+    <div class="bv-head"><label>Variations</label>${ro ? '' : `<button type="button" class="btn btn-sm" id="btn-bv-add">+ Add variation</button>`}</div>
+    <div class="hint" style="margin-bottom:8px;">One row per variation: the product, its fragrance (type a name such as <i>aloevera</i> and pick the item from the Item List) and the quantity.</div>
+    <div class="bv-list">${d.rows.length ? d.rows.map(r=>blendVariationRowHtml(r, ro)).join('') : `<div class="hint">No variations.</div>`}</div>
+    <div id="bv-dropdown" class="bv-dropdown" style="display:none;"></div>
+  </div>`;
+}
+function addBlendVariationRow(){
+  syncBlendVarDraftFromDOM();
+  const d = state._blendVarDraft; if(!d) return;
+  const r = blendNewVariation(); d.rows.push(r);
+  render();
+  const el = document.getElementById('bv-prod-'+r.id); if(el) el.focus();
+}
+function removeBlendVariationRow(rowId){
+  syncBlendVarDraftFromDOM();
+  const d = state._blendVarDraft; if(!d) return;
+  d.rows = d.rows.filter(r=>r.id!==rowId);
+  render();
+}
+// The suggestion list under a Product / Fragrance box. Picking an item fills the FRAGRANCE of that row (and remembers which Item List entry it was).
+function attachBlendVariationHandlers(){
+  document.querySelectorAll('body > .bv-dropdown').forEach(x=>x.remove());   // the list from the previous redraw
+  const wrap = document.querySelector('.bv-wrap'); if(!wrap) return;
+  ensureBlendInventoryNames();
+  const dd = wrap.querySelector('.bv-dropdown'); if(!dd) return;
+  document.body.appendChild(dd);   // a window with backdrop-filter is the containing block of fixed children, which would misplace the list: it lives on <body>
+  let activeRow = null;
+  const hide = ()=>{ dd.style.display='none'; dd.innerHTML=''; activeRow = null; };
+  const show = (input)=>{
+    const row = input.closest('.bv-row'); if(!row) return hide();
+    const isFrag = input.dataset.bvPick==='frag';
+    const typed = input.value.trim();
+    if(!typed) return hide();
+    const matches = blendFragranceMatches(typed);
+    if(!matches.length){
+      if(!isFrag) return hide();
+      activeRow = null;
+      dd.innerHTML = `<div class="bv-none">No item called “${esc(typed)}” in the Item List. Keep typing, or leave the name as it is.</div>`;
+    } else {
+      activeRow = row;
+      dd.innerHTML = matches.map(it=>`<div class="bv-opt" data-id="${escAttr(it.id||'')}" data-name="${escAttr(it.name)}"><span>${esc(it.name)}</span>${blendIsFragranceItem(it)?'<b class="bv-tag">Fragrance</b>':''}${it.category?`<i>${esc(it.category)}</i>`:''}</div>`).join('');
+    }
+    const r = input.getBoundingClientRect();
+    dd.style.position = 'fixed'; dd.style.left = r.left+'px'; dd.style.top = (r.bottom+4)+'px'; dd.style.width = Math.max(r.width, 320)+'px';
+    dd.style.display = 'block';
+  };
+  wrap.querySelectorAll('.bv-in[data-bv-pick]').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      if(input.dataset.bvPick==='frag'){ const row = input.closest('.bv-row'); if(row) row.dataset.fragId = ''; }   // typed by hand again: no longer tied to an Item List entry
+      show(input);
+    });
+    input.addEventListener('focus', ()=>show(input));
+    // Hide shortly after leaving a box, unless focus went to another suggestion box (its own focus handler shows its list).
+    input.addEventListener('blur', ()=>setTimeout(()=>{ const a = document.activeElement; if(!(a && a.dataset && a.dataset.bvPick)) hide(); }, 160));
+  });
+  dd.addEventListener('mousedown', e=>{
+    const opt = e.target.closest('.bv-opt'); if(!opt || !activeRow) return;
+    e.preventDefault();
+    const rid = activeRow.id.replace('bv-row-','');
+    const frag = document.getElementById('bv-frag-'+rid);
+    if(frag){ frag.value = opt.dataset.name; activeRow.dataset.fragId = opt.dataset.id || ''; }
+    hide();
+    const qty = document.getElementById('bv-qty-'+rid); if(qty) qty.focus();
+  });
+  const drawer = wrap.closest('.drawer, .modal'); if(drawer) drawer.addEventListener('scroll', hide, {passive:true});
+  const add = document.getElementById('btn-bv-add'); if(add) add.onclick = addBlendVariationRow;
+  wrap.querySelectorAll('[data-bv-del]').forEach(b=>b.addEventListener('click', ()=>removeBlendVariationRow(b.dataset.bvDel)));
+}
 async function createBlendBatch(e){
   e.preventDefault();
   const f = e.target;
+  syncBlendVarDraftFromDOM();
+  const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId==='new' ? state._blendVarDraft.rows : []);
+  const stages = blendStageList();
   const batch = {
     id: uid('BLD'), batchNo: (f.batchNo.value.trim() || uid('BLD')),
-    product: sanitizeRichHtml(f.product.value.trim()), qty:'', variation:'',
-    priority: f.priority.value, notes: f.notes.value.trim(),
-    stage: 0, assignee: null,
+    product: sanitizeRichHtml(f.product.value.trim()), qty: f.qty.value.trim(), variation: blendVariationsText(rows), variations: rows,
+    priority: f.priority.value, machine: BATCH_MACHINES.some(m=>m.id===f.machine.value) ? f.machine.value : '',
+    formulationCode: f.formulationCode.value.trim(), notes: f.notes.value.trim(),
+    stage: 0, stageKey: stages[0].key, assignee: null,
     createdAt: new Date().toISOString(),
-    history: [{stage:0, at:new Date().toISOString(), by:state.session.name}]
+    history: [blendHistoryEntry(stages[0], 0)]
   };
   state.blendBatches.unshift(batch);
   if(!(await save('blendBatches'))) return;
@@ -8629,47 +8913,196 @@ async function createBlendBatch(e){
 }
 async function advanceBlendBatch(id){
   const b = byId(state.blendBatches,id);
-  const lastStage = BLEND_STAGES.length-1;
-  if(!b || b.stage>=lastStage || !canAdvanceBlend(b.stage)) return;
-  b.stage += 1;
-  b.history.push({stage:b.stage, at:new Date().toISOString(), by:state.session.name});
+  if(!b) return;
+  const list = blendStageList(), i = blendStageIdx(b, list);
+  if(i >= list.length-1 || !canAdvanceBlend(i)) return;
+  const next = list[i+1];
+  blendPlaceInStage(b, next, i+1);
   if(!(await save('blendBatches'))) return;
-  logActivity(`Moved blend batch ${b.batchNo} to ${BLEND_STAGES[b.stage]}`);
-  showToast(b.stage===lastStage ? 'Batch dispatched to stock' : 'Moved to '+BLEND_STAGES[b.stage]);
+  logActivity(`Moved blend batch ${b.batchNo} to ${next.label}`);
+  showToast(i+1===list.length-1 && next.key==='dispatched' ? 'Batch dispatched to stock' : 'Moved to '+next.label);
 }
 async function submitBlendEdit(e){
   e.preventDefault();
   const f = e.target; const id = f.dataset.batchId;
-  const b = byId(state.blendBatches, id); if(!b) return;
+  const b = byId(state.blendBatches, id); if(!b || !canManageBlendBoard()) return;
+  syncBlendVarDraftFromDOM();
+  const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===id ? state._blendVarDraft.rows : blendVariationRows(b));
   Object.assign(b, {
     batchNo: f.batchNo.value.trim() || b.batchNo,
-    qty: f.qty.value.trim(), variation: f.variation.value.trim()
+    qty: f.qty.value.trim(),
+    priority: PRIORITIES.includes(f.priority.value) ? f.priority.value : (b.priority || 'Medium'),
+    machine: BATCH_MACHINES.some(m=>m.id===f.machine.value) ? f.machine.value : '',
+    formulationCode: f.formulationCode.value.trim(),
+    variations: rows, variation: blendVariationsText(rows)
   });
   if(!(await save('blendBatches'))) return;
   closeModal();
   logActivity(`Edited blend batch ${b.batchNo}`);
   showToast('Batch updated');
 }
-async function moveBlendToStage(id, newStage){
-  const b = byId(state.blendBatches, id); if(!b || b.stage===newStage || !canManageBlendBoard()) return;
-  b.stage = newStage;
-  b.history.push({stage:newStage, at:new Date().toISOString(), by:state.session.name});
+async function moveBlendToStage(id, stageKey){
+  const b = byId(state.blendBatches, id); if(!b || !canManageBlendBoard()) return;
+  const list = blendStageList(), idx = list.findIndex(x=>x.key===stageKey);
+  if(idx<0 || blendStageKeyOf(b, list)===stageKey) return;
+  blendPlaceInStage(b, list[idx], idx);
   if(!(await save('blendBatches'))) return;
-  logActivity(`Moved blend batch ${b.batchNo} to ${BLEND_STAGES[newStage]}`);
-  showToast('Moved to '+BLEND_STAGES[newStage]);
+  logActivity(`Moved blend batch ${b.batchNo} to ${list[idx].label}`);
+  showToast('Moved to '+list[idx].label);
 }
+// Only an Admin can delete a batch, and has to type their password again (owner, 2026-11-22). The check is repeated here, not only on the button.
 function deleteBlendBatch(id){
-  if(!state.session || !roleCan(state.session.role, 'blending_delete')) return;
-  const b = byId(state.blendBatches, id);
+  if(!isAdmin()) { showToast('Only an Admin can delete a batch'); return; }
+  const b = byId(state.blendBatches, id); if(!b) return;
   openConfirmModal({
-    title: 'Delete batch', danger: true, confirmLabel: 'Delete',
-    message: 'Delete this batch? This cannot be undone.',
+    title: 'Delete batch', danger: true, confirmLabel: 'Delete', requirePassword: true,
+    message: `Delete batch ${b.batchNo||b.id}${b.product?' ('+stripTags(b.product).trim()+')':''}? This cannot be undone. Type your password to confirm.`,
     onConfirm: async ()=>{
+      if(!isAdmin()) return;
       state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
       if(!(await save('blendBatches'))) return;
-      logActivity(`Deleted blend batch ${b?b.batchNo:id}`);
+      logActivity(`Deleted blend batch ${b.batchNo}`);
     },
   });
+}
+
+/* ----- Manage Lists for the Mixing and Filling stages (same pattern as the Orders board's Manage Lists; owner, 2026-11-22) ----- */
+function openManageBlendStages(){
+  if(!canManageBlendStages()) return;
+  state._blendStagesDraft = JSON.parse(JSON.stringify(blendStageList()));
+  openModal('manageblendstages');
+}
+function blendStageDraftHasLabel(label, exceptKey){
+  const n = String(label||'').trim().toLowerCase();
+  return (state._blendStagesDraft||[]).some(x=>x.key!==exceptKey && String(x.label||'').trim().toLowerCase()===n);
+}
+function manageBlendStagesModal(){
+  const stages = state._blendStagesDraft || blendStageList();
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:500px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h2 style="margin:0;">Manage Lists</h2>
+        <button type="button" class="btn-text" id="btn-add-blend-stage">+ Add stage</button>
+      </div>
+      <div class="sub">Add, rename, recolour, reorder (drag) or remove the stages on the Mixing and Filling board. The <b>last stage</b> is the finished one.</div>
+      <div class="nav-order-list" data-nav-group="blendstages">
+        ${stages.map((st,i)=>{ const n = blendBatchesInStage(st.key).length; return `
+        <div class="nav-order-row" draggable="true" data-nav-item="${escAttr(st.key)}" style="justify-content:space-between;">
+          <span style="display:flex;align-items:center;gap:10px;overflow:hidden;">
+            <span class="nav-order-handle">⋮⋮</span>
+            <input type="color" class="bst-color" data-blend-stage-color="${escAttr(st.key)}" value="${escAttr(blendStageHex(st, i))}" title="Stage colour" aria-label="Stage colour">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(st.label)}</span>
+            ${n ? `<span class="hint" style="flex-shrink:0;">${n} batch${n===1?'':'es'}</span>` : ''}
+          </span>
+          <span style="display:flex;gap:4px;flex-shrink:0;">
+            <button type="button" class="btn btn-sm" data-edit-blend-stage="${escAttr(st.key)}" title="Rename">✏️</button>
+            <button type="button" class="btn btn-sm btn-danger" data-delete-blend-stage="${escAttr(st.key)}" title="Delete">🗑️</button>
+          </span>
+        </div>`; }).join('')}
+      </div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button type="button" class="btn-text" id="btn-reset-blend-stages" title="Go back to the original seven stages">Reset to the original stages</button>
+        <span style="display:flex;gap:8px;">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-save-blend-stages">Done</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+function blendStageBlockedModal(){
+  const b = state._blendStageBlock; if(!b) return '';
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:440px;">
+      <h2>Can't delete this stage yet</h2>
+      <p>"${esc(b.label)}" still holds ${b.total} batch${b.total===1?'':'es'}. Move ${b.total===1?'it':'each one'} to another stage (open it, or drag it on the board), then come back and delete the stage.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;">
+        ${b.batches.map(x=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;">
+          <span style="min-width:0;"><b>${esc(x.batchNo)}</b>${x.product?`<span class="hint" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(x.product)}</span>`:''}</span>
+          <button type="button" class="btn btn-sm btn-primary" data-open-blocked-blend="${escAttr(x.id)}">Open batch</button>
+        </div>`).join('')}
+        ${b.total>b.batches.length ? `<div class="hint">…and ${b.total-b.batches.length} more.</div>` : ''}
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" id="btn-blend-stage-blocked-back">Back</button></div>
+    </div>
+  </div>`;
+}
+function attachManageBlendStagesHandlers(){
+  const byIdEl = id => document.getElementById(id);
+  if(byIdEl('btn-manage-blend-stages')) byIdEl('btn-manage-blend-stages').onclick = openManageBlendStages;
+  if(byIdEl('btn-add-blend-stage')) byIdEl('btn-add-blend-stage').onclick = ()=>{
+    openPromptModal({
+      title: 'New stage', label: 'Stage name', confirmLabel: 'Add',
+      onSubmit: (value)=>{
+        const name = (value||'').trim(); if(!name) return;
+        if(blendStageDraftHasLabel(name)){ openAlertModal({title:"Can't add", message:'A stage with that name already exists.', _returnTo:'manageblendstages'}); return; }
+        // A new stage goes BEFORE the final one, so the finished stage stays last.
+        const d = state._blendStagesDraft;
+        d.splice(Math.max(0, d.length-1), 0, {key:uid('STG'), label:name});
+      },
+    });
+  };
+  document.querySelectorAll('[data-edit-blend-stage]').forEach(b=>b.addEventListener('click', ()=>{
+    const st = (state._blendStagesDraft||[]).find(x=>x.key===b.dataset.editBlendStage); if(!st) return;
+    openPromptModal({
+      title: 'Rename this stage', label: 'Stage name', defaultValue: st.label, confirmLabel: 'Save',
+      onSubmit: (name)=>{
+        const t = (name||'').trim(); if(!t) return;
+        if(blendStageDraftHasLabel(t, st.key)){ openAlertModal({title:"Can't rename", message:'A stage with that name already exists.', _returnTo:'manageblendstages'}); return; }
+        st.label = t;
+      },
+    });
+  }));
+  document.querySelectorAll('input[data-blend-stage-color]').forEach(inp=>inp.addEventListener('input', ()=>{
+    const st = (state._blendStagesDraft||[]).find(x=>x.key===inp.dataset.blendStageColor); if(st) st.color = inp.value;   // no redraw: the picker stays open
+  }));
+  document.querySelectorAll('[data-delete-blend-stage]').forEach(b=>b.addEventListener('click', ()=>{
+    const d = state._blendStagesDraft || []; const st = d.find(x=>x.key===b.dataset.deleteBlendStage); if(!st) return;
+    if(d.length<=2){ openAlertModal({title:"Can't delete", message:'The board needs at least two stages.', _returnTo:'manageblendstages'}); return; }
+    const inStage = blendBatchesInStage(st.key);
+    if(inStage.length){
+      state._blendStageBlock = {key:st.key, label:st.label, total:inStage.length, batches:inStage.slice(0,12).map(x=>({id:x.id, batchNo:x.batchNo||x.id, product:stripTags(x.product||'').trim()}))};
+      state.modal = 'blendstageblocked'; render();
+      return;
+    }
+    openConfirmModal({
+      title: 'Delete stage', danger: true, confirmLabel: 'Delete', keepParentModal: true,
+      message: `Delete the stage "${st.label}"? No batch is in it.`,
+      onConfirm: ()=>{ state._blendStagesDraft = state._blendStagesDraft.filter(x=>x.key!==st.key); },
+    });
+  }));
+  if(byIdEl('btn-blend-stage-blocked-back')) byIdEl('btn-blend-stage-blocked-back').onclick = ()=>{ state._blendStageBlock = null; state.modal = 'manageblendstages'; render(); };
+  document.querySelectorAll('[data-open-blocked-blend]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.openBlockedBlend; state._blendStageBlock = null; state._blendStagesDraft = null; openModal('blend:'+id); }));
+  if(byIdEl('btn-reset-blend-stages')) byIdEl('btn-reset-blend-stages').onclick = ()=>{
+    const have = state._blendStagesDraft || [];
+    const orphan = have.filter(x=>!BLEND_STAGE_KEYS.includes(x.key) && blendBatchesInStage(x.key).length);
+    if(orphan.length){ openAlertModal({title:"Can't reset yet", message:`"${orphan[0].label}" still holds batches. Move them to another stage first.`, _returnTo:'manageblendstages'}); return; }
+    openConfirmModal({
+      title: 'Reset the stages?', confirmLabel: 'Reset', keepParentModal: true,
+      message: 'Go back to the original seven stages (Blending, 1st QC, Mixing, 2nd QC, Filling, 3rd QC, Dispatched to Stock)? Nothing is saved until you press Done.',
+      onConfirm: ()=>{ state._blendStagesDraft = BLEND_STAGES.map((label,i)=>({key:BLEND_STAGE_KEYS[i], label})); },
+    });
+  };
+  if(byIdEl('btn-save-blend-stages')) byIdEl('btn-save-blend-stages').onclick = async ()=>{
+    if(!canManageBlendStages()) return;
+    const listEl = document.querySelector('.nav-order-list[data-nav-group="blendstages"]');
+    const orderedKeys = listEl ? [...listEl.querySelectorAll('.nav-order-row')].map(r=>r.dataset.navItem) : [];
+    const byKey = {}; (state._blendStagesDraft||[]).forEach(x=>{ byKey[x.key] = x; });
+    const next = orderedKeys.map(k=>byKey[k]).filter(Boolean).map(x=>({key:x.key, label:String(x.label||'').trim(), ...( /^#[0-9a-fA-F]{6}$/.test(x.color||'') ? {color:x.color} : {} )}));
+    if(next.length<2){ showToast('The board needs at least two stages'); return; }
+    // Every batch that is in a stage must still have it (a batch could have been moved here by someone else while this window was open).
+    const stranded = (state.blendBatches||[]).filter(b=>!next.some(x=>x.key===blendStageKeyOf(b)));
+    if(stranded.length){ openAlertModal({title:"Can't save", message:`${stranded.length} batch${stranded.length===1?' is':'es are'} in a stage you removed. Move ${stranded.length===1?'it':'them'} first.`, _returnTo:'manageblendstages'}); return; }
+    const before = state.blendStages;
+    state.blendStages = next; state._blendStagesDraft = null;
+    if(!(await save('blendStages'))){ state.blendStages = before; return; }
+    logActivity('Changed the Mixing and Filling stages: '+next.map(x=>x.label).join(' → '));
+    closeModal();
+    showToast('Stages updated');
+  };
 }
 
 /* ===================== R&D projects ===================== */
@@ -11772,9 +12205,9 @@ function answerAiQuery(raw){
   }
 
   if(qHas(q,'blend','batch')){
-    const active = (state.blendBatches||[]).filter(b=>b.stage < BLEND_STAGES.length-1);
+    const active = (state.blendBatches||[]).filter(b=>!blendIsFinal(b));
     if(active.length===0) return "No blending batches are in progress right now.";
-    const names = active.map(b=>`${[b.product,b.qty].filter(Boolean).join(' ')||'Batch'} (${b.batchNo||'no batch #'}) — ${BLEND_STAGES[b.stage]}`).join('; ');
+    const names = active.map(b=>`${[b.product,b.qty].filter(Boolean).join(' ')||'Batch'} (${b.batchNo||'no batch #'}) — ${blendStageName(b)}`).join('; ');
     return `${active.length} batch${active.length===1?'':'es'} in progress: ${names}.`;
   }
 
@@ -11843,7 +12276,7 @@ function buildDallyContext(){
   const active = activeOrders();
   const todays = state.orders.filter(o=>isToday(o.createdAt));
   const openComplaints = state.complaints.filter(c=>c.status==='Open'||c.status==='In Progress');
-  const activeBatches = (state.blendBatches||[]).filter(b=>b.stage < BLEND_STAGES.length-1);
+  const activeBatches = (state.blendBatches||[]).filter(b=>!blendIsFinal(b));
   const rated = state.orders.filter(o=>o.customerRating);
   const delivered = state.orders.filter(o=>o.deliveryOutcome==='Delivered').length;
   const returned = state.orders.filter(o=>o.deliveryOutcome==='Returned').length;
@@ -11861,7 +12294,7 @@ function buildDallyContext(){
       recent: state.orders.slice(0,8).map(o=>({customer:o.customer, product:o.product, stage:STAGES[o.stage], value_lkr:o.value, created:o.createdAt})),
     },
     complaints: { open_count: openComplaints.length, open: openComplaints.map(c=>({customer:c.customer, category:c.category||null, status:c.status})) },
-    blending: { active_count: activeBatches.length, batches: activeBatches.map(b=>({product:b.product||null, qty:b.qty||null, batch_no:b.batchNo||null, stage:BLEND_STAGES[b.stage]})) },
+    blending: { active_count: activeBatches.length, batches: activeBatches.map(b=>({product:b.product||null, qty:b.qty||null, batch_no:b.batchNo||null, stage:blendStageName(b)})) },
     customers_total: state.customers.length,
     staff: state.staff.map(s=>s.name),
     suppliers: { total: state.suppliers.length, active: state.suppliers.filter(s=>s.status==='Active'||!s.status).length },
@@ -16430,8 +16863,12 @@ function renderBlendingDeptPage(){
 /* ===================== Blending board page ===================== */
 function renderBlendingBoardPage(){
   if(state._colorSheetsOpen && canViewColorSheets()) return renderColorSheetsPage();
+  const stages = blendStageList();
   return `
   <div class="toolbar">
+    <div class="tabs" style="align-items:center;">
+      ${canManageBlendStages() ? `<button type="button" class="btn-text" id="btn-manage-blend-stages">⚙ Manage Lists</button>` : ''}
+    </div>
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
       ${canViewColorSheets() ? `<button type="button" class="btn" id="btn-open-colorsheets">&#127912; Color sheets</button>` : ''}
       ${canManageBlendBoard() ? `<button class="btn btn-primary" id="btn-new-blend">+ New batch</button>` : ''}
@@ -16443,32 +16880,76 @@ function renderBlendingBoardPage(){
       ${canManageBlendBoard() ? `<button class="btn btn-primary" id="btn-new-blend-2">+ Add the first batch</button>` : ''}
     </div>
   ` : `
-  <div class="board">
-    ${BLEND_STAGES.map((stageName,i)=>renderBlendColumn(stageName,i)).join('')}
-  </div>`}
+  <div class="board blend-board">
+    ${stages.map((st,i)=>renderBlendColumn(st,i,stages)).join('')}
+  </div>
+  ${renderBlendBoardMobile(stages)}`}
   `;
 }
-function renderBlendColumn(stageName, i){
-  const key = BLEND_STAGE_KEYS[i]; const style = BLEND_STAGE_STYLE[key];
-  const batches = state.blendBatches.filter(b=>b.stage===i).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+function renderBlendColumn(st, i, stages){
+  const style = blendStageStyle(st, i);
+  const batches = state.blendBatches.filter(b=>blendStageKeyOf(b, stages)===st.key).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   return `
   <div class="column">
     <div class="column-head" style="background:${style.bg};color:${style.c};">
-      <span class="name">${stageName}</span><span class="count">${batches.length}</span>
+      <span class="name">${esc(st.label)}</span><span class="count">${batches.length}</span>
     </div>
-    <div class="column-body" data-blend-stage="${i}">
-      ${batches.length===0 ? `<div class="empty-col">Nothing here</div>` : batches.map(b=>renderBlendCard(b)).join('')}
+    <div class="column-body" data-blend-stage="${i}" data-blend-stage-key="${escAttr(st.key)}">
+      ${batches.length===0 ? `<div class="empty-col">Nothing here</div>` : batches.map(b=>renderBlendCard(b, i===stages.length-1)).join('')}
     </div>
   </div>`;
 }
-function renderBlendCard(b){
+// Phone counterpart of the board above (the columns are hidden below 760px, like the Orders board): one stage at a time, picked from tabs with their counts.
+function renderBlendBoardMobile(stages){
+  const activeKey = stages.some(x=>x.key===state._blendMobileStage) ? state._blendMobileStage : stages[0].key;
+  const batches = state.blendBatches.filter(b=>blendStageKeyOf(b, stages)===activeKey).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   return `
-  <div class="card" draggable="${canManageBlendBoard()?'true':'false'}" data-blend="${b.id}">
-    <div class="top-row"><span class="customer">${esc(b.product)}${b.qty?(' · qty '+esc(b.qty)):''}</span><span class="order-id">${b.id}</span></div>
-    <div class="product">${esc(b.batchNo)}</div>
-    <div class="meta-row">
-      <span class="days" style="margin-left:auto;">${daysAgo(b.createdAt)}</span>
+  <div class="board-mobile">
+    <div class="board-stage-tabs">
+      ${stages.map((st,i)=>{
+        const style = blendStageStyle(st, i);
+        const count = state.blendBatches.filter(b=>blendStageKeyOf(b, stages)===st.key).length;
+        const on = st.key===activeKey;
+        return `<button type="button" class="board-stage-tab ${on?'active':''}" data-blend-mobile-tab="${escAttr(st.key)}" style="${on?`color:${style.c};`:''}">${esc(st.label)} · ${count}</button>`;
+      }).join('')}
     </div>
+    <div class="column-body" data-blend-stage-key="${escAttr(activeKey)}">
+      ${batches.length===0 ? `<div class="empty-col">Nothing here</div>` : batches.map(b=>renderBlendCard(b, activeKey===stages[stages.length-1].key)).join('')}
+    </div>
+  </div>`;
+}
+// How long ago, in plain words: "just now", "35 min", "5 h", "3 days".
+function blendWaitText(iso){
+  const t = new Date(iso).getTime(); if(!t) return '';
+  const mins = Math.max(0, Math.round((Date.now()-t)/60000));
+  if(mins<2) return 'just now'; if(mins<60) return mins+' min';
+  const h = Math.round(mins/60); if(h<24) return h+' h';
+  const d = Math.floor(h/24); return d+(d===1?' day':' days');
+}
+const BLEND_PRIORITY_COLOR = {Low:'#3FA968', Medium:'#E0A82E', High:'#D2584A'};
+// The batch card (owner, 2026-11-22: "improve cards designs, inside add priority space like packing, add machine number (should automatically show that)"): a priority-coloured edge and pill
+// like the Orders board, the batch sheet's machine in its own colour (it comes from the batch sheet, nobody types it), batch number + formulation code, the variations (product / fragrance / quantity)
+// and how long the batch has been in this stage. The finished stage shows no waiting time.
+function renderBlendCard(b, isFinal){
+  const priority = PRIORITIES.includes(b.priority) ? b.priority : 'Medium';
+  const rows = blendVariationRows(b).filter(r=>r.product||r.fragrance||r.qty);
+  const code = batchFormulationCode(b);
+  const prod = stripTags(b.product||'').trim();
+  const sinceTxt = isFinal ? '' : blendWaitText(blendStageSince(b));
+  return `
+  <div class="card bcard" draggable="${canManageBlendBoard()?'true':'false'}" data-blend="${b.id}" style="--pri:${BLEND_PRIORITY_COLOR[priority]};">
+    <div class="bcard-top"><span class="bcard-title" title="${escAttr(prod)}">${esc(prod||'Batch')}</span><span class="pill pill-${priority.toLowerCase()}">${priority}</span></div>
+    <div class="bcard-ids"><span class="bcard-no">${esc(b.batchNo||b.id)}</span>${code ? `<span class="bcard-code" title="Formulation code">${esc(code)}</span>` : ''}</div>
+    <div class="bcard-chips">
+      ${b.qty ? `<span class="bcard-qty">${esc(b.qty)}</span>` : ''}
+      ${b.machine ? machineChipHtml(b.machine) : ''}
+    </div>
+    ${rows.length ? `
+    <div class="bcard-vars">
+      ${rows.slice(0,3).map(r=>`<div class="bcard-var"><span class="bcard-var-n" title="${escAttr([r.product,r.fragrance].filter(Boolean).join(' · '))}"><b>${esc(r.product||'—')}</b>${r.fragrance?`<i>${esc(r.fragrance)}</i>`:''}</span><span class="bcard-var-q">${r.qty?esc(r.qty)+(r.unit?' '+esc(r.unit):''):''}</span></div>`).join('')}
+      ${rows.length>3 ? `<div class="bcard-more">+ ${rows.length-3} more</div>` : ''}
+    </div>` : ''}
+    <div class="bcard-foot">${sinceTxt ? 'In stage · '+esc(sinceTxt) : (daysAgo(b.createdAt)==='today' ? 'Created today' : 'Created '+esc(daysAgo(b.createdAt))+' ago')}</div>
   </div>`;
 }
 
@@ -18965,7 +19446,8 @@ function batchSheetTemplatePreviewData(){
       {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},
       {type:'phrase', lines:[{name:'SLES',percent:12},{name:'Glycerin',percent:5}], instruction:'Add and mix until dissolved', temperature:'55', waitMinutes:15},
       {type:'phrase', ingredient:'Add Fragrance, mix', temperature:'40', waitMinutes:10},
-    ], combineNote:'Combine all phases slowly while stirring.', standardPH:'5.5 - 6.5'};
+    ], combineNote:'Combine all phases slowly while stirring.', standardPH:'5.5 - 6.5',
+    formulationCode:'SR-V1'};
 }
 // Both pages of the printed sheet as small thumbnails (page 1, page 2) for Settings -> Batch sheet template.
 function batchSheetTemplatePreviewHtml(tpl){
@@ -21146,9 +21628,11 @@ async function finishBatchIntoBlendingBoard(b, key){
     // to make someone retype it by hand unless this run genuinely produced a different amount.
     product: b.productName || b.recipeName, qty: b.qty || ((b.batchSizeKg || (recipe && recipe.batchSizeKg)) ? (b.batchSizeKg || recipe.batchSizeKg)+' Kg' : ''), variation: b.variation || '',
     priority: 'Medium', notes: '',
-    stage: 0, assignee: null,
+    stage: 0, stageKey: blendStageList()[0].key, assignee: null,
     createdAt: new Date().toISOString(),
-    history: [{stage:0, at:new Date().toISOString(), by:state.session.name}],
+    history: [blendHistoryEntry(blendStageList()[0], 0)],
+    variations: [],
+    formulationCode: formulationCodeFor(recipe ? recipe.name : (b.recipeName || b.productName)),
     recipeId: b.recipeId,
     recipeName: recipe ? recipe.name : b.recipeName,
     batchSizeKg: b.batchSizeKg || (recipe ? recipe.batchSizeKg : null),
@@ -22742,6 +23226,33 @@ function batchQaAfterHtml(){
     </div>
   </div></div>`;
 }
+// The variations as printed (owner, 2026-11-22: "the exact same structured variation quantities, units"): one row per variation with product, fragrance, quantity and unit, the same four columns
+// as on the board window, and a total per unit. With nothing recorded it prints three empty lines for the floor to fill in by hand.
+function batchVariationsPrintHtml(rows){
+  const list = (rows||[]).filter(r=>r && (r.product||r.fragrance||r.qty));
+  const sums = {};
+  list.forEach(r=>{ const n = parseFloat(String(r.qty||'').replace(',', '.')); if(isFinite(n) && n!==0){ const u = r.unit||''; sums[u] = (sums[u]||0)+n; } });
+  const total = Object.keys(sums).map(u=>fmtQty(sums[u])+(u?' '+u:'')).join(' + ');
+  const body = (list.length ? list : [{},{},{}]).map((r,i)=>`<tr><td class="c-no">${i+1}</td><td>${r.product?esc(r.product):'&nbsp;'}</td><td>${r.fragrance?esc(r.fragrance):''}</td><td class="num">${r.qty?esc(r.qty):''}</td><td class="un">${r.unit?esc(r.unit):''}</td></tr>`).join('');
+  return `
+    <div class="bsp-sec">Variations</div>
+    <table class="bsp-mats bsp-var">
+      <thead><tr><th class="c-no">No</th><th>Product</th><th>Fragrance</th><th class="num">Quantity</th><th class="un">Unit</th></tr></thead>
+      <tbody>${body}${total ? `<tr class="tot"><td></td><td>Total</td><td></td><td class="num">${esc(total)}</td><td></td></tr>` : ''}</tbody>
+    </table>`;
+}
+// Stage by stage on the Mixing and Filling board: one line per stage of the CURRENT stage list (Manage Lists), with when and who moved the batch in (filled for a batch that has been there)
+// and an empty box for the floor to sign by hand.
+function batchStageSignoffHtml(d){
+  const stages = blendStageList();
+  const at = d.stageRows || {};
+  return `
+    <div class="bsp-stgwrap"><div class="bsp-sec">Stage by stage — floor sign-off</div>
+    <table class="bsp-stg">
+      <thead><tr><th>Stage</th><th style="width:104px;">Date / time</th><th style="width:92px;">Moved by</th><th style="width:150px;">Sign-off</th></tr></thead>
+      <tbody>${stages.map(st=>{ const h = at[st.key]; return `<tr><td class="c-st">${esc(st.label)}${d.currentStageKey===st.key ? ' <i>· now</i>' : ''}</td><td>${h&&h.at?esc(fmtDateTime(h.at)):''}</td><td>${h&&h.by?esc(h.by):''}</td><td class="c-sig"></td></tr>`; }).join('')}</tbody>
+    </table></div>`;
+}
 function batchSheetPrintHtml(d, tplOverride, opts){
   const tpl = tplOverride || batchSheetTemplate();
   const zoom = BATCH_SHEET_FONT_SCALE[tpl.fontSize] || 1;
@@ -22754,11 +23265,17 @@ function batchSheetPrintHtml(d, tplOverride, opts){
   const steps = d.steps||[];
   const printedBy = (state.session && (state.session.staffName || state.session.name)) || '';
   const blank = '<span class="bsp-dash">—</span>';
-  const cells = [['Batch size', kg>0 ? fmtQty(kg)+' kg' : ''], ['Machine', d.machine||'']];
+  const cells = [['Batch size', kg>0 ? fmtQty(kg)+' kg' : (d.qtyText||'')], ['Machine', d.machine||'']];
+  if(d.formulationCode) cells.push(['Formulation code', d.formulationCode]);
+  if(d.priority) cells.push(['Priority', d.priority]);
   if(tpl.showDate) cells.push(['Date', d.dateText||'']);
   if(d.mode==='record'){
-    cells.push(['Started', d.startedAt ? fmtDateTime(d.startedAt)+(d.startedBy?' · '+d.startedBy:'') : '']);
-    cells.push(['Completed', d.completedAt ? fmtDateTime(d.completedAt)+(d.completedBy?' · '+d.completedBy:'') : '']);
+    if(d.startedAt || !d.createdAt){
+      cells.push(['Started', d.startedAt ? fmtDateTime(d.startedAt)+(d.startedBy?' · '+d.startedBy:'') : '']);
+      cells.push(['Completed', d.completedAt ? fmtDateTime(d.completedAt)+(d.completedBy?' · '+d.completedBy:'') : '']);
+    } else {
+      cells.push(['Created', fmtDateTime(d.createdAt)+(d.createdBy?' · '+d.createdBy:'')]);   // a batch added by hand on the board has no start / finish times
+    }
   }
   const infoRows = []; for(let i=0;i<cells.length;i+=2) infoRows.push([cells[i], cells[i+1]||null]);
   const infoCell = c => c ? `<td class="k">${esc(c[0])}</td><td class="v">${c[1] ? esc(c[1]) : blank}</td>` : '<td></td><td></td>';
@@ -22779,7 +23296,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp .bsp-product{font-size:20px;font-weight:700;overflow-wrap:anywhere;}
     .bsp .bsp-bn{font-size:18px;font-weight:700;min-width:130px;border-bottom:1px solid #9AA39C;min-height:24px;text-align:right;}
     .bsp table.bsp-info{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}
-    .bsp table.bsp-info td.k{padding:5px 8px 5px 0;width:96px;color:#6B7570;vertical-align:top;}
+    .bsp table.bsp-info td.k{padding:5px 8px 5px 0;width:112px;color:#6B7570;vertical-align:top;}
     .bsp table.bsp-info td.v{padding:5px 14px 5px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;}
     .bsp .bsp-dash{color:#C3C9C1;font-weight:400;}
     .bsp .bsp-desc{font-size:12px;color:#4A554F;margin:-4px 0 12px;}
@@ -22812,6 +23329,14 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp .bsp-sig span{flex:1;border-bottom:1px solid #6B7570;height:14px;}
     .bsp .bsp-signoff{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px;}
     .bsp .bsp-printed{margin-top:8px;font-size:10.5px;color:#6B7570;text-align:right;}
+    .bsp table.bsp-var .un{width:56px;text-align:center;}
+    .bsp table.bsp-var td{height:22px;}
+    .bsp .bsp-stgwrap{break-inside:avoid;page-break-inside:avoid;}
+    .bsp table.bsp-stg{width:100%;border-collapse:collapse;font-size:11px;}
+    .bsp table.bsp-stg th{background:${accent};color:${headInk};text-align:left;padding:4px 6px;border:1px solid #CDD2CA;font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;}
+    .bsp table.bsp-stg td{padding:3px 6px;border:1px solid #CDD2CA;height:21px;}
+    .bsp table.bsp-stg td.c-st{font-weight:600;}
+    .bsp table.bsp-stg td.c-st i{font-style:normal;font-weight:400;color:#6B7570;font-size:10px;}
     .bsp .bsp-p2{break-before:page;page-break-before:always;}
     .bsp.bsp-only1 .bsp-p2,.bsp.bsp-only2 .bsp-p1{display:none;}   /* single-page thumbnails in Settings */
   </style>
@@ -22823,6 +23348,8 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     </div>
     <table class="bsp-info">${infoRows.map(r=>`<tr>${infoCell(r[0])}${infoCell(r[1])}</tr>`).join('')}</table>
     ${(tpl.showDescription && d.description) ? `<div class="bsp-desc">${esc(d.description)}</div>` : ''}
+    ${d.showVariations ? batchVariationsPrintHtml(d.variations) : ''}
+    ${(mats.length || d.mode!=='record') ? `
     <div class="bsp-sec">Raw materials</div>
     <table class="bsp-mats">
       <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="num">Percentage</th><th class="num">Amount (kg)</th><th class="chk">Weighed</th></tr></thead>
@@ -22830,7 +23357,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
         ${mats.map((m,i)=>`<tr><td class="c-no">${i+1}</td><td>${esc(m.name)}</td><td class="num">${(Number(m.percent)||0).toFixed(3)}</td><td class="num">${kg>0 ? recipeMaterialAmount(m.percent, kg).toFixed(3) : '—'}</td><td class="chk"><span class="bsp-box"></span></td></tr>`).join('')}
         <tr class="tot"><td></td><td>Total</td><td class="num">${totalPct.toFixed(3)}</td><td class="num">${kg>0 ? recipeMaterialAmount(totalPct, kg).toFixed(3) : '—'}</td><td></td></tr>
       </tbody>
-    </table>
+    </table>` : ''}
     ${d.mode==='record' ? '' : batchQaBeforeHtml()}
   </section>
   <section class="bsp-p2">
@@ -22838,6 +23365,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     <div class="bsp-sec" style="margin-top:8px;">Production steps</div>
     ${steps.length ? bsmcLedgerStepsHtml(steps, documentedStepOrdinals(steps), kg) : '<div class="bsp-desc">No production steps.</div>'}
     ${trailing}
+    ${d.showStages ? batchStageSignoffHtml(d) : ''}
     ${d.mode==='record'
       ? `<div class="bsp-signoff"><div class="bsp-sig">Operator: <span></span></div><div class="bsp-sig">Supervisor: <span></span></div><div class="bsp-sig">QC: <span></span></div></div>`
       : batchQaAfterHtml()}
@@ -22886,7 +23414,8 @@ function printBatchSheet(recipeId){
   const area = document.getElementById('print-area');
   if(!area) return;
   area.innerHTML = batchSheetPrintHtml({mode:'live', product:r.name, description:r.description, machine:r.machine, batchNo, batchSizeKg,
-    dateText:fmtDate(new Date().toISOString()), materials:r.materials, steps, combineNote:r.combineNote, standardPH:r.standardPH});
+    dateText:fmtDate(new Date().toISOString()), materials:r.materials, steps, combineNote:r.combineNote, standardPH:r.standardPH,
+    formulationCode:formulationCodeFor(r.name)});   // the blank form stays the original 2 pages: variations and the stage sign-off belong to a batch on the board (see printDocumentedBatchSheet)
   waitForPrintAreaImages(area).then(()=>window.print());
 }
 // The physical, for-the-record version: prints the actual run data snapshotted onto a completed
@@ -22895,13 +23424,25 @@ function printBatchSheet(recipeId){
 // Checklist items print the actual ☑/☐ state recorded during the run (updateBatchPrepChecked) via
 // bsmcLedgerStepsHtml — a real <input type=checkbox> doesn't reliably print its checked state
 // across browsers/print engines.
+// Prints ANY batch on the board (owner, 2026-11-22), not only ones that came from the Production Guide: a batch added by hand has no materials or steps, so those parts are left out, but the
+// variations (product / fragrance / quantity / unit), formulation code, priority, machine and the stage-by-stage sign-off table always print. What is typed in the open batch window (even unsaved)
+// is what prints, like the Batch sheet page does for its steps.
 function printDocumentedBatchSheet(batchId){
-  const b = byId(state.blendBatches, batchId); if(!b || !b.startedAt) return;
+  const b = byId(state.blendBatches, batchId); if(!b) return;
   const area = document.getElementById('print-area');
   if(!area) return;
-  area.innerHTML = batchSheetPrintHtml({mode:'record', product:b.recipeName||b.product, machine:b.machine, batchNo:b.batchNo, batchSizeKg:b.batchSizeKg,
-    dateText:fmtDate(b.completedAt), startedAt:b.startedAt, startedBy:b.startedBy, completedAt:b.completedAt, completedBy:b.completedBy,
-    materials:b.materials||[], steps:b.productionSteps||[], combineNote:b.combineNote, standardPH:b.standardPH});
+  const f = document.getElementById('form-blend-edit');
+  const fv = (name, fallback)=>{ const el = f && f.dataset.batchId===b.id && f.elements[name]; return el ? el.value : fallback; };
+  let rows;
+  if(f && f.dataset.batchId===b.id){ syncBlendVarDraftFromDOM(); rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===b.id ? state._blendVarDraft.rows : blendVariationRows(b)); }
+  else rows = blendCleanVariations(blendVariationRows(b));
+  const stageRows = {};
+  (Array.isArray(b.history) ? b.history : []).filter(Boolean).forEach(h=>{ const k = h.stageKey || BLEND_STAGE_KEYS[h.stage]; if(k) stageRows[k] = h; });   // the latest time it entered each stage
+  const code = String(fv('formulationCode', b.formulationCode)||'').trim() || batchFormulationCode({recipeName:b.recipeName});
+  area.innerHTML = batchSheetPrintHtml({mode:'record', product:stripTags(b.recipeName||b.product||'').trim(), machine:fv('machine', b.machine)||'', batchNo:fv('batchNo', b.batchNo)||b.batchNo, batchSizeKg:b.batchSizeKg, qtyText:fv('qty', b.qty),
+    dateText:fmtDate(b.completedAt||b.createdAt), startedAt:b.startedAt, startedBy:b.startedBy, completedAt:b.completedAt, completedBy:b.completedBy, createdAt:b.createdAt, createdBy:((b.history||[])[0]||{}).by,
+    materials:b.materials||[], steps:b.productionSteps||[], combineNote:b.combineNote, standardPH:b.standardPH,
+    formulationCode:code, priority:fv('priority', b.priority)||'Medium', showVariations:true, variations:rows, showStages:true, stageRows, currentStageKey:blendStageKeyOf(b)});
   waitForPrintAreaImages(area).then(()=>window.print());
 }
 async function saveBatchSheetSteps(recipeId){
@@ -23025,6 +23566,8 @@ function renderModal(){
   if(type==='changepassword') return changePasswordModal();
   if(type==='profiledetails') return profileDetailsModal();
   if(type==='lineblocked') return lineBlockedModal();
+  if(type==='manageblendstages') return manageBlendStagesModal();
+  if(type==='blendstageblocked') return blendStageBlockedModal();
   if(type==='activitylog') return activityLogModal();
   return '';
 }
@@ -23884,12 +24427,18 @@ function renderOrderDrawer(id){
   </div>`;
 }
 
+// Both the New batch window and the batch window below hold typed forms (variation rows, numbers, notes), so they follow the Panel closing Rule: a click on the dim background does NOT close them.
+function blendMachineOptions(selected){
+  return `<option value="">No machine</option>` + BATCH_MACHINES.map(m=>`<option value="${escAttr(m.id)}" ${selected===m.id?'selected':''}>${esc(m.id)}</option>`).join('');
+}
 function newBlendBatchModal(){
+  const d = blendVarDraft('new');
+  const first = blendStageList()[0];
   return `
   <div class="overlay" id="overlay">
-    <div class="modal">
+    <div class="modal" style="max-width:640px;">
       <h2>New batch</h2>
-      <div class="sub">Adds the batch to <strong>Blending</strong>.</div>
+      <div class="sub">Adds the batch to <strong>${esc(first.label)}</strong>.</div>
       <form id="form-new-blend">
         <div class="field-row">
           <div class="field"><label>Batch No</label><input name="batchNo" autocomplete="off" placeholder="Auto-generated if left blank"></div>
@@ -23898,6 +24447,12 @@ function newBlendBatchModal(){
           </div>
         </div>
         <div class="field"><label>Product</label><textarea name="product" required class="task-area" placeholder="e.g. Aloevera Shampoo 5L"></textarea></div>
+        <div class="field-row">
+          <div class="field"><label>Quantity</label><input name="qty" autocomplete="off" placeholder="e.g. 250 Kg"></div>
+          <div class="field"><label>Machine</label><select name="machine">${blendMachineOptions('')}</select></div>
+        </div>
+        <div class="field"><label>Formulation code</label><input name="formulationCode" autocomplete="off" placeholder="e.g. SG-V1 (batches from the Production Guide fill this in)"></div>
+        ${blendVariationsSectionHtml(d, false)}
         <div class="field"><label>Notes</label><textarea name="notes" placeholder="Any special instructions"></textarea></div>
         <div class="modal-actions">
           <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
@@ -23910,10 +24465,15 @@ function newBlendBatchModal(){
 
 function renderBlendDrawer(id){
   const b = byId(state.blendBatches,id); if(!b) return '';
-  const key = BLEND_STAGE_KEYS[b.stage]; const style = BLEND_STAGE_STYLE[key] || BLEND_STAGE_STYLE[BLEND_STAGE_KEYS[0]];
-  const canAdv = canAdvanceBlend(b.stage);
+  const stages = blendStageList(), idx = blendStageIdx(b, stages);
+  const style = blendStageStyle(stages[idx], idx);
+  const canAdv = canAdvanceBlend(idx);
   const ro = !canManageBlendBoard();
   const roAttr = ro ? 'readonly' : '';
+  const priority = PRIORITIES.includes(b.priority) ? b.priority : 'Medium';
+  const d = blendVarDraft(id, b);
+  const nextLabel = blendNextActionLabel(b);
+  const code = batchFormulationCode(b);
   return `
   <div class="drawer-overlay" id="overlay"></div>
   <div class="drawer">
@@ -23921,23 +24481,26 @@ function renderBlendDrawer(id){
     <div class="drawer-hero">
       <div>
         <button type="button" class="back" id="btn-drawer-back-close">← Back to board</button>
-        <h2>${esc([b.product, b.qty].filter(Boolean).join(' '))}</h2>
-        <div class="sub">${esc(b.batchNo)} · ${BLEND_STAGES[b.stage]} · created ${fmtDateTime(b.createdAt)}</div>
+        <h2>${esc([stripTags(b.product||'').trim(), b.qty].filter(Boolean).join(' '))}</h2>
+        <div class="sub">${esc(b.batchNo)} · ${esc(stages[idx].label)} · created ${fmtDateTime(b.createdAt)}</div>
       </div>
       <div class="stat-chip"><div class="k">Days in pipeline</div><div class="v">${daysAgo(b.createdAt)}</div></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between;">
-      <span class="stage-badge" style="background:${style.bg};color:${style.c};">${BLEND_STAGES[b.stage]}</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+      <span class="stage-badge" style="background:${style.bg};color:${style.c};">${esc(stages[idx].label)}</span>
+      <span class="pill pill-${priority.toLowerCase()}">${priority} priority</span>
+      ${b.machine ? machineChipHtml(b.machine) : ''}
+      ${code ? `<span class="bcard-code" title="Formulation code">${esc(code)}</span>` : ''}
     </div>
 
-    ${b.startedAt ? `
     <div class="field" style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;">
+      ${b.startedAt ? `
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div><div class="hint">Started</div><div style="font-weight:600;">${fmtDateTime(b.startedAt)}</div>${b.startedBy?`<div class="hint">by ${esc(b.startedBy)}</div>`:''}</div>
         <div style="text-align:right;"><div class="hint">Completed</div><div style="font-weight:600;">${fmtDateTime(b.completedAt)}</div>${b.completedBy?`<div class="hint">by ${esc(b.completedBy)}</div>`:''}</div>
-      </div>
+      </div>` : `<div class="hint">Printed sheet: batch, formulation code, variations and a sign-off line for every stage.</div>`}
       <button type="button" class="btn btn-sm" style="margin-top:10px;" id="btn-print-blend-sheet">🖨 Print batch sheet</button>
-    </div>` : ''}
+    </div>
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
     <form id="form-blend-edit" data-batch-id="${b.id}">
@@ -23945,16 +24508,29 @@ function renderBlendDrawer(id){
         <div class="field"><label>Batch Number</label><input name="batchNo" value="${escAttr(b.batchNo)}" ${roAttr}></div>
         <div class="field"><label>Quantity</label><input name="qty" value="${escAttr(b.qty)}" ${roAttr}></div>
       </div>
-      <div class="field"><label>Variations</label><textarea name="variation" ${roAttr}>${escBody(unbr(b.variation))}</textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Priority</label>
+          <select name="priority" ${ro?'disabled':''}>${PRIORITIES.map(p=>`<option ${priority===p?'selected':''}>${p}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Machine</label>
+          <select name="machine" ${ro?'disabled':''}>${blendMachineOptions(b.machine||'')}</select>
+          ${b.machine && b.recipeId ? `<div class="hint">Set from the batch sheet.</div>` : ''}
+        </div>
+      </div>
+      <div class="field"><label>Formulation code</label><input name="formulationCode" value="${escAttr(b.formulationCode||'')}" placeholder="${escAttr(code||'e.g. SG-V1')}" ${roAttr}>
+        ${!b.formulationCode && code ? `<div class="hint">Shown as <b>${esc(code)}</b> (made from the batch sheet's name). Type your own to replace it.</div>` : ''}
+      </div>
+
+      ${blendVariationsSectionHtml(d, ro)}
 
       <div class="field"><label>History</label>
-        <div class="timeline">${(Array.isArray(b.history)?b.history:[]).filter(Boolean).map(h=>`<div class="item">${BLEND_STAGES[h.stage]||'—'} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
+        <div class="timeline">${(Array.isArray(b.history)?b.history:[]).filter(Boolean).map(h=>`<div class="item">${esc(blendHistoryLabel(h))} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
       </div>
 
       <div class="modal-actions" style="justify-content:space-between;">
-        <div>${state.session && roleCan(state.session.role, 'blending_delete') ? `<button type="button" class="btn btn-danger" id="btn-delete-blend">Delete</button>` : ''}</div>
+        <div>${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-blend" title="Admin only — asks for your password">Delete</button>` : ''}</div>
         <div style="display:flex;gap:8px;">
-          ${!ro && canAdv && BLEND_NEXT_ACTION_LABEL[b.stage] ? `<button type="button" class="btn" id="btn-advance-blend">${BLEND_NEXT_ACTION_LABEL[b.stage]}</button>` : ''}
+          ${!ro && canAdv && nextLabel ? `<button type="button" class="btn" id="btn-advance-blend">${esc(nextLabel)}</button>` : ''}
           ${!ro ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>
       </div>
@@ -25623,8 +26199,8 @@ function attachShellHandlers(){
     col.addEventListener('drop', e=>{
       e.preventDefault(); col.classList.remove('drag-over');
       const blendId = state._draggedBlendId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
-      const targetStage = parseInt(col.dataset.blendStage, 10);
-      if(blendId) moveBlendToStage(blendId, targetStage);
+      const targetStageKey = col.dataset.blendStageKey;
+      if(blendId && targetStageKey) moveBlendToStage(blendId, targetStageKey);
       state._draggedBlendId = null;
     });
   });
@@ -25633,6 +26209,9 @@ function attachShellHandlers(){
   if(byIdEl('btn-advance-blend')) byIdEl('btn-advance-blend').onclick = ()=>{ const id=state.modal.split(':')[1]; advanceBlendBatch(id); };
   if(byIdEl('btn-delete-blend')) byIdEl('btn-delete-blend').onclick = ()=>{ const id=state.modal.split(':')[1]; deleteBlendBatch(id); };
   if(byIdEl('btn-print-blend-sheet')) byIdEl('btn-print-blend-sheet').onclick = ()=>{ const id=state.modal.split(':')[1]; printDocumentedBatchSheet(id); };
+  attachManageBlendStagesHandlers();
+  attachBlendVariationHandlers();
+  document.querySelectorAll('[data-blend-mobile-tab]').forEach(btn=>btn.addEventListener('click', ()=>{ state._blendMobileStage = btn.dataset.blendMobileTab; render(); }));
 
   // R&D board
   if(byIdEl('btn-new-rnd')) byIdEl('btn-new-rnd').onclick = ()=>openModal('rnd:new');
@@ -26752,7 +27331,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Add color sheet form ('colorsheetnew'),
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), the Mixing and Filling batch forms ('blend:new' = New batch, 'blend:<id>' = the batch window with its variation rows), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -26762,7 +27341,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:'))) return;
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('blend:'))) return;
     closeModal();
   });
   if(byIdEl('btn-cancel-modal')) byIdEl('btn-cancel-modal').onclick = closeModal;

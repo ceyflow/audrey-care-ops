@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122151004">
+<meta name="app-build" content="20261122154743">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1576,20 +1576,44 @@ html{ visibility:hidden; }
   @media (min-width:1151px){.blend-board{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));}}
   /* ===== Batch window (Mixing and Filling) + variations (owner, 2026-11-22) ===== */
   .bw-drawer{background:#F4F7F5;}
-  .bw-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px;}
-  .bw-run{display:flex;align-items:center;gap:14px;padding:12px 16px;margin:0 0 14px;background:#fff;border:1px solid var(--border);border-radius:14px;}
+  .bw-drawer .drawer-hero{margin-bottom:12px;padding-top:16px;padding-bottom:16px;}
+  .bw-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px;}
+  .bw-run{display:flex;align-items:center;gap:14px;padding:9px 14px;margin:0 0 10px;background:#fff;border:1px solid var(--border);border-radius:12px;}
   .bw-run > div:not(.bw-run-arrow){display:flex;flex-direction:column;gap:1px;min-width:0;}
   .bw-run span{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
   .bw-run b{font-size:14px;font-weight:700;color:var(--ink);}
   .bw-run i{font-style:normal;font-size:12px;color:var(--muted);}
   .bw-run-arrow{flex:1;text-align:center;color:var(--muted);font-size:18px;}
   .bw-run-r{text-align:right;align-items:flex-end;}
-  .bw-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px 18px;margin:0 0 14px;box-shadow:0 1px 2px rgba(20,30,25,.04);}
-  .bw-card .field{margin-bottom:12px;}
-  .bw-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
-  .bw-card-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--ink);}
-  .bw-ico{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--accent-soft);color:var(--accent-dark);flex:none;}
-  .bw-hint{font-size:12px;color:var(--muted);line-height:1.45;margin:-4px 0 12px;}
+  /* Each topic is its own card with a tinted header band (owner, 2026-11-22: "dont use too much spaces, seperate main sections make them visible more"). */
+  .bw-card{background:#fff;border:1px solid #CFDCD4;border-radius:14px;padding:0 16px 14px;margin:0 0 12px;box-shadow:0 1px 3px rgba(20,30,25,.07);overflow:hidden;}
+  .bw-card .field{margin-bottom:10px;}
+  .bw-card .field label{font-size:11.5px;margin-bottom:3px;}
+  .bw-card .field input,.bw-card .field select{padding:7px 10px;}
+  .bw-card .field textarea{padding:7px 10px;min-height:0;}
+  .bw-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 -16px 12px;padding:9px 16px;background:linear-gradient(180deg,rgba(var(--accent-rgb),.13),rgba(var(--accent-rgb),.06));border-bottom:1px solid rgba(var(--accent-rgb),.22);}
+  .bw-card-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;color:var(--ink);}
+  .bw-ico{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--ui-solid,var(--accent-dark));color:#fff;flex:none;}
+  .bw-ico svg{width:15px;height:15px;}
+  .bw-fgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0 12px;}
+  .bw-fgrid > .field{margin-bottom:10px;}
+  .bw-fgrid > .s2{grid-column:span 2;} .bw-fgrid > .s3{grid-column:span 3;} .bw-fgrid > .s4{grid-column:span 4;} .bw-fgrid > .sfull{grid-column:1 / -1;}
+  .bw-fgrid > .hint{margin:-4px 0 6px;font-size:11.5px;}
+  .bw-pill{display:inline-block;margin-left:2px;padding:2px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);}
+  .bw-pill-cur{background:var(--ui-solid,var(--accent-dark));border-color:transparent;color:#fff;}
+  .bw-pill-done{background:#E5F4EA;border-color:#BFE3CB;color:#1f7a45;}
+  .bw-qc.is-current{border-color:rgba(var(--accent-rgb),.55);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.10),0 1px 3px rgba(20,30,25,.07);}
+  .bw-qc-grid{display:grid;grid-template-columns:minmax(80px,.7fr) minmax(100px,1fr) auto;gap:0 12px;align-items:end;}
+  .bw-qc-grid > .bw-qc-notes{grid-column:1 / -1;}
+  .bw-qc-checks{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;min-height:36px;}
+  .bw-card .field .qc-chk{display:inline-flex;align-items:center;gap:6px;margin:0;padding:6px 11px 6px 9px;border:1.5px solid var(--border);border-radius:999px;background:#fff;font-size:12.5px;font-weight:700;letter-spacing:0;color:var(--ink);cursor:pointer;user-select:none;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
+  .bw-card .field .qc-chk input{width:15px;height:15px;min-width:15px;margin:0;padding:0;border:0;background:none;box-shadow:none;accent-color:var(--ui-deep,var(--accent-dark));cursor:pointer;}
+  .qc-chk:hover{border-color:var(--accent);}
+  .qc-chk:has(input:checked){background:var(--accent-soft);border-color:var(--accent-dark);color:var(--accent-dark);}
+  .bw-card .field .qc-chk.dis,.bw-card .field .qc-chk.dis input{cursor:default;} .qc-chk.dis:hover{border-color:var(--border);}
+  .bw-qc-by{margin:-2px 0 0;}
+  .bw-card .timeline{max-height:190px;overflow:auto;padding-right:4px;}
+  .bw-hint{font-size:12px;color:var(--muted);line-height:1.45;margin:-4px 0 10px;}
   .bv-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);}
   .bw-footer{position:sticky;bottom:-28px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px -34px -28px;padding:14px 34px calc(14px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--border);box-shadow:0 -10px 24px -14px rgba(20,30,25,.25);}
   .bw-foot-l,.bw-foot-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
@@ -1597,6 +1621,7 @@ html{ visibility:hidden; }
   .bw-btn svg{flex:none;}
   .bw-t-short{display:none;}
   @media (max-width:760px){ .bw-t-long{display:none;} .bw-t-short{display:inline;} .bw-footer .btn{padding-left:12px;padding-right:12px;} }
+  @media (max-width:760px){ .bw-qc-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .bw-qc-grid > .bw-qc-ck{grid-column:1 / -1;} .bw-qc-checks{flex-wrap:wrap;} .bw-fgrid{grid-template-columns:repeat(2,minmax(0,1fr));} .bw-fgrid > .s2,.bw-fgrid > .s3,.bw-fgrid > .s4{grid-column:span 1;} .bw-fgrid > .s4,.bw-fgrid > .sfull{grid-column:1 / -1;} }
   @media (max-width:760px){ .bw-footer{bottom:calc(-22px - env(safe-area-inset-bottom));margin:6px -22px calc(-22px - env(safe-area-inset-bottom));padding:12px 22px calc(12px + env(safe-area-inset-bottom));} .bw-run{flex-wrap:wrap;} }
   .bv-wrap{position:relative;}
   .bv-add{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;border:1px solid transparent;background:var(--accent-soft);color:var(--accent-dark);font:700 13px inherit;font-family:inherit;cursor:pointer;transition:background .15s,transform .15s,box-shadow .15s;}
@@ -3941,11 +3966,12 @@ function dallyAiEnabled(){ return !!(state.dallySettings && state.dallySettings.
 const DEFAULT_BATCH_SHEET_TEMPLATE = {
   showLogo:true, showDate:true, showBatchNo:true, showDescription:true,
   showPH:true, showFooter:true, footerText:'Audrey Care (Pvt) Ltd.',
+  showVariations:true, showPrep:true, showStages:true,   // the parts added 2026-11-22: Variations, Preparation checking, stage-by-stage sign-off table (each switchable)
   headerColor:'#ECECE6', fontSize:'medium',
   trailingSectionOrder:['ph','footer'],
   // logo, words and spaces (Settings -> Prints edits); every value is what the sheet always used
   logoMode:'company', logoUrl:'', logoH:112, logoAlign:'center',
-  wCompany:'Audrey Care (Pvt) Ltd.', wDoc:'Batch Sheet', wProduct:'Product', wBatchNo:'Batch number', wVariations:'Variations', wMaterials:'Raw materials', wSteps:'Production steps', wStages:'Stage by stage \u2014 floor sign-off',
+  wCompany:'Audrey Care (Pvt) Ltd.', wDoc:'Batch Sheet', wProduct:'Product', wBatchNo:'Batch number', wVariations:'Variations', wMaterials:'Raw materials', wPrep:'Preparation checking', wStages:'Stage by stage \u2014 floor sign-off',
   padX:24, padY:10, secGap:14, rowPad:6,
 };
 function batchSheetTemplate(){ return {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})}; }
@@ -8707,7 +8733,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; state._blendStagesDraft = null; state._blendStageBlock = null; state._blendVarDraft = null; render(); }
+function closeModal(){ state.modal = null; state._blendQcChecks = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; state._blendStagesDraft = null; state._blendStageBlock = null; state._blendVarDraft = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -9078,8 +9104,8 @@ function blendVariationRowHtml(r, ro, saved, i){
   <div class="bv-row" id="bv-row-${r.id}" data-frag-id="${escAttr(r.fragranceId||'')}">
     <span class="bv-n" aria-hidden="true">${(i||0)+1}</span>
     <div class="bv-grid">
-      <div class="bv-cell bv-p"><label for="bv-prod-${r.id}">Product</label><input id="bv-prod-${r.id}" class="bv-in" data-bv-pick="prod" value="${escAttr(r.product)}" placeholder="e.g. Aloevera" autocomplete="off" ${dis}></div>
-      <div class="bv-cell bv-f"><label for="bv-frag-${r.id}">Fragrance</label><input id="bv-frag-${r.id}" class="bv-in" data-bv-pick="frag" value="${escAttr(r.fragrance)}" placeholder="Type to search the Item List" autocomplete="off" ${dis}></div>
+      <div class="bv-cell bv-p"><label for="bv-prod-${r.id}">Product</label><input id="bv-prod-${r.id}" class="bv-in" value="${escAttr(r.product)}" placeholder="e.g. Aloevera" autocomplete="off" ${dis}></div>
+      <div class="bv-cell bv-f"><label for="bv-frag-${r.id}">Fragrance</label><input id="bv-frag-${r.id}" class="bv-in" data-bv-pick="frag" value="${escAttr(r.fragrance)}" placeholder="Search the Item List" autocomplete="off" ${dis}></div>
       <div class="bv-cell bv-q"><label for="bv-qty-${r.id}">Quantity</label><input id="bv-qty-${r.id}" class="bv-in" value="${escAttr(r.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" ${dis}></div>
       <div class="bv-cell bv-u"><label for="bv-unit-${r.id}">Unit</label><select id="bv-unit-${r.id}" class="bv-in" ${dis}><option value="">—</option>${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
     </div>
@@ -9112,7 +9138,7 @@ function blendVariationsSectionHtml(d, ro, savedBatch){
       <div class="bw-card-title"><span class="bw-ico">${BW_ICONS.layers}</span>Variations${d.rows.length ? `<span class="bv-count">${d.rows.length}</span>` : ''}</div>
       ${ro || !d.rows.length ? '' : `<button type="button" class="bv-add" id="btn-bv-add">${BV_ICON_PLUS}<span>Add variation</span></button>`}
     </div>
-    <div class="bw-hint">One row per variation: the product, its fragrance and the quantity. Click the Product or Fragrance box to see suggestions.</div>
+    <div class="bw-hint">Type the product. Start typing the fragrance to pick it from the Item List.</div>
     ${d.rows.length
       ? `<div class="bv-list">${rowsHtml}</div>
          <div class="bv-totals" id="bv-totals" ${totals?'':'style="display:none;"'}>${totals ? `<span class="bv-tot-l">Total</span>${totals}` : ''}</div>
@@ -9138,27 +9164,8 @@ function removeBlendVariationRow(rowId){
   d.rows = d.rows.filter(r=>r.id!==rowId);
   render();
 }
-// Suggestions for the PRODUCT box (owner, 2026-11-22: "when product type dont appear suggestions"): it used to search only the Item List, so a product name such as "aloevera" showed nothing at all.
-// Now: products used in earlier variations (most used first), the product names the system already knows (Costing products, Batch sheets, other batches), and the matching Item List names (which fill the FRAGRANCE, as before).
-function blendBaseProductName(name){ return stripTags(String(name||'')).replace(/\s*[—–-]\s*version\s*\d+.*$/i, '').trim(); }
-function blendProductSuggestions(typed){
-  const sq = x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const q = sq(typed);
-  const used = new Map();
-  (state.blendBatches||[]).forEach(bt=>blendVariationRows(bt).forEach(r=>{ const n = String(r.product||'').trim(); if(!n) return; const k = n.toLowerCase(); used.set(k, {name:n, n:(used.get(k)?used.get(k).n:0)+1}); }));
-  const usedList = [...used.values()].sort((a,b)=>b.n-a.n || a.name.localeCompare(b.name)).map(x=>x.name);
-  const known = [];
-  const addKnown = n=>{ n = blendBaseProductName(n); if(n && !known.some(k=>k.toLowerCase()===n.toLowerCase())) known.push(n); };
-  (state.costingProducts||[]).forEach(pr=>addKnown(pr && pr.name));
-  (state.recipes||[]).forEach(rc=>addKnown(rc && rc.name));
-  (state.blendBatches||[]).forEach(bt=>addKnown(bt && bt.product));
-  const match = list=>list.filter(n=>!q || sq(n).includes(q));
-  const usedM = match(usedList).slice(0,5);
-  const usedSet = new Set(usedM.map(n=>n.toLowerCase()));
-  return { used: usedM, known: match(known).filter(n=>!usedSet.has(n.toLowerCase())).slice(0,5), frag: q ? blendFragranceMatches(typed).slice(0,6) : [] };
-}
-// The suggestion list under a Product / Fragrance box. Picking a PRODUCT fills the Product box; picking an Item List entry fills the FRAGRANCE of that row (and remembers which Item List entry it was).
-// Arrow keys move through the list, Enter picks, Esc closes.
+// The suggestion list under the FRAGRANCE box only (owner, 2026-11-22: "dont add suggestion to product space, just need typing space to that"): the Product box is a plain typing box.
+// Picking an Item List name fills the Fragrance of that row (and remembers which Item List entry it was). Arrow keys move through the list, Enter picks, Esc closes.
 function attachBlendVariationHandlers(){
   document.querySelectorAll('body > .bv-dropdown').forEach(x=>x.remove());   // the list from the previous redraw
   const wrap = document.querySelector('.bv-wrap'); if(!wrap) return;
@@ -9168,9 +9175,6 @@ function attachBlendVariationHandlers(){
   let activeRow = null;
   const hide = ()=>{ dd.style.display='none'; dd.innerHTML=''; activeRow = null; };
   const hl = (name, typed)=>{ const i = typed ? name.toLowerCase().indexOf(typed.toLowerCase()) : -1; return i<0 ? esc(name) : esc(name.slice(0,i))+'<mark>'+esc(name.slice(i,i+typed.length))+'</mark>'+esc(name.slice(i+typed.length)); };
-  const optProd = (n, typed)=>`<div class="bv-opt" data-kind="prod" data-name="${escAttr(n)}"><span>${hl(n, typed)}</span></div>`;
-  const optFrag = (it, typed)=>`<div class="bv-opt" data-kind="frag" data-id="${escAttr(it.id||'')}" data-name="${escAttr(it.name)}"><span>${hl(it.name, typed)}</span>${blendIsFragranceItem(it)?'<b class="bv-tag">Fragrance</b>':''}${it.category?`<i>${esc(it.category)}</i>`:''}</div>`;
-  const grp = (title, body)=>body ? `<div class="bv-grp">${esc(title)}</div>${body}` : '';
   const place = (input)=>{
     const r = input.getBoundingClientRect();
     dd.style.position = 'fixed'; dd.style.left = Math.max(8, Math.min(r.left, innerWidth - 340)) + 'px'; dd.style.width = Math.max(r.width, 320)+'px';
@@ -9180,23 +9184,13 @@ function attachBlendVariationHandlers(){
   };
   const show = (input)=>{
     const row = input.closest('.bv-row'); if(!row) return hide();
-    const isFrag = input.dataset.bvPick==='frag';
     const typed = input.value.trim();
-    let html = '';
+    if(!typed) return hide();
     activeRow = row;
-    if(isFrag){
-      if(!typed){ activeRow = null; return hide(); }
-      const m = blendFragranceMatches(typed);
-      html = m.length ? grp('Item List', m.map(it=>optFrag(it, typed)).join('')) : `<div class="bv-none">No item called “${esc(typed)}” in the Item List. Keep typing, or leave the name as it is.</div>`;
-    } else {
-      const g = blendProductSuggestions(typed);
-      html = grp('Used before', g.used.map(n=>optProd(n, typed)).join(''))
-           + grp('Products', g.known.map(n=>optProd(n, typed)).join(''))
-           + grp('Item List · fills Fragrance', g.frag.map(it=>optFrag(it, typed)).join(''));
-      if(typed && !g.used.some(n=>n.toLowerCase()===typed.toLowerCase())) html += `<div class="bv-opt bv-new" data-kind="new" data-name="${escAttr(typed)}"><span>Use “${esc(typed)}” as a new product</span></div>`;
-      if(!html){ activeRow = null; return hide(); }
-    }
-    dd.innerHTML = html;
+    const m = blendFragranceMatches(typed);
+    dd.innerHTML = m.length
+      ? `<div class="bv-grp">Item List</div>` + m.map(it=>`<div class="bv-opt" data-id="${escAttr(it.id||'')}" data-name="${escAttr(it.name)}"><span>${hl(it.name, typed)}</span>${blendIsFragranceItem(it)?'<b class="bv-tag">Fragrance</b>':''}${it.category?`<i>${esc(it.category)}</i>`:''}</div>`).join('')
+      : `<div class="bv-none">No item called “${esc(typed)}” in the Item List. Keep typing, or leave the name as it is.</div>`;
     place(input);
   };
   const move = (delta)=>{
@@ -9209,16 +9203,14 @@ function attachBlendVariationHandlers(){
   const choose = (opt)=>{
     if(!opt || !activeRow) return;
     const rid = activeRow.id.replace('bv-row-','');
-    const kind = opt.dataset.kind;
-    const prod = document.getElementById('bv-prod-'+rid), frag = document.getElementById('bv-frag-'+rid), qty = document.getElementById('bv-qty-'+rid);
-    if(kind==='prod' || kind==='new'){ if(prod) prod.value = opt.dataset.name; hide(); if(frag) frag.focus(); return; }
+    const frag = document.getElementById('bv-frag-'+rid), qty = document.getElementById('bv-qty-'+rid);
     if(frag){ frag.value = opt.dataset.name; activeRow.dataset.fragId = opt.dataset.id || ''; }
     hide();
     if(qty) qty.focus();
   };
-  wrap.querySelectorAll('.bv-in[data-bv-pick]').forEach(input=>{
+  wrap.querySelectorAll('.bv-in[data-bv-pick="frag"]').forEach(input=>{
     input.addEventListener('input', ()=>{
-      if(input.dataset.bvPick==='frag'){ const row = input.closest('.bv-row'); if(row) row.dataset.fragId = ''; }   // typed by hand again: no longer tied to an Item List entry
+      const row = input.closest('.bv-row'); if(row) row.dataset.fragId = '';   // typed by hand again: no longer tied to an Item List entry
       show(input);
     });
     input.addEventListener('focus', ()=>show(input));
@@ -9228,8 +9220,7 @@ function attachBlendVariationHandlers(){
       else if(e.key==='Enter' && open){ const on = dd.querySelector('.bv-opt.on'); if(on){ e.preventDefault(); choose(on); } else hide(); }
       else if(e.key==='Escape' && open){ e.preventDefault(); e.stopPropagation(); hide(); }
     });
-    // Hide shortly after leaving a box, unless focus went to another suggestion box (its own focus handler shows its list).
-    input.addEventListener('blur', ()=>setTimeout(()=>{ const a = document.activeElement; if(!(a && a.dataset && a.dataset.bvPick)) hide(); }, 160));
+    input.addEventListener('blur', ()=>setTimeout(()=>{ const a = document.activeElement; if(!(a && a === input)) hide(); }, 160));
   });
   wrap.querySelectorAll('.bv-q input, .bv-u select').forEach(el=>{ el.addEventListener('input', renderBlendVarTotals); el.addEventListener('change', renderBlendVarTotals); });
   dd.addEventListener('mousedown', e=>{ const opt = e.target.closest('.bv-opt'); if(!opt || !activeRow) return; e.preventDefault(); choose(opt); });
@@ -9265,6 +9256,8 @@ async function advanceBlendBatch(id){
   const list = blendStageList(), i = blendStageIdx(b, list);
   if(i >= list.length-1 || !canAdvanceBlend(i)) return;
   const next = list[i+1];
+  const openForm = document.getElementById('form-blend-edit');
+  if(openForm && openForm.dataset.batchId===id && canEditBlendQc()) applyBlendEditForm(openForm, b);   // whatever is typed in the open window is kept, then the batch moves on
   blendPlaceInStage(b, next, i+1);
   if(!(await save('blendBatches'))) return;
   logActivity(`Moved blend batch ${b.batchNo} to ${next.label}`);
@@ -9274,27 +9267,12 @@ async function submitBlendEdit(e){
   e.preventDefault();
   const f = e.target; const id = f.dataset.batchId;
   const b = byId(state.blendBatches, id); if(!b || !canEditBlendQc()) return;
-  if(!canManageBlendBoard()){   // may only type the 1st QC readings: nothing else on the batch changes
-    Object.assign(b, {qcPH: f.qcPH.value.trim(), qcViscosity: f.qcViscosity.value.trim(), qcNotes: f.qcNotes.value.trim()});
-    if(!(await save('blendBatches'))) return;
-    closeModal(); logActivity(`Updated the 1st QC readings of blend batch ${b.batchNo}`); showToast('QC readings saved');
-    return;
-  }
-  syncBlendVarDraftFromDOM();
-  const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===id ? state._blendVarDraft.rows : blendVariationRows(b));
-  Object.assign(b, {
-    batchNo: f.batchNo.value.trim() || b.batchNo,
-    qty: f.qty.value.trim(),
-    priority: PRIORITIES.includes(f.priority.value) ? f.priority.value : (b.priority || 'Medium'),
-    machine: BATCH_MACHINES.some(m=>m.id===f.machine.value) ? f.machine.value : '',
-    formulationCode: f.formulationCode.value.trim(),
-    qcPH: f.qcPH.value.trim(), qcViscosity: f.qcViscosity.value.trim(), qcNotes: f.qcNotes.value.trim(),
-    variations: rows, variation: blendVariationsText(rows)
-  });
+  const onlyQc = !canManageBlendBoard();   // may only type the QC readings: nothing else on the batch changes
+  applyBlendEditForm(f, b);
   if(!(await save('blendBatches'))) return;
   closeModal();
-  logActivity(`Edited blend batch ${b.batchNo}`);
-  showToast('Batch updated');
+  if(onlyQc){ logActivity(`Updated the QC readings of blend batch ${b.batchNo}`); showToast('QC readings saved'); }
+  else { logActivity(`Edited blend batch ${b.batchNo}`); showToast('Batch updated'); }
 }
 async function moveBlendToStage(id, stageKey){
   const b = byId(state.blendBatches, id); if(!b || !canManageBlendBoard()) return;
@@ -17222,14 +17200,35 @@ function renderOrderInquiryPage(){
    not a public page. Someone signed out sees the normal sign-in page first and lands here afterwards; a role that cannot read the Mixing and Filling data (blendBatches) gets "not found or no access". It shows the
    same facts as the sticker (product, parent batch, machine, MFD, size; a variation sticker shows that variation's size), then variations, who started / completed it and when, the 1st QC (Base) status
    (worked out from the stage list: in 1st QC = Pending, past it = Approved with when and by whom, before it = not reached yet), the pH / viscosity / notes typed in the batch window, and the live stage as a badge. */
-function batchVerifyQc1(b){
-  const list = blendStageList(); const qi = list.findIndex(x=>x.key==='qc1'); if(qi<0) return null;
+// Status of one QC stage, worked out from the stage list and the history: before it = not reached yet, in it = pending, past it = approved with when / by whom.
+function batchVerifyQcStatus(b, key){
+  const list = blendStageList(); const qi = list.findIndex(x=>x.key===key); if(qi<0) return null;
   const cur = blendStageIdx(b, list);
   if(cur<qi) return {tone:'idle', text:'Not reached yet'};
   if(cur===qi) return {tone:'wait', text:'Pending'};
   const hist = (Array.isArray(b.history) ? b.history : []).filter(Boolean);
   const leftAt = hist.filter(h=>{ const k = h.stageKey || BLEND_STAGE_KEYS[h.stage]; const hi = list.findIndex(x=>x.key===k); return hi>qi; })[0];
   return {tone:'ok', text:'Approved' + (leftAt && leftAt.at ? ' · '+fmtDateTime(leftAt.at)+(leftAt.by ? ' · '+leftAt.by : '') : '')};
+}
+function batchVerifyQcCardsHtml(b){
+  const list = blendStageList();
+  const kv = (k, val)=>`<div class="bvw-kv"><span>${esc(k)}</span><b>${val ? esc(val) : '—'}</b></div>`;
+  const shown = new Map(blendQcSections(b).map(x=>[x.key, x]));
+  return BLEND_QC_KEYS.map(key=>{
+    const si = list.findIndex(x=>x.key===key); if(si<0) return '';
+    const sec = shown.get(key);
+    if(!sec && key!=='qc1') return '';   // 2nd / 3rd QC appear once the batch gets there; the 1st QC always shows (as "Not reached yet" before)
+    const q = sec ? sec.q : blendQcOf(b, key), st = batchVerifyQcStatus(b, key);
+    const ticked = BLEND_QC_CHECKS.filter(c=>q.checks[c.id]);
+    return `<div class="bvw-card">
+      <div class="bvw-k">${esc(list[si].label)}</div>
+      ${st ? `<div class="bvw-qc ${st.tone}">${esc(st.text)}</div>` : ''}
+      ${kv('pH', q.ph)}
+      ${kv('Viscosity', q.viscosity)}
+      <div class="bvw-kv"><span>Checked</span><b>${ticked.length ? ticked.map(c=>'✓ '+esc(c.label)).join('  ·  ') : '—'}</b></div>
+      ${q.notes.trim() ? `<div class="bvw-notes"><p>${esc(q.notes.trim())}</p></div>` : ''}
+    </div>`;
+  }).join('');
 }
 function renderBatchVerifyPage(){
   const id = _batchRequestedId || '';
@@ -17247,9 +17246,8 @@ function renderBatchVerifyPage(){
   const stages = blendStageList(), idx = blendStageIdx(b, stages), style = blendStageStyle(stages[idx], idx);
   const rows = blendVariationRows(b).filter(r=>r.product||r.fragrance||r.qty);
   const v = _batchRequestedVar ? rows.find(r=>r.id===_batchRequestedVar) : null;
-  const qc1 = batchVerifyQc1(b);
   const kv = (k, val)=>`<div class="bvw-kv"><span>${esc(k)}</span><b>${val ? esc(val) : '—'}</b></div>`;
-  const noteTexts = [b.notes, b.qcNotes].map(x=>String(x||'').trim()).filter(Boolean);
+  const noteTexts = [b.notes].map(x=>String(x||'').trim()).filter(Boolean);
   const created = ((b.history||[])[0]) || {};
   return `
   <div class="bvw-page">
@@ -17277,13 +17275,8 @@ function renderBatchVerifyPage(){
       ${b.completedAt ? kv('Completed', fmtDateTime(b.completedAt)+(b.completedBy ? ' · '+b.completedBy : '')) : ''}
       ${batchFormulationCode(b) ? kv('Formulation code', batchFormulationCode(b)) : ''}
     </div>
-    <div class="bvw-card">
-      <div class="bvw-k">1st QC (Base)</div>
-      ${qc1 ? `<div class="bvw-qc ${qc1.tone}">${esc(qc1.text)}</div>` : ''}
-      ${kv('pH', b.qcPH)}
-      ${kv('Viscosity', b.qcViscosity)}
-      ${noteTexts.length ? `<div class="bvw-notes">${noteTexts.map(t=>`<p>${esc(t)}</p>`).join('')}</div>` : ''}
-    </div>
+    ${batchVerifyQcCardsHtml(b)}
+    ${noteTexts.length ? `<div class="bvw-card"><div class="bvw-k">Notes</div><div class="bvw-notes">${noteTexts.map(t=>`<p>${esc(t)}</p>`).join('')}</div></div>` : ''}
     <div class="bvw-foot hint">Read-only view · Audrey Care (Pvt) Ltd</div>
     <div class="bvw-actions"><button type="button" class="btn btn-primary" id="btn-bvw-open">Open the app</button></div>
   </div>`;
@@ -19907,21 +19900,21 @@ const BATCH_SHEET_COLOR_PRESETS = ['#ECECE6','#FFFFFF','#D9EDE0','#E3EEF7','#FDF
 // exact same header/steps/trailing-section helpers the real prints use, so it's a faithful (if
 // not page-break-accurate) preview of the full documented batch sheet, not just its header.
 function batchSheetTemplatePreviewData(){
-  return {mode:'live', product:'Sample Recipe \u2014 Version 1', description:'A short recipe description shows here', machine:'Machine 1', batchNo:'BLD-SAMPLE', batchSizeKg:100, dateText:'Oct 12, 2026',
+  return {mode:'record', product:'Sample Recipe — Version 1', description:'A short recipe description shows here', machine:'Machine 1', batchNo:'BLD-SAMPLE', batchSizeKg:100, qtyText:'100 Kg', dateText:'Oct 12, 2026',
+    startedAt:'2026-10-12T08:30:00.000Z', startedBy:'Operator', completedAt:'2026-10-12T11:10:00.000Z', completedBy:'Operator',
     materials:[{name:'Water',percent:70},{name:'SLES',percent:12},{name:'Glycerin',percent:5},{name:'Fragrance',percent:1}],
     steps:[
-      {type:'preparation', name:'', checklist:[{kind:'checklist', text:'Production room cleaned', checked:true},{kind:'field', label:'Initial water pH', value:'6.2'}]},
-      {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},
-      {type:'phrase', lines:[{name:'SLES',percent:12},{name:'Glycerin',percent:5}], instruction:'Add and mix until dissolved', temperature:'55', waitMinutes:15},
-      {type:'phrase', ingredient:'Add Fragrance, mix', temperature:'40', waitMinutes:10},
-    ], combineNote:'Combine all phases slowly while stirring.', standardPH:'5.5 - 6.5',
-    formulationCode:'SR-V1'};
+      {type:'preparation', name:'Starting preparations', checklist:[{kind:'checklist', text:'Production room cleaned', checked:true},{kind:'checklist', text:'Mixing tank cleaned', checked:true},{kind:'field', label:'Initial water pH level', value:'7.8'}]},
+      {type:'preparation', name:'', checklist:[{kind:'checklist', text:'Raw materials weighed and checked', checked:false}]},
+      {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},   // phrases are not printed
+    ], standardPH:'5.5 - 6.5', formulationCode:'SR-V1', priority:'Medium',
+    showVariations:true, variations:[{product:'Aloevera', fragrance:'Aloe Green', qty:'40', unit:'5L cans'},{product:'Cucumber', fragrance:'Alo Cucumber', qty:'25', unit:'kg'}],
+    showStages:true, stageRows:{}, currentStageKey:'qc1'};
 }
-// Both pages of the printed sheet as small thumbnails (page 1, page 2) for Settings -> Batch sheet template.
+// The whole printed sheet as one small thumbnail for Settings -> Prints edits -> Batch sheet (a long sheet continues onto a second page when printed).
 function batchSheetTemplatePreviewHtml(tpl){
-  const thumb = n => `<div style="width:230px;height:325px;overflow:hidden;border:1px solid var(--border);border-radius:6px;box-shadow:0 2px 10px rgba(20,25,20,.12);background:#fff;flex:none;">
-    <div style="width:720px;zoom:${(230/720).toFixed(4)};">${batchSheetPrintHtml(batchSheetTemplatePreviewData(), tpl, {only:n})}</div></div>`;
-  return `${thumb(1)}${thumb(2)}`;
+  return `<div style="width:300px;overflow:hidden;border:1px solid var(--border);border-radius:6px;box-shadow:0 2px 10px rgba(20,25,20,.12);background:#fff;flex:none;">
+    <div style="width:720px;zoom:${(300/720).toFixed(4)};">${batchSheetPrintHtml(batchSheetTemplatePreviewData(), tpl, {})}</div></div>`;
 }
 function renderBatchSheetTemplateBody(){
   state._peId = 'batchsheet';
@@ -19931,9 +19924,9 @@ function renderBatchSheetTemplateBody(){
   const zoom = BATCH_SHEET_FONT_SCALE[tpl.fontSize] || 1;
   return `
     <div class="pe-bs">
-      <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the pre-run form and the final documented record both use this. The logo itself is uploaded from Template customization above (it prints at the top of the sheet); everything else is here.</div>
+      <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the sheet printed from the batch window on Mixing and Filling (and the blank pre-run form) use this. It prints, top to bottom: batch details, raw materials, variations, preparation checking, then the stage sign-off table and the sign-off lines. The mixing phrases are not printed. The logo, words and spaces are below.</div>
 
-      <div class="hint" style="margin-bottom:8px;">Preview — page 1 (batch details + raw materials) and page 2 (production steps + check list). Exact page breaks depend on the real recipe's length.</div>
+      <div class="hint" style="margin-bottom:8px;">Preview — the whole sheet, drawn with sample data. A long sheet continues onto a second page when printed.</div>
       <div id="bsp-preview" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;">${batchSheetTemplatePreviewHtml(tpl)}</div>
 
       <form id="form-batch-sheet-template">
@@ -19954,6 +19947,17 @@ function renderBatchSheetTemplateBody(){
           </div>
           <div class="field">
             <label><input type="checkbox" name="showPH" ${tpl.showPH?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show standard pH note</label>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label><input type="checkbox" name="showVariations" ${tpl.showVariations!==false?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show variations</label>
+          </div>
+          <div class="field">
+            <label><input type="checkbox" name="showPrep" ${tpl.showPrep!==false?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show preparation checking</label>
+          </div>
+          <div class="field">
+            <label><input type="checkbox" name="showStages" ${tpl.showStages!==false?'checked':''} onchange="syncBatchSheetTemplateDraftAndRender()"> Show stage sign-off table</label>
           </div>
         </div>
         <div class="field">
@@ -19978,7 +19982,7 @@ function renderBatchSheetTemplateBody(){
         </div>
 
         <div class="field">
-          <label>Order of the sections after Production Steps</label>
+          <label>Order of the notes after Preparation checking</label>
           <div class="login-order-list">
             ${order.map((key,i)=>`
             <div class="login-order-row">
@@ -20018,6 +20022,9 @@ function syncBatchSheetTemplateDraftFromDOM(){
   d.showBatchNo = form.showBatchNo.checked;
   d.showDescription = form.showDescription.checked;
   d.showPH = form.showPH.checked;
+  d.showVariations = form.showVariations.checked;
+  d.showPrep = form.showPrep.checked;
+  d.showStages = form.showStages.checked;
   d.showFooter = form.showFooter.checked;
   d.footerText = form.footerText.value;
   d.headerColor = form.headerColor.value;
@@ -20524,7 +20531,7 @@ function resetPrintEdit(){
 // A test print of the preview (sample data, the draft template): the same pipeline as the real print.
 async function peTestPrint(){
   const id = state._peId; const area = document.getElementById('print-area'); if(!area) return;
-  if(id==='batchsheet'){ showToast('Use the real Print button; the preview shows both pages'); return; }
+  if(id==='batchsheet'){ showToast('Use the Print batch sheet button in a batch window; the preview shows the whole sheet'); return; }
   peReadFields(document.getElementById('pe-form'), peDraftTpl(id), id);
   const T = peDraftTpl(id);
   let pageCss = '', html = '';
@@ -24026,14 +24033,14 @@ function bsmcLedgerStepsHtml(steps, ordinals, kg){
     <tbody>${rows}</tbody>
   </table>`;
 }
-/* ===================== Printed batch sheet: ONE clean 2-page template (owner, 2026-11-21: "change the print batch sheet ui design like the order print we did,
-   clean better template, structured to 2 pages") =====================
-   Used by BOTH prints (printBatchSheet = the blank pre-run form from the Batch sheet page, printDocumentedBatchSheet = the finished-batch record from Mixing and
-   Filling) and by the live preview in Settings -> Batch sheet template. PAGE 1: header, product + batch number, batch details, raw materials (with a tick box
-   to weigh off each one), then (pre-run only) the "Before you start" check list. PAGE 2: the production steps, then the sections the template orders after them (combine note / pH / footer), then either the
-   "After the batch" check list to fill in by hand (pre-run) or the sign-off lines (record), then "Printed ... by ...". Styles are scoped to .bsp and
-   live inside the printed content, so nothing else on the page is touched. The template switches in Settings still apply (logo, date, batch number, description,
-   combine note, pH, footer text, font size, heading colour, order of the sections after the steps). */
+/* ===================== Printed batch sheet: ONE clean template, in this order (owner, 2026-11-22: "first batch details like current, and next raw materials, then VARIATIONS, do not add phrases.
+   add preparation checking setups. and remove weigh checking boxes in raw materials in print") =====================
+   Used by BOTH prints (printBatchSheet = the blank pre-run form from the Batch sheet page, printDocumentedBatchSheet = the record printed from the batch window on Mixing and Filling) and by the live
+   preview in Settings -> Prints edits -> Batch sheet. TOP TO BOTTOM: company + logo, product + batch number, batch details, RAW MATERIALS (No / Raw material / Percentage / Amount: NO "Weighed" tick column any more),
+   VARIATIONS, PREPARATION CHECKING (the batch's preparation / checking steps with their tick boxes and readings: batchPrepPrintHtml; the mixing PHRASES are NOT printed any more), the template-ordered pH / footer notes,
+   the stage-by-stage floor sign-off table, then the sign-off lines (record) or the blank "Before you start" / "After the batch" check lists (pre-run form), then "Printed ... by ...". It is ONE flowing page now (no forced
+   page break): a typical batch is one page, a long one simply continues, and each table / check list stays in one piece (`break-inside:avoid`). Styles are scoped to .bsp and live inside the printed content, so nothing else on
+   the page is touched. Settings switches: logo, date, batch number, description, pH, footer text, Variations, Preparation checking, stage sign-off, font size, heading colour, order of the pH / footer notes. */
 // The blank check list is split by WHEN it is filled in: "before you start" sits on page 1 under the raw materials, "after the batch" closes page 2 after the steps.
 function bspQaTable(title, head, rows, widths){
   return `
@@ -24071,6 +24078,23 @@ function batchQaAfterHtml(){
     </div>
   </div></div>`;
 }
+// The PREPARATION / CHECKING steps of the batch as printed (owner, 2026-11-22: "do not add phrases. add preparation checking"): one small table per preparation step, headed by the step's name
+// ("Starting preparations"), a row per check with a tick box (drawn, so it prints the same in every browser) and a row per reading with its typed value (or a blank to write in). The mixing PHRASES are
+// not printed any more. A step with nothing in its list is left out; with no preparation steps at all the whole block is left out.
+function batchPrepPrintHtml(steps, title){
+  const preps = (steps||[]).filter(s=>s && s.type==='preparation' && (s.checklist||[]).length);
+  if(!preps.length) return '';
+  const box = on => `<span class="bsp-box${on?' on':''}">${on?'\u2713':''}</span>`;
+  return `
+    <div class="bsp-sec">${esc(title || 'Preparation checking')}</div>
+    ${preps.map((s,i)=>`
+    <table class="bsp-mats bsp-prep">
+      <thead><tr><th colspan="3">${esc(s.name ? s.name : 'Preparation / Checking '+(i+1))}</th></tr></thead>
+      <tbody>${s.checklist.map(c => c.kind==='field'
+        ? `<tr><td>${esc(c.label)}</td><td class="val">${c.value ? esc(c.value) : ''}</td><td class="chk"></td></tr>`
+        : `<tr><td colspan="2">${esc(c.text)}</td><td class="chk">${box(!!c.checked)}</td></tr>`).join('')}</tbody>
+    </table>`).join('')}`;
+}
 // The variations as printed (owner, 2026-11-22: "the exact same structured variation quantities, units"): one row per variation with product, fragrance, quantity and unit, the same four columns
 // as on the board window, and a total per unit. With nothing recorded it prints three empty lines for the floor to fill in by hand.
 function batchVariationsPrintHtml(rows, title){
@@ -24094,7 +24118,7 @@ function batchStageSignoffHtml(d){
   return `
     <div class="bsp-stgwrap"><div class="bsp-sec">${esc(d.stageTitle || 'Stage by stage — floor sign-off')}</div>
     <table class="bsp-stg">
-      <thead><tr><th>Stage</th><th style="width:104px;">Date / time</th><th style="width:92px;">Moved by</th><th style="width:150px;">Sign-off</th></tr></thead>
+      <thead><tr><th>Stage</th><th style="width:124px;">Date / time</th><th style="width:84px;">Moved by</th><th style="width:136px;">Sign-off</th></tr></thead>
       <tbody>${stages.map(st=>{ const h = at[st.key]; return `<tr><td class="c-st">${esc(st.label)}${d.currentStageKey===st.key ? ' <i>· now</i>' : ''}</td><td>${h&&h.at?esc(fmtDateTime(h.at)):''}</td><td>${h&&h.by?esc(h.by):''}</td><td class="c-sig"></td></tr>`; }).join('')}</tbody>
     </table></div>`;
 }
@@ -24131,7 +24155,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
   const trailing = batchSheetTrailingSectionsHtml(tpl, {standardPH: d.standardPH});
   const prod = String(d.product||'').trim();
   return `
-  <div class="bsp${opts && opts.only ? ' bsp-only'+opts.only : ''}" style="zoom:${zoom};">
+  <div class="bsp" style="zoom:${zoom};">
   <style>
     .bsp{max-width:720px;margin:0 auto;padding:${bn('padY',10)}px ${bn('padX',24)}px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .bsp *{box-sizing:border-box;}
@@ -24148,18 +24172,17 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp table.bsp-info td.v{padding:5px 14px 5px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;}
     .bsp .bsp-dash{color:#C3C9C1;font-weight:400;}
     .bsp .bsp-desc{font-size:12px;color:#4A554F;margin:-4px 0 12px;}
-    .bsp .bsp-sec{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin:${bn('secGap',14)}px 0 5px;}
+    .bsp .bsp-sec{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin:${bn('secGap',14)}px 0 5px;break-after:avoid;page-break-after:avoid;}   /* a heading never stays alone at the bottom of a page */
     .bsp table.bsp-mats{width:100%;border-collapse:collapse;font-size:12px;}
     .bsp table.bsp-mats th{background:${accent};color:${headInk};text-align:left;padding:6px 8px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1.5px solid #1C2320;}
     .bsp table.bsp-mats td{padding:${bn('rowPad',6)}px 8px;border-bottom:1px solid #E7E9E4;}
     .bsp table.bsp-mats .c-no{width:34px;}
     .bsp table.bsp-mats td.c-no{color:#6B7570;}
     .bsp table.bsp-mats .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
-    .bsp table.bsp-mats .chk{width:62px;text-align:center;}
+    .bsp table.bsp-mats .chk{width:54px;text-align:center;}
     .bsp table.bsp-mats tr.tot td{border-top:2px solid #1C2320;border-bottom:none;font-weight:700;}
-    .bsp .bsp-box{display:inline-block;width:13px;height:13px;border:1.4px solid #6B7570;border-radius:3px;vertical-align:middle;}
-    .bsp .bsp-runhead{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:#6B7570;border-bottom:1px solid #D8DCD4;padding-bottom:5px;margin-bottom:4px;}
-    .bsp .bsp-runhead b{color:#1C2320;}
+    .bsp .bsp-box{display:inline-block;width:13px;height:13px;border:1.4px solid #6B7570;border-radius:3px;vertical-align:middle;text-align:center;font-size:11px;line-height:11px;font-weight:800;color:#1C2320;}
+    .bsp .bsp-box.on{border-color:#1C2320;}
     .bsp table.bsmc-ledger{font-size:11.5px;}
     .bsp table.bsmc-ledger th{color:#6B7570;border-bottom:1.5px solid #1C2320;}
     .bsp table.bsmc-ledger td{border-bottom:1px solid #E7E9E4;padding:5px 8px;}
@@ -24177,18 +24200,21 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp .bsp-sig span{flex:1;border-bottom:1px solid #6B7570;height:14px;}
     .bsp .bsp-signoff{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px;}
     .bsp .bsp-printed{margin-top:8px;font-size:10.5px;color:#6B7570;text-align:right;}
-    .bsp table.bsp-var .un{width:56px;text-align:center;}
+    .bsp table.bsp-var .un{width:72px;text-align:center;white-space:nowrap;}
     .bsp table.bsp-var td{height:22px;}
     .bsp .bsp-stgwrap{break-inside:avoid;page-break-inside:avoid;}
     .bsp table.bsp-stg{width:100%;border-collapse:collapse;font-size:11px;}
     .bsp table.bsp-stg th{background:${accent};color:${headInk};text-align:left;padding:4px 6px;border:1px solid #CDD2CA;font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;}
     .bsp table.bsp-stg td{padding:3px 6px;border:1px solid #CDD2CA;height:21px;}
     .bsp table.bsp-stg td.c-st{font-weight:600;}
+    .bsp table.bsp-stg td{white-space:nowrap;}
     .bsp table.bsp-stg td.c-st i{font-style:normal;font-weight:400;color:#6B7570;font-size:10px;}
-    .bsp .bsp-p2{break-before:page;page-break-before:always;}
-    .bsp.bsp-only1 .bsp-p2,.bsp.bsp-only2 .bsp-p1{display:none;}   /* single-page thumbnails in Settings */
+    .bsp table.bsp-prep{margin:0 0 8px;break-inside:avoid;page-break-inside:avoid;}
+    .bsp table.bsp-prep td.val{width:130px;font-weight:700;}
+    .bsp table.bsp-prep td.chk,.bsp table.bsp-prep th.chk{width:54px;text-align:center;}
+    .bsp table.bsp-mats tr{break-inside:avoid;page-break-inside:avoid;}
   </style>
-  <section class="bsp-p1">
+  <section class="bsp-main">
     <div class="bsp-top">${logo}<div class="bsp-co">${esc(tpl.wCompany)}</div><div class="bsp-doc">${esc(tpl.wDoc)}</div></div>
     <div class="bsp-titlerow">
       <div style="min-width:0;"><div class="bsp-k">${esc(tpl.wProduct)}</div><div class="bsp-product">${prod ? esc(prod) : blank}</div></div>
@@ -24196,24 +24222,20 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     </div>
     <table class="bsp-info">${infoRows.map(r=>`<tr>${infoCell(r[0])}${infoCell(r[1])}</tr>`).join('')}</table>
     ${(tpl.showDescription && d.description) ? `<div class="bsp-desc">${esc(d.description)}</div>` : ''}
-    ${d.showVariations ? batchVariationsPrintHtml(d.variations, tpl.wVariations) : ''}
     ${(mats.length || d.mode!=='record') ? `
     <div class="bsp-sec">${esc(tpl.wMaterials)}</div>
     <table class="bsp-mats">
-      <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="num">Percentage</th><th class="num">Amount (kg)</th><th class="chk">Weighed</th></tr></thead>
+      <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="num">Percentage</th><th class="num">Amount (kg)</th></tr></thead>
       <tbody>
-        ${mats.map((m,i)=>`<tr><td class="c-no">${i+1}</td><td>${esc(m.name)}</td><td class="num">${(Number(m.percent)||0).toFixed(3)}</td><td class="num">${kg>0 ? recipeMaterialAmount(m.percent, kg).toFixed(3) : '—'}</td><td class="chk"><span class="bsp-box"></span></td></tr>`).join('')}
-        <tr class="tot"><td></td><td>Total</td><td class="num">${totalPct.toFixed(3)}</td><td class="num">${kg>0 ? recipeMaterialAmount(totalPct, kg).toFixed(3) : '—'}</td><td></td></tr>
+        ${mats.map((m,i)=>`<tr><td class="c-no">${i+1}</td><td>${esc(m.name)}</td><td class="num">${(Number(m.percent)||0).toFixed(3)}</td><td class="num">${kg>0 ? recipeMaterialAmount(m.percent, kg).toFixed(3) : '—'}</td></tr>`).join('')}
+        <tr class="tot"><td></td><td>Total</td><td class="num">${totalPct.toFixed(3)}</td><td class="num">${kg>0 ? recipeMaterialAmount(totalPct, kg).toFixed(3) : '—'}</td></tr>
       </tbody>
     </table>` : ''}
+    ${(d.showVariations && tpl.showVariations!==false) ? batchVariationsPrintHtml(d.variations, tpl.wVariations) : ''}
+    ${tpl.showPrep!==false ? batchPrepPrintHtml(steps, tpl.wPrep) : ''}
     ${d.mode==='record' ? '' : batchQaBeforeHtml()}
-  </section>
-  <section class="bsp-p2">
-    <div class="bsp-runhead"><span><b>${prod ? esc(prod) : 'Batch sheet'}</b>${(tpl.showBatchNo && d.batchNo) ? ' · Batch '+esc(d.batchNo) : ''}</span><span>${kg>0 ? esc(fmtQty(kg))+' kg' : ''}${d.machine ? ' · '+esc(d.machine) : ''}</span></div>
-    <div class="bsp-sec" style="margin-top:8px;">${esc(tpl.wSteps)}</div>
-    ${steps.length ? bsmcLedgerStepsHtml(steps, documentedStepOrdinals(steps), kg) : '<div class="bsp-desc">No production steps.</div>'}
     ${trailing}
-    ${d.showStages ? batchStageSignoffHtml({...d, stageTitle: tpl.wStages}) : ''}
+    ${(d.showStages && tpl.showStages!==false) ? batchStageSignoffHtml({...d, stageTitle: tpl.wStages}) : ''}
     ${d.mode==='record'
       ? `<div class="bsp-signoff"><div class="bsp-sig">Operator: <span></span></div><div class="bsp-sig">Supervisor: <span></span></div><div class="bsp-sig">QC: <span></span></div></div>`
       : batchQaAfterHtml()}
@@ -24358,10 +24380,10 @@ const PRINT_DEFS = {
     ],
   },
   batchsheet: {
-    title:'Batch sheet', blurb:'The printed batch sheet (blank form and finished record). The switches, colour, font and section order are in the first part; logo, words and spaces below.',
+    title:'Batch sheet', blurb:'The printed batch sheet, top to bottom: batch details, raw materials, variations, preparation checking, the stage sign-off table and the sign-off lines. The switches, colour, font and note order are in the first part; logo, words and spaces below.',
     groups:[
       {title:'Logo', fields:peLogoFields({mode:'company', h:112, unit:'px', min:20, max:240, step:1, align:'center'})},
-      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wDoc','Document title','Batch Sheet'), PE_TXT('wProduct','Product','Product'), PE_TXT('wBatchNo','Batch number','Batch number'), PE_TXT('wVariations','Variations heading','Variations'), PE_TXT('wMaterials','Raw materials heading','Raw materials'), PE_TXT('wSteps','Production steps heading','Production steps'), PE_TXT('wStages','Stage sign-off heading','Stage by stage — floor sign-off')]},
+      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wDoc','Document title','Batch Sheet'), PE_TXT('wProduct','Product','Product'), PE_TXT('wBatchNo','Batch number','Batch number'), PE_TXT('wVariations','Variations heading','Variations'), PE_TXT('wMaterials','Raw materials heading','Raw materials'), PE_TXT('wPrep','Preparation checking heading','Preparation checking'), PE_TXT('wStages','Stage sign-off heading','Stage by stage — floor sign-off')]},
       {title:'Spaces, by hand', fields:[PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('secGap','Space above each heading',14,'px',0,60,1), PE_NUM('rowPad','Height of each table row (padding)',6,'px',0,20,.5)]},
     ],
   },
@@ -25553,6 +25575,81 @@ const BW_ICONS = {
   history: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   print:   '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7" rx="1"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg>',
 };
+/* ----- QC readings per QC stage (owner, 2026-11-22: "1st QC typing spaces only appear once transfer to that stage, and when transfer to 2nd QC under 1st QC space add another to 2nd QC ... add checkboxes to mark - Color, Fragrance, Viscosity") -----
+   Saved on the batch as b.qc = {qc1:{ph, viscosity, notes, checks:{color, fragrance, viscosity}, by, at}, qc2:{..}, qc3:{..}}, keyed by the stage KEY. A stage that was removed in Manage Lists has no section.
+   A batch saved before this existed keeps its readings in b.qcPH / b.qcViscosity / b.qcNotes: they are read as the qc1 section, and saving qc1 still writes them (the sticker page and any older open page read them). */
+const BLEND_QC_KEYS = ['qc1','qc2','qc3'];
+const BLEND_QC_CHECKS = [{id:'color', label:'Color'},{id:'fragrance', label:'Fragrance'},{id:'viscosity', label:'Viscosity'}];
+function blendQcOf(b, key){
+  const q = (b.qc && b.qc[key]) || null;
+  const legacy = !q && key==='qc1';
+  const c = (q && q.checks) || {};
+  return {
+    ph: String(q ? (q.ph||'') : legacy ? (b.qcPH||'') : ''),
+    viscosity: String(q ? (q.viscosity||'') : legacy ? (b.qcViscosity||'') : ''),
+    notes: String(q ? (q.notes||'') : legacy ? (b.qcNotes||'') : ''),
+    checks: {color: !!c.color, fragrance: !!c.fragrance, viscosity: !!c.viscosity},
+    by: q ? (q.by||'') : '', at: q ? (q.at||'') : ''
+  };
+}
+function blendQcHasData(q){ return !!(q.ph.trim() || q.viscosity.trim() || q.notes.trim() || q.checks.color || q.checks.fragrance || q.checks.viscosity); }
+// The QC sections to show on a batch: a QC stage the batch has reached (or passed), or one that already holds readings; in the order of the stage list.
+function blendQcSections(b){
+  const list = blendStageList(), cur = blendStageIdx(b, list);
+  return BLEND_QC_KEYS.map(key=>{
+    const si = list.findIndex(x=>x.key===key); if(si<0) return null;
+    const q = blendQcOf(b, key);
+    if(!(cur>=si || blendQcHasData(q))) return null;
+    return {key, label: list[si].label, stageIdx: si, state: cur===si ? 'current' : (cur>si ? 'done' : 'earlier'), q};
+  }).filter(Boolean).sort((a,c)=>a.stageIdx-c.stageIdx);
+}
+function blendQcCardHtml(s, b, canEdit){
+  const at = canEdit ? '' : 'readonly', dis = canEdit ? '' : 'disabled';
+  const draft = (state._blendQcChecks && state._blendQcChecks.forId===b.id) ? state._blendQcChecks.vals : {};
+  const pill = s.state==='current' ? '<span class="bw-pill bw-pill-cur">Current stage</span>' : s.state==='done' ? '<span class="bw-pill bw-pill-done">Done</span>' : '<span class="bw-pill">Saved earlier</span>';
+  const n = 'qc_'+s.key+'_';
+  return `
+  <section class="bw-card bw-qc ${s.state==='current'?'is-current':''}" data-qc-key="${s.key}">
+    <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.qc}</span>${esc(s.label)}${pill}</div></div>
+    <div class="bw-qc-grid">
+      <div class="field"><label>pH</label><input name="${n}ph" value="${escAttr(s.q.ph)}" placeholder="e.g. 5.8" autocomplete="off" ${at}></div>
+      <div class="field"><label>Viscosity</label><input name="${n}viscosity" value="${escAttr(s.q.viscosity)}" placeholder="e.g. 4500 cP" autocomplete="off" ${at}></div>
+      <div class="field bw-qc-ck"><label>Checked</label>
+        <div class="bw-qc-checks">${BLEND_QC_CHECKS.map(c=>{ const k = s.key+'.'+c.id; const on = (k in draft) ? !!draft[k] : s.q.checks[c.id]; return `<label class="qc-chk${canEdit?'':' dis'}"><input type="checkbox" class="bw-qc-chk" name="${n}chk_${c.id}" data-qc-k="${k}" ${on?'checked':''} ${dis}><span>${c.label}</span></label>`; }).join('')}</div>
+      </div>
+      <div class="field bw-qc-notes"><label>Notes</label><textarea name="${n}notes" rows="2" ${at} placeholder="Shown on the page the sticker's QR code opens">${escBody(s.q.notes)}</textarea></div>
+    </div>
+    ${s.q.by ? `<div class="bw-hint bw-qc-by">Last saved by ${esc(s.q.by)}${s.q.at ? ' · '+fmtDateTime(s.q.at) : ''}</div>` : ''}
+  </section>`;
+}
+// Copy what is typed in the open batch window onto the batch (Save, and "Next stage", which must not lose what was typed). A person who may only type QC readings changes nothing else.
+function applyBlendEditForm(f, b){
+  if(canManageBlendBoard()){
+    syncBlendVarDraftFromDOM();
+    const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===b.id ? state._blendVarDraft.rows : blendVariationRows(b));
+    Object.assign(b, {
+      batchNo: f.batchNo.value.trim() || b.batchNo,
+      qty: f.qty.value.trim(),
+      priority: PRIORITIES.includes(f.priority.value) ? f.priority.value : (b.priority || 'Medium'),
+      machine: BATCH_MACHINES.some(m=>m.id===f.machine.value) ? f.machine.value : '',
+      formulationCode: f.formulationCode.value.trim(),
+      variations: rows, variation: blendVariationsText(rows)
+    });
+  }
+  const qc = Object.assign({}, b.qc || {});
+  BLEND_QC_KEYS.forEach(key=>{
+    const ph = f.elements['qc_'+key+'_ph']; if(!ph) return;   // that section is not on screen
+    const g = n=>f.elements['qc_'+key+'_'+n];
+    const prev = blendQcOf(b, key);
+    const next = {ph: ph.value.trim(), viscosity: g('viscosity').value.trim(), notes: g('notes').value.trim(), checks: {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked}};
+    const same = next.ph===prev.ph.trim() && next.viscosity===prev.viscosity.trim() && next.notes===prev.notes.trim() && BLEND_QC_CHECKS.every(c=>next.checks[c.id]===prev.checks[c.id]);
+    if(same && !(b.qc && b.qc[key])) return;   // nothing typed, nothing saved before
+    next.by = same ? prev.by : (state.session && state.session.name) || ''; next.at = same ? prev.at : new Date().toISOString();
+    qc[key] = next;
+  });
+  b.qc = qc;
+  if(qc.qc1){ b.qcPH = qc.qc1.ph; b.qcViscosity = qc.qc1.viscosity; b.qcNotes = qc.qc1.notes; }   // kept in step for the sticker page and older open pages
+}
 // The batch window on Mixing and Filling (owner, 2026-11-22: "improve and organize this panel better, print buttons should go under near delete buttons"):
 // the hero, a chip row and a Started -> Completed strip on top; then one card per topic (Batch details, Variations, 1st QC, History); and a bottom bar that stays in view
 // while the window scrolls: Print batch sheet, Print Vessel Sticker and Delete on the left, Next stage and Save on the right. Every id / name the handlers use is unchanged.
@@ -25599,34 +25696,23 @@ function renderBlendDrawer(id){
     <form id="form-blend-edit" data-batch-id="${b.id}">
       <section class="bw-card">
         <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.details}</span>Batch details</div></div>
-        <div class="field-row">
-          <div class="field"><label>Batch Number</label><input name="batchNo" value="${escAttr(b.batchNo)}" ${roAttr}></div>
-          <div class="field"><label>Quantity</label><input name="qty" value="${escAttr(b.qty)}" ${roAttr}></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Priority</label>
+        <div class="bw-fgrid">
+          <div class="field s2"><label>Batch Number</label><input name="batchNo" value="${escAttr(b.batchNo)}" ${roAttr}></div>
+          <div class="field s2"><label>Quantity</label><input name="qty" value="${escAttr(b.qty)}" ${roAttr}></div>
+          <div class="field s2"><label>Priority</label>
             <select name="priority" ${ro?'disabled':''}>${PRIORITIES.map(p=>`<option ${priority===p?'selected':''}>${p}</option>`).join('')}</select>
           </div>
-          <div class="field"><label>Machine</label>
+          <div class="field s2"><label>Machine</label>
             <select name="machine" ${ro?'disabled':''}>${blendMachineOptions(b.machine||'')}</select>
-            ${b.machine && b.recipeId ? `<div class="hint">Set from the batch sheet.</div>` : ''}
           </div>
-        </div>
-        <div class="field" style="margin-bottom:0;"><label>Formulation code</label><input name="formulationCode" value="${escAttr(b.formulationCode||'')}" placeholder="${escAttr(code||'e.g. SG-V1')}" ${roAttr}>
-          ${!b.formulationCode && code ? `<div class="hint">Shown as <b>${esc(code)}</b> (made from the batch sheet's name). Type your own to replace it.</div>` : ''}
+          <div class="field s4"><label>Formulation code</label><input name="formulationCode" value="${escAttr(b.formulationCode||'')}" placeholder="${escAttr(code||'e.g. SG-V1')}" ${roAttr}></div>
+          ${(b.machine && b.recipeId) || (!b.formulationCode && code) ? `<div class="hint sfull">${b.machine && b.recipeId ? 'Machine is set from the batch sheet. ' : ''}${!b.formulationCode && code ? `Formulation code shows <b>${esc(code)}</b> (made from the batch sheet's name); type your own to replace it.` : ''}</div>` : ''}
         </div>
       </section>
 
       ${blendVariationsSectionHtml(d, ro, b)}
 
-      <section class="bw-card">
-        <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.qc}</span>1st QC</div></div>
-        <div class="field-row">
-          <div class="field"><label>pH</label><input name="qcPH" value="${escAttr(b.qcPH||'')}" placeholder="e.g. 5.8" autocomplete="off" ${qcAttr}></div>
-          <div class="field"><label>Viscosity</label><input name="qcViscosity" value="${escAttr(b.qcViscosity||'')}" placeholder="e.g. 4500 cP" autocomplete="off" ${qcAttr}></div>
-        </div>
-        <div class="field" style="margin-bottom:0;"><label>QC / blending notes</label><textarea name="qcNotes" ${qcAttr} placeholder="Shown on the page the sticker's QR code opens">${escBody(b.qcNotes||'')}</textarea></div>
-      </section>
+      ${blendQcSections(b).map(sec=>blendQcCardHtml(sec, b, qcCan)).join('')}
 
       <section class="bw-card">
         <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.history}</span>History${hist.length ? `<span class="bv-count">${hist.length}</span>` : ''}</div></div>
@@ -27326,6 +27412,11 @@ function attachShellHandlers(){
   if(byIdEl('btn-print-blend-sheet')) byIdEl('btn-print-blend-sheet').onclick = ()=>{ const id=state.modal.split(':')[1]; printDocumentedBatchSheet(id); };
   attachManageBlendStagesHandlers();
   attachBlendVariationHandlers();
+  document.querySelectorAll('#form-blend-edit .bw-qc-chk').forEach(cb=>cb.addEventListener('change', ()=>{   // render() rebuilds the window and does not put a ticked box back, so the ticks are remembered here
+    const id = (state.modal||'').split(':')[1];
+    if(!state._blendQcChecks || state._blendQcChecks.forId!==id) state._blendQcChecks = {forId:id, vals:{}};
+    state._blendQcChecks.vals[cb.dataset.qcK] = cb.checked;
+  }));
   document.querySelectorAll('[data-sticker-var]').forEach(btn=>btn.addEventListener('click', ()=>{ const id = (state.modal||'').split(':')[1]; if(id) printVesselSticker(id, btn.dataset.stickerVar||''); }));
   if(byIdEl('btn-vs-close')) byIdEl('btn-vs-close').onclick = closeModal;
   if(byIdEl('btn-vs-print')) byIdEl('btn-vs-print').onclick = ()=>{ const parts = (state.modal||'').split(':'); printVesselSticker(parts[1], parts[2]||''); };

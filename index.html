@@ -2576,6 +2576,8 @@ html{ visibility:hidden; }
   .batch-steplist .bs-checks{display:flex;flex-direction:column;gap:1px;font-size:12px;font-weight:400;color:#7A8C7F;}
   .batch-steplist .bs-checks span::before{content:"\00B7";margin-right:6px;}
   .batch-steplist .bs-row.current .bs-checks{color:#5B6E61;}
+  .batch-steplist .bs-wait{flex:none;min-width:52px;text-align:right;font-size:12px;font-weight:500;color:#9AA89F;white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:1px;}
+  .batch-steplist .bs-wait.has{color:var(--accent-dark);font-weight:700;font-size:13px;}
   @media (max-width:760px){
     .batch-focus .bf-right-col{padding:10px;}
     .bf-timer-btn{padding:10px 12px;}
@@ -22961,7 +22963,8 @@ function costingOnFixedCostFieldInput(el){
 // sound) now lives behind "Big screen" (renderBatchFocusOverlay), so this stays small even once
 // several batches are running side by side.
 // "All steps" on the big screen (owner, 2026-11-22: every step shows its relevant phrase): a phrase step shows its raw materials (kg of this batch's size) and its instruction;
-// a Preparation / Checking step lists its checks under its name instead of a bare title. The old "N min / no wait" column is gone: nothing counts down by itself any more.
+// a Preparation / Checking step lists its checks under its name instead of a bare title. Each phrase step also shows its WAIT time ("10 min" / "no wait") on the right
+// (owner, 2026-11-22: "need wait time show in all steps, so we can see wait time and set the timer manually"): nothing counts down by itself, the person reads it and sets the Timer.
 function batchStepsListHtml(b, isDone){
   return `<div class="batch-steplist">
     ${b.steps.map((s,i)=>{
@@ -22973,6 +22976,7 @@ function batchStepsListHtml(b, isDone){
           <span class="bs-text">${esc(batchStepLabel(s, b.batchSizeKg))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
           ${checks.length ? `<span class="bs-checks">${checks.map(t=>`<span>${esc(t)}</span>`).join('')}</span>` : ''}
         </span>
+        ${s.type==='preparation' ? '' : `<span class="bs-wait${s.waitMinutes>0 ? ' has' : ''}">${s.waitMinutes>0 ? esc(fmtQty(Number(s.waitMinutes)))+' min' : 'no wait'}</span>`}
       </div>`;
     }).join('')}
   </div>`;

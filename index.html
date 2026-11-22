@@ -2115,6 +2115,55 @@ html{ visibility:hidden; }
   .batch-tile .bt-mat span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
   .batch-tile .bt-mat span:last-child{font-weight:700;color:var(--tile-accent);white-space:nowrap;font-variant-numeric:tabular-nums;}
   .batch-tile .bt-headline.bt-wrap{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:8px;}
+  /* Several batches at once, one per machine (owner, 2026-11-22): a grid of tiles, and a tile whose timer has ended is ringed in amber with a "Time's up" tag. */
+  .batch-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,320px));gap:16px;align-items:start;}
+  @media (min-width:1280px){ .batch-tiles{max-width:calc(100vw - 240px - 460px);} }   /* leave the right side free for the "Time's up" cards, so they never cover a tile */
+  .batch-tiles .batch-card.batch-tile{max-width:none;margin-bottom:0;}
+  .batch-tile .bt-ended-tag{display:none;margin:8px 0 0;padding:3px 10px;border-radius:999px;background:#FFF1D6;color:#8A5200;font-size:12px;font-weight:800;letter-spacing:.02em;width:max-content;}
+  .batch-tile.bt-ended{box-shadow:0 0 0 2px #E39A1C,0 8px 22px rgba(199,123,16,.22);}
+  .batch-tile.bt-ended .bt-ended-tag{display:inline-flex;}
+  /* "Time's up" notification cards: one per machine, stacked, above everything on the Production Guide (also above the big screen). */
+  .timer-alerts{position:fixed;z-index:520;top:calc(env(safe-area-inset-top) + 72px);right:20px;width:min(380px,calc(100vw - 24px));display:flex;flex-direction:column;gap:12px;pointer-events:none;max-height:calc(100vh - 100px);overflow-y:auto;}
+  .timer-alerts:empty{display:none;}
+  .ta-card{pointer-events:auto;position:relative;background:#fff;color:#15201A;border:1px solid #F0D9A8;border-left:6px solid #E39A1C;border-radius:14px;padding:14px 16px 14px 16px;box-shadow:0 12px 32px rgba(20,30,24,.22);font-family:'Inter',system-ui,sans-serif;}
+  .ta-card.ta-silenced{border-left-color:#B8B2A4;}
+  .ta-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:26px;}
+  .ta-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:#FFF1D6;color:#8A5200;font-size:12px;font-weight:800;}
+  .ta-nomachine{font-size:12px;font-weight:700;color:#5B6E61;}
+  .ta-title{margin-top:8px;font-size:16px;font-weight:800;line-height:1.25;overflow-wrap:anywhere;}
+  .ta-meta{margin-top:2px;font-size:12.5px;color:#5B6E61;font-weight:500;}
+  .ta-step{margin-top:6px;font-size:13px;color:#15201A;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .ta-over{margin-top:8px;font-size:13px;color:#8A5200;font-weight:600;}
+  .ta-over b{font-variant-numeric:tabular-nums;font-size:15px;}
+  .ta-quiet{color:#7A8C7F;font-weight:500;}
+  .ta-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .ta-x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:none;background:#F3F5F2;color:#5B6E61;font-size:13px;cursor:pointer;line-height:1;}
+  .ta-x:hover{background:#E6EBE5;}
+  /* on the big screen the cards go bottom-right (the lower part of the two right-hand panels is usually empty) and are compact */
+  .timer-alerts.ta-bf{top:auto;bottom:24px;right:24px;max-height:60vh;justify-content:flex-end;}
+  .ta-bf .ta-card{padding:10px 12px;}
+  .ta-bf .ta-meta,.ta-bf .ta-step{display:none;}
+  .ta-bf .ta-title{margin-top:6px;font-size:15px;}
+  .ta-bf .ta-actions{margin-top:8px;}
+  @media (max-width:760px){
+    .timer-alerts{left:12px;right:12px;width:auto;top:calc(env(safe-area-inset-top) + 66px);gap:8px;}
+    .ta-card{padding:10px 12px;}
+    .ta-step{display:none;}
+    .ta-title{margin-top:6px;font-size:15px;}
+    .ta-actions{margin-top:8px;}
+    .timer-alerts.ta-bf{top:auto;bottom:calc(env(safe-area-inset-bottom) + 12px);}
+  }
+  @media (prefers-reduced-motion:no-preference){ .ta-card.ta-in{animation:ta-slide .28s cubic-bezier(.2,.8,.2,1);} @keyframes ta-slide{from{opacity:0;transform:translateY(-10px) scale(.98);}to{opacity:1;transform:none;}} }
+  /* the machine switcher on the big screen */
+  .bf-switch{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;}
+  .bf-switch-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid #D8E3DA;background:#fff;color:#15201A;font-size:13px;cursor:pointer;font-family:inherit;}
+  .bf-switch-btn i{width:9px;height:9px;border-radius:50%;flex:none;}
+  .bf-switch-btn b{font-weight:800;}
+  .bf-switch-btn span{color:#5B6E61;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bf-switch-btn.on{background:#15201A;border-color:#15201A;color:#fff;}
+  .bf-switch-btn.on span{color:#C9D6CD;}
+  .bf-switch-btn.ended{border-color:#E39A1C;box-shadow:0 0 0 2px rgba(227,154,28,.35);}
+  .bf-switch-btn em{font-style:normal;}
   .batch-prep-checklist{margin:14px 0;text-align:left;max-width:560px;}
   .batch-prep-checklist .bpc-row{font-size:15px;color:#15201A;padding:6px 0;}
   .batch-prep-checklist .bpc-check{display:flex;align-items:flex-start;gap:10px;}
@@ -3605,7 +3654,12 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // visit to the Products tab showed a "Loading…" flash while it fetched, unlike every other page's
 // data, which is already in memory from login. Loading it eagerly with everything else trades a
 // few more KB on every login for the R&D page opening exactly as instantly as the rest of the app.
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','gmpChecklistEntries','blendBatches','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
+// Running batches: ONE PER MACHINE (owner, 2026-11-22: "if 2 of machines ran out timer at together shows 2 notification messages"). Each machine has its own saved key
+// (its own slot) -- 'activeBatchM1' / 'M2' / 'M3' for Machine 1 / 2 / 3 -- and a batch with NO machine chosen uses the original 'activeBatch' key (one at a time).
+// Separate keys instead of one array: every slot keeps the single-object save / verify code that was already hardened, and two tablets working on different
+// machines can never overwrite each other. A fourth machine needs its own key here (and in BATCH_MACHINES, PAGE_DATA_KEYS.recipes, role_data_access).
+const BATCH_SLOT_KEYS = ['activeBatchM1','activeBatchM2','activeBatchM3','activeBatch'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -4523,7 +4577,7 @@ function subscribeRealtime(){
             if(justAssignedToMe) showComplaintNotice(justAssignedToMe.customer, 'assigned to you — take a look.');
           }
         }
-        if(k==='activeBatch' && state.page==='recipes') startBatchTicker();
+        if(BATCH_SLOT_KEYS.includes(k)){ if(!state[k]) stopAlertSound(k); if(state.page==='recipes') startBatchTicker(); }
       }
     })
     .subscribe();
@@ -5277,7 +5331,8 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 21;   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
+const PAGE_DATA_KEYS_VERSION = 22;   // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
+// (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
 // role_data_access table: a role only gets the keys its visible pages genuinely need.
@@ -5305,7 +5360,7 @@ const PAGE_DATA_KEYS = {
   driverrun: [],
   blendingdept: [],
   blending: ['blendBatches','colorSheets'],
-  recipes: ['recipes','activeBatch'],
+  recipes: ['recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3'],
   costing: ['costingProducts','suppliers','recipes'],
   customers: ['customers','staff','salesPersonColors'],
   suppliers: ['suppliers'],
@@ -6441,7 +6496,7 @@ function personIcon(){
 let state = {
   session: null,
   orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [], inventoryItems: [],
-  recipes: [], colorSheets: [], activeBatch: null, batchFocusMode: false,
+  recipes: [], colorSheets: [], activeBatch: null, activeBatchM1: null, activeBatchM2: null, activeBatchM3: null, batchFocusMode: false, batchFocusKey: null,
   gmpChecklistEntries: [],
   gmpLogEntries: [], gmpCalibrationInstruments: [], gmpPestPoints: [], gmpPestEntries: [],
   gmpMaintenanceMachines: [], gmpMaintenanceEntries: [], gmpHygieneRoster: [],
@@ -6557,7 +6612,7 @@ function _cachedThemeOrDefault(){
   }catch(e){}
   return {paletteId:'green'};
 }
-const _syncedKeyDefault = k => k==='activeBatch' ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : (k==='dallySettings' ? {...DEFAULT_DALLY_SETTINGS} : []))))))))));
+const _syncedKeyDefault = k => BATCH_SLOT_KEYS.includes(k) ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : (k==='dallySettings' ? {...DEFAULT_DALLY_SETTINGS} : []))))))))));
 // One request for all 34 keys instead of 34 separate ones — each kvGet() round-trip has its own
 // latency, and firing them all at once doesn't fully hide that over a slower connection (plus
 // this is on the critical path of every single page load, authenticated or not, so it's worth
@@ -6798,22 +6853,40 @@ async function loadAll(){
   // server's copy was never actually marked completed either. Detect that exact mismatch (an
   // activeBatch whose batchNo/recipeId/startedAt already match a blendBatches record) and clear
   // the stale local copy — the real transfer already happened, so there's nothing left to resume.
-  if(state.activeBatch && state.activeBatch.batchNo){
+  // The same check runs for EVERY machine's slot (see BATCH_SLOT_KEYS).
+  BATCH_SLOT_KEYS.forEach(slotKey=>{
+    const ab = state[slotKey];
+    if(!(ab && ab.batchNo)) return;
     const alreadyTransferred = (state.blendBatches||[]).some(bb =>
-      bb.batchNo === state.activeBatch.batchNo &&
-      bb.recipeId === state.activeBatch.recipeId &&
-      bb.startedAt === state.activeBatch.startedAt
+      bb.batchNo === ab.batchNo &&
+      bb.recipeId === ab.recipeId &&
+      bb.startedAt === ab.startedAt
     );
     if(alreadyTransferred){
-      state.activeBatch = null;
+      state[slotKey] = null;
       // Silent, best-effort — not saveActiveBatchVerified(): that goes through save()/_saveOnce(),
-      // which pops a "Could not save activeBatch" toast on every one of its own retry attempts
+      // which pops a "Could not save ..." toast on every one of its own retry attempts
       // that fails, and this check re-runs on every single page load, so a transient failure here
       // would surface that toast on every refresh anywhere in the app. If this write doesn't land,
       // this same check just clears it again next load — it never needs to bother anyone about it.
-      kvSet('activeBatch', null).catch(e=>console.error('clearing stale transferred activeBatch failed', e));
+      kvSet(slotKey, null).catch(e=>console.error('clearing stale transferred '+slotKey+' failed', e));
     }
-  }
+  });
+  // A batch that was already running when batches became one-per-machine (2026-11-22) sits in the ORIGINAL key but has a machine:
+  // copy it to its machine's own slot, and only when that copy is saved clear the original. Until then it keeps working where it is.
+  (async()=>{
+    const legacy = state.activeBatch;
+    if(!(legacy && legacy.machine)) return;
+    const target = batchKeyForMachine(legacy.machine);
+    if(target==='activeBatch' || state[target]) return;
+    try{
+      if(await kvSet(target, legacy)){
+        state[target] = legacy; state.activeBatch = null;
+        await kvSet('activeBatch', null);
+        render();
+      }
+    }catch(e){ console.error('moving a running batch to its machine slot failed', e); }
+  })();
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
@@ -14293,7 +14366,7 @@ const PAGE_META = {
   ongoingorders:{title:'Ongoing orders', sub:'Every order in the pipeline — click to open only your own.'},
   blendingdept:{title:'Blending Department', sub:'Choose what you need — the batch board, production guide, batch sheets, or costing.'},
   blending:{title:'Mixing and Filling', sub:'Track every batch from blending through quality checks to stock.'},
-  recipes:{title:'Production Guide', sub:'Watch the batch currently running, step by step.'},
+  recipes:{title:'Production Guide', sub:'Watch the running batches, step by step. One tile per machine.'},
   recipelibrary:{title:'Batch sheets', sub:'Create and manage the batch sheets the blending team runs batches from.'},
   costing:{title:'Costing & recipe', sub:'Raw material prices and the batch cost they work out to per recipe.'},
   customers:{title:'Customers', sub:'Everyone you ship products to.'},
@@ -14459,6 +14532,7 @@ function renderShell(freshPage){
   ${state.chatNotice ? renderChatNotice() : ''}
   ${state.complaintNotice ? renderComplaintNotice() : ''}
   ${(state.batchFocusMode && isBatchDisplayActive()) ? renderBatchFocusOverlay() : ''}
+  ${state.page==='recipes' ? timerAlertsHtml() : ''}
   ${state.adminBroadcast ? `<div class="${freshBroadcast?'':'reopen-noanim'}">${renderAdminBroadcastPanel()}</div>` : ''}
   ${state._dueNoteAlert ? renderDueNoteAlert() : ''}
   ${state._boxCountAlert ? renderBoxCountAlert() : ''}
@@ -19968,25 +20042,30 @@ function currentAlertDurationSeconds(){
   const v = state.branding && Number(state.branding.alertDurationSeconds);
   return (v && v>0) ? v : 5;
 }
-let _alertAudioEl = null;
-let _alertSynthTimer = null;
-// Stops whatever alert is currently sounding — a real <audio> file or a repeating synth
-// cycle — so a new alert (or a second Preview click) never overlaps a previous one.
-function stopAlertSound(){
-  if(_alertAudioEl){ try{ _alertAudioEl.pause(); _alertAudioEl.currentTime = 0; }catch(e){} _alertAudioEl = null; }
-  if(_alertSynthTimer){ clearInterval(_alertSynthTimer); _alertSynthTimer = null; }
+// Sound CHANNELS (owner, 2026-11-22): every running batch plays on its own channel (its slot key), so when two machines run out of time together both
+// alerts can sound at once instead of the second cutting the first. The Settings preview uses the 'main' channel.
+const _alertAudioEls = {};     // channel -> <audio>
+const _alertSynthTimers = {};  // channel -> interval id
+// Stops what is sounding on ONE channel (a real <audio> file or a repeating synth cycle), or on every channel when none is given.
+function stopAlertSound(channel){
+  const channels = channel ? [channel] : Array.from(new Set(Object.keys(_alertAudioEls).concat(Object.keys(_alertSynthTimers))));
+  channels.forEach(ch=>{
+    if(_alertAudioEls[ch]){ try{ _alertAudioEls[ch].pause(); _alertAudioEls[ch].currentTime = 0; }catch(e){} delete _alertAudioEls[ch]; }
+    if(_alertSynthTimers[ch]){ clearInterval(_alertSynthTimers[ch]); delete _alertSynthTimers[ch]; }
+  });
 }
-function playAlertSoundById(id, durationSeconds){
-  stopAlertSound();
+function playAlertSoundById(id, durationSeconds, channel){
+  channel = channel || 'main';
+  stopAlertSound(channel);   // a new alert (or a second Preview click) never overlaps the previous one ON ITS OWN channel
   const preset = ALERT_SOUNDS[id] || ALERT_SOUNDS.chime;
   const duration = durationSeconds!=null ? durationSeconds : currentAlertDurationSeconds();
   if(preset.type==='audio'){
     try{
       const audioEl = new Audio(preset.src);
       audioEl.loop = true;
-      _alertAudioEl = audioEl;
+      _alertAudioEls[channel] = audioEl;
       audioEl.play().catch(()=>{});
-      setTimeout(()=>{ if(_alertAudioEl===audioEl) stopAlertSound(); }, duration*1000);
+      setTimeout(()=>{ if(_alertAudioEls[channel]===audioEl) stopAlertSound(channel); }, duration*1000);
     }catch(e){ /* best-effort — never let a sound glitch break the timer */ }
     return;
   }
@@ -20014,9 +20093,9 @@ function playAlertSoundById(id, durationSeconds){
   const cycleMs = Math.max(200, (preset.notes.length*preset.gap + preset.dur) * 1000);
   playOnce();
   let elapsedMs = 0;
-  _alertSynthTimer = setInterval(()=>{
+  _alertSynthTimers[channel] = setInterval(()=>{
     elapsedMs += cycleMs;
-    if(elapsedMs >= duration*1000){ stopAlertSound(); return; }
+    if(elapsedMs >= duration*1000){ stopAlertSound(channel); return; }
     playOnce();
   }, cycleMs);
 }
@@ -20030,8 +20109,8 @@ function alertSoundForMachine(machine){
   if(ALERT_SOUNDS[saved]) return saved;
   return ALERT_SOUNDS[MACHINE_DEFAULT_SOUNDS[machine]] ? MACHINE_DEFAULT_SOUNDS[machine] : currentAlertSound();
 }
-function playBatchAlertSound(machine){
-  playAlertSoundById(alertSoundForMachine(typeof machine==='string' ? machine : ''));
+function playBatchAlertSound(machine, channel){
+  playAlertSoundById(alertSoundForMachine(typeof machine==='string' ? machine : ''), undefined, channel);
 }
 
 // Preparation/Checking steps have no ingredient/amount/waitMinutes — the batch runner (timer,
@@ -20229,17 +20308,17 @@ function batchTempGlowClass(temp){
   if(t>50) return 'temp-yellow';
   return 'temp-green';
 }
-function batchStepChecklistHtml(step){
+function batchStepChecklistHtml(step, key){
   if(step.type!=='preparation') return '';
   const canEdit = canManageBlendBoard();
   return `<div class="batch-prep-checklist">${(step.checklist||[]).map(c=> c.kind==='field'
     ? `<div class="bpc-row bpc-field">
         <label for="batch-field-${c.id}">${esc(c.label)}:</label>
         ${canEdit
-          ? `<input type="text" class="bpc-field-input" id="batch-field-${c.id}" value="${escAttr(c.value)}" placeholder="Enter value" onchange="updateBatchPrepFieldValue('${step.id}','${c.id}',this.value)">`
+          ? `<input type="text" class="bpc-field-input" id="batch-field-${c.id}" value="${escAttr(c.value)}" placeholder="Enter value" onchange="updateBatchPrepFieldValue('${key}','${step.id}','${c.id}',this.value)">`
           : `<strong>${esc(c.value)||'—'}</strong>`}
       </div>`
-    : `<div class="bpc-row bpc-check"><input type="checkbox" id="batch-chk-${c.id}" ${c.checked?'checked':''} ${canEdit?'':'disabled'} onchange="updateBatchPrepChecked('${step.id}','${c.id}',this.checked)"><label for="batch-chk-${c.id}">${esc(c.text)}</label></div>`
+    : `<div class="bpc-row bpc-check"><input type="checkbox" id="batch-chk-${c.id}" ${c.checked?'checked':''} ${canEdit?'':'disabled'} onchange="updateBatchPrepChecked('${key}','${step.id}','${c.id}',this.checked)"><label for="batch-chk-${c.id}">${esc(c.text)}</label></div>`
   ).join('')}</div>`;
 }
 // The whole point of a "field" prep item (e.g. "Initial Water pH Level") is to record the value
@@ -20247,30 +20326,76 @@ function batchStepChecklistHtml(step){
 // into the recipe/template editor ahead of time (usually blank, so always "—"), with no way for
 // the person running the batch to type the real reading in. Same gap for the checklist items:
 // the checkbox rendered but nothing ever listened for it, so a tick never persisted or carried
-// through to the documented batch sheet. Both now write straight onto state.activeBatch and save,
+// through to the documented batch sheet. Both now write straight onto the running batch (state[key], one slot per machine) and save,
 // the same as every other batch-run mutation (pause/next/etc.) — so they end up in
 // finishBatchIntoBlendingBoard's productionSteps snapshot and the physical printed record.
-async function updateBatchPrepFieldValue(stepId, checklistId, value){
+async function updateBatchPrepFieldValue(key, stepId, checklistId, value){
   if(!canManageBlendBoard()) return;
-  const b = state.activeBatch; if(!b) return;
+  const b = state[key]; if(!b) return;
   const step = b.steps.find(s=>s.id===stepId); if(!step || step.type!=='preparation') return;
   const item = (step.checklist||[]).find(c=>c.id===checklistId); if(!item) return;
   item.value = value;
-  await saveActiveBatchVerified();
+  await saveActiveBatchVerified(key);
 }
-async function updateBatchPrepChecked(stepId, checklistId, checked){
+async function updateBatchPrepChecked(key, stepId, checklistId, checked){
   if(!canManageBlendBoard()) return;
-  const b = state.activeBatch; if(!b) return;
+  const b = state[key]; if(!b) return;
   const step = b.steps.find(s=>s.id===stepId); if(!step || step.type!=='preparation') return;
   const item = (step.checklist||[]).find(c=>c.id===checklistId); if(!item) return;
   item.checked = checked;
-  await saveActiveBatchVerified();
+  await saveActiveBatchVerified(key);
 }
-function batchRemainingSeconds(){
-  const b = state.activeBatch; if(!b) return 0;
+function batchRemainingSeconds(b){
+  if(!b) return 0;
   if(b.status==='paused') return b.remainingSecondsWhenPaused;
   if(!b.stepDeadline) return 0;
   return (new Date(b.stepDeadline).getTime() - Date.now())/1000;
+}
+// ---- Several batches at once: one per machine (see BATCH_SLOT_KEYS) ----
+// Every running batch lives in its own slot: state[key] with key = batchKeyForMachine(machine).
+function batchKeyForMachine(machine){
+  const i = BATCH_MACHINES.findIndex(m=>m.id===machine);
+  return i>=0 ? 'activeBatchM'+(i+1) : 'activeBatch';
+}
+// [{key, b}] for every batch still on screen, Machine 1, 2, 3 first and a batch with no machine last. A 'completed' leftover counts as nothing (see isBatchDisplayActive).
+function runningBatches(){
+  return BATCH_SLOT_KEYS.filter(k=>state[k] && state[k].status!=='completed').map(k=>({key:k, b:state[k]}));
+}
+function isBatchDisplayActive(){ return runningBatches().length>0; }
+// Is a batch already running on this machine? A batch with no machine shares the original 'activeBatch' slot, so that slot being taken blocks it too.
+function batchSlotBusy(machine){
+  const k = batchKeyForMachine(machine);
+  if(state[k] && state[k].status!=='completed') return true;
+  return runningBatches().some(x=>(x.b.machine||'')===(machine||''));
+}
+function batchBusyMessage(machine){
+  const x = runningBatches().find(y=>(y.b.machine||'')===(machine||'')) || runningBatches().find(y=>y.key===batchKeyForMachine(machine));
+  const who = x ? (x.b.recipeName||x.b.productName||'another batch') : 'another batch';
+  return machine ? `${machine} is already running "${who}". Finish or stop it first, or pick another machine on the batch sheet.`
+                 : `A batch with no machine is already running ("${who}"). Choose a machine on the batch sheet to run several batches at once.`;
+}
+// The batch whose big screen is open (the chosen one, else the first running).
+function batchFocusEntry(){
+  const list = runningBatches();
+  return list.find(x=>x.key===state.batchFocusKey) || list[0] || null;
+}
+// A key from a button, or — for older callers — the only running batch.
+function resolveBatchKey(key){
+  if(key && state[key]) return key;
+  const l = runningBatches();
+  return l.length===1 ? l[0].key : null;
+}
+// "This step of this run": identifies one alert so a silenced / hidden alert comes back for the NEXT step and a restarted timer.
+function batchStepSid(b){ return b.id+':'+b.currentStep+':'+b.stepDeadline; }
+// A timed step whose countdown reached 00:00 and is still on that step (a person has to press Next).
+function batchTimerEnded(b){
+  if(!b || b.status!=='running') return false;
+  const step = b.steps[b.currentStep];
+  return !!(step && step.waitMinutes>0 && batchRemainingSeconds(b)<=0);
+}
+// Every running batch whose timer has ended: [{key, b, sid, over (seconds past 00:00)}]
+function batchTimerAlerts(){
+  return runningBatches().filter(x=>batchTimerEnded(x.b)).map(x=>({key:x.key, b:x.b, sid:batchStepSid(x.b), over:-batchRemainingSeconds(x.b)}));
 }
 // Keeps the screen from auto-locking while a batch is actively being watched on this device —
 // without it, mobile browsers throttle/suspend this very timer once the screen locks or the tab
@@ -20302,43 +20427,107 @@ document.addEventListener('visibilitychange', () => { if(document.visibilityStat
 function startBatchTicker(){
   stopBatchTicker();
   ensureBatchWakeLock();
-  state._batchTicker = setInterval(()=>{
-    ensureBatchWakeLock();
-    if(!state.activeBatch || state.page!=='recipes') return;
-    const b = state.activeBatch;
+  state._batchTicker = setInterval(batchTick, 1000);
+  batchTick();
+}
+// One tick (every second) for EVERY running batch: counts down each timed step, sounds that machine's alert when its timer has ended, and keeps the
+// "time's up" notification cards up to date. The batch is NEVER moved to the next step automatically (owner, 2026-11-21): when the time is over it stays
+// on the step, counting at 00:00 and sounding (every 15 s, in the sound chosen for its MACHINE) until a person presses Next.
+function batchTick(){
+  ensureBatchWakeLock();
+  if(state.page!=='recipes') return;
+  const now = Date.now();
+  state._beepAt = state._beepAt || {};
+  state._alertSilenced = state._alertSilenced || {};
+  runningBatches().forEach(({key,b})=>{
     if(b.status!=='running') return;
-    const remaining = batchRemainingSeconds();
     const step = b.steps[b.currentStep];
-
-    // audible alert when a timed step finishes — repeats every 15s until someone moves the batch on,
-    // so it's heard on the factory floor even if the first chime is missed. The sound is the one chosen
-    // for this batch's MACHINE (Settings -> Machine alert sounds).
-    // The batch is NEVER moved to the next step automatically (owner, 2026-11-21): when the time is over it
-    // stays on this step, counting at 00:00 and sounding, until a person presses Next.
-    if(step && step.waitMinutes>0 && remaining<=0){
-      const key = b.id+':'+b.currentStep+':'+b.stepDeadline;
-      const now = Date.now();
-      if(state._lastBeepKey!==key || !state._lastBeepAt || (now-state._lastBeepAt)>=15000){
-        playBatchAlertSound(b.machine);
-        state._lastBeepKey = key;
-        state._lastBeepAt = now;
+    if(!step || !(step.waitMinutes>0)) return;   // only a TIMED step's counter / note is updated (an untimed step keeps its dash)
+    const remaining = batchRemainingSeconds(b);
+    const ended = remaining<=0;
+    const text = formatCountdown(remaining);
+    document.querySelectorAll('[data-cd="'+key+'"]').forEach(el=>{ el.textContent = text; el.classList.toggle('done', ended); });
+    const tile = document.querySelector('[data-bt-key="'+key+'"]'); if(tile) tile.classList.toggle('bt-ended', ended);
+    const fe = batchFocusEntry();
+    if(fe && fe.key===key){
+      const noteEl = document.getElementById('batch-countdown-note');
+      if(noteEl) noteEl.textContent = ended ? "Time's up — press Next step when you're ready" : 'remaining on this step';
+    }
+    if(ended){
+      const sid = batchStepSid(b);
+      const rec = state._beepAt[key];
+      if(state._alertSilenced[key]!==sid && (!rec || rec.sid!==sid || (now-rec.at)>=15000)){
+        playBatchAlertSound(b.machine, key);
+        state._beepAt[key] = {sid, at:now};
       }
     }
-
-    if(!step || !(step.waitMinutes>0)) return;   // only a TIMED step's counter / note is updated (an untimed step keeps its dash)
-    const text = formatCountdown(remaining);
-    ['batch-countdown','batch-focus-countdown'].forEach(id=>{
-      const el = document.getElementById(id);
-      if(el){ el.textContent = text; el.classList.toggle('done', remaining<=0); }
-    });
-    const noteEl = document.getElementById('batch-countdown-note');
-    if(noteEl) noteEl.textContent = remaining<=0 ? "Time's up — press Next step when you're ready" : 'remaining on this step';
-  }, 1000);
+  });
+  refreshTimerAlerts();
 }
 function stopBatchTicker(){
   if(state._batchTicker){ clearInterval(state._batchTicker); state._batchTicker=null; }
   if(_batchWakeLock){ const lock = _batchWakeLock; _batchWakeLock = null; lock.release().catch(()=>{}); }
 }
+// ---- "Time's up" notifications (owner, 2026-11-22): one card per machine whose timer has ended, with the details, so it is clear WHICH machine ran
+// out of time; two machines out together = two cards. Shown on the Production Guide (tiles and big screen). The card stays until that batch moves
+// on (Next / Stop / Restart); Silence only stops the sound, and the little x hides the card for this step. Per device, nothing is saved.
+function timerAlertCardsHtml(alerts){
+  state._alertSilenced = state._alertSilenced || {};
+  state._alertSeen = state._alertSeen || {};
+  const canRun = canManageBlendBoard();
+  return alerts.map(a=>{
+    const b = a.b, step = b.steps[b.currentStep];
+    const silenced = state._alertSilenced[a.key]===a.sid;
+    const fresh = state._alertSeen[a.key]!==a.sid; state._alertSeen[a.key] = a.sid;
+    const last = b.currentStep>=b.steps.length-1;
+    return `
+    <div class="ta-card${fresh?' ta-in':''}${silenced?' ta-silenced':''}" data-ta-card="${a.key}" role="alert">
+      <button type="button" class="ta-x" data-ta-act="hide" data-ta-key="${a.key}" title="Hide this message" aria-label="Hide this message">✕</button>
+      <div class="ta-top"><span class="ta-badge">⏰ Time's up</span>${b.machine ? machineChipHtml(b.machine) : '<span class="ta-nomachine">No machine chosen</span>'}</div>
+      <div class="ta-title">${esc(b.recipeName||b.productName||'Batch')}</div>
+      <div class="ta-meta">${b.batchNo ? 'Batch '+esc(b.batchNo)+' · ' : ''}${Number(b.batchSizeKg)>0 ? esc(fmtQty(Number(b.batchSizeKg)))+' kg · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}</div>
+      <div class="ta-step">${esc(batchStepLabel(step, b.batchSizeKg))}</div>
+      <div class="ta-over">Over by <b data-ta-over="${a.key}">${formatCountdown(a.over)}</b>${silenced ? ' <span class="ta-quiet">· sound off</span>' : ''}</div>
+      <div class="ta-actions">
+        <button type="button" class="btn btn-primary btn-sm" data-ta-act="open" data-ta-key="${a.key}">Open batch</button>
+        ${canRun ? `<button type="button" class="btn btn-sm" data-ta-act="next" data-ta-key="${a.key}">${last?'Finish batch':'Next step ▸'}</button>` : ''}
+        ${silenced ? '' : `<button type="button" class="btn btn-sm" data-ta-act="silence" data-ta-key="${a.key}">Silence</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+function timerAlertsVisible(){
+  state._alertHidden = state._alertHidden || {};
+  return batchTimerAlerts().filter(a=>state._alertHidden[a.key]!==a.sid);
+}
+function timerAlertsSig(alerts){
+  state._alertSilenced = state._alertSilenced || {};
+  return alerts.map(a=>a.key+':'+a.sid+':'+(state._alertSilenced[a.key]===a.sid?'s':'')+':'+(canManageBlendBoard()?'m':'')).join('|');
+}
+// The container drawn by render() on the Production Guide; the tick swaps its cards only when the set of alerts changes.
+function timerAlertsHtml(){
+  const alerts = timerAlertsVisible();
+  const onBigScreen = !!(state.batchFocusMode && isBatchDisplayActive());
+  return `<div id="timer-alerts" class="timer-alerts${onBigScreen?' ta-bf':''}" data-sig="${escAttr(timerAlertsSig(alerts))}" aria-live="assertive">${timerAlertCardsHtml(alerts)}</div>`;
+}
+function refreshTimerAlerts(){
+  const box = document.getElementById('timer-alerts'); if(!box) return;
+  const alerts = timerAlertsVisible();
+  const sig = timerAlertsSig(alerts);
+  if(box.dataset.sig!==sig){ box.innerHTML = timerAlertCardsHtml(alerts); box.dataset.sig = sig; }
+  alerts.forEach(a=>{ const el = box.querySelector('[data-ta-over="'+a.key+'"]'); if(el) el.textContent = formatCountdown(a.over); });
+}
+// One delegated listener (the cards are swapped in and out by the tick).
+document.addEventListener('click', e=>{
+  const btn = e.target.closest && e.target.closest('[data-ta-act]'); if(!btn) return;
+  const key = btn.dataset.taKey, act = btn.dataset.taAct;
+  const b = state[key]; if(!b) return;
+  const sid = batchStepSid(b);
+  if(act==='silence'){ state._alertSilenced = state._alertSilenced||{}; state._alertSilenced[key] = sid; stopAlertSound(key); refreshTimerAlerts(); }
+  else if(act==='hide'){ state._alertHidden = state._alertHidden||{}; state._alertHidden[key] = sid; stopAlertSound(key); state._alertSilenced = state._alertSilenced||{}; state._alertSilenced[key] = sid; refreshTimerAlerts(); }
+  else if(act==='open'){ setBatchFocusKey(key); }
+  else if(act==='next'){ nextBatchStep(key); }
+});
 
 // ---- Recipe CRUD ----
 const TEMPERATURE_OPTIONS = [40,45,50,55,60,65,70,75,80];
@@ -20703,14 +20892,18 @@ function deleteRecipe(id){
 }
 
 // ---- Batch run controls (Admin only) ----
+// Several batches can run at once, one per machine; every control takes the KEY of the batch it acts on (its slot, see batchKeyForMachine).
+// Returns true when the batch was started.
 async function startBatch(recipeId, extra){
-  const r = byId(state.recipes, recipeId); if(!r) return;
-  if(!r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return; }
+  const r = byId(state.recipes, recipeId); if(!r) return false;
+  if(!r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return false; }
+  if(batchSlotBusy(r.machine||'')){ showToast(batchBusyMessage(r.machine||'')); return false; }
   extra = extra || {};
   const first = r.steps[0];
-  state.activeBatch = {
+  const key = batchKeyForMachine(r.machine||'');
+  state[key] = {
     id: uid('BATCH'), recipeId: r.id, recipeName: r.name,
-    machine: r.machine || '',   // the machine chosen on the batch sheet card: shown on the Production Guide card, picks the alert sound
+    machine: r.machine || '',   // the machine chosen on the batch sheet card: its own slot, shown on the Production Guide card, picks the alert sound
     productName: extra.productName || r.name, qty: extra.qty || '',
     batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '', batchSizeKg: extra.batchSizeKg || r.batchSizeKg || 0,
     // A preparation step's checklist array/items are objects, not primitives — {...s} alone
@@ -20725,11 +20918,13 @@ async function startBatch(recipeId, extra){
     status: 'running', stepDeadline: new Date(Date.now()+batchStepWaitMinutes(first)*60000).toISOString(),
     remainingSecondsWhenPaused: null, startedAt: new Date().toISOString(), startedBy: state.session.name
   };
-  if(!(await saveActiveBatchVerified())) return;
+  if(!(await saveActiveBatchVerified(key))){ state[key] = null; render(); return false; }   // never leave an unsaved "ghost" batch on screen
+  state.batchFocusMode = false; state.batchFocusKey = null;   // a new batch never pops the big screen open by itself
   startBatchTicker();
-  showToast('Batch started: '+r.name);
+  showToast('Batch started: '+r.name+(r.machine ? ' on '+r.machine : ''));
+  return true;
 }
-// activeBatch is a single shared object, not an array-of-records, so it gets none of the
+// A batch's slot is a single shared object, not an array-of-records, so it gets none of the
 // concurrent-edit merge protection the rest of the save pipeline gives record arrays — a save
 // here always blindly overwrites the server copy, last-write-wins. That's a real risk for a
 // live batch timer the app itself expects multiple people to have open at once (a floor
@@ -20739,55 +20934,59 @@ async function startBatch(recipeId, extra){
 // resurrect the batch someone else already ended. Guard every mutator by re-checking the
 // server's current copy still matches (by id) the batch this tab thinks is active before
 // writing; if not, drop the stale local copy instead of overwriting whatever's really there now.
-async function verifyActiveBatchStillCurrent(expectedId){
+async function verifyActiveBatchStillCurrent(key, expectedId){
   try{
-    const server = await kvGet('activeBatch');
+    const server = await kvGet(key);
     return !!server && server.id === expectedId;
   }catch(e){ return true; } // can't check — don't block the action over a network hiccup
 }
-function dropStaleActiveBatch(message){
-  state.activeBatch = null;
-  stopBatchTicker();
+function dropStaleActiveBatch(key, message){
+  state[key] = null;
+  stopAlertSound(key);
+  if(!runningBatches().length) stopBatchTicker();
   showToast(message || 'This batch was already ended elsewhere');
   render();
 }
-// A plain save('activeBatch') showed its success toast on the live site while the server copy
+// A plain save() showed its success toast on the live site while the server copy
 // was later found to still hold the OLD value on the very next refresh — reported as "stop a
 // batch, refresh, it's back". Unlike every other synced key this one has no merge protection at
 // all (it's a single object, not a record array), so if its write doesn't land for any reason
 // (a dropped request, a race with another save on the same key) there's nothing to catch it.
 // Read back what's actually stored right after saving and retry a few times if it didn't stick,
 // so by the time we report success it's actually confirmed on the server.
-async function saveActiveBatchVerified(){
-  const target = state.activeBatch;
+async function saveActiveBatchVerified(key){
+  const target = state[key];
   for(let attempt=0; attempt<3; attempt++){
-    await save('activeBatch');
-    const confirmed = await kvGet('activeBatch').catch(()=>undefined);
+    await save(key);
+    const confirmed = await kvGet(key).catch(()=>undefined);
     if(stableStringify(confirmed) === stableStringify(target)) return true;
     await new Promise(r=>setTimeout(r, 400));
   }
-  console.error('activeBatch save did not verify after retries');
+  console.error(key+' save did not verify after retries');
   return false;
 }
-async function pauseBatch(){
-  const b = state.activeBatch; if(!b || b.status!=='running') return;
-  stopAlertSound();
-  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
-  b.remainingSecondsWhenPaused = Math.max(0, batchRemainingSeconds());
+async function pauseBatch(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b || b.status!=='running') return;
+  stopAlertSound(key);
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
+  b.remainingSecondsWhenPaused = Math.max(0, batchRemainingSeconds(b));
   b.status = 'paused';
-  await saveActiveBatchVerified(); render();
+  await saveActiveBatchVerified(key); render();
 }
-async function resumeBatch(){
-  const b = state.activeBatch; if(!b || b.status!=='paused') return;
-  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
+async function resumeBatch(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b || b.status!=='paused') return;
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
   b.stepDeadline = new Date(Date.now() + (b.remainingSecondsWhenPaused||0)*1000).toISOString();
   b.status = 'running'; b.remainingSecondsWhenPaused = null;
-  await saveActiveBatchVerified(); render();
+  await saveActiveBatchVerified(key); render();
 }
-async function nextBatchStep(){
-  const b = state.activeBatch; if(!b) return;
-  stopAlertSound();   // moving on by hand ends the alert for the step that just finished
-  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
+async function nextBatchStep(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b) return;
+  stopAlertSound(key);   // moving on by hand ends the alert for the step that just finished
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
   if(b.currentStep >= b.steps.length-1){
     // Used to persist status:'completed' to the server here, then immediately overwrite it with
     // null a moment later in finishBatchIntoBlendingBoard — two full verified round-trips to the
@@ -20796,7 +20995,7 @@ async function nextBatchStep(){
     // and the odds of hitting a transient save failure on "Finish batch" — reported live as a
     // spurious "Could not save activeBatch" toast right after a batch had, in fact, finished fine.
     b.status = 'completed';
-    await finishBatchIntoBlendingBoard(b);
+    await finishBatchIntoBlendingBoard(b, key);
     return;
   }
   b.currentStep += 1;
@@ -20804,57 +21003,63 @@ async function nextBatchStep(){
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  if(!(await saveActiveBatchVerified())) return;
-  showToast('Now: '+batchStepLabel(step, b.batchSizeKg)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
+  if(!(await saveActiveBatchVerified(key))) return;
+  showToast((b.machine ? b.machine+' — ' : '')+'Now: '+batchStepLabel(step, b.batchSizeKg)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
 }
-async function prevBatchStep(){
-  const b = state.activeBatch; if(!b || b.currentStep<=0) return;
-  stopAlertSound();
-  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
+async function prevBatchStep(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b || b.currentStep<=0) return;
+  stopAlertSound(key);
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
   b.currentStep -= 1;
   const step = b.steps[b.currentStep];
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  await saveActiveBatchVerified(); render();
+  await saveActiveBatchVerified(key); render();
 }
-async function restartCurrentStep(){
-  const b = state.activeBatch; if(!b) return;
-  stopAlertSound();
-  if(!await verifyActiveBatchStillCurrent(b.id)){ dropStaleActiveBatch(); return; }
+async function restartCurrentStep(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const b = state[key]; if(!b) return;
+  stopAlertSound(key);
+  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
   const step = b.steps[b.currentStep];
   b.status = 'running';
   b.stepDeadline = new Date(Date.now()+batchStepWaitMinutes(step)*60000).toISOString();
   b.remainingSecondsWhenPaused = null;
-  await saveActiveBatchVerified(); render();
+  await saveActiveBatchVerified(key); render();
 }
-function stopBatch(){
-  const isDone = state.activeBatch && state.activeBatch.status==='completed';
+function stopBatch(key){
+  key = resolveBatchKey(key); if(!key) return;
+  const isDone = state[key] && state[key].status==='completed';
   const doStop = async ()=>{
-    const b = state.activeBatch;
-    stopAlertSound();
-    if(b && !await verifyActiveBatchStillCurrent(b.id)){
+    const b = state[key];
+    stopAlertSound(key);
+    if(b && !await verifyActiveBatchStillCurrent(key, b.id)){
       // Someone already ended ours — possibly started a different one. Don't blindly null that
       // out; just drop our own stale copy.
-      dropStaleActiveBatch('This batch was already ended elsewhere');
+      dropStaleActiveBatch(key, 'This batch was already ended elsewhere');
       return;
     }
-    state.activeBatch = null;
-    const ok = await saveActiveBatchVerified();
-    stopBatchTicker();
+    state[key] = null;
+    const ok = await saveActiveBatchVerified(key);
+    if(!runningBatches().length){ stopBatchTicker(); state.batchFocusMode = false; }
+    state.batchFocusKey = null;
+    render();
     if(!ok) return;
     showToast('Batch stopped');
   };
   if(isDone){ doStop(); return; }
+  const b0 = state[key];
   openConfirmModal({
     title: 'Stop batch', danger: true, confirmLabel: 'Stop batch',
-    message: 'Stop this batch? Everyone watching will lose the live timer.',
+    message: `Stop ${b0 && b0.machine ? 'the batch on '+b0.machine : 'this batch'}${b0 && (b0.recipeName||b0.productName) ? ' ("'+(b0.recipeName||b0.productName)+'")' : ''}? Everyone watching will lose the live timer.`,
     onConfirm: doStop,
   });
 }
 // Finishing a recipe's step timer feeds it into the Blending board as a real batch,
-// then takes everyone watching straight there — no manual "Dismiss" click needed.
-async function finishBatchIntoBlendingBoard(b){
+// then takes everyone watching straight there — no manual "Dismiss" click needed (unless other machines are still running: then it stays on the Production Guide).
+async function finishBatchIntoBlendingBoard(b, key){
   // Snapshot the production run onto the board card itself (not just a recipeId reference) so
   // the documented batch sheet stays accurate for physical record-keeping even if the recipe is
   // later edited or deleted.
@@ -20882,33 +21087,39 @@ async function finishBatchIntoBlendingBoard(b){
   };
   state.blendBatches.unshift(batch);
   if(!(await save('blendBatches'))) return;
-  state.activeBatch = null;
+  state[key] = null;
   // Not saveActiveBatchVerified(): the transfer above already landed and is the part that
-  // matters — this is just clearing the now-stale activeBatch slot behind it. That save's own
-  // retry loop pops a "Could not save activeBatch" toast on any attempt that fails, which kept
+  // matters — this is just clearing the now-stale slot behind it. That save's own
+  // retry loop pops a "Could not save ..." toast on any attempt that fails, which kept
   // surfacing right after a batch had, in fact, finished fine. A silent best-effort write is
-  // enough here — if it doesn't land, loadAll()'s self-heal check (an activeBatch that already
+  // enough here — if it doesn't land, loadAll()'s self-heal check (a running batch that already
   // matches a blendBatches record) clears it again on the very next load.
-  kvSet('activeBatch', null).catch(e=>console.error('clearing activeBatch after finish failed', e));
-  goTo('blending');
+  kvSet(key, null).catch(e=>console.error('clearing '+key+' after finish failed', e));
+  stopAlertSound(key);
+  if(state.batchFocusKey===key) state.batchFocusKey = null;
+  if(runningBatches().length){
+    render();   // other machines are still running: stay on the Production Guide
+  } else {
+    stopBatchTicker(); state.batchFocusMode = false;
+    goTo('blending');
+  }
   showToast('Batch complete — added to Mixing and Filling: '+batch.product);
 }
-function toggleBatchFocus(){ state.batchFocusMode = !state.batchFocusMode; render(); }
-// finishBatchIntoBlendingBoard transfers a 'completed' batch to the Blending board and nulls
-// activeBatch right after — that's meant to be instant, so the recipe page should never really
-// show the "All steps done / Dismiss" card for long. But activeBatch has no merge protection,
-// so a stale or delayed write/echo can leave a 'completed' batch sitting in state after it's
-// already been handed off. Rather than show that stuck intermediate state, treat a 'completed'
-// activeBatch as nothing to show: blank, same as if no batch were running at all.
-function isBatchDisplayActive(){ return !!(state.activeBatch && state.activeBatch.status!=='completed'); }
+function toggleBatchFocus(key){
+  if(state.batchFocusMode){ state.batchFocusMode = false; }
+  else { state.batchFocusMode = true; state.batchFocusKey = (typeof key==='string' && state[key]) ? key : ((batchFocusEntry()||{}).key || null); }
+  render();
+}
+function setBatchFocusKey(key){ state.batchFocusKey = key; state.batchFocusMode = true; render(); }
 
 // ---- Rendering ----
 // Production Guide now shows ONLY the batch currently running — browsing/creating/deleting
 // recipes moved to its own "Recipe library" page (renderRecipeLibraryPage, below), so this one
 // stays small even once several batches can run side by side.
 function renderRecipesPage(){
-  if(isBatchDisplayActive()) return renderActiveBatchCard();
-  return `<div class="empty-state">No batch running right now. Open a sheet in <a href="#" data-nav="recipelibrary">Batch sheets</a> and start one from its Batch sheet to see it here.</div>`;
+  const list = runningBatches();
+  if(list.length) return `<div class="batch-tiles">${list.map(x=>renderActiveBatchCard(x.key, x.b)).join('')}</div>`;
+  return `<div class="empty-state">No batch running right now. Open a sheet in <a href="#" data-nav="recipelibrary">Batch sheets</a> and start one from its Batch sheet to see it here. Batches on different machines can run at the same time.</div>`;
 }
 // Machines a batch sheet can run on (owner, 2026-11-21): chosen from the three-dots menu on a card, saved on the recipe (r.machine),
 // shown in colour on the card and on the open sheet. The colours are dark enough for text on white.
@@ -20930,9 +21141,9 @@ async function setRecipeMachine(recipeId, machine){
 async function startBatchFromCard(recipeId){
   const r = byId(state.recipes, recipeId); if(!r || !canManageBlendBoard()) return;
   state._recipeMenuOpen = null;
-  if(isBatchDisplayActive()){ showToast('A batch is already running'); render(); return; }
-  await startBatch(recipeId, Object.assign(r.batchNo ? {batchNo:r.batchNo} : {}, {batchSizeKg: r.batchSizeKg||0}));
-  if(state.activeBatch) goTo('recipes'); else render();
+  if(batchSlotBusy(r.machine||'')){ showToast(batchBusyMessage(r.machine||'')); render(); return; }
+  const started = await startBatch(recipeId, Object.assign(r.batchNo ? {batchNo:r.batchNo} : {}, {batchSizeKg: r.batchSizeKg||0}));
+  if(started) goTo('recipes'); else render();
 }
 function renderRecipeLibraryPage(){
   if(state._batchSheetId && byId(state.recipes, state._batchSheetId)) return renderBatchSheetPage(state._batchSheetId);
@@ -20940,7 +21151,6 @@ function renderRecipeLibraryPage(){
   const canStart = canManageBlendBoard();
   const canDelete = !!(state.session && roleCan(state.session.role, 'costing_delete_recipe'));
   const hasMenu = canMachine || canStart || canDelete;   // each item inside is shown only to roles allowed to do it
-  const batchRunning = isBatchDisplayActive();
   return `
   <div class="toolbar">
     <div class="hint" style="font-weight:600;color:var(--ink);">Batch sheets</div>
@@ -20955,6 +21165,7 @@ function renderRecipeLibraryPage(){
       const matCount = (r.materials||[]).length;
       const totalPct = recipeMaterialsTotalPercent(r.materials);
       const menuOpen = state._recipeMenuOpen===r.id;
+      const batchRunning = batchSlotBusy(r.machine||'');   // a batch is already running on THIS sheet's machine
       return `
       <div class="recipe-card" style="position:relative;">
         <div class="rc-head">
@@ -20962,7 +21173,7 @@ function renderRecipeLibraryPage(){
           ${hasMenu ? `<button type="button" class="rc-dots" data-recipe-menu="${r.id}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${menuOpen}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
         </div>
         ${menuOpen ? `<div class="rc-menu" role="menu">
-          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}" ${batchRunning?'disabled':''}>${batchRunning ? 'A batch is running' : '\u25B6 Start the batch'}</button>` : ''}
+          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}" ${batchRunning?'disabled':''}>${batchRunning ? (r.machine ? esc(r.machine)+' is busy' : 'A batch is running') : '\u25B6 Start the batch'}</button>` : ''}
           ${canMachine ? `<div class="rc-menu-label">Machine</div>
           ${BATCH_MACHINES.map(m=>`<button type="button" role="menuitem" class="rc-menu-item ${r.machine===m.id?'on':''}" data-machine-recipe="${r.id}" data-machine-value="${m.id}"><i style="background:${m.color};"></i><span style="color:${m.color};">${m.id}</span>${r.machine===m.id?'<b>\u2713</b>':''}</button>`).join('')}
           ${r.machine ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-clear" data-machine-recipe="${r.id}" data-machine-value="">Clear machine</button>` : ''}` : ''}
@@ -21570,8 +21781,7 @@ function batchStepsListHtml(b, isDone){
     }).join('')}
   </div>`;
 }
-function renderActiveBatchCard(){
-  const b = state.activeBatch;
+function renderActiveBatchCard(key, b){
   const step = b.steps[b.currentStep];
   const isDone = b.status==='completed';
   const batchBit = [b.batchNo?('Batch '+esc(b.batchNo)):'', b.qty?esc(b.qty):'', b.variation?esc(b.variation):''].filter(Boolean).join(' · ');
@@ -21584,6 +21794,7 @@ function renderActiveBatchCard(){
       else if(dotClass==='temp-red') accentClass = 'bt-temp-red';
     }
   }
+  const ended = batchTimerEnded(b);
   const bodyHtml = isDone ? `
       <div class="bt-countdown">✓</div>
       <div class="bt-headline">All ${b.steps.length} steps done 🎉</div>
@@ -21596,32 +21807,33 @@ function renderActiveBatchCard(){
       <div class="bt-headline">${esc(step.name)||'Preparation / Checking'}</div>
       <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}</div>`;
     })() : (()=>{
-      const remaining = batchRemainingSeconds();
+      const remaining = batchRemainingSeconds(b);
       const parts = splitStepInstruction(stepInstructionText(step));
       const mats = stepRawLines(step, b.batchSizeKg);   // raw materials in kg of this batch's size
       const timed = step.waitMinutes>0;
       return `
-      <div ${timed?'id="batch-countdown"':''} class="bt-countdown ${timed && remaining<=0 ? 'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
+      <div ${timed?`data-cd="${key}" `:''}class="bt-countdown ${timed && remaining<=0 ? 'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
       ${mats.length ? `<div class="bt-mats">${mats.map(m=>`<div class="bt-mat"><span>${esc(m.name)}</span><span>${esc(m.qty)}</span></div>`).join('')}</div>` : ''}
       ${parts.headline ? `<div class="bt-headline${mats.length?' bt-wrap':''}">${esc(parts.headline)}</div>` : ''}
       <div class="bt-meta">${batchBit ? batchBit+' · ' : ''}Step ${b.currentStep+1} of ${b.steps.length}${step.temperature?(' · '+esc(String(step.temperature))+'°C'):''}</div>`;
     })();
   return `
-  <div class="batch-card batch-tile ${accentClass}">
+  <div class="batch-card batch-tile ${accentClass}${ended?' bt-ended':''}" data-bt-key="${key}">
     <div class="bt-head">
       <span class="bt-recipe">${esc(b.recipeName)}</span>
       <span class="bt-dot ${dotClass}"></span>
     </div>
     ${b.machine ? `<div class="bt-machine">${machineChipHtml(b.machine)}</div>` : ''}
+    <div class="bt-ended-tag">⏰ Time's up</div>
     ${bodyHtml}
     <div class="bt-actions">
       ${canManageBlendBoard() ? `
-      ${!isDone && b.status==='running' ? `<button class="btn" id="btn-batch-pause">Pause</button>` : ''}
-      ${!isDone && b.status==='paused' ? `<button class="btn" id="btn-batch-resume">Resume</button>` : ''}
-      ${!isDone ? `<button class="btn btn-primary" id="btn-batch-next">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
-      <button class="btn" id="btn-batch-stop">${isDone?'Dismiss':'Stop'}</button>
+      ${!isDone && b.status==='running' ? `<button class="btn" data-bt-act="pause" data-bt-key="${key}">Pause</button>` : ''}
+      ${!isDone && b.status==='paused' ? `<button class="btn" data-bt-act="resume" data-bt-key="${key}">Resume</button>` : ''}
+      ${!isDone ? `<button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
+      <button class="btn" data-bt-act="stop" data-bt-key="${key}">${isDone?'Dismiss':'Stop'}</button>
       ` : ''}
-      <button class="btn bt-expand" id="btn-batch-focus" title="Big screen — full detail, all steps & more controls">⛶</button>
+      <button class="btn bt-expand" data-bt-act="focus" data-bt-key="${key}" title="Big screen — full detail, all steps & more controls">⛶</button>
     </div>
   </div>`;
 }
@@ -21661,16 +21873,20 @@ function batchRunSheetHtml(b){
       </div>`;
 }
 function renderBatchFocusOverlay(){
-  const b = state.activeBatch;
+  const entry = batchFocusEntry();
+  if(!entry) return '';
+  const key = entry.key, b = entry.b;
+  const all = runningBatches();
   const isDone = b.status==='completed';
   const step = b.steps[b.currentStep];
-  const remaining = isDone ? 0 : batchRemainingSeconds();
+  const remaining = isDone ? 0 : batchRemainingSeconds(b);
   const progressPct = Math.round((b.currentStep / b.steps.length) * 100);
   return `
-  <div class="batch-focus">
+  <div class="batch-focus" data-bf-key="${key}">
     <div class="batch-focus-progress"><div class="batch-focus-progress-fill" style="width:${isDone?100:progressPct}%;"></div></div>
     <div class="batch-focus-body">
     <div class="bf-main-col">
+      ${all.length>1 ? `<div class="bf-switch" role="tablist" aria-label="Running batches">${all.map(x=>`<button type="button" role="tab" class="bf-switch-btn${x.key===key?' on':''}${batchTimerEnded(x.b)?' ended':''}" data-bf-switch="${x.key}" aria-selected="${x.key===key}">${x.b.machine ? `<i style="background:${machineColor(x.b.machine)};"></i><b>${esc(x.b.machine)}</b>` : '<b>No machine</b>'}<span>${esc(x.b.recipeName||x.b.productName||'')}</span>${batchTimerEnded(x.b)?'<em>\u23F0</em>':''}</button>`).join('')}</div>` : ''}
       <div class="batch-focus-head">
         <div>
           <div class="bf-recipe">${esc(b.recipeName)}</div>
@@ -21689,7 +21905,7 @@ function renderBatchFocusOverlay(){
         <div class="bf-grid">
           <div class="bf-main">
             <div class="bf-main-label">Checklist</div>
-            ${batchStepChecklistHtml(step)}
+            ${batchStepChecklistHtml(step, key)}
           </div>
           <div class="bf-side">${batchFocusTempStatHtml(step.temperature)}</div>
         </div>
@@ -21699,7 +21915,7 @@ function renderBatchFocusOverlay(){
         ${renderBatchInstructionHtml(step, null, b.batchSizeKg)}
         <div class="bf-grid">
           <div class="bf-main">
-            <div id="batch-focus-countdown" class="bf-countdown ${timed && remaining<=0?'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
+            <div id="batch-focus-countdown" ${timed?`data-cd="${key}" `:''}class="bf-countdown ${timed && remaining<=0?'done':''}">${timed ? formatCountdown(remaining) : '—'}</div>
             <div ${timed?'id="batch-countdown-note" ':''}class="bf-note">${!timed ? 'No wait — move on when ready' : (b.status==='paused' ? 'Paused' : (remaining<=0 ? "Time's up — press Next step when you're ready" : 'remaining on this step'))}</div>
           </div>
           <div class="bf-side">
@@ -22207,7 +22423,7 @@ function recipeBatchSheetInner(recipeId, asPage){
   // same draft + step-editor-row markup/handlers as the full recipe form.
   const canEditSteps = !!state.session && roleCan(state.session.role, 'costing_edit_steps') && state._recipeDraft && state._recipeDraft.id===r.id;
   const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
-  const batchActive = isBatchDisplayActive();
+  const batchActive = batchSlotBusy(r.machine||'');   // this sheet's machine already runs a batch
   const tpl = batchSheetTemplate();
   const batchNoVal = (state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || '';
   const leftHtml = `
@@ -22294,7 +22510,7 @@ function recipeBatchSheetInner(recipeId, asPage){
       <div class="modal-actions" style="justify-content:center;margin-top:22px;flex-wrap:wrap;">
         <button type="button" class="btn" id="${asPage?'btn-close-batchsheet':'btn-cancel-modal'}">Close</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
-        ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
+        ${canManageBlendBoard() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?(r.machine ? esc(r.machine)+' is busy' : 'Batch running'):'Start the batch'}</button>` : ''}
       </div>`;
   return `
   ${asPage ? '<div id="batchsheet-page" class="bsmc-page bs2">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
@@ -22480,7 +22696,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp{max-width:720px;margin:0 auto;padding:10px 24px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .bsp *{box-sizing:border-box;}
     .bsp .bsp-top{text-align:center;margin-bottom:12px;}
-    .bsp .bsp-logo{display:block;margin:0 auto 6px;max-height:46px;max-width:240px;object-fit:contain;}
+    .bsp .bsp-logo{display:block;margin:0 auto 8px;width:auto;height:auto;max-height:112px;max-width:60%;object-fit:contain;}   /* big and clearly visible: about 60% of the sheet's width (owner, 2026-11-21) */
     .bsp .bsp-co{font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:600;}
     .bsp .bsp-doc{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;}
     .bsp .bsp-titlerow{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #1C2320;padding-bottom:8px;margin-bottom:12px;}
@@ -26280,10 +26496,10 @@ function attachShellHandlers(){
     // Anything typed on the sheet but not saved yet (steps, batch number, batch size) is saved first, so the batch runs with exactly
     // what is on screen (and the "Discard changes?" question can never stop the jump to the Production Guide below).
     if(batchSheetDirty()){ await saveBatchSheetSteps(recipeId); if(batchSheetDirty()) return; }
-    await startBatch(recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
+    const started = await startBatch(recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
     // zero-step recipes show a toast and stay open instead. Recipe library and the batch-running
     // view (Production Guide) are separate pages now: once the batch is started it appears there (owner, 2026-11-21).
-    if(state.activeBatch){ state._batchSheetId = null; state._recipeDraft = null; closeModal(); goTo('recipes'); }
+    if(started){ state._batchSheetId = null; state._recipeDraft = null; closeModal(); goTo('recipes'); }
   };
   if(byIdEl('form-recipe')) byIdEl('form-recipe').addEventListener('submit', submitRecipe);
   if(byIdEl('btn-add-step')) byIdEl('btn-add-step').onclick = ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftAddStep(); };
@@ -26302,19 +26518,22 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-mat-up]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveMaterial(b.dataset.matUp, -1); }));
   document.querySelectorAll('[data-mat-down]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftMoveMaterial(b.dataset.matDown, 1); }));
   document.querySelectorAll('[data-mat-remove]').forEach(b=>b.addEventListener('click', ()=>{ syncDraftTopFieldsFromDOM(); syncDraftStepFieldsFromDOM(); syncDraftMaterialFieldsFromDOM(); draftRemoveMaterial(b.dataset.matRemove); }));
-  if(byIdEl('btn-batch-pause')) byIdEl('btn-batch-pause').onclick = pauseBatch;
-  if(byIdEl('btn-batch-resume')) byIdEl('btn-batch-resume').onclick = resumeBatch;
-  if(byIdEl('btn-batch-next')) byIdEl('btn-batch-next').onclick = nextBatchStep;
-  if(byIdEl('btn-batch-stop')) byIdEl('btn-batch-stop').onclick = stopBatch;
-  if(byIdEl('btn-batch-focus')) byIdEl('btn-batch-focus').onclick = toggleBatchFocus;
-  if(byIdEl('btn-batch-focus-close')) byIdEl('btn-batch-focus-close').onclick = toggleBatchFocus;
-  if(byIdEl('btn-batch-focus-test-sound')) byIdEl('btn-batch-focus-test-sound').onclick = ()=>playBatchAlertSound(state.activeBatch && state.activeBatch.machine);
-  if(byIdEl('btn-batch-focus-pause')) byIdEl('btn-batch-focus-pause').onclick = pauseBatch;
-  if(byIdEl('btn-batch-focus-resume')) byIdEl('btn-batch-focus-resume').onclick = resumeBatch;
-  if(byIdEl('btn-batch-focus-prev')) byIdEl('btn-batch-focus-prev').onclick = prevBatchStep;
-  if(byIdEl('btn-batch-focus-restart')) byIdEl('btn-batch-focus-restart').onclick = restartCurrentStep;
-  if(byIdEl('btn-batch-focus-next')) byIdEl('btn-batch-focus-next').onclick = nextBatchStep;
-  if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = stopBatch;
+  // Running batches: one tile per machine (data-bt-act + data-bt-key); the big screen is for the chosen batch (batchFocusEntry).
+  document.querySelectorAll('[data-bt-act]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const k = btn.dataset.btKey, act = btn.dataset.btAct;
+    if(act==='pause') pauseBatch(k); else if(act==='resume') resumeBatch(k); else if(act==='next') nextBatchStep(k);
+    else if(act==='stop') stopBatch(k); else if(act==='focus') toggleBatchFocus(k);
+  }));
+  document.querySelectorAll('[data-bf-switch]').forEach(btn=>btn.addEventListener('click', ()=>setBatchFocusKey(btn.dataset.bfSwitch)));
+  const focusKey = ()=>{ const e = batchFocusEntry(); return e ? e.key : null; };
+  if(byIdEl('btn-batch-focus-close')) byIdEl('btn-batch-focus-close').onclick = ()=>toggleBatchFocus();
+  if(byIdEl('btn-batch-focus-test-sound')) byIdEl('btn-batch-focus-test-sound').onclick = ()=>{ const e = batchFocusEntry(); playBatchAlertSound(e && e.b.machine, 'main'); };
+  if(byIdEl('btn-batch-focus-pause')) byIdEl('btn-batch-focus-pause').onclick = ()=>pauseBatch(focusKey());
+  if(byIdEl('btn-batch-focus-resume')) byIdEl('btn-batch-focus-resume').onclick = ()=>resumeBatch(focusKey());
+  if(byIdEl('btn-batch-focus-prev')) byIdEl('btn-batch-focus-prev').onclick = ()=>prevBatchStep(focusKey());
+  if(byIdEl('btn-batch-focus-restart')) byIdEl('btn-batch-focus-restart').onclick = ()=>restartCurrentStep(focusKey());
+  if(byIdEl('btn-batch-focus-next')) byIdEl('btn-batch-focus-next').onclick = ()=>nextBatchStep(focusKey());
+  if(byIdEl('btn-batch-focus-stop')) byIdEl('btn-batch-focus-stop').onclick = ()=>stopBatch(focusKey());
 
   // Chat
   attachChat2Handlers();

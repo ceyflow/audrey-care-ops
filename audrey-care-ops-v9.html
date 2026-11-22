@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122141034">
+<meta name="app-build" content="20261122142638">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2407,10 +2407,6 @@ html{ visibility:hidden; }
   .bf-instr-twocol-lead{flex:1 1 380px;font:700 clamp(24px,3vw,34px) 'Poppins',sans-serif;color:#15201A;line-height:1.25;}
   .bf-instr-twocol-list{flex:1 1 260px;display:flex;flex-direction:column;gap:10px;padding-left:24px;border-left:2px solid #D7E8DB;}
   .bf-instr-twocol-item{font:600 16px 'Inter',sans-serif;color:#15201A;}
-  .bf-instr-flow{margin:26px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px;max-width:1100px;}
-  .bf-instr-flow-item{font:600 clamp(16px,1.8vw,18px) 'Inter',sans-serif;color:#15201A;background:#fff;border:1px solid #E1EAE3;padding:9px 15px;border-radius:12px;}
-  .bf-instr-flow-item.lead{font:700 clamp(18px,2.1vw,21px) 'Poppins',sans-serif;background:var(--accent-soft);border-color:var(--accent-soft);}
-  .bf-instr-flow-arrow{font:700 18px 'Inter',sans-serif;color:var(--accent-dark);}
   .bf-instr-divider{margin:26px 0 0;max-width:780px;}
   .bf-instr-divider-row{padding:14px 0;border-bottom:1px solid #E1EAE3;font:600 clamp(17px,1.9vw,20px) 'Inter',sans-serif;color:#15201A;}
   .bf-instr-divider-row:last-child{border-bottom:none;}
@@ -2576,6 +2572,14 @@ html{ visibility:hidden; }
   .batch-steplist .bs-checks{display:flex;flex-direction:column;gap:1px;font-size:12px;font-weight:400;color:#7A8C7F;}
   .batch-steplist .bs-checks span::before{content:"\00B7";margin-right:6px;}
   .batch-steplist .bs-row.current .bs-checks{color:#5B6E61;}
+  .batch-steplist .bs-cap{display:block;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-dark);opacity:.85;}
+  .batch-steplist .bs-row.done .bs-cap{opacity:.55;}
+  .bf-phrase-tag{display:inline-block;margin-right:10px;padding:3px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);font:700 13px 'Poppins',sans-serif;letter-spacing:.02em;vertical-align:middle;}
+  .bf-instr-onebox{margin:26px 0 0;max-width:820px;padding:18px 24px;border-radius:16px;background:var(--accent-soft);}
+  .bf-instr-onebox p{margin:0;font:700 clamp(18px,2.1vw,23px) 'Poppins',sans-serif;line-height:1.45;color:#15201A;}
+  .bf-instr-onebox p + p{margin-top:10px;}
+  /* wide screens: the left side scrolls on its own, so Previous / Finish / Stop stay pinned at its bottom edge whatever the length of the text above them */
+  @media (min-width:1100px){ .batch-focus .bf-main-col .bf-controls{position:sticky;bottom:0;z-index:2;margin-top:18px;padding:16px 0 8px;background:linear-gradient(to top,#F6FAF7 72%,rgba(246,250,247,0));} }
   .batch-steplist .bs-wait{flex:none;min-width:52px;text-align:right;font-size:12px;font-weight:500;color:#9AA89F;white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:1px;}
   .batch-steplist .bs-wait.has{color:var(--accent-dark);font-weight:700;font-size:13px;}
   @media (max-width:760px){
@@ -21243,7 +21247,7 @@ const BATCH_INSTRUCTION_STYLES = [
   {id:'activechecklist', name:'Active Checklist', desc:'The current line lit up, the rest dimmed as "coming up".'},
   {id:'singlefocus', name:'Single Focus + Up Next', desc:'Only the current line, large, plus a small "Up next" tag.'},
   {id:'twocolumn', name:'Two-Column Split', desc:'Lead line big on the left, remaining lines listed on the right.'},
-  {id:'arrowflow', name:'Arrow Flow', desc:'Lines connected by → arrows, flowchart-style.'},
+  {id:'arrowflow', name:'One Box', desc:'Every line together in one tinted box (was Arrow Flow).'},
   {id:'dividerlist', name:'Divider List', desc:'Equal-weight lines separated by thin rules.'},
 ];
 function currentInstructionStyle(){
@@ -21330,9 +21334,9 @@ function renderBatchInstructionLinesHtml(lines, style){
     </div>`;
   }
   if(style==='arrowflow'){
-    return `<div class="bf-instr-flow">
-      ${lines.map((line,i)=>(i>0?'<span class="bf-instr-flow-arrow">→</span>':'')+`<span class="bf-instr-flow-item${i===0?' lead':''}">${esc(line)}</span>`).join('')}
-    </div>`;
+    // All the lines of the instruction together in ONE box, no arrows between separate boxes (owner, 2026-11-22: "add these texts into one space").
+    // The id stays 'arrowflow' because that is the value saved in the live settings.
+    return `<div class="bf-instr-onebox">${lines.map(line=>`<p>${esc(line)}</p>`).join('')}</div>`;
   }
   if(style==='dividerlist'){
     return `<div class="bf-instr-divider">
@@ -22965,7 +22969,14 @@ function costingOnFixedCostFieldInput(el){
 // "All steps" on the big screen (owner, 2026-11-22: every step shows its relevant phrase): a phrase step shows its raw materials (kg of this batch's size) and its instruction;
 // a Preparation / Checking step lists its checks under its name instead of a bare title. Each phrase step also shows its WAIT time ("10 min" / "no wait") on the right
 // (owner, 2026-11-22: "need wait time show in all steps, so we can see wait time and set the timer manually"): nothing counts down by itself, the person reads it and sets the Timer.
+// A running batch's step labels, the same as on the batch sheet (owner, 2026-11-22: "show with phrases, ex-phrase A, B etc."): phrase steps are lettered among the PHRASES
+// only (Phrase A, B, C ...), preparation / checking steps are numbered among themselves (Preparation 1, 2 ...). The instruction text itself says "add phrase B".
+function batchStepLabels(steps){
+  let ph = 0, pr = 0;
+  return (steps||[]).map(s=> s.type==='preparation' ? {prep:true, text:'Preparation '+(++pr)} : {prep:false, text:'Phrase '+letterLabel(ph++)});
+}
 function batchStepsListHtml(b, isDone){
+  const labels = batchStepLabels(b.steps);
   return `<div class="batch-steplist">
     ${b.steps.map((s,i)=>{
       const cls = i<b.currentStep || isDone ? 'done' : (i===b.currentStep ? 'current' : '');
@@ -22973,6 +22984,7 @@ function batchStepsListHtml(b, isDone){
       return `<div class="bs-row ${cls}">
         <span class="bs-num">${i<b.currentStep||isDone ? '✓' : (i+1)}</span>
         <span class="bs-body">
+          <span class="bs-cap">${esc(labels[i].text)}</span>
           <span class="bs-text">${esc(batchStepLabel(s, b.batchSizeKg))}${s.amount?(' — '+esc(s.amount)):''}${s.temperature?(' — '+esc(s.temperature)+'°C'):''}</span>
           ${checks.length ? `<span class="bs-checks">${checks.map(t=>`<span>${esc(t)}</span>`).join('')}</span>` : ''}
         </span>
@@ -23117,7 +23129,7 @@ function renderBatchFocusOverlay(){
         <div>
           <div class="bf-recipe">${esc(b.recipeName)}</div>
           ${b.machine ? `<div class="bf-machine">${machineChipHtml(b.machine)}</div>` : ''}
-          ${!isDone ? `<div class="bf-step-of">Step ${b.currentStep+1} of ${b.steps.length}</div>` : ''}
+          ${!isDone ? `<div class="bf-step-of"><span class="bf-phrase-tag">${esc(batchStepLabels(b.steps)[b.currentStep].text)}</span>Step ${b.currentStep+1} of ${b.steps.length}</div>` : ''}
         </div>
         <div class="bf-head-actions">
           ${timerBtn}
@@ -28110,6 +28122,13 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-bf-switch]').forEach(btn=>btn.addEventListener('click', ()=>setBatchFocusKey(btn.dataset.bfSwitch)));
   const focusKey = ()=>{ const e = batchFocusEntry(); return e ? e.key : null; };
   if(byIdEl('btn-batch-focus-close')) byIdEl('btn-batch-focus-close').onclick = ()=>toggleBatchFocus();
+  // All steps scrolls inside its own card on a wide screen: keep the step being worked on in view (never scrolls the page itself)
+  { const sc = document.querySelector('.batch-focus .bf-right-col .bf-steps-card'), cur = sc && sc.querySelector('.bs-row.current');
+    if(sc && cur && sc.scrollHeight > sc.clientHeight + 2){
+      const cr = cur.getBoundingClientRect(), r = sc.getBoundingClientRect();
+      if(cr.bottom > r.bottom - 8) sc.scrollTop += cr.bottom - r.bottom + 16;
+      else if(cr.top < r.top + 8) sc.scrollTop -= r.top - cr.top + 16;
+    } }
   if(byIdEl('btn-batch-focus-prev')) byIdEl('btn-batch-focus-prev').onclick = ()=>prevBatchStep(focusKey());
   // The Timer button + its digital clock (batchTimerPanelHtml): the panel is a view state of this device, the timer itself belongs to the batch.
   if(byIdEl('btn-batch-focus-timer')) byIdEl('btn-batch-focus-timer').onclick = ()=>{ state._bfTimerOpen = !state._bfTimerOpen; state._bfTimerCustom = false; render(); };

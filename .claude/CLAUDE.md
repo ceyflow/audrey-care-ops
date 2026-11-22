@@ -88,6 +88,15 @@ Keep these true when changing the app. Details and the audit are in the owner's 
 - **Sign-in.** Name -> `resolve_login` (database function, anonymous-callable) -> one `signInWithPassword`. A person's
   role, name and on/off status come ONLY from the `profiles` row, which only an Admin (or a service-role Edge Function)
   can change. The browser never writes its own role, and never trusts the saved account list for it.
+- **Sign-in speed (owner, 2026-11-22: "login quickly as possible").** Measured from the live API logs: the database answers in 3-150 ms, but EVERY call pays a ~110 ms floor between Supabase's edge and the database plus the person's own
+  connection delay, and sign-in used to make FOUR calls one after another (resolve_login -> token -> profile + last_seen -> account list + data). Now it is two waits: (1) `resolve_login` is asked WHILE the person types the password
+  (`prefetchLoginEmail`, called from the name box's input / change / blur in `attachLoginHandlers`; remembered 5 minutes per name in `_loginEmailCache`; a failed lookup or a failed sign-in is forgotten so the retry asks again);
+  (2) after `signInWithPassword`, `confirmLoginV2` asks for the profile, the account list and the data AT ONCE. That is only safe because the DATABASE now refreshes `profiles.last_seen` during the password check itself
+  (trigger `trg_touch_last_seen_on_sign_in` on `auth.users` -> `private.touch_last_seen_on_sign_in()`, migration `touch_last_seen_on_sign_in`, swallows its own errors so it can never block a sign-in): `session_is_active()`,
+  the gate every `app_data` read goes through, needs a fresh `last_seen` for anyone returning after their inactivity timeout, which is why the page used to update it first and wait. DO NOT remove that trigger without putting the
+  "update last_seen, then fetch" order back. Safety net kept: if the account list does not come back, the page refreshes `last_seen` and asks once more; the empty-data retry in `_applySyncedKeysFetch` is unchanged.
+  Measured in a stubbed browser (every call delayed): 250 ms per call 1362 -> 824 ms; 600 ms per call 2836 -> 1360 ms (Enter to dashboard). The database policies were looked at and are NOT the cause (the performance advisor's
+  `auth_rls_initplan` / multiple-policy warnings were left alone: the data query takes ~40-150 ms). Still ahead of the first sign-in screen: the three blocking CDN scripts (supabase-js, lottie, leaflet) and the logged-out data fetch.
 - **Accounts** are created, reset and deleted only by the Edge Functions `admin-create-account`,
   `admin-reset-password`, `admin-delete-account` (sources in `supabase/functions/`; they find accounts by exact
   profile name, never by matching the end of an address). Do not bring back browser sign-ups or browser-written profiles.

@@ -3673,20 +3673,42 @@ function authEmailFor(name){
   const slug = (name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
   return slug + '@audreyops.internal';
 }
+// The name -> login address lookup (resolve_login) is asked WHILE the person is still typing their password
+// (attachLoginHandlers calls this when the name box changes / loses focus), so by the time they press Log in the
+// answer is already here and sign-in is one call shorter (owner, 2026-11-22: "login quickly as possible").
+// The answer only says which address belongs to a typed name (no secret, no limit needed); it is remembered for
+// 5 minutes per name, a failed lookup is never remembered, and a failed sign-in forgets it so the retry asks again.
+const _loginEmailCache = {};   // lower-cased typed name -> {p: Promise<address|null>, at: ms}
+const LOGIN_EMAIL_CACHE_MS = 5*60*1000;
+function loginLookupKey(name){ return String(name||'').trim().toLowerCase(); }
+function prefetchLoginEmail(name){
+  const key = loginLookupKey(name);
+  if(!key || !supabaseClient) return null;
+  const hit = _loginEmailCache[key];
+  if(hit && Date.now() - hit.at < LOGIN_EMAIL_CACHE_MS) return hit.p;
+  const p = (async()=>{
+    try{
+      const { data, error } = await supabaseClient.rpc('resolve_login', {p_name: String(name).trim()});
+      if(!error && typeof data === 'string' && data) return data;
+    }catch(e){ console.error('resolve_login failed', e); }
+    return null;
+  })();
+  _loginEmailCache[key] = {p, at: Date.now()};
+  p.then(v=>{ if(!v && _loginEmailCache[key] && _loginEmailCache[key].p===p) delete _loginEmailCache[key]; });
+  return p;
+}
 async function supabaseSignIn(role, name, password){
   if(!supabaseClient) return {ok:false, error:'Backend not configured'};
-  // Two calls, always: ask the server which login belongs to the typed name (resolve_login), then sign in
-  // once with it. (The old way read the whole account list in the browser, then tried the standard address
+  // Asks the server which login belongs to the typed name (resolve_login, usually already answered while the person typed
+  // the password, see prefetchLoginEmail), then signs in once with it. (The old way read the whole account list in the browser, then tried the standard address
   // and, on a miss, a dozen role-prefixed ones in parallel: most sign-in calls failed and were noise.)
   // `role` is no longer used; it is kept in the signature so existing callers (change-password) need no edit.
   let email = null;
-  try{
-    const { data, error } = await supabaseClient.rpc('resolve_login', {p_name: name});
-    if(!error && typeof data === 'string' && data) email = data;
-  }catch(e){ console.error('resolve_login failed', e); }
+  const pending = prefetchLoginEmail(name);
+  if(pending) email = await pending;
   if(!email) email = authEmailFor(name); // the lookup could not be asked: the standard address
   const res = await supabaseClient.auth.signInWithPassword({email, password});
-  if(res.error) return {ok:false, error: res.error.message};
+  if(res.error){ delete _loginEmailCache[loginLookupKey(name)]; return {ok:false, error: res.error.message}; }
   return {ok:true, userId: res.data.user.id};
 }
 async function supabaseFetchProfile(userId){
@@ -3724,8 +3746,9 @@ async function supabaseSignUpForMigration(role, name, password){
 async function loadAuthRecordAfterSignIn(){
   try{
     const a = await kvGetAuthWithRetry();
-    if(a){ state.auth = {...DEFAULT_AUTH, ...a, migratedToSupabaseAuth:true}; snapshotAuthBaseline(); }
+    if(a){ state.auth = {...DEFAULT_AUTH, ...a, migratedToSupabaseAuth:true}; snapshotAuthBaseline(); return true; }
   }catch(e){ console.error('account list fetch after sign-in failed', e); }
+  return false;
 }
 // The SMS, live CityPak tracking and Dally (AI) features each run in a server function (supabase/functions/).
 // They used to be locked with a shared password written into this page, which made the password public. Now the
@@ -8272,16 +8295,18 @@ async function confirmLoginV2(){
   if(!typedName || !password){ fail('Incorrect name or password — try again.'); return; }
   const res = await supabaseSignIn(null, typedName, password);
   if(!res.ok){ fail('Incorrect name or password — try again.'); return; }
-  // Refresh profiles.last_seen right now, awaited, before any data fetch below — session_is_active() (the RLS
-  // gate every app_data read/write goes through) checks this timestamp, and for anyone returning after their
-  // configured timeout — the normal case for every first login of the day — it was still sitting at however
-  // long ago they last used the app. Without this, that gap blocked the very first synced-keys fetch of every
-  // fresh login. Runs in parallel with the profile read (they do not depend on each other); a failure here must
-  // never block sign-in itself.
-  const [profile] = await Promise.all([
+  // Everything the page needs right after the password check is asked for AT ONCE: the person's own record (profiles),
+  // the account list and the shared data (owner, 2026-11-22: "login quickly as possible"; it used to be two steps, so
+  // every sign-in paid an extra round trip). This is safe because profiles.last_seen is now refreshed BY THE DATABASE
+  // during the password check itself (trigger trg_touch_last_seen_on_sign_in on auth.users, migration
+  // touch_last_seen_on_sign_in): session_is_active(), the gate every app_data read goes through, needs that timestamp fresh,
+  // and for anyone returning after their configured timeout (the normal case for every first login of the day) it used to be
+  // stale, which is why the page used to wait for its own last_seen update first. If that trigger is ever removed, the safety net
+  // just below (account list missing -> refresh last_seen, ask again) and the empty-data retry in _applySyncedKeysFetch still recover.
+  const [profile, authLoaded, parallelLoadedValues] = await Promise.all([
     supabaseFetchProfile(res.userId),
-    supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', res.userId)
-      .then(()=>{ _lastServerPingAt = Date.now(); }, e=>{ console.error('last_seen pre-fetch refresh failed', e); }),
+    loadAuthRecordAfterSignIn(),
+    _fetchSyncedKeys(),
   ]);
   // Who this person is, and what they may do, comes from the server's own record of them (profiles) — which only
   // an Admin can change. It is never taken from this browser or from the (public-facing) account list, and this
@@ -8300,10 +8325,16 @@ async function confirmLoginV2(){
   const sessionRole = role;
   // The Orders Process board is a shared-device account like Blending/Packing — signing into it goes straight to
   // the public board display rather than a staff session.
-  if(role==='Orders Process'){ logLoginEvent(typedName, role); await refreshAppData(true); enterBoardMode(); return; }
-  // The account list (Employer code, extra pages) is readable once signed in, so it is fetched now, together with
-  // the main data. The server already knows this person's real access level, so one data fetch is enough.
-  const [, parallelLoadedValues] = await Promise.all([ loadAuthRecordAfterSignIn(), _fetchSyncedKeys() ]);
+  if(role==='Orders Process'){ logLoginEvent(typedName, role); await _applySyncedKeysFetch(parallelLoadedValues, true); enterBoardMode(); return; }
+  // Safety net (normally never runs): the account list did not come back. That is what a database that does not refresh last_seen
+  // at sign-in would cause for someone returning after their timeout, so refresh it now and ask once more.
+  if(!authLoaded){
+    try{ await supabaseClient.from('profiles').update({last_seen: new Date().toISOString()}).eq('id', res.userId); _lastServerPingAt = Date.now(); }
+    catch(e){ console.error('last_seen refresh failed', e); }
+    await loadAuthRecordAfterSignIn();
+  }
+  // The account list (Employer code, extra pages) was fetched above, together with the main data. The server already
+  // knows this person's real access level, so one data fetch is enough.
   const acctEntry = (state.auth.secureAccounts||[]).find(r=>r.name.toLowerCase()===String(profile.staff_name||typedName).toLowerCase());
   const roleWasStale = false;
   // Falls back to acctEntry.name (the canonical, correctly-cased login name) rather than the raw typedName, for
@@ -13186,6 +13217,17 @@ function attachLoginHandlers(){
     });
     const passEl = document.getElementById('login-password');
     if(passEl && !state.auth.migratedToSupabaseAuth) passEl.focus();
+  }
+  // Ask the server which login belongs to the typed name WHILE the person is still typing their password, so pressing
+  // Log in does not have to wait for that answer (see prefetchLoginEmail). Quiet: it never shows anything.
+  const nameEl = document.getElementById('login-name');
+  if(nameEl){
+    let askTimer = null;
+    const ask = ()=>{ clearTimeout(askTimer); if(nameEl.value.trim().length >= 2) prefetchLoginEmail(nameEl.value); };
+    nameEl.addEventListener('input', ()=>{ clearTimeout(askTimer); askTimer = setTimeout(ask, 500); });
+    nameEl.addEventListener('change', ask);
+    nameEl.addEventListener('blur', ask);
+    if(nameEl.value) ask();
   }
   const toggleBtn = document.getElementById('btn-toggle-login-password');
   if(toggleBtn){

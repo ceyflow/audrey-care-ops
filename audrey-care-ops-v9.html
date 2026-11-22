@@ -6872,21 +6872,7 @@ async function loadAll(){
       kvSet(slotKey, null).catch(e=>console.error('clearing stale transferred '+slotKey+' failed', e));
     }
   });
-  // A batch that was already running when batches became one-per-machine (2026-11-22) sits in the ORIGINAL key but has a machine:
-  // copy it to its machine's own slot, and only when that copy is saved clear the original. Until then it keeps working where it is.
-  (async()=>{
-    const legacy = state.activeBatch;
-    if(!(legacy && legacy.machine)) return;
-    const target = batchKeyForMachine(legacy.machine);
-    if(target==='activeBatch' || state[target]) return;
-    try{
-      if(await kvSet(target, legacy)){
-        state[target] = legacy; state.activeBatch = null;
-        await kvSet('activeBatch', null);
-        render();
-      }
-    }catch(e){ console.error('moving a running batch to its machine slot failed', e); }
-  })();
+  migrateLegacyRunningBatch();   // (see there)
   // Backfills any SMS template keys added after a workspace was first set up.
   state.smsTemplates = {...DEFAULT_SMS_TEMPLATES, ...(state.smsTemplates||{})};
   state.orderSettings = {...DEFAULT_ORDER_SETTINGS, ...(state.orderSettings||{})};
@@ -20355,7 +20341,27 @@ function batchRemainingSeconds(b){
 // Every running batch lives in its own slot: state[key] with key = batchKeyForMachine(machine).
 function batchKeyForMachine(machine){
   const i = BATCH_MACHINES.findIndex(m=>m.id===machine);
-  return i>=0 ? 'activeBatchM'+(i+1) : 'activeBatch';
+  const k = i>=0 ? 'activeBatchM'+(i+1) : 'activeBatch';
+  // A machine added to BATCH_MACHINES later WITHOUT its own key in BATCH_SLOT_KEYS would otherwise run a batch nobody could see or save:
+  // it shares the no-machine slot (one at a time) until its key is added everywhere (see BATCH_SLOT_KEYS).
+  return BATCH_SLOT_KEYS.includes(k) ? k : 'activeBatch';
+}
+// A batch that was already running when batches became one-per-machine (2026-11-22) sits in the ORIGINAL key but has a machine: copy it to its
+// machine's own slot, and only when that copy is saved clear the original. Until then it keeps working where it is (tiles carry their key).
+async function migrateLegacyRunningBatch(){
+  const legacy = state.activeBatch;
+  if(!(legacy && legacy.machine)) return false;
+  const target = batchKeyForMachine(legacy.machine);
+  if(target==='activeBatch' || state[target]) return false;
+  try{
+    if(await kvSet(target, legacy)){
+      state[target] = legacy; state.activeBatch = null;
+      await kvSet('activeBatch', null);
+      render();
+      return true;
+    }
+  }catch(e){ console.error('moving a running batch to its machine slot failed', e); }
+  return false;
 }
 // [{key, b}] for every batch still on screen, Machine 1, 2, 3 first and a batch with no machine last. A 'completed' leftover counts as nothing (see isBatchDisplayActive).
 function runningBatches(){

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122004829">
+<meta name="app-build" content="20261122010705">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -3659,7 +3659,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // Separate keys instead of one array: every slot keeps the single-object save / verify code that was already hardened, and two tablets working on different
 // machines can never overwrite each other. A fourth machine needs its own key here (and in BATCH_MACHINES, PAGE_DATA_KEYS.recipes, role_data_access).
 const BATCH_SLOT_KEYS = ['activeBatchM1','activeBatchM2','activeBatchM3','activeBatch'];
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','activityLog','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -5331,7 +5331,8 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 22;   // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
+const PAGE_DATA_KEYS_VERSION = 23;   // 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
+// 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
 // (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
 // mapped by reading every render function's state.* references. Drives the database-level
@@ -5377,12 +5378,11 @@ const PAGE_DATA_KEYS = {
   ratings: ['orders'],
   settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
 };
-// Every mutating action across every page calls logActivity(), and the topbar's Activity log
-// viewer is available regardless of which page is open — so activityLog isn't tied to one page,
-// every role needs it.
+// Every mutating action across every page calls logActivity() — which now just adds one small row through the database function log_activity
+// (any signed-in person may), and only an Admin reads the log back (activity_log_recent), so it needs no role data key at all.
 function dataKeysForRole(role){
   const pages = pagesForRole(role);
-  // Like activityLog, personalNotes isn't tied to any one page — the notes FAB (gated on
+  // personalNotes isn't tied to any one page — the notes FAB (gated on
   // notes_access, not a page) is reachable from the shell regardless of which page is open, so
   // every role needs this key the same way every role needs the activity log. loginHistory used
   // to only come along with the Settings page (where it's viewed), but every role writes to it
@@ -5399,7 +5399,7 @@ function dataKeysForRole(role){
   // one-role patch for ("whatever caused that"); it's this. Every role needs read access to
   // userRoles for the same reason every role needs the other three — it's what tells a custom
   // role what it's even allowed to see, not something tied to having the Settings page itself.
-  const keys = new Set(['activityLog','personalNotes','loginHistory','userRoles']);
+  const keys = new Set(['personalNotes','loginHistory','userRoles']);   // (the activity log is no longer a synced key: see logActivity / activity_log_recent)
   pages.forEach(p => (PAGE_DATA_KEYS[p]||[]).forEach(k=>keys.add(k)));
   return [...keys];
 }
@@ -6523,7 +6523,6 @@ let state = {
   complaintCategories: [],
   complaintPriorities: [],
   costingProducts: [],
-  activityLog: [],
   _costingOpenProductId: null,
   _costingOpenVersionId: null,
   _costingVersionsView: 'active',
@@ -7335,6 +7334,7 @@ async function loadAll(){
     }catch(e){}
     if(state.page==='chat') c2Enter(); else c2Boot();
   }
+  migrateBrandingImagesToStorage(); // fire-and-forget (Admin only): images out of the branding row, into storage
   shrinkOversizedLoginHeroPhotoIfNeeded(); // fire-and-forget, see its own comment
   setTimeout(shrinkOversizedStaffPhotosIfNeeded, 4000); // fire-and-forget, after the page has settled
   // Customer-facing tracking page: while a CityPak shipment is still in transit, silently
@@ -7553,23 +7553,41 @@ async function handleExpiredSignIn(){
 // A single admin-visible audit trail — who did what, and when. Call this alongside (never
 // instead of) the real action; a logging failure must never block or roll back the action it's
 // recording, so this never throws and the caller doesn't need to await it.
+// The activity log is a set of small database rows, NOT one big synced row (owner, 2026-11-22: the project went over its monthly data allowance; every
+// logged action used to re-save the whole ~310 KB log and push it to every connected device). One call adds one row; only an Admin can read them back.
 async function logActivity(message){
   try{
-    if(!Array.isArray(state.activityLog)) state.activityLog = [];
-    state.activityLog.unshift({
-      id: uid('LOG'), at: new Date().toISOString(),
-      actor: (state.session && (state.session.staffName || state.session.name)) || 'Unknown',
-      role: state.session ? state.session.role : null,
-      message,
+    if(!state.session) return;
+    const { error } = await supabaseClient.rpc('log_activity', {
+      p_actor: (state.session.staffName || state.session.name) || 'Unknown',
+      p_role: state.session.role || null,
+      p_message: String(message==null ? '' : message),
     });
-    // activityLog is fetched in full on every single login/refresh (it's not a DEFERRED_KEY — the
-    // topbar's Activity log button is visible, and clickable, from any page) — a full year of
-    // every mutating action across a busy shop adds up to real megabytes re-downloaded every time.
-    // 180 days plus a hard count cap bounds that, while still keeping a solid audit window.
-    const sixMonthsAgo = Date.now() - 180*24*60*60*1000;
-    state.activityLog = state.activityLog.filter(l => new Date(l.at).getTime() >= sixMonthsAgo).slice(0, 5000);
-    await save('activityLog');
+    if(error) console.error('logActivity failed', error);
   }catch(e){ console.error('logActivity failed', e); }
+}
+// Activity log window (Admin): the newest entries are fetched when it opens (not at sign-in), "Load older" adds the next page.
+const ACTIVITY_LOG_PAGE = 1000;
+function openActivityLog(){
+  state._activityLogRows = null; state._activityLogError = ''; state._activityLogMore = false;
+  openModal('activitylog');
+  loadActivityLog(false);
+}
+async function loadActivityLog(older){
+  try{
+    const before = (older && state._activityLogRows && state._activityLogRows.length) ? state._activityLogRows[state._activityLogRows.length-1].at : null;
+    const { data, error } = await supabaseClient.rpc('activity_log_recent', before ? {p_limit: ACTIVITY_LOG_PAGE, p_before: before} : {p_limit: ACTIVITY_LOG_PAGE});
+    if(error) throw error;
+    const rows = (data||[]).map(r=>({id:String(r.id), at:r.at, actor:r.actor||'Unknown', role:r.role||'', message:r.message||''}));
+    state._activityLogRows = older ? (state._activityLogRows||[]).concat(rows) : rows;
+    state._activityLogMore = rows.length>=ACTIVITY_LOG_PAGE;
+    state._activityLogError = '';
+  }catch(e){
+    console.error('loadActivityLog failed', e);
+    if(!state._activityLogRows) state._activityLogRows = [];
+    state._activityLogError = 'Could not load the activity log. Check the connection and press Refresh.';
+  }
+  if(state.modal==='activitylog') render();
 }
 
 /* ===================== Utilities ===================== */
@@ -8323,7 +8341,7 @@ function performGoTo(page){
 }
 function toggleSidebar(){ state.sidebarOpen = !state.sidebarOpen; render(); }
 function openModal(m){ state.modal = m; render(); }
-function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; render(); }
+function closeModal(){ state.modal = null; state._deliveryLinesDraft = null; state._staffCategoriesDraft = null; state._complaintReasonsDraft = null; state._complaintPrioritiesDraft = null; state._bulkSmsTemplateForm = null; state._lineBlock = null; state._outstandingTemplateDraft = null; state.pendingSmsConfirm = null; state._confirmAction = null; state._promptAction = null; state._alertInfo = null; state._rndAttCal = null; state._salesPersonColorsDraft = null; state._attCaptureType = null; state._boxCountEditId = null; state._boxCountSelected = []; state._bcDate = null; state._activityLogRows = null; render(); }
 
 /* ===================== Orders logic ===================== */
 async function createOrder(e){
@@ -9021,6 +9039,53 @@ async function shrinkOversizedStaffPhotosIfNeeded(){
     render();
   }catch(e){ console.error('shrinkOversizedStaffPhotosIfNeeded failed', e); }
 }
+// ---- Branding images live in a STORAGE BUCKET, not inside the shared 'branding' row (owner, 2026-11-22: the project went over its monthly data allowance).
+// They used to be saved as base64 text inside branding.addons[].image: 678 KB that EVERY visitor (the logged-out login page and the public tracking page too)
+// downloaded on every page load and that was pushed to every device whenever branding changed. Now addons[].image holds a short public link to a file in the
+// public bucket 'branding' (a browser downloads each file once and keeps it). Only an Admin can upload (database storage policy). If an upload ever fails the
+// image is kept the old way (inside the row), so nothing breaks; the next Admin load tries again (migrateBrandingImagesToStorage).
+const BRANDING_BUCKET = 'branding';
+function dataUrlToBlob(dataUrl){
+  const comma = dataUrl.indexOf(',');
+  const head = dataUrl.slice(0, comma), body = dataUrl.slice(comma+1);
+  const mime = (head.match(/^data:([^;,]+)/)||[])[1] || 'image/png';
+  const bin = atob(body);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], {type: mime});
+}
+// Uploads a data-URL image and returns its public link; anything else (already a link, empty) is returned unchanged, and a failed upload returns the image unchanged.
+async function brandImageToStorage(image, addonId){
+  if(!image || typeof image!=='string' || !/^data:image\//.test(image)) return image;
+  try{
+    const blob = dataUrlToBlob(image);
+    const ext = ({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg','image/x-icon':'ico','image/vnd.microsoft.icon':'ico'})[blob.type] || 'png';
+    const path = String(addonId||'image').replace(/[^A-Za-z0-9_-]/g,'') + '-' + Date.now().toString(36) + '.' + ext;   // a new file name every time, so browsers never show an old copy
+    const { error } = await supabaseClient.storage.from(BRANDING_BUCKET).upload(path, blob, {contentType: blob.type, cacheControl: '31536000', upsert: false});
+    if(error){ console.warn('branding image upload failed, keeping it inside the row for now', error); return image; }
+    const { data } = supabaseClient.storage.from(BRANDING_BUCKET).getPublicUrl(path);
+    return (data && data.publicUrl) ? data.publicUrl : image;
+  }catch(e){ console.warn('branding image upload failed, keeping it inside the row for now', e); return image; }
+}
+// Once, from an Admin's browser after load: move every image that is still stored inside the branding row into the bucket.
+async function migrateBrandingImagesToStorage(){
+  try{
+    if(!(state.session && state.session.role==='Admin')) return;
+    const addons = (state.branding && state.branding.addons) || [];
+    const todo = addons.filter(a=>a && typeof a.image==='string' && /^data:image\//.test(a.image));
+    if(!todo.length) return;
+    let changed = 0;
+    for(const a of todo){
+      const url = await brandImageToStorage(a.image, a.id);
+      if(url && url!==a.image){ a.image = url; changed++; }
+    }
+    if(changed){
+      await save('branding');
+      applyFavicon(); applyMobileUiRuntime(); render();
+      console.log('Moved '+changed+' branding image(s) into storage (every visitor was downloading them inside the branding data).');
+    }
+  }catch(e){ console.error('migrateBrandingImagesToStorage failed', e); }
+}
 async function shrinkOversizedLoginHeroPhotoIfNeeded(){
   try{
     if(!(state.session && roleCan(state.session.role, 'branding_manage'))) return;
@@ -9367,8 +9432,9 @@ async function finishBrandCrop(dataUrl){
   }
   const addons = state.branding.addons || (state.branding.addons = []);
   const existing = addons.find(a=>a.id===pc.addonId);
-  if(existing){ existing.image = dataUrl; existing.updatedAt = new Date().toISOString(); }
-  else { addons.push({id:pc.addonId, name: label, image:dataUrl, updatedAt:new Date().toISOString()}); }
+  const storedImage = await brandImageToStorage(dataUrl, pc.addonId);   // a link to the stored file (or the image itself if the upload failed)
+  if(existing){ existing.image = storedImage; existing.updatedAt = new Date().toISOString(); }
+  else { addons.push({id:pc.addonId, name: label, image:storedImage, updatedAt:new Date().toISOString()}); }
   state.pendingCrop = null;
   if(!(await save('branding'))) return;
   applyFavicon(); applyMobileUiRuntime(); closeModal();
@@ -9387,7 +9453,8 @@ async function brandingAddAddon(e){
     catch(err){ showToast('Could not read that file'); return; }
   }
   const addons = state.branding.addons || (state.branding.addons = []);
-  addons.push({id: uid('BRND'), name, image: dataUrl, updatedAt: new Date().toISOString()});
+  const newId = uid('BRND');
+  addons.push({id: newId, name, image: await brandImageToStorage(dataUrl, newId), updatedAt: new Date().toISOString()});
   if(!(await save('branding'))) return;
   closeModal();
   showToast('Addon added');
@@ -9589,6 +9656,8 @@ async function downloadFullBackup(){
   SYNCED_KEYS.forEach(k => { data[k] = state[k]; });
   const deferredPairs = await Promise.all(DEFERRED_KEYS.map(async k => [k, await kvGet(k)]));
   deferredPairs.forEach(([k, v]) => { data[k] = (v===null || v===undefined) ? (state[k] ?? null) : v; });
+  // the activity log is no longer a synced key (it is database rows): fetch it for the backup (Admin only)
+  try{ const { data: logRows, error: logErr } = await supabaseClient.rpc('activity_log_recent', {p_limit: 5000}); if(!logErr && Array.isArray(logRows)) data.activityLog = logRows.map(r=>({id:String(r.id), at:r.at, actor:r.actor, role:r.role, message:r.message})); }catch(e){ console.error('backup: activity log not included', e); }
   const payload = {app: 'Audrey Care Ops', exportedAt: new Date().toISOString(), data};
   const stamp = todayStr();
   downloadFile(`audrey-care-ops-backup-${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
@@ -22983,7 +23052,8 @@ function fmtMonthLabel(ym){
   return new Date(y, m-1, 1).toLocaleDateString(undefined, {month:'long', year:'numeric'});
 }
 function activityLogModal(){
-  const all = state.activityLog||[];
+  const loading = state._activityLogRows===null || state._activityLogRows===undefined;
+  const all = state._activityLogRows||[];
   const q = (state.filters.activityLogSearch||'').trim().toLowerCase();
   const dateF = state.filters.activityLogDate||'';
   const userF = state.filters.activityLogUser||'';
@@ -23018,12 +23088,15 @@ function activityLogModal(){
             </tr>
           </thead>
           <tbody>
-            ${rows.length===0 ? `<tr><td colspan="3"><div class="empty-state">No activity ${anyFilterActive?'matches these filters':'logged yet'}.</div></td></tr>` : rows.map(l=>`<tr><td style="white-space:nowrap;">${fmtDateTime(l.at)}</td><td style="white-space:nowrap;">${esc(l.actor)}</td><td>${esc(l.message)}</td></tr>`).join('')}
+            ${loading ? `<tr><td colspan="3"><div class="empty-state">Loading…</div></td></tr>` : (rows.length===0) ? `<tr><td colspan="3"><div class="empty-state">${state._activityLogError ? esc(state._activityLogError) : 'No activity '+(anyFilterActive?'matches these filters':'logged yet')+'.'}</div></td></tr>` : rows.map(l=>`<tr><td style="white-space:nowrap;">${fmtDateTime(l.at)}</td><td style="white-space:nowrap;">${esc(l.actor)}</td><td>${esc(l.message)}</td></tr>`).join('')}
           </tbody>
         </table>
       </div>
       ${filtered.length>500 ? `<div class="hint" style="margin-top:6px;">Showing the 500 most recent of ${filtered.length} matching entries.</div>` : ''}
+      ${(!loading && state._activityLogError && all.length) ? `<div class="hint" style="margin-top:6px;color:var(--danger,#B3261E);">${esc(state._activityLogError)}</div>` : ''}
       <div class="modal-actions">
+        ${(!loading && state._activityLogMore) ? `<button type="button" class="btn" id="btn-activitylog-older">Load older entries</button>` : ''}
+        <button type="button" class="btn" id="btn-activitylog-refresh">Refresh</button>
         <button type="button" class="btn" id="btn-cancel-modal">Close</button>
       </div>
     </div>
@@ -24999,7 +25072,9 @@ function attachShellHandlers(){
   if(byIdEl('btn-switch-role')) byIdEl('btn-switch-role').onclick = logOut;
   if(byIdEl('btn-open-aibot')) byIdEl('btn-open-aibot').onclick = ()=>openModal('aibot');
   if(byIdEl('btn-change-password')) byIdEl('btn-change-password').onclick = ()=>openModal('changepassword');
-  if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = ()=>openModal('activitylog');
+  if(byIdEl('btn-activity-log')) byIdEl('btn-activity-log').onclick = openActivityLog;
+  if(byIdEl('btn-activitylog-refresh')) byIdEl('btn-activitylog-refresh').onclick = ()=>{ state._activityLogError=''; loadActivityLog(false); };
+  if(byIdEl('btn-activitylog-older')) byIdEl('btn-activitylog-older').onclick = ()=>loadActivityLog(true);
   document.querySelectorAll('[data-delete-login]').forEach(b=>b.addEventListener('click', ()=>deleteLoginEntry(b.dataset.deleteLogin)));
   if(byIdEl('btn-download-backup')) byIdEl('btn-download-backup').onclick = downloadFullBackup;
   if(byIdEl('btn-export-orders-csv')) byIdEl('btn-export-orders-csv').onclick = downloadOrdersCsv;
@@ -26763,9 +26838,10 @@ function attachShellHandlers(){
     if('_mobileUiPendingImage' in state){
       const addons = state.branding.addons || (state.branding.addons = []);
       const idx = addons.findIndex(a=>a.id==='mobileBgImage');
+      const pendingStored = state._mobileUiPendingImage===null ? null : await brandImageToStorage(state._mobileUiPendingImage, 'mobileBgImage');
       if(state._mobileUiPendingImage===null){ if(idx>=0) addons.splice(idx,1); }
-      else if(idx>=0){ addons[idx].image = state._mobileUiPendingImage; addons[idx].updatedAt = new Date().toISOString(); }
-      else addons.push({id:'mobileBgImage', name: BRAND_ADDON_NAMES.mobileBgImage, image: state._mobileUiPendingImage, updatedAt: new Date().toISOString()});
+      else if(idx>=0){ addons[idx].image = pendingStored; addons[idx].updatedAt = new Date().toISOString(); }
+      else addons.push({id:'mobileBgImage', name: BRAND_ADDON_NAMES.mobileBgImage, image: pendingStored, updatedAt: new Date().toISOString()});
     }
     state._mobileUiDraft = null;
     delete state._mobileUiPendingImage;

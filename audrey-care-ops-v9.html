@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122031500">
+<meta name="app-build" content="20261122053000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1630,6 +1630,36 @@ html{ visibility:hidden; }
   .bvw-foot{text-align:center;}
   .bvw-actions{display:flex;justify-content:center;}
   .bvw-actions .btn{min-height:46px;padding:0 22px;font-size:15px;}
+  /* ---------------- Settings -> Prints edits ---------------- */
+  .pe-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .pe-tab{border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .pe-tab.on{background:var(--ui-solid, var(--accent));border-color:transparent;color:#fff;}
+  .pe-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,440px);gap:22px;align-items:start;}
+  @media (max-width:1100px){.pe-wrap{grid-template-columns:minmax(0,1fr);}}
+  .pe-side{position:sticky;top:96px;}
+  @media (max-width:1100px){.pe-side{position:static;}}
+  .pe-preview-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .pe-preview{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;justify-content:center;overflow:auto;max-height:78vh;}
+  .pe-warn{margin-top:10px;padding:10px 12px;border-radius:10px;background:#FCEEEB;color:#A33F32;font-size:12.5px;font-weight:600;}
+  .pe-group{border:1px solid var(--border);border-radius:12px;padding:10px 14px 12px;margin:0 0 12px;}
+  .pe-group legend{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 6px;}
+  .pe-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px;}
+  @media (max-width:640px){.pe-grid{grid-template-columns:minmax(0,1fr);}}
+  .pe-bools{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;}
+  .pe-bool{display:flex;align-items:center;gap:7px;font-size:13.5px;cursor:pointer;}
+  .pe-numrow{display:flex;align-items:center;gap:8px;}
+  .pe-numrow input{width:100%;min-width:0;}
+  .pe-numrow .hint{flex:none;white-space:nowrap;}
+  .pe-numf .hint:last-child{font-size:11px;margin-top:2px;}
+  .pe-color{width:46px;height:34px;padding:2px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;}
+  .pe-logo{grid-column:1 / -1;}
+  .pe-logo-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0;}
+  .pe-logo-thumb{max-height:54px;max-width:160px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px;background:#fff;}
+  .pe-a4-scale{zoom:.5;flex:none;}
+  .pe-a4{width:794px;min-height:1123px;box-sizing:border-box;padding:45px;background:#fff;box-shadow:0 2px 14px rgba(20,25,20,.2);}
+  .pe-sticker-zoom{zoom:2.05;flex:none;}
+  .pe-sticker-card{box-shadow:0 1px 4px rgba(20,25,20,.3);background:#fff;}
+
   /* ---------------- Overlay / Modal ---------------- */
   @keyframes overlay-fade{from{opacity:0;}to{opacity:1;}}
   @keyframes modal-pop{from{opacity:0;transform:scale(.94) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
@@ -3735,7 +3765,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // Separate keys instead of one array: every slot keeps the single-object save / verify code that was already hardened, and two tablets working on different
 // machines can never overwrite each other. A fourth machine needs its own key here (and in BATCH_MACHINES, PAGE_DATA_KEYS.recipes, role_data_access).
 const BATCH_SLOT_KEYS = ['activeBatchM1','activeBatchM2','activeBatchM3','activeBatch'];
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','blendStages','colorSheets','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','blendStages','colorSheets','printTemplates','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -3758,6 +3788,10 @@ const DEFAULT_BATCH_SHEET_TEMPLATE = {
   showPH:true, showCombineNote:true, showFooter:true, footerText:'Audrey Care (Pvt) Ltd.',
   headerColor:'#ECECE6', fontSize:'medium',
   trailingSectionOrder:['combineNote','ph','footer'],
+  // logo, words and spaces (Settings -> Prints edits); every value is what the sheet always used
+  logoMode:'company', logoUrl:'', logoH:112, logoAlign:'center',
+  wCompany:'Audrey Care (Pvt) Ltd.', wDoc:'Batch Sheet', wProduct:'Product', wBatchNo:'Batch number', wVariations:'Variations', wMaterials:'Raw materials', wSteps:'Production steps', wStages:'Stage by stage \u2014 floor sign-off',
+  padX:24, padY:10, secGap:14, rowPad:6,
 };
 function batchSheetTemplate(){ return {...DEFAULT_BATCH_SHEET_TEMPLATE, ...(state.batchSheetTemplate||{})}; }
 const BATCH_SHEET_FONT_SCALE = {small:0.85, medium:1, large:1.15};
@@ -5168,6 +5202,10 @@ const PERMISSION_REGISTRY = [
   // Blending Department board
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage', label:'Create batches, drag cards, advance stage, use timer controls'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage_stages', label:'Manage the Mixing and Filling stages (Manage Lists button: add, rename, reorder, delete)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_print_sticker', label:'Print the 50 x 50 mm vessel sticker (Print Vessel Sticker, and the question after a batch is transferred)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_print_sheet', label:'Print a batch\'s batch sheet from Mixing and Filling (Print batch sheet in the batch window)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_qc', label:'Type the 1st QC readings (pH, viscosity, notes) on a batch, even without the permission to create / move batches'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_view_batch_page', label:'Open the Batch Verification page (what the QR code on a vessel sticker opens)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_view', label:'Open and print the Color sheets (Color sheets button on Mixing and Filling)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'colorsheets_edit', label:'Edit, add and delete Color sheets'},
   // Costing & Recipe / Production Guide
@@ -5225,7 +5263,7 @@ const ALL_PERMISSION_IDS = PERMISSION_REGISTRY.map(p=>p.id);
 const LEGACY_ROLE_PERMISSIONS = {
   Admin: ALL_PERMISSION_IDS,
   'Sub Admin': ['complaints_manage','complaints_edit_after_1hr','complaints_full_edit','complaints_delete_active','complaints_restore','complaints_bulk_delete','notes_access','orders_drag','colorsheets_view','colorsheets_edit'],
-  Blending: ['blending_manage','notes_access','colorsheets_view'],
+  Blending: ['blending_manage','notes_access','colorsheets_view','blending_print_sticker','blending_print_sheet','blending_edit_qc','blending_view_batch_page'],   // the Blending role has no saved record, so it follows this list: it keeps everything it could already do
   Packing: ['orders_advance','orders_edit_tracking_only','notes_access'],
   'Customer Care': ['complaints_manage','complaints_edit_after_1hr','notes_access'],
   'Orders Process': [],
@@ -5407,7 +5445,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 24;   // 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
+const PAGE_DATA_KEYS_VERSION = 25;   // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
 // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
 // (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
@@ -5452,7 +5490,7 @@ const PAGE_DATA_KEYS = {
   chat: ['chat','chatTheme','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'],
   ratings: ['orders'],
-  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
+  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','printTemplates','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
 };
 // Every mutating action across every page calls logActivity() — which now just adds one small row through the database function log_activity
 // (any signed-in person may), and only an Admin reads the log back (activity_log_recent), so it needs no role data key at all.
@@ -5905,6 +5943,10 @@ function blendPlaceInStage(b, st, idx){
   b.history.push(blendHistoryEntry(st, idx));
 }
 function canAdvanceBlend(stageIdx){ return canManageBlendBoard() && stageIdx < blendStageList().length-1; }
+function canPrintBlendSticker(){ return !!state.session && roleCan(state.session.role, 'blending_print_sticker'); }
+function canPrintBlendSheet(){ return !!state.session && roleCan(state.session.role, 'blending_print_sheet'); }
+function canEditBlendQc(){ return !!state.session && (roleCan(state.session.role, 'blending_edit_qc') || canManageBlendBoard()); }
+function canViewBatchPage(){ return !!state.session && roleCan(state.session.role, 'blending_view_batch_page'); }
 function canManageBlendStages(){ return !!state.session && roleCan(state.session.role, 'blending_manage_stages'); }
 // "Approve — start mixing" style wording is kept only while both stages still have their starting names and neighbours; anything edited reads "Move to <stage>".
 function blendNextActionLabel(b){
@@ -6654,6 +6696,7 @@ let state = {
   _attEditAlert: null,
   blendBatches: [],
   blendStages: [],
+  printTemplates: {},
   rndProjects: [],
   rndChemists: [],
   rndAttendance: [],
@@ -6764,7 +6807,7 @@ function _cachedThemeOrDefault(){
   }catch(e){}
   return {paletteId:'green'};
 }
-const _syncedKeyDefault = k => BATCH_SLOT_KEYS.includes(k) ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : (k==='dallySettings' ? {...DEFAULT_DALLY_SETTINGS} : []))))))))));
+const _syncedKeyDefault = k => BATCH_SLOT_KEYS.includes(k) ? null : (k==='branding' ? _cachedBrandingOrDefault() : (k==='navOrder' ? {} : (k==='navLabels' ? {} : (k==='theme' ? _cachedThemeOrDefault() : (k==='smsTemplates' ? {...DEFAULT_SMS_TEMPLATES} : (k==='orderSettings' ? {...DEFAULT_ORDER_SETTINGS} : (k==='batchSheetTemplate' ? {...DEFAULT_BATCH_SHEET_TEMPLATE} : (k==='loginCustomization' ? _cachedLoginCustomizationOrDefault() : (k==='salesPersonColors' ? {} : (k==='dallySettings' ? {...DEFAULT_DALLY_SETTINGS} : (k==='printTemplates' ? {} : [])))))))))));
 // One request for all 34 keys instead of 34 separate ones — each kvGet() round-trip has its own
 // latency, and firing them all at once doesn't fully hide that over a slower connection (plus
 // this is on the critical path of every single page load, authenticated or not, so it's worth
@@ -8768,12 +8811,21 @@ function deleteOrder(id){
    b.variation (the old free-text field, one "Name - quantity" per line) is still written from the rows so older code, Dally and older cached pages keep working, and a batch that only has the
    old text opens as rows (parseLegacyVariationText). b.priority (Low / Medium / High, like the Orders board), b.machine (copied from the batch sheet by finishBatchIntoBlendingBoard, editable) and
    b.formulationCode (made from the batch sheet's name, e.g. "Shower Gel — Version 1" -> SG-V1, editable) sit next to them. */
-const BLEND_VAR_UNITS = ['kg','g','L','mL','pcs'];
-function blendNormUnit(u){ const k = String(u||'').trim().toLowerCase(); return ({kg:'kg', g:'g', l:'L', ml:'mL', pcs:'pcs'})[k] || ''; }
+const BLEND_VAR_UNITS = ['kg','g','L','mL','5L cans','pcs'];   // "5L cans" is there by default (owner, 2026-11-22)
+const BLEND_UNIT_LITRES = {'5L cans':5};   // a unit that stands for a volume: a vessel sticker shows the litres ("40 x 5L cans" = 200 L), the scan page shows both
+function blendNormUnit(u){ const k = String(u||'').trim().toLowerCase().replace(/\s+/g,' '); return ({kg:'kg', g:'g', l:'L', ml:'mL', pcs:'pcs', '5l cans':'5L cans', '5l can':'5L cans', '5lcans':'5L cans', '5 l cans':'5L cans'})[k] || ''; }
+// "40 5L cans" -> 200 (litres); any other unit -> null
+function blendVarLitres(r){ const per = BLEND_UNIT_LITRES[r && r.unit]; const n = parseFloat(String((r && r.qty) || '').replace(',', '.')); return (per && isFinite(n)) ? n*per : null; }
+// How one variation reads on the scan page: "200 L · 40 x 5L cans" for a can unit, otherwise "40 kg".
+function blendVarQtyBoth(r){
+  const raw = r.qty ? r.qty + (r.unit ? ' '+r.unit : '') : '';
+  const l = blendVarLitres(r);
+  return l!==null ? `${fmtQty(l)} L \u00b7 ${r.qty} \u00d7 ${r.unit}` : raw;
+}
 function blendNewVariation(){ return {id:uid('VAR'), product:'', fragrance:'', fragranceId:'', qty:'', unit:'kg'}; }
 function parseLegacyVariationText(text){
   return String(text||'').split(/\n|<br\s*\/?>/i).map(l=>l.trim()).filter(Boolean).map(line=>{
-    const m = line.match(/^(.*?)\s*[-–—:=]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|pcs)?\.?\s*$/i);
+    const m = line.match(/^(.*?)\s*[-–—:=]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|5\s*l\s*cans?|pcs)?\.?\s*$/i);
     const r = blendNewVariation(); r.unit = '';
     if(m){ r.product = m[1].trim(); r.qty = m[2].replace(',', '.'); r.unit = blendNormUnit(m[3]); }
     else r.product = line;
@@ -8857,7 +8909,7 @@ function blendVariationRowHtml(r, ro, saved){
     <div class="bv-cell bv-q"><label>Quantity</label><input id="bv-qty-${r.id}" class="bv-in" value="${escAttr(r.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" ${dis}></div>
     <div class="bv-cell bv-u"><label>Unit</label><select id="bv-unit-${r.id}" class="bv-in" ${dis}><option value="">—</option>${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
     <span class="bv-btns">
-      ${saved ? `<button type="button" class="bv-x bv-st" data-sticker-var="${r.id}" title="Print the vessel sticker for this variation" aria-label="Print the vessel sticker for this variation">🏷</button>` : ''}
+      ${(saved && canPrintBlendSticker()) ? `<button type="button" class="bv-x bv-st" data-sticker-var="${r.id}" title="Print the vessel sticker for this variation" aria-label="Print the vessel sticker for this variation">🏷</button>` : ''}
       ${ro ? '' : `<button type="button" class="bv-x" data-bv-del="${r.id}" title="Remove this variation" aria-label="Remove this variation">✕</button>`}
     </span>
   </div>`;
@@ -8968,7 +9020,13 @@ async function advanceBlendBatch(id){
 async function submitBlendEdit(e){
   e.preventDefault();
   const f = e.target; const id = f.dataset.batchId;
-  const b = byId(state.blendBatches, id); if(!b || !canManageBlendBoard()) return;
+  const b = byId(state.blendBatches, id); if(!b || !canEditBlendQc()) return;
+  if(!canManageBlendBoard()){   // may only type the 1st QC readings: nothing else on the batch changes
+    Object.assign(b, {qcPH: f.qcPH.value.trim(), qcViscosity: f.qcViscosity.value.trim(), qcNotes: f.qcNotes.value.trim()});
+    if(!(await save('blendBatches'))) return;
+    closeModal(); logActivity(`Updated the 1st QC readings of blend batch ${b.batchNo}`); showToast('QC readings saved');
+    return;
+  }
   syncBlendVarDraftFromDOM();
   const rows = blendCleanVariations(state._blendVarDraft && state._blendVarDraft.forId===id ? state._blendVarDraft.rows : blendVariationRows(b));
   Object.assign(b, {
@@ -13843,17 +13901,29 @@ function fmtOtMinutes(mins){
 async function printAttendanceSheet(staffName){
   await ensureFullNames();
   const ym = state._attRecordsMonth || todayStr().slice(0,7);
+  const area = document.getElementById('print-area');
+  if(!area) return;
+  area.innerHTML = attendancePrintHtml(attendancePrintData(staffName, ym), printTpl('attendance'));
+  waitForPrintAreaImages(area).then(()=>window.print());
+}
+// The month's rows for one person (kept apart so the Settings -> Prints edits preview can draw the same sheet from sample data).
+function attendancePrintData(staffName, ym){
   const [y, m] = ym.split('-').map(Number);
-  const daysInMonth = new Date(y, m, 0).getDate();
   const byDay = {};
   (state.tempAttendance||[]).forEach(a=>{
     if(a.staffName!==staffName || (a.date||'').slice(0,7)!==ym) return;
     const day = Number(a.date.slice(8,10));
     (byDay[day] = byDay[day] || {})[a.type] = a;
   });
+  return {y, m, byDay, name: fullNameFor(staffName) || staffName};
+}
+function attendancePrintHtml(data, T){
+  T = T || printTpl('attendance');
+  const n = (k, def)=>peNum(T[k], def);
+  const {y, m, byDay, name} = data;
+  const daysInMonth = new Date(y, m, 0).getDate();
   const monthName = new Date(y, m-1, 1).toLocaleDateString(undefined, {month:'long'});
-  const area = document.getElementById('print-area');
-  if(!area) return;
+  const rp = n('rowPad',3), fs = n('fs',100);
   let rows = '', presentCount = 0, totalOtMinutes = 0;
   for(let d=1; d<=daysInMonth; d++){
     const inE = byDay[d] && byDay[d].in, outE = byDay[d] && byDay[d].out;
@@ -13862,30 +13932,33 @@ async function printAttendanceSheet(staffName){
     totalOtMinutes += otMins;
     rows += `
     <tr style="border-bottom:1px solid #E7E9E4;${d%2===0?'background:#FAFAF8;':''}">
-      <td style="padding:3px 6px;color:#6B7570;">${d}</td>
-      <td style="padding:3px 6px;font-weight:600;">${inE?esc(fmtTimeOnly(inE.at)):''}</td>
-      <td style="padding:3px 6px;font-weight:600;">${outE?esc(fmtTimeOnly(outE.at)):''}</td>
-      <td style="padding:3px 6px;${otMins?'font-weight:600;color:#9A5A4E;':'color:#C3C9C1;'}">${otMins?esc(fmtOtMinutes(otMins)):'—'}</td>
+      <td style="padding:${rp}px 6px;color:#6B7570;">${d}</td>
+      <td style="padding:${rp}px 6px;font-weight:600;">${inE?esc(fmtTimeOnly(inE.at)):''}</td>
+      <td style="padding:${rp}px 6px;font-weight:600;">${outE?esc(fmtTimeOnly(outE.at)):''}</td>
+      <td style="padding:${rp}px 6px;${otMins?'font-weight:600;color:#9A5A4E;':'color:#C3C9C1;'}">${otMins?esc(fmtOtMinutes(otMins)):'—'}</td>
     </tr>`;
   }
+  const logoUrl = printLogoUrl(T);
+  const logoAlign = ['left','center','right'].includes(T.logoAlign) ? T.logoAlign : 'center';
   // Every value below is sized to keep the whole thing -- header, both tables, footer -- inside
   // one A4 page at the @page margin above: 31 rows is the worst case (longest month), confirmed
   // by rendering this to a PDF with realistic (not zero) print margins and counting pages.
-  area.innerHTML = `
-  <div style="max-width:720px;margin:0 auto;padding:10px 24px;font-family:'Fraunces',Georgia,serif;color:#1C2320;">
+  return `
+  <div style="max-width:720px;margin:0 auto;padding:${n('padY',10)}px ${n('padX',24)}px;font-family:'Fraunces',Georgia,serif;color:#1C2320;${fs!==100?`zoom:${fs/100};`:''}">${logoUrl ? `
+    <div style="text-align:${logoAlign};margin-bottom:6px;"><img src="${escAttr(logoUrl)}" alt="" style="max-height:${n('logoH',50)}px;max-width:60%;object-fit:contain;"></div>` : ''}
     <div style="text-align:center;margin-bottom:10px;">
-      <div style="font-size:19px;font-weight:600;">Audrey Care (Pvt) Ltd.</div>
-      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;">Attendance Sheet — ${y}</div>
+      <div style="font-size:19px;font-weight:600;">${esc(T.wCompany)}</div>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;">${esc(T.wTitle)} — ${y}</div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;font-family:'Inter',system-ui,sans-serif;">
       <tr>
-        <td style="padding:3px 0;width:70px;color:#6B7570;">Name</td>
-        <td style="padding:3px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(fullNameFor(staffName) || staffName)}</td>
-        <td style="padding:3px 24px;width:90px;color:#6B7570;">Employee #</td>
-        <td style="padding:3px 0;border-bottom:1px solid #D8DCD4;width:120px;"></td>
+        <td style="padding:3px 0;width:70px;color:#6B7570;">${esc(T.wName)}</td>
+        <td style="padding:3px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(name)}</td>
+        ${T.showEmp===false ? '' : `<td style="padding:3px 24px;width:90px;color:#6B7570;">${esc(T.wEmp)}</td>
+        <td style="padding:3px 0;border-bottom:1px solid #D8DCD4;width:120px;"></td>`}
       </tr>
       <tr>
-        <td style="padding:3px 0;color:#6B7570;">Month</td>
+        <td style="padding:3px 0;color:#6B7570;">${esc(T.wMonth)}</td>
         <td colspan="3" style="padding:3px 0;font-weight:600;border-bottom:1px solid #D8DCD4;">${esc(monthName)}</td>
       </tr>
     </table>
@@ -13893,19 +13966,18 @@ async function printAttendanceSheet(staffName){
       <thead>
         <tr style="border-bottom:2px solid #1C2320;">
           <th style="text-align:left;padding:4px 6px;width:30px;">#</th>
-          <th style="text-align:left;padding:4px 6px;">In Time</th>
-          <th style="text-align:left;padding:4px 6px;">Out Time</th>
-          <th style="text-align:left;padding:4px 6px;">OT Hours <span style="font-weight:400;color:#6B7570;">(after 6pm)</span></th>
+          <th style="text-align:left;padding:4px 6px;">${esc(T.wIn)}</th>
+          <th style="text-align:left;padding:4px 6px;">${esc(T.wOut)}</th>
+          <th style="text-align:left;padding:4px 6px;">${esc(T.wOt)} <span style="font-weight:400;color:#6B7570;">${esc(T.wOtNote)}</span></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
-    <div style="display:flex;justify-content:flex-end;gap:28px;margin-top:8px;font-size:11.5px;color:#6B7570;font-family:'Inter',system-ui,sans-serif;">
-      <div>Days present <b style="color:#1C2320;">${presentCount}</b></div>
-      <div>Total OT <b style="color:#1C2320;">${totalOtMinutes?fmtOtMinutes(totalOtMinutes):'0m'}</b></div>
-    </div>
+    ${T.showSummary===false ? '' : `<div style="display:flex;justify-content:flex-end;gap:28px;margin-top:8px;font-size:11.5px;color:#6B7570;font-family:'Inter',system-ui,sans-serif;">
+      <div>${esc(T.wPresent)} <b style="color:#1C2320;">${presentCount}</b></div>
+      <div>${esc(T.wTotalOt)} <b style="color:#1C2320;">${totalOtMinutes?fmtOtMinutes(totalOtMinutes):'0m'}</b></div>
+    </div>`}
   </div>`;
-  waitForPrintAreaImages(area).then(()=>window.print());
 }
 // The landing view itself stays lightweight (time + one button) -- tapping the button is what
 // pops up the map/location/fingerprint panel (attendanceCheckinModal below), matching the
@@ -16898,6 +16970,10 @@ function batchVerifyQc1(b){
 function renderBatchVerifyPage(){
   const id = _batchRequestedId || '';
   const b = (state.blendBatches||[]).find(x=>x.id===id) || (state.blendBatches||[]).find(x=>x.batchNo===id) || null;
+  if(!canViewBatchPage()){
+    return `<div class="bvw-page"><div class="bvw-head"><div class="bvw-co">Audrey Care (Pvt) Ltd</div></div><div class="bvw-card"><div class="bvw-big">No access</div><div class="hint">Your role is not allowed to open batch pages. Ask your Admin to switch it on in Settings → User role permission.</div></div>
+      <div class="bvw-actions"><button type="button" class="btn btn-primary" id="btn-bvw-open">Open the app</button></div></div>`;
+  }
   const logo = batchSheetLogo();
   const head = `<div class="bvw-head">${logo ? `<img class="bvw-logo" src="${escAttr(logo)}" alt="">` : ''}<div class="bvw-co">Audrey Care (Pvt) Ltd</div></div>`;
   if(!b){
@@ -16929,7 +17005,7 @@ function renderBatchVerifyPage(){
     </div>
     <div class="bvw-card">
       <div class="bvw-k">Variations</div>
-      ${rows.length ? rows.map(r=>`<div class="bvw-row${v&&v.id===r.id?' on':''}"><span><b>${esc(r.product||'—')}</b>${r.fragrance?`<i>${esc(r.fragrance)}</i>`:''}</span><b>${r.qty ? esc(r.qty+(r.unit?' '+r.unit:'')) : '—'}</b></div>`).join('') : `<div class="hint">No variations recorded.</div>`}
+      ${rows.length ? rows.map(r=>`<div class="bvw-row${v&&v.id===r.id?' on':''}"><span><b>${esc(r.product||'—')}</b>${r.fragrance?`<i>${esc(r.fragrance)}</i>`:''}</span><b>${r.qty ? esc(blendVarQtyBoth(r)) : '—'}</b></div>`).join('') : `<div class="hint">No variations recorded.</div>`}
     </div>
     <div class="bvw-card">
       <div class="bvw-k">Production</div>
@@ -17110,7 +17186,8 @@ function colorSheetDirty(){
   return colorSheetSig(d) !== colorSheetSig(sh);
 }
 // The sheet itself, exactly the PDF's layout. Used on screen (view mode + the live preview while editing) and for printing.
-function colorSheetPaperHtml(sh){
+function colorSheetPaperHtml(sh, T){
+  T = T || printTpl('colorsheet');
   const hex = (c, fallback) => /^#[0-9a-fA-F]{6}$/.test(c||'') ? c : fallback;
   const bar = hex(sh.barColor, '#194235'), tint = hex(sh.tintColor, '#DDF0DB'), sub = hex(sh.subtitleColor, bar);
   const cell = v => (String(v||'').trim()==='' ? '&nbsp;' : esc(v));
@@ -17119,16 +17196,22 @@ function colorSheetPaperHtml(sh){
     const blank = String(r.product||'').trim()==='' && !lines.length;
     return `<tr${blank?' class="cs-blank"':''}><td class="cs-p">${esc(r.product||'')}</td><td class="cs-c">${lines.map(l=>`<div>${cell(l.color)}</div>`).join('')}</td><td class="cs-q">${lines.map(l=>`<div>${cell(l.qty)}</div>`).join('')}</td></tr>`;
   }).join('');
+  // Settings -> Prints edits: only what differs from the owner's PDF layout adds a style, so an untouched template draws exactly the same markup as before.
+  const pn = (k, def)=>peNum(T[k], def);
+  const padChanged = pn('padT',0)!==0 || pn('padL',10.15)!==10.15 || pn('padR',9.6)!==9.6 || pn('padB',3.4)!==3.4;
+  const innerStyle = padChanged ? ` style="padding:${pn('padT',0)}cqw ${pn('padR',9.6)}% ${pn('padB',3.4)}cqw ${pn('padL',10.15)}%;"` : '';
+  const headStyle = pn('logoH',28.3)!==28.3 ? ` style="grid-template-columns:${pn('logoH',28.3)}% 1fr;"` : '';
+  const logoUrl = printLogoUrl(T, 'assets/colorsheet/dallin-logo.png');
   return `
-  <div class="cs-paper" style="--cs-bar:${bar};--cs-tint:${tint};--cs-sub:${sub};"><div class="cs-inner">
-    <div class="cs-head">
-      <div class="cs-logo"><img src="assets/colorsheet/dallin-logo.png" alt="Dallin Hotel Amenities"></div>
+  <div class="cs-paper" style="--cs-bar:${bar};--cs-tint:${tint};--cs-sub:${sub};"><div class="cs-inner"${innerStyle}>
+    <div class="cs-head"${headStyle}>
+      <div class="cs-logo">${logoUrl ? `<img src="${escAttr(logoUrl)}" alt="${T.logoMode==='default' ? 'Dallin Hotel Amenities' : ''}">` : ''}</div>
       <div class="cs-bar"><span>${esc(sh.name||'')}</span></div>
       <div class="cs-subtitle">${esc(sh.subtitle||'')}</div>
     </div>
     <table class="cs-table">
       <colgroup><col style="width:32%"><col style="width:35.6%"><col style="width:32.4%"></colgroup>
-      <thead><tr><th>Product</th><th>Color</th><th>${esc(sh.qtyHeader||'')}</th></tr></thead>
+      <thead><tr><th>${esc(T.wProduct)}</th><th>${esc(T.wColor)}</th><th>${esc(sh.qtyHeader||'')}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="cs-foot">${esc(sh.footer||'')}</div>
@@ -19576,15 +19659,14 @@ function batchSheetTemplatePreviewHtml(tpl){
     <div style="width:720px;zoom:${(230/720).toFixed(4)};">${batchSheetPrintHtml(batchSheetTemplatePreviewData(), tpl, {only:n})}</div></div>`;
   return `${thumb(1)}${thumb(2)}`;
 }
-function renderBatchSheetTemplatePanel(){
+function renderBatchSheetTemplateBody(){
+  state._peId = 'batchsheet';
   if(!state._batchSheetTemplateDraft) state._batchSheetTemplateDraft = {...batchSheetTemplate()};
   const tpl = state._batchSheetTemplateDraft;
   const order = (tpl.trailingSectionOrder && tpl.trailingSectionOrder.length===3) ? tpl.trailingSectionOrder : DEFAULT_BATCH_SHEET_TEMPLATE.trailingSectionOrder;
   const zoom = BATCH_SHEET_FONT_SCALE[tpl.fontSize] || 1;
   return `
-  <div class="panel" id="settings-batch-sheet-template">
-    <div class="panel-head"><h3>Batch sheet template</h3></div>
-    <div class="panel-body">
+    <div class="pe-bs">
       <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the pre-run form and the final documented record both use this. The logo itself is uploaded from Template customization above (it prints at the top of the sheet); everything else is here.</div>
 
       <div class="hint" style="margin-bottom:8px;">Preview — page 1 (batch details + raw materials) and page 2 (production steps + check list). Exact page breaks depend on the real recipe's length.</div>
@@ -19648,12 +19730,22 @@ function renderBatchSheetTemplatePanel(){
           </div>
         </div>
 
+        <div class="hint" style="margin:6px 0 8px;">${esc(PRINT_DEFS.batchsheet.blurb)}</div>
+        ${peGroupsHtml('batchsheet', tpl)}
+
         <div class="modal-actions" style="justify-content:flex-start;margin-top:10px;">
           <button type="submit" class="btn btn-primary">Save</button>
           <button type="button" class="btn" id="btn-reset-batch-sheet-template">Reset to default</button>
         </div>
       </form>
-    </div>
+    </div>`;
+}
+// (the older stand-alone Batch sheet template panel; its editor now sits under Settings -> Prints edits)
+function renderBatchSheetTemplatePanel(){
+  return `
+  <div class="panel" id="settings-batch-sheet-template">
+    <div class="panel-head"><h3>Batch sheet template</h3></div>
+    <div class="panel-body">${renderBatchSheetTemplateBody()}</div>
   </div>`;
 }
 function syncBatchSheetTemplateDraftFromDOM(){
@@ -19670,6 +19762,7 @@ function syncBatchSheetTemplateDraftFromDOM(){
   d.footerText = form.footerText.value;
   d.headerColor = form.headerColor.value;
   d.fontSize = form.fontSize.value;
+  peReadFields(form, d, 'batchsheet');   // logo, words and spaces (Prints edits)
 }
 function syncBatchSheetTemplateDraftAndRender(){ syncBatchSheetTemplateDraftFromDOM(); render(); }
 // Live-updates the preview's color/text as you type/pick, without a full render() — matches the
@@ -19995,11 +20088,245 @@ function renderTimerAlertSoundPanel(){
 // one, the jump cards act as accordion tabs: clicking a card shows only that panel below, no
 // scrolling past everything else needed. state._settingsOpenPanel remembers which one; the page
 // opens with just the card grid and nothing below until a card is clicked.
+/* ---- The Prints edits panel ---- */
+function peDraftTpl(id){
+  if(id==='batchsheet'){ if(!state._batchSheetTemplateDraft) state._batchSheetTemplateDraft = {...batchSheetTemplate()}; return state._batchSheetTemplateDraft; }
+  if(!state._peDraft || state._peDraft.id!==id) state._peDraft = {id, tpl:{...printTpl(id)}};
+  return state._peDraft.tpl;
+}
+function peFieldHtml(f, v){
+  const k = escAttr(f.k), onI = 'oninput="peLive()"', onC = 'onchange="peLive()"';
+  if(f.t==='text') return `<div class="field"><label>${esc(f.label)}</label><input type="text" data-pe="${k}" value="${escAttr(v)}" placeholder="${escAttr(f.def)}" autocomplete="off" ${onI}></div>`;
+  if(f.t==='num') return `<div class="field pe-numf"><label>${esc(f.label)}</label><div class="pe-numrow"><input type="number" data-pe="${k}" value="${escAttr(v)}" min="${f.min}" max="${f.max}" step="${f.step}" ${onI}><span class="hint">${esc(f.unit||'')}</span></div><div class="hint">Original: ${esc(String(f.def))}</div></div>`;
+  if(f.t==='bool') return `<label class="pe-bool"><input type="checkbox" data-pe="${k}" ${v?'checked':''} ${onC}> ${esc(f.label)}</label>`;
+  if(f.t==='color') return `<div class="field"><label>${esc(f.label)}</label><input type="color" data-pe="${k}" value="${escAttr(v)}" class="pe-color" ${onI}></div>`;
+  if(f.t==='sel') return `<div class="field"><label>${esc(f.label)}</label><select data-pe="${k}" ${onC}>${f.opts.map(o=>`<option value="${escAttr(o[0])}" ${String(v)===o[0]?'selected':''}>${esc(o[1])}</option>`).join('')}</select></div>`;
+  if(f.t==='logo') return `
+    <div class="field pe-logo" id="pe-logo-custom" style="display:${(peCurrentLogoMode()==='custom')?'block':'none'};">
+      <label>${esc(f.label)}</label>
+      <input type="hidden" data-pe="${k}" value="${escAttr(v||'')}">
+      <div class="pe-logo-row">
+        ${v ? `<img src="${escAttr(v)}" alt="" class="pe-logo-thumb">` : '<span class="hint">No logo uploaded yet.</span>'}
+        <input type="file" accept="image/*" id="pe-logo-file" ${isAdmin()?'':'disabled'}>
+        ${v ? `<button type="button" class="btn btn-sm" id="btn-pe-logo-remove">Remove</button>` : ''}
+      </div>
+      <div class="hint">${isAdmin() ? 'A new picture is uploaded to the brand storage; only its link is saved here.' : 'Only an Admin can upload a logo.'}</div>
+    </div>`;
+  return '';
+}
+function peCurrentLogoMode(){ const t = peDraftTpl(state._peId); return t && t.logoMode; }
+function peGroupsHtml(id, tpl){
+  return PRINT_DEFS[id].groups.map(g=>{
+    const bools = g.fields.filter(f=>f.t==='bool'), rest = g.fields.filter(f=>f.t!=='bool');
+    return `<fieldset class="pe-group"><legend>${esc(g.title)}</legend>
+      ${rest.length ? `<div class="pe-grid">${rest.map(f=>peFieldHtml(f, tpl[f.k]===undefined ? f.def : tpl[f.k])).join('')}</div>` : ''}
+      ${bools.length ? `<div class="pe-bools">${bools.map(f=>peFieldHtml(f, tpl[f.k]===undefined ? f.def : tpl[f.k])).join('')}</div>` : ''}
+    </fieldset>`;
+  }).join('');
+}
+// Reads every [data-pe] box under `root` into `tpl` (a number box left empty goes back to its original value, and a number is kept inside its allowed range).
+function peReadFields(root, tpl, id){
+  if(!root) return;
+  printFieldList(id).forEach(f=>{
+    const el = root.querySelector('[data-pe="'+f.k+'"]'); if(!el) return;
+    if(f.t==='bool') tpl[f.k] = !!el.checked;
+    else if(f.t==='num'){ const raw = String(el.value).trim(); const n = Number(raw); tpl[f.k] = (raw==='' || !isFinite(n)) ? f.def : Math.min(f.max, Math.max(f.min, n)); }
+    else tpl[f.k] = el.value;
+  });
+}
+function peEditorHtml(id){
+  const def = PRINT_DEFS[id], tpl = peDraftTpl(id);
+  return `
+  <div class="pe-wrap">
+    <form id="pe-form" class="pe-form">
+      <div class="hint" style="margin-bottom:10px;">${esc(def.blurb)}</div>
+      ${peGroupsHtml(id, tpl)}
+      <div class="modal-actions" style="justify-content:flex-start;margin-top:12px;flex-wrap:wrap;">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn" id="btn-pe-test">Print a test</button>
+        <button type="button" class="btn" id="btn-pe-reset">Reset to the original</button>
+      </div>
+    </form>
+    <div class="pe-side">
+      <div class="pe-preview-title">Preview <span class="hint" style="font-weight:400;">(sample data)</span></div>
+      <div id="pe-preview" class="pe-preview"></div>
+      <div id="pe-warn" class="pe-warn" style="display:none;"></div>
+    </div>
+  </div>`;
+}
+function renderPrintEditsPanel(){
+  if(!PRINT_DEFS[state._peId]) state._peId = 'sticker';
+  const id = state._peId;
+  const tabs = PRINT_ORDER.map(k=>`<button type="button" class="pe-tab ${k===id?'on':''}" data-pe-tab="${k}">${esc(PRINT_DEFS[k].title)}</button>`).join('');
+  return `
+  <div class="panel" id="settings-print-edits">
+    <div class="panel-head"><h3>Prints edits</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:12px;">Change how every printout looks: its logo, its wording, what is shown, and the spaces and sizes by hand. The preview on the right is drawn with sample data and updates as you type. Nothing changes for anyone until you press Save, and "Reset to the original" brings back the standard look.</div>
+      <div class="pe-tabs">${tabs}</div>
+      ${id==='batchsheet' ? renderBatchSheetTemplateBody() : peEditorHtml(id)}
+    </div>
+  </div>`;
+}
+/* sample data for the previews and the test print */
+function peSampleStickerData(){
+  const url = 'https://audreyops.online/batch/BLD-SAMPLE';
+  return {name1:'Shower Gel', name2:'', batchNo:'BLD-8GIA6', machine:'Machine 1', mfd:fmtDateTime(new Date().toISOString()), size:'200 L', qr: typeof qrcode==='function' ? qrSvgHtml(url) : '<svg class="vs-qr" viewBox="0 0 1 1"></svg>'};
+}
+function peSampleOrder(){
+  return {id:'SAMPLE', orderNumber:'SO2611100', customer:'Sample Customer (Pvt) Ltd', phone:'077 123 4567', address:'12 Galle Road\nColombo 03', product:'<b>Shower Gel</b> 250ml x 24', priority:'High', stage:1, courierService:'AC', courierNumber:'TRK-0001', notes:'Handle with care', startDate:'2026-11-20', dueDate:'2026-11-25', createdAt:'2026-11-20T08:00:00.000Z', photo:'', history:[{stage:0,at:'2026-11-20T08:00:00.000Z',by:'Admin'},{stage:1,at:'2026-11-21T08:00:00.000Z',by:'Packing'}]};
+}
+function peSampleAttendance(){
+  const byDay = {}; const y = 2026, m = 10;
+  for(let d=1; d<=31; d++){ if(d%7===0||d%7===6) continue; byDay[d] = {in:{at:new Date(y,m,d,8,30).toISOString()}, out:{at:new Date(y,m,d,d%3===0?19:17,45).toISOString()}}; }
+  return {y, m, byDay, name:'Sample Person'};   // 31 days: the worst case for "one page"
+}
+function peSampleColorSheet(){
+  const real = (state.colorSheets||[])[0]; if(real) return real;
+  return {name:'Shampoo', subtitle:'Color Sheet -( 50Kg )', qtyHeader:'Quantity ( 50Kg )', footer:'Audrey Care (Pvt)Ltd.', barColor:'#194235', tintColor:'#D9F1D8', subtitleColor:'#194235', rows:[{id:'1',product:'Aloevera',lines:[{id:'a',color:'Blue Powder',qty:'2.5g'}]},{id:'2',product:'Lotus',lines:[{id:'b',color:'Pink Liquid',qty:'3ml'}]},{id:'3',product:'',lines:[]}]};
+}
+function pePreviewHtml(id, T){
+  const a4 = inner => `<div class="pe-a4-scale"><div class="pe-a4">${inner}</div></div>`;
+  if(id==='sticker') return `<div class="pe-sticker-zoom"><div class="pe-sticker-card">${vesselStickerHtml(peSampleStickerData(), T)}</div></div>`;
+  if(id==='order') return a4(orderPrintHtml(peSampleOrder(), {deliveryLabel:'AC Delivery', salesman:'Sample Rep', stageLabel:'Processing', printedBy:'Admin'}, T));
+  if(id==='attendance') return a4(attendancePrintHtml(peSampleAttendance(), T));
+  if(id==='colorsheet') return `<div class="cs-screen" style="margin-bottom:0;">${colorSheetPaperHtml(peSampleColorSheet(), T)}</div>`;
+  return '';
+}
+async function peRefreshPreview(){
+  const id = state._peId; const box = document.getElementById('pe-preview'); if(!box || id==='batchsheet') return;
+  if(id==='sticker') await ensureQrLib();
+  if(!document.getElementById('pe-preview')) return;
+  const T = peDraftTpl(id);
+  box.innerHTML = pePreviewHtml(id, T);
+  // "does it still fit?"
+  const warn = document.getElementById('pe-warn'); if(!warn) return;
+  let msg = '';
+  if(id==='sticker'){
+    const el = box.querySelector('.vsticker');
+    if(el && el.scrollHeight > el.clientHeight + 1) msg = 'The content is taller than the label. Make a space or a size smaller, or turn a line off.';
+    else if(el && el.scrollWidth > el.clientWidth + 1) msg = 'The content is wider than the label.';
+  } else if(id==='attendance' || id==='order'){
+    const el = box.querySelector('.pe-a4 > div');
+    if(el && el.getBoundingClientRect){ const z = el.offsetHeight; if(z > 1123 - 91) msg = id==='attendance' ? 'With 31 days this runs past one A4 page. Make a row, a space or the text smaller.' : 'This sample runs past one A4 page.'; }
+  }
+  warn.style.display = msg ? 'block' : 'none'; warn.textContent = msg;
+}
+function peLive(){
+  const id = state._peId;
+  if(id==='batchsheet'){ updateBatchSheetTemplatePreviewLive(); return; }
+  const form = document.getElementById('pe-form'); if(!form) return;
+  peReadFields(form, peDraftTpl(id), id);
+  const modeEl = form.querySelector('[data-pe="logoMode"]');
+  const custom = document.getElementById('pe-logo-custom'); if(custom && modeEl) custom.style.display = modeEl.value==='custom' ? 'block' : 'none';
+  peRefreshPreview();
+}
+function peDirty(id){
+  if(id==='batchsheet'){
+    if(!state._batchSheetTemplateDraft) return false;
+    syncBatchSheetTemplateDraftFromDOM();
+    return JSON.stringify(state._batchSheetTemplateDraft) !== JSON.stringify(batchSheetTemplate());
+  }
+  if(!state._peDraft || state._peDraft.id!==id) return false;
+  peReadFields(document.getElementById('pe-form'), state._peDraft.tpl, id);
+  return JSON.stringify(state._peDraft.tpl) !== JSON.stringify(printTpl(id));
+}
+function peSwitchTab(to){
+  const from = state._peId;
+  if(to===from || !PRINT_DEFS[to]) return;
+  const go = ()=>{ if(from==='batchsheet') state._batchSheetTemplateDraft = null; else state._peDraft = null; state._peId = to; render(); };
+  if(peDirty(from)){
+    openConfirmModal({title:'Discard changes?', danger:true, confirmLabel:'Discard', cancelLabel:'Keep editing', message:`You changed the ${PRINT_DEFS[from].title.toLowerCase()} template and did not save it. Discard the changes?`, onConfirm: go});
+    return;
+  }
+  go();
+}
+async function savePrintEdit(e){
+  if(e) e.preventDefault();
+  const id = state._peId; if(id==='batchsheet' || !PRINT_DEFS[id]) return;
+  if(!state.session || !(isAdmin() || roleCan(state.session.role, 'settings_access'))) return;
+  peReadFields(document.getElementById('pe-form'), peDraftTpl(id), id);
+  const tpl = peDraftTpl(id), def = printDefaults(id);
+  const diff = {}; Object.keys(def).forEach(k=>{ if(tpl[k]!==undefined && tpl[k]!==def[k]) diff[k] = tpl[k]; });
+  const before = state.printTemplates; const next = {...(state.printTemplates && !Array.isArray(state.printTemplates) ? state.printTemplates : {})};
+  if(Object.keys(diff).length) next[id] = diff; else delete next[id];
+  state.printTemplates = next;
+  if(!(await save('printTemplates'))){ state.printTemplates = before; return; }
+  logActivity(`Changed the ${PRINT_DEFS[id].title} print template`);
+  showToast(PRINT_DEFS[id].title+' template saved');
+}
+function resetPrintEdit(){
+  const id = state._peId;
+  if(id==='batchsheet'){ resetBatchSheetTemplate(); return; }
+  openConfirmModal({title:'Reset to the original?', danger:true, confirmLabel:'Reset', message:`Go back to the standard ${PRINT_DEFS[id].title.toLowerCase()} look? Your changes to it are removed once you press Save.`,
+    onConfirm: ()=>{ state._peDraft = {id, tpl:{...printDefaults(id)}}; }});
+}
+// A test print of the preview (sample data, the draft template): the same pipeline as the real print.
+async function peTestPrint(){
+  const id = state._peId; const area = document.getElementById('print-area'); if(!area) return;
+  if(id==='batchsheet'){ showToast('Use the real Print button; the preview shows both pages'); return; }
+  peReadFields(document.getElementById('pe-form'), peDraftTpl(id), id);
+  const T = peDraftTpl(id);
+  let pageCss = '', html = '';
+  if(id==='sticker'){
+    if(!(await ensureQrLib())){ showToast('The QR code could not be made'); return; }
+    html = vesselStickerHtml(peSampleStickerData(), T); pageCss = `@page{size:${peNum(T.labelW,50)}mm ${peNum(T.labelH,50)}mm;margin:0}`;
+  } else if(id==='order') html = orderPrintHtml(peSampleOrder(), {deliveryLabel:'AC Delivery', salesman:'Sample Rep', stageLabel:'Processing', printedBy:(state.session&&(state.session.staffName||state.session.name))||''}, T);
+  else if(id==='attendance') html = attendancePrintHtml(peSampleAttendance(), T);
+  else if(id==='colorsheet'){ html = `<style>@page{size:A4;margin:0;} html,body{background:#fff !important;}</style><div class="cs-print">${colorSheetPaperHtml(peSampleColorSheet(), T)}</div>`; }
+  area.innerHTML = html;
+  let st = null;
+  if(pageCss){ st = document.createElement('style'); st.id = 'print-test-page'; st.textContent = pageCss; document.head.appendChild(st); const clean = ()=>{ if(st){ st.remove(); st = null; } window.removeEventListener('afterprint', clean); }; window.addEventListener('afterprint', clean); setTimeout(clean, 120000); }
+  await waitForPrintAreaImages(area);
+  window.print();
+}
+// Logo upload: shrink to at most 700 px wide (keeping transparency), put it in the public brand storage bucket (Admin only), keep only the link.
+function peShrinkImage(file, maxW){
+  return new Promise((resolve, reject)=>{
+    const fr = new FileReader();
+    fr.onerror = ()=>reject(new Error('read failed'));
+    fr.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error('not an image'));
+      img.onload = ()=>{
+        const w0 = img.naturalWidth || 300, h0 = img.naturalHeight || 100; const scale = Math.min(1, maxW / w0);
+        const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w0*scale)); c.height = Math.max(1, Math.round(h0*scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL(file.type==='image/jpeg' ? 'image/jpeg' : 'image/png', 0.92));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function peUploadLogo(file){
+  if(!isAdmin()){ showToast('Only an Admin can upload a logo'); return; }
+  if(!file || !/^image\//.test(file.type||'')){ showToast('Choose a picture file'); return; }
+  try{
+    const dataUrl = await peShrinkImage(file, 700);
+    const url = await brandImageToStorage(dataUrl, 'print-'+state._peId);
+    if(!url || /^data:/.test(url)){ showToast('The logo could not be uploaded. Check the connection and try again.', 6000); return; }
+    const t = peDraftTpl(state._peId); t.logoUrl = url; t.logoMode = 'custom';
+    render();
+    showToast('Logo uploaded. Press Save to keep it.');
+  }catch(e){ console.error('logo upload failed', e); showToast('That picture could not be read'); }
+}
+function attachPrintEditHandlers(){
+  const byIdEl = id => document.getElementById(id);
+  document.querySelectorAll('[data-pe-tab]').forEach(b=>b.addEventListener('click', ()=>peSwitchTab(b.dataset.peTab)));
+  if(byIdEl('pe-form')) byIdEl('pe-form').addEventListener('submit', savePrintEdit);
+  if(byIdEl('btn-pe-reset')) byIdEl('btn-pe-reset').onclick = resetPrintEdit;
+  if(byIdEl('btn-pe-test')) byIdEl('btn-pe-test').onclick = peTestPrint;
+  if(byIdEl('pe-logo-file')) byIdEl('pe-logo-file').addEventListener('change', ev=>{ const f = ev.target.files && ev.target.files[0]; if(f) peUploadLogo(f); });
+  if(byIdEl('btn-pe-logo-remove')) byIdEl('btn-pe-logo-remove').onclick = ()=>{ const t = peDraftTpl(state._peId); t.logoUrl = ''; if(t.logoMode==='custom') t.logoMode = PRINT_DEFS[state._peId].groups[0] && printDefaults(state._peId).logoMode!=='custom' ? printDefaults(state._peId).logoMode : 'none'; render(); };
+  if(byIdEl('pe-preview')) peRefreshPreview();
+}
 const SETTINGS_PANEL_RENDERERS = {
   'settings-complaint-access': renderComplaintAccessPanel,
   'settings-sidebar-order': renderSidebarOrderPanel,
   'settings-template-customization': renderTemplateCustomizationPanel,
   'settings-batch-sheet-template': renderBatchSheetTemplatePanel,
+  'settings-print-edits': renderPrintEditsPanel,
   'settings-login-customization': renderLoginCustomizationPanel,
   'settings-appearance': renderAppearancePanel,
   'settings-mobile-appearance': renderMobileAppearancePanel,
@@ -20032,7 +20359,7 @@ function renderSettingsPage(){
     {id:'settings-complaint-access', label:'Complaint access', icon:'complaints', adminOnly:false},
     {id:'settings-sidebar-order', label:'Sidebar order', icon:'dashboard', adminOnly:false},
     {id:'settings-template-customization', label:'Template customization', icon:'settings', adminOnly:false},
-    {id:'settings-batch-sheet-template', label:'Batch sheet template', icon:'flask', adminOnly:false},
+    {id:'settings-print-edits', label:'Prints edits', icon:'flask', adminOnly:false},
     {id:'settings-login-customization', label:'Login panel customization', icon:'star', adminOnly:false},
     {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false},
     {id:'settings-mobile-appearance', label:'Mobile appearance', icon:'star', adminOnly:false},
@@ -21712,7 +22039,7 @@ async function restartCurrentStep(key){
 }
 /* Finishing a batch (owner, 2026-11-22: "when finishing a batch dont auto push to mixing and filling stage, ask ... yes or no, if yes ask 'Need to print the batch sticker' yes or no, if yes sticker print option appear").
    Finish -> "Transfer it to Mixing and Filling?"  Yes: the batch is added to Mixing and Filling (finishBatchIntoBlendingBoard), then "Need to print the batch sticker?"  Yes: the vessel sticker print view opens.
-   No (transfer): the batch is marked finished and STAYS on the Production Guide (its card gets a "Transfer to Mixing and Filling" button, so nothing is lost); until it is transferred or dismissed it keeps its machine busy.
+   No (transfer): the batch is marked finished and STAYS on the Production Guide (its card gets a "Transfer to Mixing and Filling" button, so nothing is lost); until it is transferred it keeps its machine busy. A finished batch has NO Dismiss button, on the card or on the big screen (owner, 2026-11-22): the only way off the Production Guide is Transfer.
    Both questions are `sticky`: a click on the dim background does not answer them. */
 function askFinishTransfer(key){
   key = resolveBatchKey(key); if(!key) return;
@@ -21742,6 +22069,7 @@ async function markBatchFinishedNotTransferred(key){
   showToast('Batch finished. It stays on the Production Guide until you transfer it to Mixing and Filling.', 7000);
 }
 function askPrintVesselSticker(batchId){
+  if(!canPrintBlendSticker()) return;   // a role without the sticker switch is not asked
   openConfirmModal({
     title: 'Batch sticker', sticky: true, confirmLabel: 'Yes', cancelLabel: 'No',
     message: 'Need to print the batch sticker?',
@@ -22561,8 +22889,7 @@ function renderActiveBatchCard(key, b){
       ${!isDone && b.status==='running' ? `<button class="btn" data-bt-act="pause" data-bt-key="${key}">Pause</button>` : ''}
       ${!isDone && b.status==='paused' ? `<button class="btn" data-bt-act="resume" data-bt-key="${key}">Resume</button>` : ''}
       ${!isDone ? `<button class="btn btn-primary" data-bt-act="next" data-bt-key="${key}">${b.currentStep>=b.steps.length-1?'Finish':'Next ▸'}</button>` : ''}
-      ${isDone ? `<button class="btn btn-primary" data-bt-act="transfer" data-bt-key="${key}">Transfer to Mixing and Filling</button>` : ''}
-      <button class="btn" data-bt-act="stop" data-bt-key="${key}">${isDone?'Dismiss':'Stop'}</button>
+      ${isDone ? `<button class="btn btn-primary" data-bt-act="transfer" data-bt-key="${key}">Transfer to Mixing and Filling</button>` : `<button class="btn" data-bt-act="stop" data-bt-key="${key}">Stop</button>`}
       ` : ''}
       <button class="btn bt-expand" data-bt-act="focus" data-bt-key="${key}" title="Big screen — full detail, all steps & more controls">⛶</button>
     </div>
@@ -22662,8 +22989,7 @@ function renderBatchFocusOverlay(){
         ${!isDone && b.currentStep>0 ? `<button class="btn" id="btn-batch-focus-prev">◂ Previous</button>` : ''}
         ${!isDone ? `<button class="btn" id="btn-batch-focus-restart">Restart step timer</button>` : ''}
         ${!isDone ? `<button class="btn btn-primary" id="btn-batch-focus-next">${b.currentStep>=b.steps.length-1?'Finish batch':'Next step ▸'}</button>` : ''}
-        ${isDone ? `<button class="btn btn-primary" id="btn-batch-focus-transfer">Transfer to Mixing and Filling</button>` : ''}
-        <button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">${isDone?'Dismiss':'Stop batch'}</button>
+        ${isDone ? `<button class="btn btn-primary" id="btn-batch-focus-transfer">Transfer to Mixing and Filling</button>` : `<button class="btn" id="btn-batch-focus-stop" style="margin-left:auto;">Stop batch</button>`}
       </div>` : ''}
     </div>
       <div class="bf-right-col">
@@ -23401,14 +23727,14 @@ function batchQaAfterHtml(){
 }
 // The variations as printed (owner, 2026-11-22: "the exact same structured variation quantities, units"): one row per variation with product, fragrance, quantity and unit, the same four columns
 // as on the board window, and a total per unit. With nothing recorded it prints three empty lines for the floor to fill in by hand.
-function batchVariationsPrintHtml(rows){
+function batchVariationsPrintHtml(rows, title){
   const list = (rows||[]).filter(r=>r && (r.product||r.fragrance||r.qty));
   const sums = {};
   list.forEach(r=>{ const n = parseFloat(String(r.qty||'').replace(',', '.')); if(isFinite(n) && n!==0){ const u = r.unit||''; sums[u] = (sums[u]||0)+n; } });
   const total = Object.keys(sums).map(u=>fmtQty(sums[u])+(u?' '+u:'')).join(' + ');
   const body = (list.length ? list : [{},{},{}]).map((r,i)=>`<tr><td class="c-no">${i+1}</td><td>${r.product?esc(r.product):'&nbsp;'}</td><td>${r.fragrance?esc(r.fragrance):''}</td><td class="num">${r.qty?esc(r.qty):''}</td><td class="un">${r.unit?esc(r.unit):''}</td></tr>`).join('');
   return `
-    <div class="bsp-sec">Variations</div>
+    <div class="bsp-sec">${esc(title || 'Variations')}</div>
     <table class="bsp-mats bsp-var">
       <thead><tr><th class="c-no">No</th><th>Product</th><th>Fragrance</th><th class="num">Quantity</th><th class="un">Unit</th></tr></thead>
       <tbody>${body}${total ? `<tr class="tot"><td></td><td>Total</td><td></td><td class="num">${esc(total)}</td><td></td></tr>` : ''}</tbody>
@@ -23420,7 +23746,7 @@ function batchStageSignoffHtml(d){
   const stages = blendStageList();
   const at = d.stageRows || {};
   return `
-    <div class="bsp-stgwrap"><div class="bsp-sec">Stage by stage — floor sign-off</div>
+    <div class="bsp-stgwrap"><div class="bsp-sec">${esc(d.stageTitle || 'Stage by stage — floor sign-off')}</div>
     <table class="bsp-stg">
       <thead><tr><th>Stage</th><th style="width:104px;">Date / time</th><th style="width:92px;">Moved by</th><th style="width:150px;">Sign-off</th></tr></thead>
       <tbody>${stages.map(st=>{ const h = at[st.key]; return `<tr><td class="c-st">${esc(st.label)}${d.currentStageKey===st.key ? ' <i>· now</i>' : ''}</td><td>${h&&h.at?esc(fmtDateTime(h.at)):''}</td><td>${h&&h.by?esc(h.by):''}</td><td class="c-sig"></td></tr>`; }).join('')}</tbody>
@@ -23452,13 +23778,16 @@ function batchSheetPrintHtml(d, tplOverride, opts){
   }
   const infoRows = []; for(let i=0;i<cells.length;i+=2) infoRows.push([cells[i], cells[i+1]||null]);
   const infoCell = c => c ? `<td class="k">${esc(c[0])}</td><td class="v">${c[1] ? esc(c[1]) : blank}</td>` : '<td></td><td></td>';
-  const logo = (tpl.showLogo && batchSheetLogo()) ? `<img class="bsp-logo" src="${batchSheetLogo()}" alt="Logo">` : '';
+  const bn = (k, def)=>peNum(tpl[k], def);
+  const logoUrl = tpl.showLogo ? printLogoUrl(tpl) : '';
+  const logoMargin = tpl.logoAlign==='left' ? '0 auto 8px 0' : (tpl.logoAlign==='right' ? '0 0 8px auto' : '0 auto 8px');
+  const logo = logoUrl ? `<img class="bsp-logo" src="${escAttr(logoUrl)}" alt="Logo" ${(bn('logoH',112)!==112 || logoMargin!=='0 auto 8px') ? `style="max-height:${bn('logoH',112)}px;margin:${logoMargin};"` : ''}>` : '';
   const trailing = batchSheetTrailingSectionsHtml(tpl, {combineNote: d.combineNote, standardPH: d.standardPH});
   const prod = String(d.product||'').trim();
   return `
   <div class="bsp${opts && opts.only ? ' bsp-only'+opts.only : ''}" style="zoom:${zoom};">
   <style>
-    .bsp{max-width:720px;margin:0 auto;padding:10px 24px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .bsp{max-width:720px;margin:0 auto;padding:${bn('padY',10)}px ${bn('padX',24)}px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .bsp *{box-sizing:border-box;}
     .bsp .bsp-top{text-align:center;margin-bottom:12px;}
     .bsp .bsp-logo{display:block;margin:0 auto 8px;width:auto;height:auto;max-height:112px;max-width:60%;object-fit:contain;}   /* big and clearly visible: about 60% of the sheet's width (owner, 2026-11-21) */
@@ -23473,10 +23802,10 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp table.bsp-info td.v{padding:5px 14px 5px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;}
     .bsp .bsp-dash{color:#C3C9C1;font-weight:400;}
     .bsp .bsp-desc{font-size:12px;color:#4A554F;margin:-4px 0 12px;}
-    .bsp .bsp-sec{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin:14px 0 5px;}
+    .bsp .bsp-sec{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin:${bn('secGap',14)}px 0 5px;}
     .bsp table.bsp-mats{width:100%;border-collapse:collapse;font-size:12px;}
     .bsp table.bsp-mats th{background:${accent};color:${headInk};text-align:left;padding:6px 8px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1.5px solid #1C2320;}
-    .bsp table.bsp-mats td{padding:6px 8px;border-bottom:1px solid #E7E9E4;}
+    .bsp table.bsp-mats td{padding:${bn('rowPad',6)}px 8px;border-bottom:1px solid #E7E9E4;}
     .bsp table.bsp-mats .c-no{width:34px;}
     .bsp table.bsp-mats td.c-no{color:#6B7570;}
     .bsp table.bsp-mats .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -23514,16 +23843,16 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp.bsp-only1 .bsp-p2,.bsp.bsp-only2 .bsp-p1{display:none;}   /* single-page thumbnails in Settings */
   </style>
   <section class="bsp-p1">
-    <div class="bsp-top">${logo}<div class="bsp-co">Audrey Care (Pvt) Ltd.</div><div class="bsp-doc">Batch Sheet</div></div>
+    <div class="bsp-top">${logo}<div class="bsp-co">${esc(tpl.wCompany)}</div><div class="bsp-doc">${esc(tpl.wDoc)}</div></div>
     <div class="bsp-titlerow">
-      <div style="min-width:0;"><div class="bsp-k">Product</div><div class="bsp-product">${prod ? esc(prod) : blank}</div></div>
-      ${tpl.showBatchNo ? `<div style="text-align:right;flex:none;"><div class="bsp-k">Batch number</div><div class="bsp-bn">${d.batchNo ? esc(d.batchNo) : '&nbsp;'}</div></div>` : ''}
+      <div style="min-width:0;"><div class="bsp-k">${esc(tpl.wProduct)}</div><div class="bsp-product">${prod ? esc(prod) : blank}</div></div>
+      ${tpl.showBatchNo ? `<div style="text-align:right;flex:none;"><div class="bsp-k">${esc(tpl.wBatchNo)}</div><div class="bsp-bn">${d.batchNo ? esc(d.batchNo) : '&nbsp;'}</div></div>` : ''}
     </div>
     <table class="bsp-info">${infoRows.map(r=>`<tr>${infoCell(r[0])}${infoCell(r[1])}</tr>`).join('')}</table>
     ${(tpl.showDescription && d.description) ? `<div class="bsp-desc">${esc(d.description)}</div>` : ''}
-    ${d.showVariations ? batchVariationsPrintHtml(d.variations) : ''}
+    ${d.showVariations ? batchVariationsPrintHtml(d.variations, tpl.wVariations) : ''}
     ${(mats.length || d.mode!=='record') ? `
-    <div class="bsp-sec">Raw materials</div>
+    <div class="bsp-sec">${esc(tpl.wMaterials)}</div>
     <table class="bsp-mats">
       <thead><tr><th class="c-no">No</th><th>Raw material</th><th class="num">Percentage</th><th class="num">Amount (kg)</th><th class="chk">Weighed</th></tr></thead>
       <tbody>
@@ -23535,10 +23864,10 @@ function batchSheetPrintHtml(d, tplOverride, opts){
   </section>
   <section class="bsp-p2">
     <div class="bsp-runhead"><span><b>${prod ? esc(prod) : 'Batch sheet'}</b>${(tpl.showBatchNo && d.batchNo) ? ' · Batch '+esc(d.batchNo) : ''}</span><span>${kg>0 ? esc(fmtQty(kg))+' kg' : ''}${d.machine ? ' · '+esc(d.machine) : ''}</span></div>
-    <div class="bsp-sec" style="margin-top:8px;">Production steps</div>
+    <div class="bsp-sec" style="margin-top:8px;">${esc(tpl.wSteps)}</div>
     ${steps.length ? bsmcLedgerStepsHtml(steps, documentedStepOrdinals(steps), kg) : '<div class="bsp-desc">No production steps.</div>'}
     ${trailing}
-    ${d.showStages ? batchStageSignoffHtml(d) : ''}
+    ${d.showStages ? batchStageSignoffHtml({...d, stageTitle: tpl.wStages}) : ''}
     ${d.mode==='record'
       ? `<div class="bsp-signoff"><div class="bsp-sig">Operator: <span></span></div><div class="bsp-sig">Supervisor: <span></span></div><div class="bsp-sig">QC: <span></span></div></div>`
       : batchQaAfterHtml()}
@@ -23601,7 +23930,7 @@ function printBatchSheet(recipeId){
 // variations (product / fragrance / quantity / unit), formulation code, priority, machine and the stage-by-stage sign-off table always print. What is typed in the open batch window (even unsaved)
 // is what prints, like the Batch sheet page does for its steps.
 function printDocumentedBatchSheet(batchId){
-  const b = byId(state.blendBatches, batchId); if(!b) return;
+  const b = byId(state.blendBatches, batchId); if(!b || !canPrintBlendSheet()) return;
   const area = document.getElementById('print-area');
   if(!area) return;
   const f = document.getElementById('form-blend-edit');
@@ -23617,6 +23946,99 @@ function printDocumentedBatchSheet(batchId){
     materials:b.materials||[], steps:b.productionSteps||[], combineNote:b.combineNote, standardPH:b.standardPH,
     formulationCode:code, priority:fv('priority', b.priority)||'Medium', showVariations:true, variations:rows, showStages:true, stageRows, currentStageKey:blendStageKeyOf(b)});
   waitForPrintAreaImages(area).then(()=>window.print());
+}
+/* ===================== Prints edits: one definition per print (owner, 2026-11-22: "a card in settings named 'prints edits'... all should be able to adjust logos, template words, manage spaces by hand") =====================
+   Settings -> Prints edits edits how every printout looks: the LOGO (none / the company logo / an uploaded one, its size and position), the WORDS (title, field names, footer...), what is SHOWN, and the SPACES (page margins, gaps, sizes) by hand.
+   Prints: Batch sticker, Order print, Batch sheet, Attendance sheet, Color sheets. Each has a definition in PRINT_DEFS (groups of fields, each with its default); a print's saved changes are only the fields that differ from the default, stored in
+   app_data key `printTemplates` = {sticker:{..}, order:{..}, attendance:{..}, colorsheet:{..}} (the Batch sheet keeps its own older key `batchSheetTemplate`, extended with the same kind of fields). Every default is EXACTLY what the print looked like before this
+   card existed, so nothing changes until someone edits it (checked by comparing the HTML). The builders (vesselStickerHtml, orderPrintHtml, attendancePrintHtml, colorSheetPaperHtml, batchSheetPrintHtml) take the template, and the editor draws the same builder
+   with the draft and sample data as its live preview. Every role that prints must READ `printTemplates` (database policy "signed-in can read shared settings"); changing it needs the Settings page. A custom logo is uploaded to the public `branding` storage bucket
+   (Admin only, like every brand image) and only its link is stored: never an image inside the row. */
+const PE_LOGO_MODES = [['none','No logo'],['company','The company logo (from Template customization)'],['custom','My own logo (upload)']];
+const PE_ALIGN = [['left','Left'],['center','Centre'],['right','Right']];
+function peLogoFields(d){
+  return [
+    {k:'logoMode', t:'sel', label:'Logo', opts:d.modes||PE_LOGO_MODES, def:d.mode},
+    {k:'logoUrl', t:'logo', label:'My own logo', def:''},
+    {k:'logoH', t:'num', label:d.hLabel||'Logo height', unit:d.unit, min:d.min, max:d.max, step:d.step, def:d.h},
+    {k:'logoAlign', t:'sel', label:'Logo position', opts:d.alignOpts||PE_ALIGN, def:d.align},
+  ];
+}
+const PE_TXT = (k,label,def)=>({k, t:'text', label, def});
+const PE_NUM = (k,label,def,unit,min,max,step)=>({k, t:'num', label, def, unit, min, max, step});
+const PE_BOOL = (k,label,def)=>({k, t:'bool', label, def});
+const PRINT_DEFS = {
+  sticker: {
+    title:'Batch sticker', blurb:'The small label stuck on a vessel (50 x 50 mm). The QR code on it opens the batch page.',
+    groups:[
+      {title:'Label size', fields:[PE_NUM('labelW','Width',50,'mm',20,150,1), PE_NUM('labelH','Height',50,'mm',20,150,1)]},
+      {title:'Logo (off: the sticker prints only what the floor needs)', fields:peLogoFields({mode:'none', h:6, unit:'mm', min:2, max:25, step:.5, align:'right'})},
+      {title:'Words', fields:[PE_TXT('wParent','Parent batch line','Parent Batch:'), PE_TXT('wMachine','Machine line','Machine No.:'), PE_TXT('wMfd','Date and time line','MFD Date & Time:'), PE_TXT('wSize','Batch size line','Batch Size:'), PE_TXT('wCompany','Company name under the QR code','Audrey Care (Pvt) Ltd')]},
+      {title:'Show or hide', fields:[PE_BOOL('showParent','Parent batch line',true), PE_BOOL('showMachine','Machine line',true), PE_BOOL('showMfd','Date and time line',true), PE_BOOL('showSize','Batch size line',true), PE_BOOL('showQr','QR code',true), PE_BOOL('showCompany','Company name',true)]},
+      {title:'Spaces and sizes, by hand', fields:[
+        PE_NUM('padT','Space above the product name',1.6,'mm',0,15,.1), PE_NUM('padX','Space at the left and right',2.2,'mm',0,15,.1), PE_NUM('padB','Space at the bottom',1.2,'mm',0,15,.1),
+        PE_NUM('nameSize','Product name size',10.5,'pt',5,30,.5), PE_NUM('nameH','Height kept for the product name',7.6,'mm',2,30,.1),
+        PE_NUM('lineSize','Detail lines size',6.3,'pt',4,16,.1), PE_NUM('lineH','Height of each detail line',2.55,'mm',1.5,10,.05),
+        PE_NUM('writeH','Empty space to write on by hand',10.5,'mm',0,40,.5),
+        PE_NUM('qrSize','QR code size',14,'mm',8,40,.5), PE_NUM('qrPad','White space around the QR code',1,'mm',0,6,.1), PE_NUM('coSize','Company name size',6,'pt',4,16,.5)]},
+    ],
+  },
+  order: {
+    title:'Order print', blurb:'The Order Sheet printed from the Print button in an order window (A4).',
+    groups:[
+      {title:'Logo', fields:peLogoFields({mode:'none', h:60, unit:'px', min:20, max:200, step:1, align:'center'})},
+      {title:'Words: heading', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wTitle','Document title','Order Sheet'), PE_TXT('wCustomer','Customer','Customer'), PE_TXT('wOrderNo','Order number','Order number')]},
+      {title:'Words: details', fields:[PE_TXT('wStage','Current stage','Current stage'), PE_TXT('wPriority','Priority','Priority'), PE_TXT('wCreated','Created','Created'), PE_TXT('wSales','Sales person','Sales person'), PE_TXT('wStart','Start date','Start date'), PE_TXT('wDue','Due date','Due date'), PE_TXT('wContact','Customer contact','Customer contact'), PE_TXT('wDelivery','Delivery method','Delivery method'), PE_TXT('wTracking','Tracking number','Tracking number')]},
+      {title:'Words: sections', fields:[PE_TXT('wProduct','Product section','Product / task'), PE_TXT('wNotes','Notes section','Notes'), PE_TXT('wAddress','Address section','Customer address'), PE_TXT('wPicture','Picture section','Picture'), PE_TXT('wHistory','History section','History'), PE_TXT('wHStage','History: stage column','Stage'), PE_TXT('wHWhen','History: when column','When'), PE_TXT('wHBy','History: by column','By'), PE_TXT('wPrinted','Printed line','Printed'), PE_TXT('wPrintedBy','Printed line: "by"','by')]},
+      {title:'Show or hide', fields:[PE_BOOL('showNotes','Notes',true), PE_BOOL('showAddress','Customer address',true), PE_BOOL('showPicture','Picture',true), PE_BOOL('showHistory','History',true), PE_BOOL('showPrinted','Printed line',true)]},
+      {title:'Spaces and sizes, by hand', fields:[PE_NUM('maxW','Page content width',720,'px',400,900,10), PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('gap','Space between sections',12,'px',0,60,1), PE_NUM('fs','Text size',100,'%',60,160,5), {k:'ink', t:'color', label:'Text and line colour', def:'#1C2320'}]},
+    ],
+  },
+  attendance: {
+    title:'Attendance sheet', blurb:'The monthly sheet printed from Attendance records (A4, one page, up to 31 days).',
+    groups:[
+      {title:'Logo', fields:peLogoFields({mode:'none', h:50, unit:'px', min:20, max:160, step:1, align:'center'})},
+      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wTitle','Document title (the year is added after it)','Attendance Sheet'), PE_TXT('wName','Name','Name'), PE_TXT('wEmp','Employee number','Employee #'), PE_TXT('wMonth','Month','Month'), PE_TXT('wIn','In time column','In Time'), PE_TXT('wOut','Out time column','Out Time'), PE_TXT('wOt','Overtime column','OT Hours'), PE_TXT('wOtNote','Overtime note','(after 6pm)'), PE_TXT('wPresent','Days present','Days present'), PE_TXT('wTotalOt','Total overtime','Total OT')]},
+      {title:'Show or hide', fields:[PE_BOOL('showEmp','Employee number box',true), PE_BOOL('showSummary','Days present and total overtime',true)]},
+      {title:'Spaces and sizes, by hand (keep it on one page: check the preview with 31 days)', fields:[PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('rowPad','Height of each day row (padding)',3,'px',0,12,.5), PE_NUM('fs','Text size',100,'%',60,140,5)]},
+    ],
+  },
+  colorsheet: {
+    title:'Color sheets', blurb:'The Color sheet printed from Mixing and Filling (A4). Each sheet keeps its own name, colours, rows and footer; this sets what they share.',
+    groups:[
+      {title:'Logo', fields:peLogoFields({mode:'default', modes:[['default','The Dallin logo (the owner\'s PDF)'],['none','No logo'],['company','The company logo (from Template customization)'],['custom','My own logo (upload)']], h:28.3, hLabel:'Logo width (% of the page)', unit:'%', min:10, max:60, step:.5, align:'left', alignOpts:[['left','Left']]})},
+      {title:'Words', fields:[PE_TXT('wProduct','Product column','Product'), PE_TXT('wColor','Colour column','Color')]},
+      {title:'Spaces, by hand', fields:[PE_NUM('padT','Space above the sheet',0,'% of width',0,15,.1), PE_NUM('padL','Space at the left',10.15,'% of width',0,25,.05), PE_NUM('padR','Space at the right',9.6,'% of width',0,25,.05), PE_NUM('padB','Space at the bottom',3.4,'% of width',0,15,.1)]},
+    ],
+  },
+  batchsheet: {
+    title:'Batch sheet', blurb:'The printed batch sheet (blank form and finished record). The switches, colour, font and section order are in the first part; logo, words and spaces below.',
+    groups:[
+      {title:'Logo', fields:peLogoFields({mode:'company', h:112, unit:'px', min:20, max:240, step:1, align:'center'})},
+      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wDoc','Document title','Batch Sheet'), PE_TXT('wProduct','Product','Product'), PE_TXT('wBatchNo','Batch number','Batch number'), PE_TXT('wVariations','Variations heading','Variations'), PE_TXT('wMaterials','Raw materials heading','Raw materials'), PE_TXT('wSteps','Production steps heading','Production steps'), PE_TXT('wStages','Stage sign-off heading','Stage by stage — floor sign-off')]},
+      {title:'Spaces, by hand', fields:[PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('secGap','Space above each heading',14,'px',0,60,1), PE_NUM('rowPad','Height of each table row (padding)',6,'px',0,20,.5)]},
+    ],
+  },
+};
+const PRINT_ORDER = ['sticker','order','batchsheet','attendance','colorsheet'];
+function printFieldList(id){ const out = []; (PRINT_DEFS[id].groups||[]).forEach(g=>g.fields.forEach(f=>out.push(f))); return out; }
+function printDefaults(id){
+  if(id==='batchsheet') return {...DEFAULT_BATCH_SHEET_TEMPLATE};
+  const d = {}; printFieldList(id).forEach(f=>{ d[f.k] = f.def; }); return d;
+}
+// The template a print uses right now: the defaults, with the saved changes on top.
+function printTpl(id){
+  if(id==='batchsheet') return batchSheetTemplate();
+  const saved = (state.printTemplates && !Array.isArray(state.printTemplates) && state.printTemplates[id]) || {};
+  return {...printDefaults(id), ...saved};
+}
+function peNum(v, def){ const n = Number(v); return isFinite(n) && v!=='' && v!==null && v!==undefined ? n : def; }
+// The logo a print should draw (an address) or '' for none. 'default' (colour sheets) is the file the owner's PDF used.
+function printLogoUrl(T, defaultUrl){
+  if(T.logoMode==='custom' && T.logoUrl) return T.logoUrl;
+  if(T.logoMode==='company') return batchSheetLogo() || '';
+  if(T.logoMode==='default') return defaultUrl || '';
+  return '';
 }
 /* ===================== Vessel sticker: 50 x 50 mm label with a QR code (owner, 2026-11-22) =====================
    Prints ONLY, top to bottom: the product name (large, bold, top left), Parent Batch, Machine No., MFD Date & Time, Batch Size (just the size: a pack breakdown such as "(40 x 5L cans)" is dropped), an empty
@@ -23647,7 +24069,7 @@ function stickerProductName(b){
   return n.replace(/\s*[—–-]\s*version\s*\d+.*$/i, '').trim() || n;
 }
 function stickerBatchSize(b, v, qtyText){
-  if(v) return v.qty ? v.qty + (v.unit ? ' '+v.unit : '') : '';
+  if(v){ const l = blendVarLitres(v); if(l!==null) return fmtQty(l)+' L'; return v.qty ? v.qty + (v.unit ? ' '+v.unit : '') : ''; }   // a variation in 5L cans shows the litres: just the size, no pack breakdown
   let q = String(qtyText!=null ? qtyText : (b.qty||'')).replace(/\s*\([^)]*\)/g, '').trim();   // no pack breakdown
   if(!q && Number(b.batchSizeKg)>0) q = fmtQty(b.batchSizeKg)+' kg';
   return q;
@@ -23671,36 +24093,48 @@ function vesselStickerData(b, varId){
     size: stickerBatchSize(b, v, w.qty), qr: qrSvgHtml(batchPublicUrl(b, v)),
   };
 }
-function vesselStickerHtml(d){
-  const line = (k,v)=>`<div class="vs-l"><span>${esc(k)}</span> <b>${v ? esc(v) : '—'}</b></div>`;
+function vesselStickerHtml(d, T){
+  T = T || printTpl('sticker');
+  const n = (k, def)=>peNum(T[k], def);
+  const line = (show, k, v)=> show===false ? '' : `<div class="vs-l"><span>${esc(k)}</span> <b>${v ? esc(v) : '—'}</b></div>`;
+  const qrBox = n('qrSize',14)+2*n('qrPad',1);
+  const logoUrl = printLogoUrl(T);
+  const logoImg = logoUrl ? `<img class="vs-logo" src="${escAttr(logoUrl)}" alt="" style="height:${n('logoH',6)}mm;width:auto;max-width:40%;">` : '';
+  const nameInner = d.name2 ? `<div class="ln">${esc(d.name1)}</div><div class="ln">${esc(d.name2)}</div>` : `<div class="one">${esc(d.name1||'Batch')}</div>`;
+  const align = T.logoAlign==='left' || T.logoAlign==='center' ? T.logoAlign : 'right';
+  const head = !logoImg ? `<div class="vs-name">${nameInner}</div>`
+    : (align==='center'
+      ? `<div style="text-align:center;flex:none;">${logoImg}</div><div class="vs-name">${nameInner}</div>`
+      : `<div class="vs-top" style="display:flex;gap:1.2mm;align-items:flex-start;flex:none;${align==='left'?'flex-direction:row-reverse;':''}"><div class="vs-name" style="flex:1;min-width:0;">${nameInner}</div>${logoImg}</div>`);
   return `
   <div class="vsticker">
   <style>
-    .vsticker{width:50mm;height:50mm;box-sizing:border-box;padding:1.6mm 2.2mm 1.2mm;background:#fff;color:#000;font-family:'Inter',Arial,Helvetica,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;page-break-inside:avoid;}
+    .vsticker{width:${n('labelW',50)}mm;height:${n('labelH',50)}mm;box-sizing:border-box;padding:${n('padT',1.6)}mm ${n('padX',2.2)}mm ${n('padB',1.2)}mm;background:#fff;color:#000;font-family:'Inter',Arial,Helvetica,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;page-break-inside:avoid;}
     .vsticker *{box-sizing:border-box;margin:0;padding:0;}
-    .vsticker .vs-name{height:7.6mm;flex:none;font-size:10.5pt;font-weight:800;line-height:1;letter-spacing:-.01em;text-align:left;overflow:hidden;}
+    .vsticker .vs-name{height:${n('nameH',7.6)}mm;flex:none;font-size:${n('nameSize',10.5)}pt;font-weight:800;line-height:1;letter-spacing:-.01em;text-align:left;overflow:hidden;}
     .vsticker .vs-name .one{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;}
     .vsticker .vs-name .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .vsticker .vs-l{flex:none;height:2.55mm;font-size:6.3pt;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .vsticker .vs-l{flex:none;height:${n('lineH',2.55)}mm;font-size:${n('lineSize',6.3)}pt;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .vsticker .vs-l b{font-weight:800;}
-    .vsticker .vs-write{flex:none;height:10.5mm;}
-    .vsticker .vs-qrbox{flex:none;width:16mm;height:16mm;margin:0 auto;padding:1mm;background:#fff;}
-    .vsticker .vs-qr{display:block;width:14mm;height:14mm;}
-    .vsticker .vs-co{flex:none;text-align:center;font-size:6pt;font-weight:700;line-height:1;margin-top:.4mm;white-space:nowrap;}
+    .vsticker .vs-write{flex:none;height:${n('writeH',10.5)}mm;}
+    .vsticker .vs-qrbox{flex:none;width:${qrBox}mm;height:${qrBox}mm;margin:0 auto;padding:${n('qrPad',1)}mm;background:#fff;}
+    .vsticker .vs-qr{display:block;width:${n('qrSize',14)}mm;height:${n('qrSize',14)}mm;}
+    .vsticker .vs-co{flex:none;text-align:center;font-size:${n('coSize',6)}pt;font-weight:700;line-height:1;margin-top:.4mm;white-space:nowrap;}
   </style>
-    <div class="vs-name">${d.name2 ? `<div class="ln">${esc(d.name1)}</div><div class="ln">${esc(d.name2)}</div>` : `<div class="one">${esc(d.name1||'Batch')}</div>`}</div>
-    ${line('Parent Batch:', d.batchNo)}${line('Machine No.:', d.machine)}${line('MFD Date & Time:', d.mfd)}${line('Batch Size:', d.size)}
+    ${head}
+    ${line(T.showParent, T.wParent, d.batchNo)}${line(T.showMachine, T.wMachine, d.machine)}${line(T.showMfd, T.wMfd, d.mfd)}${line(T.showSize, T.wSize, d.size)}
     <div class="vs-write"></div>
-    <div class="vs-qrbox">${d.qr}</div>
-    <div class="vs-co">Audrey Care (Pvt) Ltd</div>
+    ${T.showQr===false ? '' : `<div class="vs-qrbox">${d.qr}</div>`}
+    ${T.showCompany===false ? '' : `<div class="vs-co">${esc(T.wCompany)}</div>`}
   </div>`;
 }
 async function printVesselSticker(batchId, varId){
-  const b = byId(state.blendBatches, batchId); if(!b) return;
+  const b = byId(state.blendBatches, batchId); if(!b || !canPrintBlendSticker()) return;
   if(!(await ensureQrLib())){ showToast('The QR code could not be made. Check the connection and try again.', 6000); return; }
   const area = document.getElementById('print-area'); if(!area) return;
-  area.innerHTML = vesselStickerHtml(vesselStickerData(b, varId||''));
-  const st = document.createElement('style'); st.id = 'vessel-sticker-page'; st.textContent = '@page{size:50mm 50mm;margin:0}';
+  const T = printTpl('sticker');
+  area.innerHTML = vesselStickerHtml(vesselStickerData(b, varId||''), T);
+  const st = document.createElement('style'); st.id = 'vessel-sticker-page'; st.textContent = `@page{size:${peNum(T.labelW,50)}mm ${peNum(T.labelH,50)}mm;margin:0}`;
   document.head.appendChild(st);
   let cleaned = false;
   const clean = ()=>{ if(cleaned) return; cleaned = true; st.remove(); window.removeEventListener('afterprint', clean); };
@@ -23710,7 +24144,7 @@ async function printVesselSticker(batchId, varId){
 }
 // The sticker print view: a window with the label at about twice its real size and a Print button. Opened by the "Need to print the batch sticker?" question.
 async function openVesselSticker(batchId, varId){
-  if(!byId(state.blendBatches, batchId)) return;
+  if(!byId(state.blendBatches, batchId) || !canPrintBlendSticker()) return;
   if(!(await ensureQrLib())){ showToast('The QR code could not be made. Check the connection and try again.', 6000); return; }
   openModal('vesselsticker:'+batchId+(varId ? ':'+varId : ''));
 }
@@ -24536,65 +24970,78 @@ function printOrderSheet(orderId){
   const o = byId(state.orders, orderId); if(!o) return;
   if(!state.session || !roleCan(state.session.role, 'orders_print')) return;
   const area = document.getElementById('print-area'); if(!area) return;
+  area.innerHTML = orderPrintHtml(o, orderPrintContext(o), printTpl('order'));
+  waitForPrintAreaImages(area).then(()=>window.print());
+}
+// What the Order Sheet needs besides the order itself (kept apart so the Settings -> Prints edits preview can draw the same sheet from sample data).
+function orderPrintContext(o){
   const line = (state.deliveryLines||[]).find(l=>l.key===o.courierService);
+  return {deliveryLabel: line ? line.label : o.courierService, salesman: orderSalesmanFor(o), stageLabel: orderStageLabel(o), printedBy: state.session ? (state.session.staffName || state.session.name || '') : ''};
+}
+function orderPrintHtml(o, ctx, T){
+  T = T || printTpl('order');
+  const n = (k, def)=>peNum(T[k], def);
+  const ink = /^#[0-9a-fA-F]{6}$/.test(T.ink||'') ? T.ink : '#1C2320';
+  const gap = n('gap',12), fs = n('fs',100);
   const day = d => d ? fmtDate(d+'T12:00:00') : '';
-  const salesman = orderSalesmanFor(o);
-  const printedBy = state.session.staffName || state.session.name || '';
   const labelTd = 'padding:5px 8px 5px 0;width:120px;color:#6B7570;vertical-align:top;';
   const valueTd = 'padding:5px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;';
-  const row = (label, value) => `<td style="${labelTd}">${label}</td><td style="${valueTd}">${value ? esc(value) : '<span style="color:#C3C9C1;font-weight:400;">—</span>'}</td>`;
+  const row = (label, value) => `<td style="${labelTd}">${esc(label)}</td><td style="${valueTd}">${value ? esc(value) : '<span style="color:#C3C9C1;font-weight:400;">—</span>'}</td>`;
+  const sec = (label) => `<div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">${esc(label)}</div>`;
   const history = (Array.isArray(o.history) ? o.history : []).filter(Boolean);
-  area.innerHTML = `
-  <div style="max-width:720px;margin:0 auto;padding:10px 24px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;">
+  const logoUrl = printLogoUrl(T);
+  const logoAlign = ['left','center','right'].includes(T.logoAlign) ? T.logoAlign : 'center';
+  return `
+  <div style="max-width:${n('maxW',720)}px;margin:0 auto;padding:${n('padY',10)}px ${n('padX',24)}px;font-family:'Inter',system-ui,sans-serif;color:${ink};${fs!==100?`zoom:${fs/100};`:''}">${logoUrl ? `
+    <div style="text-align:${logoAlign};margin-bottom:8px;"><img src="${escAttr(logoUrl)}" alt="" style="max-height:${n('logoH',60)}px;max-width:60%;object-fit:contain;"></div>` : ''}
     <div style="text-align:center;margin-bottom:14px;">
-      <div style="font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:600;">Audrey Care (Pvt) Ltd.</div>
-      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;">Order Sheet</div>
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:600;">${esc(T.wCompany)}</div>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;">${esc(T.wTitle)}</div>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #1C2320;padding-bottom:8px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid ${ink};padding-bottom:8px;margin-bottom:${gap}px;">
       <div style="min-width:0;">
-        <div style="font-size:11px;color:#6B7570;">Customer</div>
+        <div style="font-size:11px;color:#6B7570;">${esc(T.wCustomer)}</div>
         <div style="font-size:20px;font-weight:700;">${esc(o.customer)}</div>
       </div>
       <div style="text-align:right;flex:none;">
-        <div style="font-size:11px;color:#6B7570;">Order number</div>
+        <div style="font-size:11px;color:#6B7570;">${esc(T.wOrderNo)}</div>
         <div style="font-size:18px;font-weight:700;">${esc(o.orderNumber || o.id)}</div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
-      <tr>${row('Current stage', orderStageLabel(o))}<td style="width:20px;"></td>${row('Priority', o.priority || 'Medium')}</tr>
-      <tr>${row('Created', o.createdAt ? fmtDateTime(o.createdAt) : '')}<td></td>${row('Sales person', salesman)}</tr>
-      <tr>${row('Start date', day(o.startDate))}<td></td>${row('Due date', day(o.dueDate))}</tr>
-      <tr>${row('Customer contact', o.phone)}<td></td>${row('Delivery method', line ? line.label : o.courierService)}</tr>
-      <tr>${row('Tracking number', o.courierNumber)}<td></td><td></td><td></td></tr>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:${gap}px;">
+      <tr>${row(T.wStage, ctx.stageLabel)}<td style="width:20px;"></td>${row(T.wPriority, o.priority || 'Medium')}</tr>
+      <tr>${row(T.wCreated, o.createdAt ? fmtDateTime(o.createdAt) : '')}<td></td>${row(T.wSales, ctx.salesman)}</tr>
+      <tr>${row(T.wStart, day(o.startDate))}<td></td>${row(T.wDue, day(o.dueDate))}</tr>
+      <tr>${row(T.wContact, o.phone)}<td></td>${row(T.wDelivery, ctx.deliveryLabel)}</tr>
+      <tr>${row(T.wTracking, o.courierNumber)}<td></td><td></td><td></td></tr>
     </table>
-    <div style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Product / task</div>
+    <div style="margin-bottom:${gap}px;">
+      ${sec(T.wProduct)}
       <div style="border:1px solid #D8DCD4;border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.5;min-height:40px;">${richText(o.product)}</div>
     </div>
-    <div style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Notes</div>
+    ${T.showNotes===false ? '' : `<div style="margin-bottom:${gap}px;">
+      ${sec(T.wNotes)}
       <div style="border:1px solid #D8DCD4;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.5;min-height:32px;">${o.notes ? esc(unbr(o.notes)) : '<span style="color:#C3C9C1;">—</span>'}</div>
-    </div>
-    <div style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Customer address</div>
+    </div>`}
+    ${T.showAddress===false ? '' : `<div style="margin-bottom:${gap}px;">
+      ${sec(T.wAddress)}
       <div style="border:1px solid #D8DCD4;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.5;min-height:32px;">${o.address ? esc(unbr(o.address)) : '<span style="color:#C3C9C1;">—</span>'}</div>
-    </div>
-    ${o.photo ? `
-    <div style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">Picture</div>
+    </div>`}
+    ${(o.photo && T.showPicture!==false) ? `
+    <div style="margin-bottom:${gap}px;">
+      ${sec(T.wPicture)}
       <img src="${escAttr(o.photo)}" alt="Order picture" style="max-width:100%;max-height:230px;object-fit:contain;border:1px solid #D8DCD4;border-radius:6px;">
     </div>` : ''}
-    ${history.length ? `
+    ${(history.length && T.showHistory!==false) ? `
     <div style="margin-bottom:8px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin-bottom:4px;">History</div>
+      ${sec(T.wHistory)}
       <table style="width:100%;border-collapse:collapse;font-size:11px;">
-        <thead><tr style="border-bottom:1.5px solid #1C2320;"><th style="text-align:left;padding:3px 6px;">Stage</th><th style="text-align:left;padding:3px 6px;">When</th><th style="text-align:left;padding:3px 6px;">By</th></tr></thead>
+        <thead><tr style="border-bottom:1.5px solid ${ink};"><th style="text-align:left;padding:3px 6px;">${esc(T.wHStage)}</th><th style="text-align:left;padding:3px 6px;">${esc(T.wHWhen)}</th><th style="text-align:left;padding:3px 6px;">${esc(T.wHBy)}</th></tr></thead>
         <tbody>${history.map(h=>`<tr style="border-bottom:1px solid #E7E9E4;"><td style="padding:3px 6px;font-weight:600;">${esc(STAGES[h.stage]||'—')}</td><td style="padding:3px 6px;">${h.at ? esc(fmtDateTime(h.at)) : ''}</td><td style="padding:3px 6px;">${esc(h.by||'')}</td></tr>`).join('')}</tbody>
       </table>
     </div>` : ''}
-    <div style="margin-top:14px;font-size:10.5px;color:#6B7570;text-align:right;">Printed ${esc(fmtDateTime(new Date().toISOString()))}${printedBy ? ' by '+esc(printedBy) : ''}</div>
+    ${T.showPrinted===false ? '' : `<div style="margin-top:14px;font-size:10.5px;color:#6B7570;text-align:right;">${esc(T.wPrinted)} ${esc(fmtDateTime(new Date().toISOString()))}${ctx.printedBy ? ' '+esc(T.wPrintedBy)+' '+esc(ctx.printedBy) : ''}</div>`}
   </div>`;
-  waitForPrintAreaImages(area).then(()=>window.print());
 }
 function renderOrderDrawer(id){
   const o = byId(state.orders,id); if(!o) return '';
@@ -24759,6 +25206,7 @@ function renderBlendDrawer(id){
   const canAdv = canAdvanceBlend(idx);
   const ro = !canManageBlendBoard();
   const roAttr = ro ? 'readonly' : '';
+  const qcCan = canEditBlendQc(), qcAttr = qcCan ? '' : 'readonly';   // a person who may only type the QC readings can still do that
   const priority = PRIORITIES.includes(b.priority) ? b.priority : 'Medium';
   const d = blendVarDraft(id, b);
   const nextLabel = blendNextActionLabel(b);
@@ -24788,10 +25236,10 @@ function renderBlendDrawer(id){
         <div><div class="hint">Started</div><div style="font-weight:600;">${fmtDateTime(b.startedAt)}</div>${b.startedBy?`<div class="hint">by ${esc(b.startedBy)}</div>`:''}</div>
         <div style="text-align:right;"><div class="hint">Completed</div><div style="font-weight:600;">${fmtDateTime(b.completedAt)}</div>${b.completedBy?`<div class="hint">by ${esc(b.completedBy)}</div>`:''}</div>
       </div>` : `<div class="hint">Printed sheet: batch, formulation code, variations and a sign-off line for every stage.</div>`}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        <button type="button" class="btn btn-sm" id="btn-print-blend-sheet">🖨 Print batch sheet</button>
-        <button type="button" class="btn btn-sm" id="btn-print-vessel-sticker" data-sticker-var="">🏷 Print Vessel Sticker</button>
-      </div>
+      ${(canPrintBlendSheet() || canPrintBlendSticker()) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        ${canPrintBlendSheet() ? `<button type="button" class="btn btn-sm" id="btn-print-blend-sheet">🖨 Print batch sheet</button>` : ''}
+        ${canPrintBlendSticker() ? `<button type="button" class="btn btn-sm" id="btn-print-vessel-sticker" data-sticker-var="">🏷 Print Vessel Sticker</button>` : ''}
+      </div>` : ''}
     </div>
 
     ${ro ? `<div class="hint" style="margin-bottom:14px;">View only.</div>` : ''}
@@ -24816,10 +25264,10 @@ function renderBlendDrawer(id){
       ${blendVariationsSectionHtml(d, ro, b)}
 
       <div class="field-row">
-        <div class="field"><label>1st QC · pH</label><input name="qcPH" value="${escAttr(b.qcPH||'')}" placeholder="e.g. 5.8" autocomplete="off" ${roAttr}></div>
-        <div class="field"><label>1st QC · Viscosity</label><input name="qcViscosity" value="${escAttr(b.qcViscosity||'')}" placeholder="e.g. 4500 cP" autocomplete="off" ${roAttr}></div>
+        <div class="field"><label>1st QC · pH</label><input name="qcPH" value="${escAttr(b.qcPH||'')}" placeholder="e.g. 5.8" autocomplete="off" ${qcAttr}></div>
+        <div class="field"><label>1st QC · Viscosity</label><input name="qcViscosity" value="${escAttr(b.qcViscosity||'')}" placeholder="e.g. 4500 cP" autocomplete="off" ${qcAttr}></div>
       </div>
-      <div class="field"><label>QC / blending notes</label><textarea name="qcNotes" ${roAttr} placeholder="Shown on the page the sticker's QR code opens">${escBody(b.qcNotes||'')}</textarea></div>
+      <div class="field"><label>QC / blending notes</label><textarea name="qcNotes" ${qcAttr} placeholder="Shown on the page the sticker's QR code opens">${escBody(b.qcNotes||'')}</textarea></div>
 
       <div class="field"><label>History</label>
         <div class="timeline">${(Array.isArray(b.history)?b.history:[]).filter(Boolean).map(h=>`<div class="item">${esc(blendHistoryLabel(h))} <div class="t">${fmtDateTime(h.at)} · ${esc(h.by)}</div></div>`).join('')}</div>
@@ -24829,7 +25277,7 @@ function renderBlendDrawer(id){
         <div>${isAdmin() ? `<button type="button" class="btn btn-danger" id="btn-delete-blend" title="Admin only — asks for your password">Delete</button>` : ''}</div>
         <div style="display:flex;gap:8px;">
           ${!ro && canAdv && nextLabel ? `<button type="button" class="btn" id="btn-advance-blend">${esc(nextLabel)}</button>` : ''}
-          ${!ro ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
+          ${(!ro || qcCan) ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>
       </div>
     </form>
@@ -25681,6 +26129,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
     state._settingsOpenPanel = el.dataset.settingsJump;
+    state._peDraft = null; state._batchSheetTemplateDraft = null;   // Prints edits opens with the saved templates, not an old unsaved draft
     render();
   }));
   if(byIdEl('btn-more-fab-toggle')) byIdEl('btn-more-fab-toggle').onclick = ()=>{ state._moreFabOpen = !state._moreFabOpen; render(); };
@@ -28102,6 +28551,7 @@ function attachShellHandlers(){
   if(byIdEl('btn-reset-login-customization')) byIdEl('btn-reset-login-customization').onclick = resetLoginCustomization;
   document.querySelectorAll('[data-login-order-up]').forEach(b=>b.addEventListener('click', ()=>loginOrderMove(b.dataset.loginOrderUp, -1)));
   document.querySelectorAll('[data-login-order-down]').forEach(b=>b.addEventListener('click', ()=>loginOrderMove(b.dataset.loginOrderDown, 1)));
+  attachPrintEditHandlers();
   if(byIdEl('form-batch-sheet-template')) byIdEl('form-batch-sheet-template').addEventListener('submit', submitBatchSheetTemplate);
   if(byIdEl('btn-reset-batch-sheet-template')) byIdEl('btn-reset-batch-sheet-template').onclick = resetBatchSheetTemplate;
   document.querySelectorAll('[data-batchsheet-order-up]').forEach(b=>b.addEventListener('click', ()=>batchSheetTemplateOrderMove(b.dataset.batchsheetOrderUp, -1)));

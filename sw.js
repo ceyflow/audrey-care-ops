@@ -19,7 +19,7 @@ self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => k !== CACHE && k !== 'audrey-auth').map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -75,6 +75,18 @@ self.addEventListener('push', event => {
   const title = d.title || 'Audrey Care';
   const tag = d.tag || 'chat';
   event.waitUntil((async () => {
+    // Signed out on this device (the page leaves a marker at sign-out): show nothing and drop this device's push registration.
+    // A notification still has to be "shown" for the browser to accept the push, so it is closed again at once.
+    try {
+      const out = await (await caches.open('audrey-auth')).match(self.location.origin + '/__signed_out__');
+      if (out) {
+        await self.registration.showNotification('Audrey Care', { tag: 'signed-out', silent: true, body: '' });
+        (await self.registration.getNotifications({ tag: 'signed-out' })).forEach(n => n.close());
+        const sub = await self.registration.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+        return;
+      }
+    } catch (e) { /* if the check itself fails, behave as before */ }
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const watching = wins.some(w => w.visibilityState === 'visible');
     const icon = new URL('assets/icons/icon-192.png', self.location).href;

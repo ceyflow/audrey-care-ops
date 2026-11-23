@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122173039">
+<meta name="app-build" content="20261123014551">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2114,30 +2114,6 @@ html{ visibility:hidden; }
   .timeline .item{font-size:13px;position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 13px;line-height:1.45;box-shadow:0 2px 6px rgba(20,25,20,.05);}
   .timeline .item:before{content:'';position:absolute;left:-24.5px;top:15px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--surface);}
   .timeline .item .t{color:var(--muted);font-size:11px;margin-top:4px;}
-  .citypak-live-track{position:relative;height:52px;margin:2px 0 8px;}
-  .citypak-live-track .cpl-line{position:absolute;left:6%;right:6%;top:37px;height:3px;background:var(--border);border-radius:99px;overflow:hidden;}
-  .citypak-live-track .cpl-line-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);border-radius:99px;animation:citypak-fill-grow 4s cubic-bezier(.45,0,.4,1) infinite;}
-  .citypak-live-track .cpl-dot{position:absolute;top:33px;width:9px;height:9px;border-radius:50%;background:var(--border);}
-  .citypak-live-track .cpl-dot.start{left:calc(6% - 4.5px);}
-  .citypak-live-track .cpl-dot.end{left:calc(94% - 4.5px);background:var(--accent);}
-  .citypak-live-track .cpl-truck{position:absolute;top:19px;left:6%;width:30px;height:20px;margin-left:-15px;animation:citypak-truck-drive 4s cubic-bezier(.45,0,.4,1) infinite;}
-  .citypak-live-track .cpl-truck svg{width:100%;height:100%;display:block;filter:drop-shadow(0 3px 3px rgba(20,25,20,.22));animation:citypak-truck-bob .42s ease-in-out infinite;}
-  @keyframes citypak-fill-grow{
-    0%{width:0;opacity:1;}
-    86%{width:93%;opacity:1;}
-    92%{width:93%;opacity:0;}
-    100%{width:0;opacity:0;}
-  }
-  @keyframes citypak-truck-drive{
-    0%{left:6%;opacity:1;}
-    86%{left:88%;opacity:1;}
-    92%{left:88%;opacity:0;}
-    100%{left:6%;opacity:0;}
-  }
-  @keyframes citypak-truck-bob{
-    0%,100%{transform:translateY(0);}
-    50%{transform:translateY(-1.2px);}
-  }
 
   /* ---------------- Recipes / batch timer ---------------- */
   .recipe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(20,25,20,.06);transition:box-shadow .18s ease,transform .18s ease,border-color .15s;}
@@ -2198,7 +2174,7 @@ html{ visibility:hidden; }
   }
   .bs-steps-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;min-height:30px;}
   .bs-steps-head .bsmc-label{margin:0;}
-  /* A phrase on the batch sheet: its raw materials as created on the Process template, quantities in kg of the typed batch size (never percentages) */
+  /* A phase on the batch sheet: its raw materials as created on the Process template, quantities in kg of the typed batch size (never percentages) */
   .bs-mats{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:13.5px;}
   .bs-mats th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:7px 10px;text-align:left;border-bottom:1.5px solid var(--border);}
   .bs-mats th.c-qty,.bs-mats td.c-qty{text-align:right;}
@@ -3305,16 +3281,12 @@ html{ visibility:hidden; }
   }
   .track-card{position:relative;z-index:1;background:#fff;border:none;border-radius:16px;padding:40px 32px 34px;max-width:440px;width:100%;box-shadow:0 1px 2px rgba(0,0,0,.06), 0 30px 70px -10px rgba(0,0,0,.5);}
   .track-lead{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--muted);text-align:center;letter-spacing:.01em;}
-  .track-ring-wrap{position:relative;width:104px;height:104px;margin:22px auto 0;}
-  .track-ring-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--accent-dark);}
-  .track-ring-icon svg{width:34px;height:34px;}
-  .track-order-num{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center;margin-top:18px;}
-  .track-customer-name{font-family:'Fraunces',serif;font-size:21px;font-weight:500;text-align:center;margin-top:3px;color:var(--ink);}
+  .track-customer-name{font-family:'Fraunces',serif;font-size:21px;font-weight:500;text-align:center;margin-top:16px;color:var(--ink);}
   .track-status-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 16px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.01em;margin:14px auto 0;background:linear-gradient(90deg,var(--accent-dark),var(--accent));color:#fff;box-shadow:0 6px 16px -4px rgba(var(--accent-rgb),.5);}
   .track-status-badge .dot{width:6px;height:6px;border-radius:50%;background:#fff;}
-  .tracker-steps{display:flex;align-items:flex-start;justify-content:space-between;position:relative;margin:38px 0 6px;}
-  .tracker-steps .track-line{position:absolute;top:16px;left:8%;right:8%;height:2px;background:var(--border);border-radius:99px;z-index:0;}
-  .tracker-steps .track-fill{position:absolute;top:16px;left:8%;height:2px;background:linear-gradient(90deg,var(--accent-dark),var(--accent));border-radius:99px;z-index:1;transition:width .6s cubic-bezier(.3,.8,.3,1);}
+  .tracker-steps{display:flex;align-items:flex-start;justify-content:space-between;position:relative;margin:26px 0 6px;}
+  .tracker-steps .track-line{position:absolute;top:16px;left:8%;right:8%;height:3px;background:var(--border);border-radius:99px;z-index:0;}
+  .tracker-steps .track-fill{position:absolute;top:16px;left:8%;height:3px;background:linear-gradient(90deg,var(--accent-dark),var(--accent));border-radius:99px;z-index:1;transition:width .6s cubic-bezier(.3,.8,.3,1);}
   .tracker-step{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:11px;flex:1;}
   .tracker-step .node{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:1.5px solid var(--border);color:var(--muted);transition:all .3s ease;}
   .tracker-step .node svg{width:14px;height:14px;}
@@ -3332,6 +3304,118 @@ html{ visibility:hidden; }
   .track-courier-icon svg{width:17px;height:17px;}
   .track-courier-name{font-weight:600;font-size:13.5px;color:var(--ink);}
   .track-courier-sub{font-size:11.5px;color:var(--muted);margin-top:1px;letter-spacing:.01em;}
+  /* ---------------- Customer tracking page v2: animated scene per stage (owner request 2026-11-23) ----------------
+     One small inline-SVG scene (no library, no image files, about 9 KB in total): stage 0 order slip, stage 1 PACKING line,
+     stage 2 invoice + scan check, stage 3 DRIVING / location scene, and a "delivered" scene. Every colour comes from the
+     theme (--accent*) except the natural ones (cardboard, road, grass, success green). Only transform / opacity animate.
+     The static look (no animation) is a finished picture too, so prefers-reduced-motion shows a clean still scene. */
+  .tk-scene{position:relative;margin:20px 0 0;border-radius:20px;overflow:hidden;aspect-ratio:360/176;background:linear-gradient(180deg,var(--accent-soft) 0%,#fff 100%);border:1px solid var(--border);}
+  .tk-scene svg{display:block;width:100%;height:100%;}
+  .tk-chip{position:absolute;top:10px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid var(--border);font-size:10.5px;font-weight:600;color:var(--muted);letter-spacing:.02em;box-shadow:0 2px 8px -3px rgba(20,25,20,.18);max-width:62%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tk-chip b{color:var(--ink);font-weight:700;}
+  .tk-chip-l{left:10px;} .tk-chip-r{right:10px;}
+  .tk-scene .k1{fill:#DDAE72} .tk-scene .k2{fill:#C99455} .tk-scene .k3{fill:#EBC48C} .tk-scene .k4{fill:#A9753B}
+  .tk-scene .sl{fill:#56627A} .tk-scene .sd{fill:#3E4A60} .tk-scene .wh{fill:#fff} .tk-scene .gr{fill:#3FA968}
+  .tk-scene .ac{fill:var(--accent)} .tk-scene .ad{fill:var(--accent-dark)} .tk-scene .as{fill:var(--accent-soft)}
+  .tk-scene .fl{fill:rgba(var(--accent-rgb),.09)} .tk-scene .bg1{fill:rgba(var(--accent-rgb),.07)}
+  .tk-scene .bdr{stroke:var(--border);stroke-width:1.4}
+  .tk-scene .tk-tick{fill:none;stroke:#fff;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;}
+  .tk-scene .tk-tickg{fill:none;stroke:#3FA968;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+  .tk-scene .tk-sp{transform-box:fill-box;transform-origin:center;transform:scale(0);}
+  /* resting poses (what shows with no animation) */
+  .tk-scene .pk-fl{transform-origin:128px 96px;transform:rotate(-125deg);}
+  .tk-scene .pk-fr{transform-origin:232px 96px;transform:rotate(125deg);}
+  .tk-scene .pk-tape{transform-origin:180px 90px;transform:scaleY(0);}
+  .tk-scene .pk-badge{transform-box:fill-box;transform-origin:center;transform:scale(0);}
+  .tk-scene .ck-badge{transform-box:fill-box;transform-origin:center;}
+  .tk-scene .cf{opacity:0;}
+  @media (prefers-reduced-motion:no-preference){
+    .tk-fresh .tk-scene{animation:tk-scene-in .7s cubic-bezier(.16,.84,.3,1) both;}
+    .tk-fresh .track-customer-name,.tk-fresh .track-status-badge,.tk-fresh .tk-msg{animation:tk-up .6s cubic-bezier(.16,.84,.3,1) both;}
+    .tk-fresh .track-status-badge{animation-delay:.08s;} .tk-fresh .tk-msg{animation-delay:.14s;}
+    .tk-fresh .tracker-steps .track-fill{animation:tk-fill-in 1s cubic-bezier(.3,.8,.3,1) .25s both;}
+    /* PACKING: a box rides in on the belt, three products drop in, the lid folds shut, tape, tick, and it rides out (7 s loop) */
+    .pk-box{animation:pk-move 8s infinite;}
+    .pk-hop{animation:pk-hop 8s infinite;}
+    .pk-item{animation:pk-drop 8s infinite both;}
+    .tk-scene .pk-fl{animation:pk-flL 8s infinite;} .tk-scene .pk-fr{animation:pk-flR 8s infinite;}
+    .tk-scene .pk-tape{animation:pk-tape 8s infinite;}
+    .tk-scene .pk-badge{animation:pk-badge 8s infinite;}
+    .tk-scene .tk-sp.pk-sp{animation:pk-spark 8s infinite;}
+    .tk-ticks{animation:tk-belt .5s linear infinite;}
+    /* ORDER RECEIVED */
+    .rc-float{animation:rc-float 3.4s ease-in-out infinite;}
+    .rc-line{transform-box:fill-box;transform-origin:left center;animation:rc-draw 5s infinite both;}
+    .rc-ring{transform-box:fill-box;transform-origin:center;animation:rc-ring 5s infinite;}
+    .rc-badge{transform-box:fill-box;transform-origin:center;animation:rc-badge 5s infinite both;}
+    .rc-tick{stroke-dasharray:26;animation:rc-tick 5s infinite both;}
+    .tk-scene .tk-sp{animation:tk-twinkle 3s ease-in-out infinite;}
+    /* INVOICE + CHECK */
+    .ck-scan{animation:ck-scan 2.6s ease-in-out infinite;}
+    .ck-tickg{stroke-dasharray:22;animation:ck-tick 6s infinite both;}
+    .tk-scene .ck-badge{animation:ck-badge 6s infinite both;}
+    /* DRIVING: three scenery layers at different speeds, spinning wheels, a pin that bobs over the destination */
+    .tr-l1{animation:tk-scroll 40s linear infinite;} .tr-l2{animation:tk-scroll 24s linear infinite;} .tr-l3{animation:tk-scroll 9s linear infinite;}
+    .tr-dash{animation:tr-dash .5s linear infinite;}
+    .tr-bob{animation:tr-bob .46s ease-in-out infinite;}
+    .tr-spin{transform-box:fill-box;transform-origin:center;animation:tk-spin .5s linear infinite;}
+    .tr-speed{animation:tr-speed .9s ease-out infinite;}
+    .tr-cloud{animation:tr-cloud 46s linear infinite;}
+    .tr-sun{transform-box:fill-box;transform-origin:center;animation:tk-pulse 4s ease-in-out infinite;}
+    .tr-pin{animation:tr-pinbob 1.6s ease-in-out infinite alternate;}
+    .tr-ring{transform-box:fill-box;transform-origin:center;animation:tr-ring 2s ease-out infinite;}
+    .tk-still .tr-l1,.tk-still .tr-l2,.tk-still .tr-l3,.tk-still .tr-dash,.tk-still .tr-bob,.tk-still .tr-spin,.tk-still .tr-speed{animation-play-state:paused;}
+    /* DELIVERED */
+    .dl-badge{transform-box:fill-box;transform-origin:center;animation:dl-badge 6s infinite both;}
+    .dl-ring{transform-box:fill-box;transform-origin:center;animation:rc-ring 3s ease-out infinite;}
+    .tk-scene .cf{animation:dl-fall 6s ease-in infinite both;transform-box:fill-box;transform-origin:center;}
+    .rate-star{display:inline-block;transition:transform .15s ease;} .rate-star:hover{transform:scale(1.25);}
+    /* the page behind the card drifts very slowly (two soft light patches, transform only) */
+    .track-page::before,.track-page::after{content:'';position:absolute;border-radius:50%;pointer-events:none;z-index:0;}
+    .track-page::before{width:520px;height:520px;left:-160px;top:-180px;background:radial-gradient(circle,rgba(255,255,255,.13),transparent 68%);animation:tk-drift 22s ease-in-out infinite alternate;}
+    .track-page::after{width:460px;height:460px;right:-140px;bottom:-170px;background:radial-gradient(circle,rgba(255,255,255,.10),transparent 68%);animation:tk-drift 28s ease-in-out -9s infinite alternate-reverse;}
+  }
+  @media (prefers-reduced-motion:reduce){ .tk-scene .ck-scan{display:none;} }
+  @keyframes tk-scene-in{from{opacity:0;transform:translateY(14px) scale(.97);}to{opacity:1;transform:none;}}
+  @keyframes tk-up{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes tk-fill-in{from{width:0;}}
+  @keyframes tk-drift{from{transform:translate(0,0) scale(1);}to{transform:translate(70px,50px) scale(1.12);}}
+  @keyframes tk-spin{to{transform:rotate(360deg);}}
+  @keyframes tk-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+  @keyframes tk-scroll{to{transform:translateX(-360px);}}
+  @keyframes tk-belt{to{transform:translateX(-20px);}}
+  @keyframes tk-twinkle{0%,100%{transform:scale(0);opacity:0;}50%{transform:scale(1);opacity:1;}}
+  @keyframes pk-move{0%{transform:translateX(-290px);animation-timing-function:cubic-bezier(.2,.75,.25,1);}12.5%{transform:translateX(0);}85%{transform:translateX(0);animation-timing-function:cubic-bezier(.6,0,.9,.4);}96%,100%{transform:translateX(290px);}}
+  @keyframes pk-drop{0%{transform:translateY(-140px);opacity:0;}1%{opacity:1;}7%{transform:translateY(7px);}9%{transform:translateY(-3px);}11%,16%{transform:translateY(0);opacity:1;}22%{transform:translateY(40px);opacity:1;}23%,100%{transform:translateY(40px);opacity:0;}}
+  @keyframes pk-flL{0%,47.5%{transform:rotate(-125deg);}57.5%,100%{transform:rotate(0);}}
+  @keyframes pk-flR{0%,47.5%{transform:rotate(125deg);}57.5%,100%{transform:rotate(0);}}
+  @keyframes pk-tape{0%,57.5%{transform:scaleY(0);}65%,100%{transform:scaleY(1);}}
+  @keyframes pk-hop{0%,65%{transform:translateY(0);}69%{transform:translateY(-9px);}73%{transform:translateY(0);}76%{transform:translateY(-3px);}79%,100%{transform:translateY(0);}}
+  @keyframes pk-badge{0%,66%{transform:scale(0);opacity:0;}71%{transform:scale(1.2);opacity:1;}75%,88%{transform:scale(1);opacity:1;}92%,100%{transform:scale(0);opacity:0;}}
+  @keyframes pk-spark{0%,66%{transform:scale(0);opacity:0;}71%{transform:scale(1);opacity:1;}79%,100%{transform:scale(0);opacity:0;}}
+  @keyframes rc-float{0%,100%{transform:translateY(2px);}50%{transform:translateY(-5px);}}
+  @keyframes rc-draw{0%{transform:scaleX(0);}14%,88%{transform:scaleX(1);}96%,100%{transform:scaleX(0);}}
+  @keyframes rc-badge{0%,34%{transform:scale(0);opacity:0;}42%{transform:scale(1.18);opacity:1;}47%,88%{transform:scale(1);opacity:1;}95%,100%{transform:scale(0);opacity:0;}}
+  @keyframes rc-tick{0%,44%{stroke-dashoffset:26;}56%,88%{stroke-dashoffset:0;}95%,100%{stroke-dashoffset:26;}}
+  @keyframes rc-ring{0%,52%{transform:scale(1);opacity:0;}54%{opacity:.5;}84%,100%{transform:scale(2.2);opacity:0;}}
+  @keyframes ck-scan{0%,100%{transform:translateX(0);}50%{transform:translateX(88px);}}
+  @keyframes ck-tick{0%,14%{stroke-dashoffset:22;}22%,90%{stroke-dashoffset:0;}96%,100%{stroke-dashoffset:22;}}
+  @keyframes ck-badge{0%,58%{transform:scale(0);opacity:0;}65%{transform:scale(1.2);opacity:1;}70%,90%{transform:scale(1);opacity:1;}96%,100%{transform:scale(0);opacity:0;}}
+  @keyframes tr-dash{to{transform:translateX(-42px);}}
+  @keyframes tr-bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-1.6px);}}
+  @keyframes tr-speed{0%{transform:translateX(8px);opacity:0;}25%{opacity:.85;}100%{transform:translateX(-22px);opacity:0;}}
+  @keyframes tr-cloud{from{transform:translateX(-90px);}to{transform:translateX(420px);}}
+  @keyframes tr-pinbob{from{transform:translateY(0);}to{transform:translateY(-5px);}}
+  @keyframes tr-ring{0%{transform:scale(.5);opacity:.7;}100%{transform:scale(1.9);opacity:0;}}
+  @keyframes dl-badge{0%{transform:scale(0);}8%{transform:scale(1.22);}13%,100%{transform:scale(1);}}
+  @keyframes dl-fall{0%{transform:translateY(-30px) rotate(0);opacity:0;}6%{opacity:1;}46%{transform:translateY(190px) rotate(420deg);opacity:1;}52%,100%{transform:translateY(190px) rotate(420deg);opacity:0;}}
+  .tk-msg{text-align:center;font-size:13.5px;line-height:1.5;color:var(--muted);margin:10px auto 0;max-width:32ch;}
+  .tk-hotline{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);font-weight:700;font-size:13px;text-decoration:none;transition:background .15s,transform .15s;}
+  .tk-hotline:hover{background:rgba(var(--accent-rgb),.18);transform:translateY(-1px);}
+  .tk-hotline svg{width:15px;height:15px;}
+  .tk-rate{margin-top:18px;padding:14px 12px 12px;border-radius:16px;background:var(--bg);border:1px solid var(--border);}
+  .tk-rate .field{margin:0 !important;}
+  @media (max-width:420px){ .track-card{padding:30px 20px 28px;border-radius:18px;} .tk-chip{font-size:10px;padding:3px 8px;} }
   /* ---------------- AC lorry runs: driver page, office page, customer tracking block ---------------- */
   .lorry-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:10px;box-shadow:0 1px 2px rgba(20,25,20,.04);}
   .lorry-card:first-child{margin-top:0;}
@@ -3374,7 +3458,8 @@ html{ visibility:hidden; }
   .lorry-choice-delivered.on{background:#3FA968;border-color:#3FA968;color:#fff;}
   .lorry-choice-not_home.on{background:#F5C84C;border-color:#F5C84C;color:#5b4300;}
   .lorry-choice-returned.on{background:#D9695C;border-color:#D9695C;color:#fff;}
-  .lorry-track-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px;}
+  .lorry-track-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;box-shadow:0 6px 14px -4px rgba(var(--accent-rgb),.45);}
+  .lorry-track-ico svg{width:19px;height:19px;}
   /* Profile details is a phone feature (owner's decision): on a PC the header links stay Activity log / Change password / Log out. */
   @media (min-width:761px){ #btn-profile-details{display:none !important;} }
   /* ---------------- Profile details panel ---------------- */
@@ -4401,31 +4486,9 @@ function renderCitypakTrackingBlock(trackingNumber){
   const d = cached.data || {};
   const history = (d.tracking_history||[]).slice().reverse();
   if(!history.length) return fallbackLink;
-  const liveTrack = d.is_delivered ? '' : `
-    <div class="citypak-live-track">
-      <div class="cpl-line"><div class="cpl-line-fill"></div></div>
-      <div class="cpl-dot start"></div>
-      <div class="cpl-dot end"></div>
-      <div class="cpl-truck"><svg viewBox="0 0 160 100">
-        <defs>
-          <linearGradient id="cplSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBFCFB"/><stop offset="1" stop-color="#C7D1CA"/></linearGradient>
-          <linearGradient id="cplBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FC7F2"/><stop offset="1" stop-color="#3E7FB8"/></linearGradient>
-          <linearGradient id="cplWheel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454F46"/><stop offset="1" stop-color="#13170F"/></linearGradient>
-        </defs>
-        <g transform="translate(160,0) scale(-1,1)">
-          <path d="M20,82 L20,60 Q20,50 30,50 L58,50 Q66,38 80,38 L92,38 L92,82 Z" fill="url(#cplSilver)" stroke="#8C9A91" stroke-width="2"/>
-          <path d="M58,42 L80,42 L80,54 L58,54 Z" fill="#2A3A2E" opacity=".55"/>
-          <rect x="92" y="58" width="48" height="24" fill="url(#cplBlue)" stroke="#2C5E86" stroke-width="2"/>
-          <rect x="92" y="58" width="6" height="24" fill="#2C5E86"/>
-          <circle cx="46" cy="84" r="13" fill="url(#cplWheel)"/><circle cx="46" cy="84" r="4" fill="#8a948a"/>
-          <circle cx="120" cy="84" r="13" fill="url(#cplWheel)"/><circle cx="120" cy="84" r="4" fill="#8a948a"/>
-        </g>
-      </svg></div>
-    </div>`;
   return `
   <div class="field" style="margin-top:18px;">
     <label style="text-align:center;display:block;">Delivery tracking${d.is_delivered ? ' — delivered' : ''}</label>
-    ${liveTrack}
     <div class="timeline">
       ${history.map(h=>`<div class="item">${esc(h.status_type||'')}${h.location?' · '+esc(h.location):''}${h.description?' — '+esc(h.description):''}<div class="t">${esc(h.date||'')} ${esc(h.time||'')}</div></div>`).join('')}
     </div>
@@ -8324,7 +8387,7 @@ function checkDueNotes(){
   }
 }
 // 0-based index -> A, B, …, Z, AA, AB, … (Excel-column style) — used to letter production-step
-// phrases instead of numbering them.
+// phases instead of numbering them.
 function letterLabel(i){
   let n = i, s = '';
   do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n/26) - 1; } while(n >= 0);
@@ -13269,9 +13332,13 @@ async function submitTrack(e){
 function renderTrackPage(){
   const o = state._publicOrder;
   const logo = trackPageLogo();
+  // The entrance animation plays ONLY the first time this order is drawn: render() rebuilds the page on every poll / redraw
+  // and the scene would otherwise jump back to its first frame each time.
+  const fresh = !!o && state._tkSeenId !== o.id;
+  if(o) state._tkSeenId = o.id;
   return `
   <div class="track-page">
-    <div class="track-card">
+    <div class="track-card${fresh?' tk-fresh':''}">
       ${logo
         ? `<img src="${esc(logo)}" alt="Audrey Care" style="display:block;margin:0 auto 8px;max-height:64px;max-width:240px;object-fit:contain;">`
         : `<span class="wordmark" style="display:block;text-align:center;font-size:24px;color:var(--accent-dark);">Audrey Care</span>`}
@@ -13290,33 +13357,190 @@ function renderTrackSearch(){
     <button type="submit" class="btn btn-primary" style="width:100%;">Track order</button>
   </form>`;
 }
+/* ---- Animated scene at the top of the customer tracking page (2026-11-23) ----
+   Which picture shows is worked out from what the customer page already knows: the order's stage, and (stage 3 only) the lorry / CityPak
+   answer that is already fetched. Nothing new is stored or asked from the database. */
+function trackSceneKey(o){
+  const st = Number(o.stage)||0;
+  if(st<=0) return 'received';
+  if(st===1) return 'packing';
+  if(st===2) return 'checking';
+  if(o.courierService==='AC Delivery'){
+    const t = state._lorryTrack;
+    const s = t && t.orderId===o.id && t.data ? t.data.state : '';
+    if(s==='delivered') return 'delivered';
+    if(s==='not_home' || s==='returned') return 'transit-still';
+  } else if(o.courierService==='CityPak' && o.courierNumber){
+    const c = state._citypakTracking && state._citypakTracking[o.courierNumber];
+    if(c && c.ok && c.data && c.data.is_delivered) return 'delivered';
+  }
+  return 'transit';
+}
+function trackStatusCopy(o, key){
+  if(key==='received') return 'We have your order and our team will start on it shortly.';
+  if(key==='packing') return 'Our team is carefully packing your items.';
+  if(key==='checking') return 'We are preparing your invoice and double-checking every item.';
+  if(key==='delivered') return 'Your order has been delivered. Thank you for choosing Audrey Care!';
+  if(key==='transit-still') return 'Your order is with our delivery team. See the note below.';
+  if(o.courierService==='AC Delivery') return 'Your order is on our delivery lorry and heading your way.';
+  if(o.courierService==='CityPak') return 'Your order has been handed to CityPak and is on its way to you.';
+  return 'Your order has been handed over for delivery.';
+}
+const TK_STAR = 'M0,-6L1.6,-1.6L6,0L1.6,1.6L0,6L-1.6,1.6L-6,0L-1.6,-1.6Z';
+function tkSpark(x, y, delay, cls){ return `<g transform="translate(${x},${y})"><path class="tk-sp ${cls||''}" fill="#F5C84C" d="${TK_STAR}" style="animation-delay:${delay}s"/></g>`; }
+function tkBox(x, y, w, h){   // a small closed cardboard box with a tape strip, used as props
+  const tx = x + w/2 - 5;
+  return `<rect class="k1" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/><rect class="k3" x="${x}" y="${y}" width="${w}" height="${Math.max(5,Math.round(h*.24))}" rx="2"/><rect class="ac" x="${tx}" y="${y}" width="10" height="${h}"/>`;
+}
+const TK_SCENES = {
+  received(){
+    const rows = [[54,52],[66,44],[78,60],[90,38]];
+    return `<svg viewBox="0 0 360 176" role="img" aria-label="Order received">
+<circle class="bg1" cx="306" cy="42" r="60"/><circle class="bg1" cx="44" cy="76" r="38"/>
+<rect class="fl" x="0" y="150" width="360" height="26"/>
+${tkBox(34,116,52,34)}${tkBox(44,94,34,22)}${tkBox(268,122,58,28)}${tkBox(280,104,30,18)}
+<ellipse cx="180" cy="150" rx="46" ry="4" fill="#000" fill-opacity=".07"/>
+<g class="rc-float">
+<path class="wh bdr" d="M140,22H220A8,8 0 0 1 228,30V136L220,130L212,136L204,130L196,136L188,130L180,136L172,130L164,136L156,130L148,136L140,130L132,136V30A8,8 0 0 1 140,22Z"/>
+<rect class="ac" x="144" y="34" width="40" height="7" rx="3.5"/><circle class="as" cx="212" cy="38" r="6"/><circle class="ac" cx="212" cy="38" r="2.4"/>
+${rows.map((r,i)=>`<rect class="rc-line" x="144" y="${r[0]}" width="${r[1]}" height="5" rx="2.5" fill="#D7DEEE" style="animation-delay:${(i*.22).toFixed(2)}s"/><rect class="rc-line" x="204" y="${r[0]}" width="16" height="5" rx="2.5" fill="#E4E9F5" style="animation-delay:${(i*.22+.1).toFixed(2)}s"/>`).join('')}
+<rect x="144" y="102" width="76" height="1.5" rx=".75" fill="#E4E9F5"/>
+<rect class="ac rc-line" x="144" y="110" width="30" height="6" rx="3" style="animation-delay:1s"/><rect class="ad rc-line" x="196" y="109" width="24" height="8" rx="4" style="animation-delay:1.1s"/>
+<circle class="rc-ring" cx="222" cy="128" r="16" fill="none" stroke="#3FA968" stroke-width="2" style="opacity:0"/>
+<g class="rc-badge"><circle class="gr" cx="222" cy="128" r="16" stroke="#fff" stroke-width="3"/><path class="tk-tick rc-tick" d="M214,128l6,6 11,-12"/></g>
+</g>
+${tkSpark(110,42,0)}${tkSpark(254,34,1.1)}${tkSpark(100,100,.6)}${tkSpark(262,92,1.7)}
+</svg>`;
+  },
+  packing(){
+    const ticks = Array.from({length:19},(_,i)=>`<rect x="${14+i*20}" y="143" width="3" height="8" rx="1.5"/>`).join('');
+    return `<svg viewBox="0 0 360 176" role="img" aria-label="Your order is being packed">
+<circle class="bg1" cx="306" cy="42" r="62"/><circle class="bg1" cx="40" cy="64" r="38"/>
+<rect class="fl" x="0" y="150" width="360" height="26"/>
+<rect class="sd" x="34" y="152" width="8" height="16"/><rect class="sd" x="318" y="152" width="8" height="16"/>
+<rect class="sl" x="14" y="138" width="332" height="16" rx="8"/>
+<clipPath id="tkBelt"><rect x="22" y="140" width="316" height="12" rx="6"/></clipPath><clipPath id="tkPkClip"><rect x="130" y="0" width="100" height="137"/></clipPath>
+<g clip-path="url(#tkBelt)"><g class="tk-ticks" fill="#fff" fill-opacity=".3">${ticks}</g></g>
+<rect x="22" y="139" width="316" height="3" rx="1.5" fill="#fff" fill-opacity=".2"/>
+<g class="pk-box"><g class="pk-hop">
+<rect class="k4" x="132" y="85" width="96" height="15"/>
+<g clip-path="url(#tkPkClip)"><g class="pk-item" style="animation-delay:1s"><rect class="wh" x="148" y="57" width="9" height="8" rx="2"/><rect class="ad" x="147" y="63" width="11" height="7" rx="2"/><rect class="ac" x="139" y="69" width="27" height="52" rx="7"/><rect class="wh" x="144" y="80" width="17" height="20" rx="3" fill-opacity=".92"/><rect class="ac" x="148" y="86" width="9" height="3" rx="1.5"/></g>
+<g class="pk-item" style="animation-delay:1.5s"><rect class="wh bdr" x="172" y="78" width="28" height="44" rx="5"/><rect class="ac" x="172" y="92" width="28" height="14"/><rect class="ad" x="171" y="73" width="30" height="7" rx="3"/><rect class="wh" x="177" y="97" width="18" height="3" rx="1.5" fill-opacity=".8"/></g>
+<g class="pk-item" style="animation-delay:2s"><rect class="as" x="205" y="86" width="19" height="40" rx="6" style="stroke:var(--accent);stroke-width:1.5"/><rect class="ad" x="212" y="78" width="5" height="9"/><rect class="ad" x="206" y="72" width="16" height="6" rx="3"/></g></g>
+<path class="k1" d="M128,96H232V132A6,6 0 0 1 226,138H134A6,6 0 0 1 128,132Z"/>
+<path class="k2" d="M128,128H232V132A6,6 0 0 1 226,138H134A6,6 0 0 1 128,132Z"/>
+<rect class="wh" x="196" y="108" width="26" height="16" rx="2"/>
+<path d="M200,112v8M203,112v8M205.5,112v8M209,112v8M212,112v8M216,112v8" stroke="#56627A" stroke-width="1.3" fill="none"/>
+<path class="k3 pk-fl" d="M128,85H180V96H128Z"/><path class="k3 pk-fr" d="M180,85H232V96H180Z"/>
+<g class="pk-tape"><rect class="ac" x="172" y="90" width="16" height="34" rx="2"/><rect x="176" y="90" width="3" height="34" fill="#fff" fill-opacity=".28"/></g>
+<g class="pk-badge"><circle class="gr" cx="180" cy="62" r="14" stroke="#fff" stroke-width="3"/><path class="tk-tick" d="M173,62l5,5 9-10"/></g>
+${tkSpark(136,66,0,'pk-sp')}${tkSpark(226,70,.12,'pk-sp')}${tkSpark(204,44,.24,'pk-sp')}
+</g></g>
+</svg>`;
+  },
+  checking(){
+    const rows = [70,88,106];
+    return `<svg viewBox="0 0 360 176" role="img" aria-label="Your order is being checked and invoiced">
+<defs><linearGradient id="tkBeam" x1="0" x2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:0"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:.4"/></linearGradient><clipPath id="tkBoxClip"><rect x="40" y="88" width="108" height="62" rx="5"/></clipPath></defs>
+<circle class="bg1" cx="46" cy="50" r="46"/><circle class="bg1" cx="318" cy="150" r="52"/>
+<rect class="fl" x="0" y="150" width="360" height="26"/>
+<rect class="k1" x="40" y="88" width="108" height="62" rx="5"/><rect class="k3" x="40" y="88" width="108" height="14" rx="4"/>
+<rect class="ac" x="86" y="88" width="16" height="62"/><rect x="90" y="88" width="3" height="62" fill="#fff" fill-opacity=".28"/>
+<rect class="wh" x="108" y="108" width="34" height="30" rx="3"/>
+<path d="M112,112v14M115,112v14M117.5,112v14M121,112v14M124,112v14M128,112v14M131,112v14M135,112v14M138,112v14" stroke="#56627A" stroke-width="1.3" fill="none"/>
+<rect x="112" y="129" width="22" height="3" rx="1.5" fill="#D7DEEE"/>
+<g clip-path="url(#tkBoxClip)"><g class="ck-scan"><rect x="40" y="88" width="20" height="62" fill="url(#tkBeam)"/><rect x="58" y="88" width="2.4" height="62" style="fill:var(--accent)"/></g></g>
+<rect class="sl" x="186" y="38" width="118" height="112" rx="10"/><rect class="sd" x="224" y="30" width="42" height="16" rx="5"/>
+<rect class="wh" x="194" y="52" width="102" height="90" rx="6"/>
+<rect class="ac" x="204" y="58" width="34" height="5" rx="2.5"/>
+${rows.map((y,i)=>`<rect class="bdr" x="204" y="${y}" width="14" height="14" rx="3.5" fill="#fff"/><path class="tk-tickg ck-tickg" d="M207,${y+7.5}l3.5,3.5 6,-7" style="animation-delay:${(i*.6).toFixed(1)}s"/><rect x="226" y="${y+1}" width="${[52,44,58][i]}" height="4.5" rx="2.2" fill="#D7DEEE"/><rect x="226" y="${y+9}" width="${[30,36,24][i]}" height="3" rx="1.5" fill="#E8ECF6"/>`).join('')}
+<rect class="ad" x="204" y="127" width="40" height="5" rx="2.5"/><rect class="as" x="256" y="125" width="24" height="8" rx="4"/>
+<g class="ck-badge"><circle class="gr" cx="290" cy="138" r="15" stroke="#fff" stroke-width="3"/><path class="tk-tick" d="M283,138l5,5 9-10"/></g>
+</svg>`;
+  },
+  transit(){
+    const hills1 = '<path d="M0,128L0,112C30,92 62,92 92,108C122,124 150,104 182,100C214,96 238,112 262,108C300,102 330,94 360,112L360,128Z"/>';
+    const hills2 = '<path d="M0,132L0,120C40,104 80,106 120,118C150,127 180,112 214,108C252,104 300,116 360,120L360,132Z"/>';
+    const tree = x=>`<g transform="translate(${x},0)"><rect x="-1.5" y="110" width="3" height="20" fill="#8A6A45"/><circle cx="0" cy="104" r="11" fill="#6DB887"/><circle cx="-5" cy="108" r="7" fill="#5FAE7C"/></g>`;
+    const near = `${tree(36)}${tree(92)}${tree(176)}${tree(322)}
+<rect class="wh bdr" x="252" y="108" width="32" height="22" rx="2"/><path class="ad" d="M247,110L268,91L289,110Z"/><rect class="ac" x="264" y="116" width="8" height="14" rx="1.5"/>
+<g transform="translate(268,88)"><g class="tr-pin"><path class="ac" d="M0,0C-8,-10 -12,-17 -12,-23A12,12 0 1 1 12,-23C12,-17 8,-10 0,0Z"/><circle class="wh" cx="0" cy="-23" r="4.6"/></g></g>
+<g transform="translate(268,131)"><ellipse class="tr-ring" rx="16" ry="4" style="fill:none;stroke:var(--accent);stroke-width:1.6"/></g>`;
+    const dashes = Array.from({length:11},(_,i)=>`<rect x="${-42+i*42}" y="146" width="22" height="3" rx="1.5"/>`).join('');
+    const cloud = '<ellipse cx="20" cy="12" rx="20" ry="9"/><ellipse cx="34" cy="8" rx="14" ry="9"/><ellipse cx="8" cy="10" rx="10" ry="7"/>';
+    const wheel = x=>`<g transform="translate(${x},148)"><circle r="10" fill="#2B3445"/><g class="tr-spin"><circle r="5.5" fill="#B9C3D8"/><path d="M-4,0H4M0,-4V4" stroke="#56627A" stroke-width="1.6"/></g></g>`;
+    return `<svg viewBox="0 0 360 176" role="img" aria-label="Your order is on its way">
+<g class="tr-sun"><circle cx="300" cy="62" r="26" fill="#FFD36B" fill-opacity=".22"/><circle cx="300" cy="62" r="14" fill="#FFD36B"/></g>
+<g class="tr-cloud" fill="#fff" fill-opacity=".92"><g transform="translate(0,44)">${cloud}</g></g>
+<g class="tr-cloud" fill="#fff" fill-opacity=".75" style="animation-duration:62s;animation-delay:-26s"><g transform="translate(0,72) scale(.8)">${cloud}</g></g>
+<g class="tr-l1" style="fill:rgba(var(--accent-rgb),.14)">${hills1}<g transform="translate(360)">${hills1}</g></g>
+<g class="tr-l2" style="fill:rgba(var(--accent-rgb),.24)">${hills2}<g transform="translate(360)">${hills2}</g></g>
+<rect x="0" y="126" width="360" height="40" fill="#CDEBD6"/>
+<g class="tr-l3">${near}<g transform="translate(360)">${near}</g></g>
+<rect x="0" y="134" width="360" height="26" fill="#5B6B86"/><rect x="0" y="134" width="360" height="2" fill="#fff" fill-opacity=".5"/><rect x="0" y="158" width="360" height="2" fill="#fff" fill-opacity=".5"/>
+<rect x="0" y="160" width="360" height="16" fill="#BFE2CA"/>
+<g class="tr-dash" fill="#fff" fill-opacity=".85">${dashes}</g>
+<ellipse cx="158" cy="158" rx="58" ry="3" fill="#000" fill-opacity=".22"/>
+<g transform="translate(104,0)">
+<g class="tr-speed" style="animation-delay:0s"><path d="M-8,112H-28" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
+<g class="tr-speed" style="animation-delay:.3s"><path d="M-6,124H-30" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
+<g class="tr-speed" style="animation-delay:.6s"><path d="M-8,136H-24" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
+<g class="tr-bob">
+<rect class="sd" x="-2" y="140" width="110" height="8" rx="3"/>
+<rect class="wh bdr" x="0" y="88" width="70" height="52" rx="5"/><rect class="ac" x="0" y="122" width="70" height="8"/>
+<circle class="as" cx="35" cy="104" r="10"/><rect class="ac" x="29" y="99" width="12" height="10" rx="1.5"/><rect class="wh" x="29" y="99" width="12" height="3" fill-opacity=".6"/>
+<path class="ad" d="M70,100H88Q93,100 96,106L104,120Q106,124 106,128V140H70Z"/>
+<path d="M76,106H88Q90,106 92,109L97,119H76Z" fill="#CFE6FF"/>
+<circle cx="103.5" cy="128" r="2.6" fill="#FFE08A"/>
+${wheel(22)}${wheel(86)}
+</g></g>
+</svg>`;
+  },
+  delivered(){
+    const conf = [[66,'#F5C84C',0],[96,'var(--accent)',.5],[132,'#3FA968',1.1],[168,'#D9695C',.3],[204,'#F5C84C',.9],[236,'var(--accent)',.15],[270,'#3FA968',.7],[298,'#D9695C',1.3],[116,'#fff',1.5],[252,'#fff',1.7]];
+    return `<svg viewBox="0 0 360 176" role="img" aria-label="Your order has been delivered">
+<circle class="bg1" cx="46" cy="52" r="44"/><circle class="bg1" cx="318" cy="120" r="50"/>
+<rect x="0" y="146" width="360" height="30" fill="#CDEBD6"/>
+<path d="M166,176L171,146H189L194,176Z" fill="#E9DCC6"/>
+<circle cx="92" cy="141" r="13" fill="#A9D8B7"/><circle cx="108" cy="146" r="9" fill="#BCE3C8"/><circle cx="270" cy="141" r="13" fill="#A9D8B7"/><circle cx="254" cy="146" r="9" fill="#BCE3C8"/>
+<rect class="ad" x="208" y="34" width="12" height="28"/>
+<rect class="wh bdr" x="124" y="72" width="112" height="76" rx="4"/>
+<path class="ad" d="M112,76L180,26L248,76Z"/>
+<rect class="ac" x="166" y="100" width="28" height="48" rx="4"/><circle cx="188" cy="126" r="2" fill="#fff"/>
+<rect x="136" y="86" width="22" height="22" rx="3" fill="#CFE6FF"/><path d="M147,86V108M136,97H158" stroke="#fff" stroke-width="1.6"/>
+<rect x="202" y="86" width="22" height="22" rx="3" fill="#CFE6FF"/><path d="M213,86V108M202,97H224" stroke="#fff" stroke-width="1.6"/>
+<g>${tkBox(198,128,30,22)}</g>
+<circle class="dl-ring" cx="250" cy="58" r="17" fill="none" stroke="#3FA968" stroke-width="2" style="opacity:0"/>
+<g class="dl-badge"><circle class="gr" cx="250" cy="58" r="17" stroke="#fff" stroke-width="3"/><path class="tk-tick" d="M241,58l6,6 11,-12"/></g>
+${conf.map((c,i)=>`<rect class="cf" x="${c[0]}" y="0" width="6" height="10" rx="1.5" style="fill:${c[1]};animation-delay:${c[2]}s"/>`).join('')}
+</svg>`;
+  }
+};
+function trackSceneHtml(key){
+  const f = TK_SCENES[key==='transit-still' ? 'transit' : key] || TK_SCENES.received;
+  return f();
+}
+const TK_PHONE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
 function renderTrackResult(o){
-  const stage = o.stage;
+  const stage = Math.max(0, Math.min(STAGES.length-1, Number(o.stage)||0));
+  const key = trackSceneKey(o);
   // .track-line/.track-fill span the middle 84% of the row (8% inset each side),
   // so the fill's width has to be scaled to that 84%, not the full row width.
   const fillPct = STAGES.length<=1 ? 0 : (stage/(STAGES.length-1))*100*0.84;
-  // Hero ring: same stroke-dasharray-on-a-circle technique as the Dashboard's Pipeline donut,
-  // just one segment instead of per-stage ones, sized for this 104px badge.
-  const ringR = 44, ringCirc = 2*Math.PI*ringR;
-  const ringFrac = STAGES.length<=1 ? 1 : stage/(STAGES.length-1);
+  const statusText = key==='delivered' ? 'Delivered' : STAGES[stage];
   return `
-  <div class="track-ring-wrap">
-    <svg viewBox="0 0 104 104" width="104" height="104">
-      <circle cx="52" cy="52" r="${ringR}" fill="none" stroke="var(--bg)" stroke-width="7"/>
-      <circle cx="52" cy="52" r="${ringR}" fill="none" stroke="url(#trackRingGrad)" stroke-width="7" stroke-linecap="round"
-        stroke-dasharray="${(ringFrac*ringCirc).toFixed(2)} ${ringCirc.toFixed(2)}"
-        transform="rotate(-90 52 52)"/>
-      <defs><linearGradient id="trackRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" style="stop-color:var(--accent-dark)"/><stop offset="100%" style="stop-color:var(--accent)"/></linearGradient></defs>
-    </svg>
-    <span class="track-ring-icon">${icon('box')}</span>
+  <div class="tk-scene tk-s-${key}${key==='transit-still'?' tk-still':''}">
+    ${trackSceneHtml(key)}
+    <span class="tk-chip tk-chip-l">Order <b>${esc(o.orderNumber||o.id)}</b></span>
+    <span class="tk-chip tk-chip-r">Step ${stage+1} of ${STAGES.length}</span>
   </div>
-  <div class="track-order-num">${esc(o.orderNumber||o.id)}</div>
   <div class="track-customer-name">${esc(o.customer)}</div>
   <div style="text-align:center;">
     <div class="track-status-badge">
-      <span class="dot"></span>${esc(STAGES[stage])}
+      <span class="dot"></span>${esc(statusText)}
     </div>
   </div>
+  <p class="tk-msg">${esc(trackStatusCopy(o, key))}</p>
   <div class="tracker-steps">
     <div class="track-line"></div>
     <div class="track-fill" style="width:${fillPct}%;"></div>
@@ -13337,12 +13561,12 @@ function renderTrackResult(o){
       ${o.courierNumber?`<div class="track-courier-sub">Tracking no. ${esc(o.courierNumber)}</div>`:''}
     </div>
   </div>` : ''}
-  ${stage>=3 ? renderRatingBlock(o) : ''}
+  ${stage>=3 ? `<div class="tk-rate">${renderRatingBlock(o)}</div>` : ''}
   ${o.courierService==='CityPak' && o.courierNumber && stage>=3 ? renderCitypakTrackingBlock(o.courierNumber) : ''}
   ${o.courierService==='AC Delivery' && stage>=3 ? renderLorryTrackBlock(o) : ''}
   <div class="track-divider"></div>
   <div style="text-align:center;">
-    <a href="tel:0776979959" class="btn btn-sm" style="text-decoration:none;display:inline-block;">Hotline: 077 697 9959</a>
+    <a href="tel:0776979959" class="tk-hotline">${TK_PHONE_ICON}Hotline: 077 697 9959</a>
   </div>
   `;
 }
@@ -15350,15 +15574,16 @@ function renderLorryTrackBlock(o){
   const t = state._lorryTrack;
   if(!t || t.orderId !== o.id || !t.data) return '';
   const d = t.data;
-  let ico = '🚚', head = '', sub = '';
+  const svg = p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  let ico = svg(TRACK_STAGE_PATHS[3]), head = '', sub = '';
   if(d.state === 'loading'){ head = 'Loading onto our delivery lorry'; sub = 'Your order is being prepared for today’s delivery run.'; }
   else if(d.state === 'on_the_way'){
     head = 'On the way to you';
     sub = d.driverFirstName ? `Your driver is ${d.driverFirstName}.` : 'Your order is on its way.';
   }
-  else if(d.state === 'delivered'){ ico = '✅'; head = 'Delivered'; sub = d.doneAt ? 'Delivered at ' + fmtDateTime(d.doneAt) + '.' : 'Your order has been delivered.'; }
-  else if(d.state === 'not_home'){ ico = '⏸'; head = 'We could not reach you'; sub = 'Our driver tried to deliver. Our team will contact you shortly. Hotline: 077 697 9959.'; }
-  else if(d.state === 'returned'){ ico = '↩'; head = 'Returned to us'; sub = 'Your order came back to us. Please call us on 077 697 9959.'; }
+  else if(d.state === 'delivered'){ ico = svg('<path d="M5 13l4 4L19 7"/>'); head = 'Delivered'; sub = d.doneAt ? 'Delivered at ' + fmtDateTime(d.doneAt) + '.' : 'Your order has been delivered.'; }
+  else if(d.state === 'not_home'){ ico = svg('<path d="M10 5v14M16 5v14"/>'); head = 'We could not reach you'; sub = 'Our driver tried to deliver. Our team will contact you shortly. Hotline: 077 697 9959.'; }
+  else if(d.state === 'returned'){ ico = svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'); head = 'Returned to us'; sub = 'Your order came back to us. Please call us on 077 697 9959.'; }
   else return '';
   return `<div class="track-divider"></div>
   <div class="lorry-track"><div class="track-courier-row"><span class="lorry-track-ico">${ico}</span>
@@ -20297,7 +20522,7 @@ function batchSheetTemplatePreviewData(){
     steps:[
       {type:'preparation', name:'Starting preparations', checklist:[{kind:'checklist', text:'Production room cleaned', checked:true},{kind:'checklist', text:'Mixing tank cleaned', checked:true},{kind:'field', label:'Initial water pH level', value:'7.8'}]},
       {type:'preparation', name:'', checklist:[{kind:'checklist', text:'Raw materials weighed and checked', checked:false}]},
-      {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},   // phrases are not printed
+      {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},   // phases are not printed
     ], standardPH:'5.5 - 6.5', formulationCode:'SR-V1', priority:'Medium',
     showVariations:true, variations:[{product:'Aloevera', fragrance:'Aloe Green', qty:'40', unit:'5L cans'},{product:'Cucumber', fragrance:'Alo Cucumber', qty:'25', unit:'kg'}],
     qc:[{key:'qc1', label:'1st QC (Base)', ph:'5.8', viscosity:'4500 cP', notes:'Color matches the standard', checks:{color:false, fragrance:false, viscosity:false}, noChecks:true, by:'QC officer', at:'2026-10-12T09:40:00.000Z'},
@@ -20317,7 +20542,7 @@ function renderBatchSheetTemplateBody(){
   const zoom = BATCH_SHEET_FONT_SCALE[tpl.fontSize] || 1;
   return `
     <div class="pe-bs">
-      <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the sheet printed from the batch window on Mixing and Filling (and the blank pre-run form) use this. It prints, top to bottom: batch details, raw materials, variations, preparation checking, QC details (1st QC and 2nd QC), then the stage sign-off table and the sign-off lines. The mixing phrases are not printed. The logo, words and spaces are below.</div>
+      <div class="hint" style="margin-bottom:16px;">How the printed batch sheet looks — the sheet printed from the batch window on Mixing and Filling (and the blank pre-run form) use this. It prints, top to bottom: batch details, raw materials, variations, preparation checking, QC details (1st QC and 2nd QC), then the stage sign-off table and the sign-off lines. The mixing phases are not printed. The logo, words and spaces are below.</div>
 
       <div class="hint" style="margin-bottom:8px;">Preview — the whole sheet, drawn with sample data. A long sheet continues onto a second page when printed.</div>
       <div id="bsp-preview" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;">${batchSheetTemplatePreviewHtml(tpl)}</div>
@@ -21766,7 +21991,7 @@ function playBatchAlertSound(machine, channel){
 }
 
 // Preparation/Checking steps have no ingredient/amount/waitMinutes — the batch runner (timer,
-// step cards, focus overlay) was built only for phrase steps and would otherwise crash
+// step cards, focus overlay) was built only for phase steps and would otherwise crash
 // (new Date(NaN).toISOString()) or show "undefined" the moment one of these is first/reached.
 function batchStepLabel(step, kg){ return step.type==='preparation' ? (step.name||'Preparation/Checking') : stepSummaryText(step, kg); }
 // The Instruction field is a growing textarea now (see instructionTextareaHtml) — people write
@@ -22261,7 +22486,7 @@ function newMaterialDraft(){ return {id:uid('MAT'), name:'', percent:0}; }
 // any batch size instead of being locked to one fixed absolute weight.
 function recipeMaterialAmount(percent, batchSizeKg){ return (Number(percent)||0)/100 * (Number(batchSizeKg)||0); }
 function recipeMaterialsTotalPercent(materials){ return (materials||[]).reduce((sum,m)=>sum+(Number(m.percent)||0), 0); }
-// Quantities inside a phrase (owner, 2026-11-21). A phrase made on the Process template keeps its raw-material lines as a PERCENT of the
+// Quantities inside a phase (owner, 2026-11-21). A phase made on the Process template keeps its raw-material lines as a PERCENT of the
 // batch ({lines:[{name,percent}], instruction}); every screen shows them as KG of the batch size that was typed (250 kg batch: 30% -> 75 kg),
 // never as a percentage. Only when no batch size is known at all does a line fall back to its percent.
 function fmtQty(n){ return String(Math.round((Number(n)||0)*1000)/1000); }
@@ -22271,7 +22496,7 @@ function phraseQtyText(percent, kg){
   return (Number(percent)||0) ? fmtQty(percent)+'%' : '';
 }
 function stepIsPhraseWithLines(s){ return !!s && s.type!=='preparation' && Array.isArray(s.lines); }
-function stepRawLines(s, kg){   // [{name, qty:'75 kg'}]; [] for a plain-text phrase
+function stepRawLines(s, kg){   // [{name, qty:'75 kg'}]; [] for a plain-text phase
   if(!stepIsPhraseWithLines(s)) return [];
   return s.lines.filter(l=>String(l.name||'').trim()).map(l=>({name:String(l.name).trim(), qty:phraseQtyText(l.percent, kg)}));
 }
@@ -22282,7 +22507,7 @@ function stepSummaryText(s, kg){
   const mats = stepRawLines(s, kg).map(l=>l.name+(l.qty?' '+l.qty:'')).join(', ');
   return [mats, stepInstructionText(s).trim()].filter(Boolean).join(' — ');
 }
-// The old one-line text kept on every phrase (`ingredient`, with percentages): older screens and records read it, so it is rebuilt when the instruction changes.
+// The old one-line text kept on every phase (`ingredient`, with percentages): older screens and records read it, so it is rebuilt when the instruction changes.
 function phraseIngredientSummary(lines, instruction){
   const text = (lines||[]).filter(l=>String(l.name||'').trim()).map(l=>String(l.name).trim() + (Number(l.percent) ? ' '+fmtQty(l.percent)+'%' : '')).join(', ');
   return [text, String(instruction||'').trim()].filter(Boolean).join(' — ');
@@ -22356,7 +22581,7 @@ function batchSheetDirty(){
 // ---- Process template: step-draft helpers (state._templateDraft) ----
 function templateDraftAddPhrase(){
   const s = newStepDraft(); s.type = 'phrase';
-  s.lines = []; s.instruction = ''; s.showInstr = false;   // a phrase starts as an empty table
+  s.lines = []; s.instruction = ''; s.showInstr = false;   // a phase starts as an empty table
   state._templateDraft.steps.push(s);
   renderKeepModalScroll();
 }
@@ -22499,7 +22724,7 @@ function syncDraftStepFieldsFromDOM(){
       return;
     }
     const ing = document.getElementById('step-ing-'+s.id);
-    const instr = document.getElementById('step-instr-'+s.id);   // a phrase with raw-material lines: only its instruction text is typed here
+    const instr = document.getElementById('step-instr-'+s.id);   // a phase with raw-material lines: only its instruction text is typed here
     const amt = document.getElementById('step-amt-'+s.id);
     const temp = document.getElementById('step-temp-'+s.id);
     const wait = document.getElementById('step-wait-'+s.id);   // (no Wait box on the batch sheet any more; still read for the old recipe form)
@@ -23536,14 +23761,14 @@ function costingOnFixedCostFieldInput(el){
 // everything else (full multi-line instructions, the complete step list, Previous/Restart/Test
 // sound) now lives behind "Big screen" (renderBatchFocusOverlay), so this stays small even once
 // several batches are running side by side.
-// "All steps" on the big screen (owner, 2026-11-22: every step shows its relevant phrase): a phrase step shows its raw materials (kg of this batch's size) and its instruction;
-// a Preparation / Checking step lists its checks under its name instead of a bare title. Each phrase step also shows its WAIT time ("10 min" / "no wait") on the right
+// "All steps" on the big screen (owner, 2026-11-22: every step shows its relevant phase): a phase step shows its raw materials (kg of this batch's size) and its instruction;
+// a Preparation / Checking step lists its checks under its name instead of a bare title. Each phase step also shows its WAIT time ("10 min" / "no wait") on the right
 // (owner, 2026-11-22: "need wait time show in all steps, so we can see wait time and set the timer manually"): nothing counts down by itself, the person reads it and sets the Timer.
-// A running batch's step labels, the same as on the batch sheet (owner, 2026-11-22: "show with phrases, ex-phrase A, B etc."): phrase steps are lettered among the PHRASES
-// only (Phrase A, B, C ...), preparation / checking steps are numbered among themselves (Preparation 1, 2 ...). The instruction text itself says "add phrase B".
+// A running batch's step labels, the same as on the batch sheet (owner, 2026-11-22: "show with phases, ex-phase A, B etc."): phase steps are lettered among the PHASES
+// only (Phase A, B, C ...), preparation / checking steps are numbered among themselves (Preparation 1, 2 ...). The instruction text itself says "add phase B".
 function batchStepLabels(steps){
   let ph = 0, pr = 0;
-  return (steps||[]).map(s=> s.type==='preparation' ? {prep:true, text:'Preparation '+(++pr)} : {prep:false, text:'Phrase '+letterLabel(ph++)});
+  return (steps||[]).map(s=> s.type==='preparation' ? {prep:true, text:'Preparation '+(++pr)} : {prep:false, text:'Phase '+letterLabel(ph++)});
 }
 function batchStepsListHtml(b){
   const labels = batchStepLabels(b.steps);
@@ -23757,11 +23982,11 @@ function renderBatchFocusOverlay(){
     </div>
   </div>`;
 }
-// The phrases / preparation-checking editor (cards + the two "add" buttons) of the per-product "Process template" page.
+// The phases / preparation-checking editor (cards + the two "add" buttons) of the per-product "Process template" page.
 // It edits state._templateDraft (ids and handlers tstep-*, tprep-*, ...).
 function templateStepsEditorHtml(d){
-  // Phrases and Preparation/Checking steps live in one ordered list but are numbered within
-  // their own kind (Phrase A, B, C… / Preparation/Checking Step 1, 2, 3…), not by raw position.
+  // Phases and Preparation/Checking steps live in one ordered list but are numbered within
+  // their own kind (Phase A, B, C… / Preparation/Checking Step 1, 2, 3…), not by raw position.
   let phraseCount = 0, prepCount = 0;
   const ordinals = d.steps.map(s => s.type==='preparation' ? ++prepCount : ++phraseCount);
   return `
@@ -23811,17 +24036,17 @@ function templateStepsEditorHtml(d){
               </div>
             </div>`;
           }
-          return ptPhraseCardHtml(s, ord);   // a phrase = a table of raw-material lines + an optional instruction
+          return ptPhraseCardHtml(s, ord);   // a phase = a table of raw-material lines + an optional instruction
         }).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm" id="btn-add-template-step">+ Add phrase</button>
+        <button type="button" class="btn btn-sm" id="btn-add-template-step">+ Add phase</button>
         <button type="button" class="btn btn-sm" id="btn-add-template-prep-step">+ Add preparation checking step</button>
       </div>
   `;
 }
 // ---- Process template (per product, Costing & recipe) ----
-// Left: the batch sheet of the product's ACTIVE version (No / raw material / percentage). Right: the phrases and
+// Left: the batch sheet of the product's ACTIVE version (No / raw material / percentage). Right: the phases and
 // preparation-checking steps, moved here from the Recipe library. Stored on the product (processTemplate.steps) and copied
 // into the batch sheet when a version is transferred to Batch sheets.
 function costingActiveVersion(product){
@@ -23838,13 +24063,13 @@ function freshStepCopies(steps){
 function cloneSteps(steps){
   return (steps||[]).map(s=>s.type==='preparation' ? {...s, checklist:(s.checklist||[]).map(c=>({...c}))}
     : (Array.isArray(s.lines) ? {...s, lines:s.lines.map(l=>({...l}))}
-      : {...s, lines:[], instruction:s.ingredient||'', showInstr:!!String(s.ingredient||'').trim()}));   // a phrase saved before the table existed opens with its text as the instruction
+      : {...s, lines:[], instruction:s.ingredient||'', showInstr:!!String(s.ingredient||'').trim()}));   // a phase saved before the table existed opens with its text as the instruction
 }
 
-// ---- Process template: a phrase is a small table of raw-material lines (No / Raw material / %) + an optional instruction ----
+// ---- Process template: a phase is a small table of raw-material lines (No / Raw material / %) + an optional instruction ----
 function ptNorm(n){ return String(n==null?'':n).trim().toLowerCase(); }
 function newLineDraft(){ return {id:uid('LN'), name:'', percent:''}; }
-// Raw materials of the ACTIVE version (water balanced like the costing sheet): the pool that phrases draw from.
+// Raw materials of the ACTIVE version (water balanced like the costing sheet): the pool that phases draw from.
 function ptMaterials(){
   const d = state._templateDraft; const product = d && byId(state.costingProducts, d.processProductId);
   const ver = costingActiveVersion(product);
@@ -23852,7 +24077,7 @@ function ptMaterials(){
   costingAutoBalanceWater({materials:mats}, null);
   return mats.filter(m=>String(m.name||'').trim()).map(m=>({name:String(m.name).trim(), key:ptNorm(m.name), orig:Number(m.percent)||0}));
 }
-// How much of each raw material the phrases have used so far (by name), from the draft.
+// How much of each raw material the phases have used so far (by name), from the draft.
 function ptUsedFromDraft(d){
   const used = {};
   (d.steps||[]).forEach(st=>{ if(st.type!=='preparation') (st.lines||[]).forEach(l=>{ const k = ptNorm(l.name), v = parseFloat(l.percent)||0; if(k && v>0) used[k] = (used[k]||0) + v; }); });
@@ -23866,7 +24091,7 @@ function ptUsedFromDom(){
   });
   return used;
 }
-// The left batch sheet: what is LEFT of each raw material after the phrases took their share (e.g. water 80, a phrase takes 50 -> 30).
+// The left batch sheet: what is LEFT of each raw material after the phases took their share (e.g. water 80, a phase takes 50 -> 30).
 function ptRemainingRowsHtml(mats, used){
   const taken = new Set(); let total = 0;
   const rows = mats.map((m,i)=>{
@@ -23931,7 +24156,7 @@ function ptPhraseCardHtml(s, ord){
   return `
   <div class="bsheet-step-row pt-phrase">
     <div class="bsr-head">
-      <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temperatureTagHtml('tstep', s)}</div>
+      <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phase ${letterLabel(ord-1)} ${temperatureTagHtml('tstep', s)}</div>
       <div class="bsr-actions">
         <button type="button" data-tstep-up="${s.id}" title="Move up">↑</button>
         <button type="button" data-tstep-down="${s.id}" title="Move down">↓</button>
@@ -23989,7 +24214,7 @@ async function transferProcessToBatchSheets(){
 // Builds the Process template page's working copy from what is saved on the product (no redraw). Used by the
 // "Process template" button and by browser Forward / Back (navApply).
 function startProcessTemplateDraft(product){
-  // A product with nothing saved yet opens EMPTY: the right side shows only "+ Add phrase" and "+ Add preparation checking step" (owner, 2026-11-18).
+  // A product with nothing saved yet opens EMPTY: the right side shows only "+ Add phase" and "+ Add preparation checking step" (owner, 2026-11-18).
   const own = product.processTemplate && Array.isArray(product.processTemplate.steps) && product.processTemplate.steps.length ? product.processTemplate : null;
   const steps = own ? cloneSteps(own.steps) : [];
   state._templateDraft = {id:null, name:product.name, steps, processProductId:product.id};
@@ -24072,13 +24297,13 @@ function cleanTemplateSteps(rawSteps){
       }).filter(Boolean);
       return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
     }
-    if(Array.isArray(s.lines)){   // Process template phrase: raw-material lines + optional instruction (no wait time)
+    if(Array.isArray(s.lines)){   // Process template phase: raw-material lines + optional instruction (no wait time)
       const lines = s.lines.map(l=>({id:l.id, name:String(l.name||'').trim(), percent:Math.max(0, parseFloat(l.percent)||0)})).filter(l=>l.name);
       const instruction = String(s.instruction||'').trim();
       if(!lines.length && !instruction) return null;
       const fmt = n=>String(Math.round(n*1000)/1000);
       const text = lines.map(l=>l.name + (l.percent ? ' ' + fmt(l.percent) + '%' : '')).join(', ');
-      // `ingredient` keeps the Production Guide working: it shows this one line for the phrase.
+      // `ingredient` keeps the Production Guide working: it shows this one line for the phase.
       return {id:s.id, type:'phrase', lines, instruction, ingredient:[text, instruction].filter(Boolean).join(' \u2014 '), amount:'', temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, Number(s.waitMinutes)||0)};
     }
     const ingredient = (s.ingredient||'').trim();
@@ -24091,7 +24316,7 @@ async function saveProcessTemplate(){
   syncTemplateDraftStepFieldsFromDOM();
   const d = state._templateDraft; if(!d || !d.processProductId) return;
   const product = byId(state.costingProducts, d.processProductId); if(!product) return;
-  const steps = cleanTemplateSteps(d.steps);   // may be empty: no phrases and no lists is allowed (owner, 2026-11-18)
+  const steps = cleanTemplateSteps(d.steps);   // may be empty: no phases and no lists is allowed (owner, 2026-11-18)
   const had = Object.prototype.hasOwnProperty.call(product,'processTemplate'); const prev = product.processTemplate;
   product.processTemplate = {steps, updatedAt:new Date().toISOString(), updatedBy:(state.session.staffName||state.session.name)};
   if(!(await save('costingProducts'))){ if(had) product.processTemplate = prev; else delete product.processTemplate; return; }   // draft stays open to retry
@@ -24170,11 +24395,11 @@ function recipeFormModal(){
     </div>
   </div>`;
 }
-// A phrase's instruction box when it has raw-material lines: only the instruction text is typed (the lines come from the Process template).
+// A phase's instruction box when it has raw-material lines: only the instruction text is typed (the lines come from the Process template).
 function phraseInstructionTextareaHtml(s){
   return `<textarea id="step-instr-${s.id}" rows="2" placeholder="Instruction (optional)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';">${escBody(unbr(s.instruction||''))}</textarea>`;
 }
-// One phrase on the batch sheet (right side). Its raw materials are listed one by one as created on the Process template, with the quantity
+// One phase on the batch sheet (right side). Its raw materials are listed one by one as created on the Process template, with the quantity
 // in kg of the typed batch size (live: see updateSheetBatchKg), never percentages. Wait (min) stays (owner, 2026-11-21: "Don't remove wait time").
 function batchSheetPhraseCardHtml(s, ord, kg, editable){
   const lines = stepIsPhraseWithLines(s) ? s.lines.filter(l=>String(l.name||'').trim()) : [];
@@ -24197,7 +24422,7 @@ function batchSheetPhraseCardHtml(s, ord, kg, editable){
   return `
   <div class="bsheet-step-row bs-phrase">
     <div class="bsr-head">
-      <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phrase ${letterLabel(ord-1)} ${temp}</div>
+      <div class="bsr-title"><span class="bsr-badge">${letterLabel(ord-1)}</span> Phase ${letterLabel(ord-1)} ${temp}</div>
       ${editable ? `<div class="bsr-actions">
         <button type="button" data-step-up="${s.id}" title="Move up">↑</button>
         <button type="button" data-step-down="${s.id}" title="Move down">↓</button>
@@ -24205,7 +24430,7 @@ function batchSheetPhraseCardHtml(s, ord, kg, editable){
       </div>` : ''}
     </div>
     ${matsTable}
-    ${instrField || (lines.length ? '' : '<div class="hint">Nothing written in this phrase yet.</div>')}
+    ${instrField || (lines.length ? '' : '<div class="hint">Nothing written in this phase yet.</div>')}
   </div>`;
 }
 // A preparation / checking step for someone who may not edit steps: read-only list.
@@ -24316,7 +24541,7 @@ function recipeBatchSheetInner(recipeId, asPage){
       </div>
       <div id="step-editor-list">${stepsHtml}</div>
       ${canEditSteps ? `<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm" id="btn-add-step">+ Add phrase</button>
+        <button type="button" class="btn btn-sm" id="btn-add-step">+ Add phase</button>
         <button type="button" class="btn btn-sm" id="btn-add-prep-step">+ Add preparation checking step</button>
       </div>` : ''}`;
   const actionsHtml = `
@@ -24396,7 +24621,7 @@ function waitForPrintAreaImages(area){
     img.addEventListener('error', resolve, {once:true});
   })));
 }
-// Ordinals ("Preparation/Checking 1", Phrase "A"/"B"...) number within their own kind across the
+// Ordinals ("Preparation/Checking 1", Phase "A"/"B"...) number within their own kind across the
 // WHOLE step list — computed once up front so every caller (live or documented) labels steps the
 // same way the on-screen step editor already does.
 function documentedStepOrdinals(steps){
@@ -24422,7 +24647,7 @@ function bsmcLedgerStepsHtml(steps, ordinals, kg){
       ).join('');
       return `<tr class="bsmc-ledger-grp"><td colspan="5">${s.name?esc(s.name):'Preparation / Checking '+ord}</td></tr>${checklistRows}`;
     }
-    // A phrase with raw-material lines prints each raw material with its quantity in kg of the batch size, then its instruction.
+    // A phase with raw-material lines prints each raw material with its quantity in kg of the batch size, then its instruction.
     const instr = stepInstructionText(s).trim();
     const cell = stepIsPhraseWithLines(s)
       ? stepRawLines(s, kg).map(l=>`<div class="bsmc-ledger-mat"><span>${esc(l.name)}</span><b>${esc(l.qty)}</b></div>`).join('') + (instr ? `<div class="bsmc-ledger-instr">${esc(instr)}</div>` : '')
@@ -24435,11 +24660,11 @@ function bsmcLedgerStepsHtml(steps, ordinals, kg){
     <tbody>${rows}</tbody>
   </table>`;
 }
-/* ===================== Printed batch sheet: ONE clean template, in this order (owner, 2026-11-22: "first batch details like current, and next raw materials, then VARIATIONS, do not add phrases.
+/* ===================== Printed batch sheet: ONE clean template, in this order (owner, 2026-11-22: "first batch details like current, and next raw materials, then VARIATIONS, do not add phases.
    add preparation checking setups. and remove weigh checking boxes in raw materials in print") =====================
    Used by BOTH prints (printBatchSheet = the blank pre-run form from the Batch sheet page, printDocumentedBatchSheet = the record printed from the batch window on Mixing and Filling) and by the live
    preview in Settings -> Prints edits -> Batch sheet. TOP TO BOTTOM: company + logo, product + batch number, batch details, RAW MATERIALS (No / Raw material / Percentage / Amount: NO "Weighed" tick column any more),
-   VARIATIONS, PREPARATION CHECKING (the batch's preparation / checking steps with their tick boxes and readings: batchPrepPrintHtml; the mixing PHRASES are NOT printed any more), the template-ordered pH / footer notes,
+   VARIATIONS, PREPARATION CHECKING (the batch's preparation / checking steps with their tick boxes and readings: batchPrepPrintHtml; the mixing PHASES are NOT printed any more), the template-ordered pH / footer notes,
    the stage-by-stage floor sign-off table, then the sign-off lines (record) or the blank "Before you start" / "After the batch" check lists (pre-run form), then "Printed ... by ...". It is ONE flowing page now (no forced
    page break): a typical batch is one page, a long one simply continues, and each table / check list stays in one piece (`break-inside:avoid`). Styles are scoped to .bsp and live inside the printed content, so nothing else on
    the page is touched. Settings switches: logo, date, batch number, description, pH, footer text, Variations, Preparation checking, stage sign-off, font size, heading colour, order of the pH / footer notes. */
@@ -24480,8 +24705,8 @@ function batchQaAfterHtml(){
     </div>
   </div></div>`;
 }
-// The PREPARATION / CHECKING steps of the batch as printed (owner, 2026-11-22: "do not add phrases. add preparation checking"): one small table per preparation step, headed by the step's name
-// ("Starting preparations"), a row per check with a tick box (drawn, so it prints the same in every browser) and a row per reading with its typed value (or a blank to write in). The mixing PHRASES are
+// The PREPARATION / CHECKING steps of the batch as printed (owner, 2026-11-22: "do not add phases. add preparation checking"): one small table per preparation step, headed by the step's name
+// ("Starting preparations"), a row per check with a tick box (drawn, so it prints the same in every browser) and a row per reading with its typed value (or a blank to write in). The mixing PHASES are
 // not printed any more. A step with nothing in its list is left out; with no preparation steps at all the whole block is left out.
 function batchPrepPrintHtml(steps, title){
   const preps = (steps||[]).filter(s=>s && s.type==='preparation' && (s.checklist||[]).length);
@@ -25014,7 +25239,7 @@ async function saveBatchSheetSteps(recipeId){
       }).filter(Boolean);
       return checklist.length ? {id:s.id, type:'preparation', name:(s.name||'').trim(), checklist} : null;
     }
-    if(stepIsPhraseWithLines(s)){   // a phrase made on the Process template keeps its raw-material lines (the instruction is the only text edited here)
+    if(stepIsPhraseWithLines(s)){   // a phase made on the Process template keeps its raw-material lines (the instruction is the only text edited here)
       const lines = s.lines.map(l=>({id:l.id, name:String(l.name||'').trim(), percent:Math.max(0, Number(l.percent)||0)})).filter(l=>l.name);
       const instruction = String(s.instruction||'').trim();
       if(!lines.length && !instruction) return null;
@@ -25024,7 +25249,7 @@ async function saveBatchSheetSteps(recipeId){
     if(!ingredient) return null;
     return {id:s.id, type:'phrase', ingredient, amount:(s.amount||'').trim(), temperature:(s.temperature||'').trim(), waitMinutes: Math.max(0, s.waitMinutes||0)};
   }).filter(Boolean);
-  if(steps.length===0){ showToast('Add at least one phrase or preparation step'); return; }
+  if(steps.length===0){ showToast('Add at least one phase or preparation step'); return; }
   const r = byId(state.recipes, recipeId); if(!r) return;
   r.steps = steps;
   // The batch number and the batch size typed on the sheet are saved together with the steps (Save and Start the batch both do this).

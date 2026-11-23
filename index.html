@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261123061831">
+<meta name="app-build" content="20261123112457">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -7475,6 +7475,7 @@ async function loadAll(){
   if(state.session && signedOffByTimeLimit()){
     state.session = null; try{ localStorage.setItem('audrey_session', 'null'); }catch(e){}
     signOutThisDevice();
+    pushUnregister().catch(()=>{});   // this start-up sign-off used to leave the device registered, so chat notifications kept arriving while signed out
   }
   // supabaseClient restores a saved login session from localStorage in the background as soon as
   // it's created — that restore isn't finished yet the instant the page loads. Without waiting
@@ -8209,7 +8210,7 @@ function saveSession(){
   catch(e){ console.error('save session failed', e); }
   // A fresh login (or re-login) resets the inactivity clock — see persistLastActivity()'s own
   // comment for why this needs to survive a page reload, not just live in a JS variable.
-  if(state.session){ persistLastActivity(); _lastActivityAt = Date.now(); _lastServerPingAt = 0; pingServerLastSeen(); }
+  if(state.session){ persistLastActivity(); _lastActivityAt = Date.now(); _lastServerPingAt = 0; pingServerLastSeen(); pushSetSignedOutMarker(false); }
   scheduleSignOffTimer();
 }
 // The in-tab inactivity ticker (armed near the bottom of this file) only tracks "last activity"
@@ -12441,12 +12442,27 @@ async function pushDisable(){
 }
 // signing out: this phone must stop receiving the previous person's messages (the browser keeps its registration, the
 // database stops using it; the next sign-in registers it again for whoever signs in)
+// SIGNED-OUT MARKER (owner, 2026-11-23: "if log out, notifications appear on pc and mobile. dont do that"): a tiny entry in the Cache API that the service worker can read.
+// Set at every sign-out (button, inactivity, expired login, start-up sign-off), cleared at the next sign-in (saveSession). While it is set, the service worker shows NO chat notification
+// and drops this device's push registration, even if the database still has it. (Absent = signed in, so people who were already signed in before this change are not affected.)
+async function pushSetSignedOutMarker(on){
+  try{
+    if(!('caches' in window)) return;
+    const c = await caches.open('audrey-auth'), key = location.origin + '/__signed_out__';
+    if(on) await c.put(key, new Response('1')); else await c.delete(key);
+  }catch(e){ /* best effort */ }
+}
 async function pushUnregister(){
+  await pushSetSignedOutMarker(true);
   try{
     if(!pushSupported() || !supabaseClient) return;
     const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, rej)=>setTimeout(()=>rej(new Error('slow')), 1500))]);
     const sub = await reg.pushManager.getSubscription();
-    if(sub) await Promise.race([c2Rpc('push_unsubscribe', {p_endpoint:sub.endpoint}), new Promise(r=>setTimeout(r, 2500))]);
+    if(sub){
+      // fire-and-forget request that survives the page closing (the old awaited call was cut off after 2.5 s on a slow connection, leaving the database still pushing to this device)
+      try{ fetch(SUPABASE_URL + '/rest/v1/rpc/push_unsubscribe', {method:'POST', keepalive:true, headers:{'apikey':SUPABASE_ANON_KEY, 'Content-Type':'application/json'}, body:JSON.stringify({p_endpoint:sub.endpoint})}).catch(()=>{}); }catch(e){}
+      await Promise.race([c2Rpc('push_unsubscribe', {p_endpoint:sub.endpoint}), new Promise(r=>setTimeout(r, 2500))]);
+    }
   }catch(e){ /* never block signing out */ }
 }
 async function c2PushKick(messageId){
@@ -13390,9 +13406,13 @@ function trackStatusCopy(o, key){
 }
 const TK_STAR = 'M0,-6L1.6,-1.6L6,0L1.6,1.6L0,6L-1.6,1.6L-6,0L-1.6,-1.6Z';
 function tkSpark(x, y, delay, cls){ return `<g transform="translate(${x},${y})"><path class="tk-sp ${cls||''}" fill="#F5C84C" d="${TK_STAR}" style="animation-delay:${delay}s"/></g>`; }
-function tkBox(x, y, w, h){   // a small closed cardboard box with a tape strip, used as props
-  const tx = x + w/2 - 5;
-  return `<rect class="k1" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/><rect class="k3" x="${x}" y="${y}" width="${w}" height="${Math.max(5,Math.round(h*.24))}" rx="2"/><rect class="ac" x="${tx}" y="${y}" width="10" height="${h}"/>`;
+const TK_LOGO_SRC = 'assets/brand/dallin-logo.png', TK_LOGO_RATIO = 440/167;   // the brand logo (a 6 KB transparent PNG, near-black ink): printed on the lorry, the invoice and the parcels
+const TK_AUDREY_SRC = 'assets/brand/audrey-logo.png', TK_AUDREY_RATIO = 300/52;   // the AUDREY wordmark: printed on the INVOICES (order slip + clipboard); the Dallin logo stays on the lorry and the parcels
+function tkLogo(x, y, w, audrey){ const src = audrey ? TK_AUDREY_SRC : TK_LOGO_SRC, r = audrey ? TK_AUDREY_RATIO : TK_LOGO_RATIO; return `<image href="${src}" x="${x}" y="${y}" width="${w}" height="${(w/r).toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`; }
+function tkBox(x, y, w, h, logo){   // a small closed cardboard box with a tape strip, used as props (logo = the brand printed on the front, tape moved to the right)
+  const tx = logo ? x + w - 13 : x + w/2 - 5;
+  const lw = logo ? w - 22 : 0, ly = y + Math.max(5,Math.round(h*.24)) + (h - Math.max(5,Math.round(h*.24)) - lw/TK_LOGO_RATIO)/2;
+  return `<rect class="k1" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/><rect class="k3" x="${x}" y="${y}" width="${w}" height="${Math.max(5,Math.round(h*.24))}" rx="2"/><rect class="ac" x="${tx}" y="${y}" width="10" height="${h}"/>${logo ? tkLogo(x+4, ly.toFixed(1), lw) : ''}`;
 }
 const TK_SCENES = {
   received(){
@@ -13400,11 +13420,11 @@ const TK_SCENES = {
     return `<svg viewBox="0 0 360 176" role="img" aria-label="Order received">
 <circle class="bg1" cx="306" cy="42" r="60"/><circle class="bg1" cx="44" cy="76" r="38"/>
 <rect class="fl" x="0" y="150" width="360" height="26"/>
-${tkBox(34,116,52,34)}${tkBox(44,94,34,22)}${tkBox(268,122,58,28)}${tkBox(280,104,30,18)}
+${tkBox(34,116,52,34,1)}${tkBox(44,94,34,22)}${tkBox(268,122,58,28,1)}${tkBox(280,104,30,18)}
 <ellipse cx="180" cy="150" rx="46" ry="4" fill="#000" fill-opacity=".07"/>
 <g class="rc-float">
 <path class="wh bdr" d="M140,22H220A8,8 0 0 1 228,30V136L220,130L212,136L204,130L196,136L188,130L180,136L172,130L164,136L156,130L148,136L140,130L132,136V30A8,8 0 0 1 140,22Z"/>
-<rect class="ac" x="144" y="34" width="40" height="7" rx="3.5"/><circle class="as" cx="212" cy="38" r="6"/><circle class="ac" cx="212" cy="38" r="2.4"/>
+${tkLogo(144,33,44,1)}<circle class="as" cx="212" cy="38" r="6"/><circle class="ac" cx="212" cy="38" r="2.4"/>
 ${rows.map((r,i)=>`<rect class="rc-line" x="144" y="${r[0]}" width="${r[1]}" height="5" rx="2.5" fill="#D7DEEE" style="animation-delay:${(i*.22).toFixed(2)}s"/><rect class="rc-line" x="204" y="${r[0]}" width="16" height="5" rx="2.5" fill="#E4E9F5" style="animation-delay:${(i*.22+.1).toFixed(2)}s"/>`).join('')}
 <rect x="144" y="102" width="76" height="1.5" rx=".75" fill="#E4E9F5"/>
 <rect class="ac rc-line" x="144" y="110" width="30" height="6" rx="3" style="animation-delay:1s"/><rect class="ad rc-line" x="196" y="109" width="24" height="8" rx="4" style="animation-delay:1.1s"/>
@@ -13433,6 +13453,7 @@ ${tkSpark(110,42,0)}${tkSpark(254,34,1.1)}${tkSpark(100,100,.6)}${tkSpark(262,92
 <path class="k2" d="M128,128H232V132A6,6 0 0 1 226,138H134A6,6 0 0 1 128,132Z"/>
 <rect class="wh" x="196" y="108" width="26" height="16" rx="2"/>
 <path d="M200,112v8M203,112v8M205.5,112v8M209,112v8M212,112v8M216,112v8" stroke="#56627A" stroke-width="1.3" fill="none"/>
+${tkLogo(134,110,36)}
 <path class="k3 pk-fl" d="M128,85H180V96H128Z"/><path class="k3 pk-fr" d="M180,85H232V96H180Z"/>
 <g class="pk-tape"><rect class="ac" x="172" y="90" width="16" height="34" rx="2"/><rect x="176" y="90" width="3" height="34" fill="#fff" fill-opacity=".28"/></g>
 <g class="pk-badge"><circle class="gr" cx="180" cy="62" r="14" stroke="#fff" stroke-width="3"/><path class="tk-tick" d="M173,62l5,5 9-10"/></g>
@@ -13448,13 +13469,13 @@ ${tkSpark(136,66,0,'pk-sp')}${tkSpark(226,70,.12,'pk-sp')}${tkSpark(204,44,.24,'
 <rect class="fl" x="0" y="150" width="360" height="26"/>
 <rect class="k1" x="40" y="88" width="108" height="62" rx="5"/><rect class="k3" x="40" y="88" width="108" height="14" rx="4"/>
 <rect class="ac" x="86" y="88" width="16" height="62"/><rect x="90" y="88" width="3" height="62" fill="#fff" fill-opacity=".28"/>
-<rect class="wh" x="108" y="108" width="34" height="30" rx="3"/>
+${tkLogo(46,108,38)}<rect class="wh" x="108" y="108" width="34" height="30" rx="3"/>
 <path d="M112,112v14M115,112v14M117.5,112v14M121,112v14M124,112v14M128,112v14M131,112v14M135,112v14M138,112v14" stroke="#56627A" stroke-width="1.3" fill="none"/>
 <rect x="112" y="129" width="22" height="3" rx="1.5" fill="#D7DEEE"/>
 <g clip-path="url(#tkBoxClip)"><g class="ck-scan"><rect x="40" y="88" width="20" height="62" fill="url(#tkBeam)"/><rect x="58" y="88" width="2.4" height="62" style="fill:var(--accent)"/></g></g>
 <rect class="sl" x="186" y="38" width="118" height="112" rx="10"/><rect class="sd" x="224" y="30" width="42" height="16" rx="5"/>
 <rect class="wh" x="194" y="52" width="102" height="90" rx="6"/>
-<rect class="ac" x="204" y="58" width="34" height="5" rx="2.5"/>
+${tkLogo(204,57,46,1)}
 ${rows.map((y,i)=>`<rect class="bdr" x="204" y="${y}" width="14" height="14" rx="3.5" fill="#fff"/><path class="tk-tickg ck-tickg" d="M207,${y+7.5}l3.5,3.5 6,-7" style="animation-delay:${(i*.6).toFixed(1)}s"/><rect x="226" y="${y+1}" width="${[52,44,58][i]}" height="4.5" rx="2.2" fill="#D7DEEE"/><rect x="226" y="${y+9}" width="${[30,36,24][i]}" height="3" rx="1.5" fill="#E8ECF6"/>`).join('')}
 <rect class="ad" x="204" y="127" width="40" height="5" rx="2.5"/><rect class="as" x="256" y="125" width="24" height="8" rx="4"/>
 <g class="ck-badge"><circle class="gr" cx="290" cy="138" r="15" stroke="#fff" stroke-width="3"/><path class="tk-tick" d="M283,138l5,5 9-10"/></g>
@@ -13490,7 +13511,7 @@ ${rows.map((y,i)=>`<rect class="bdr" x="204" y="${y}" width="14" height="14" rx=
 <g class="tr-bob">
 <rect class="sd" x="-2" y="140" width="110" height="8" rx="3"/>
 <rect class="wh bdr" x="0" y="88" width="70" height="52" rx="5"/><rect class="ac" x="0" y="122" width="70" height="8"/>
-<circle class="as" cx="35" cy="104" r="10"/><rect class="ac" x="29" y="99" width="12" height="10" rx="1.5"/><rect class="wh" x="29" y="99" width="12" height="3" fill-opacity=".6"/>
+${tkLogo(7,95,56)}
 <path class="ad" d="M70,100H88Q93,100 96,106L104,120Q106,124 106,128V140H70Z"/>
 <path d="M76,106H88Q90,106 92,109L97,119H76Z" fill="#CFE6FF"/>
 <circle cx="103.5" cy="128" r="2.6" fill="#FFE08A"/>
@@ -13511,7 +13532,7 @@ ${wheel(22)}${wheel(86)}
 <rect class="ac" x="166" y="100" width="28" height="48" rx="4"/><circle cx="188" cy="126" r="2" fill="#fff"/>
 <rect x="136" y="86" width="22" height="22" rx="3" fill="#CFE6FF"/><path d="M147,86V108M136,97H158" stroke="#fff" stroke-width="1.6"/>
 <rect x="202" y="86" width="22" height="22" rx="3" fill="#CFE6FF"/><path d="M213,86V108M202,97H224" stroke="#fff" stroke-width="1.6"/>
-<g>${tkBox(198,128,30,22)}</g>
+<g>${tkBox(196,122,46,28,1)}</g>
 <circle class="dl-ring" cx="250" cy="58" r="17" fill="none" stroke="#3FA968" stroke-width="2" style="opacity:0"/>
 <g class="dl-badge"><circle class="gr" cx="250" cy="58" r="17" stroke="#fff" stroke-width="3"/><path class="tk-tick" d="M241,58l6,6 11,-12"/></g>
 ${conf.map((c,i)=>`<rect class="cf" x="${c[0]}" y="0" width="6" height="10" rx="1.5" style="fill:${c[1]};animation-delay:${c[2]}s"/>`).join('')}

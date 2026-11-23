@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261123014551">
+<meta name="app-build" content="20261123061831">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4080,8 +4080,8 @@ const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','reci
 // (Bulk SMS's own keys used to live here too — moved to SYNCED_KEYS for the same reason rndProjects
 // was: a "Loading…" flash on every single visit to the page, instead of being there instantly like
 // the rest of the app.)
-const DEFERRED_KEYS = ['blendArchive','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','tempAttendance','attendanceEditRequests'];
-const DEFERRED_KEY_PAGES = { gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'], attendance: ['tempAttendance','attendanceEditRequests'], myattendance: ['tempAttendance','attendanceEditRequests'] };
+const DEFERRED_KEYS = ['blendArchive','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','tempAttendance','attendanceEditRequests','attendanceAbsences'];
+const DEFERRED_KEY_PAGES = { gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'], attendance: ['tempAttendance','attendanceEditRequests','attendanceAbsences'], myattendance: ['tempAttendance','attendanceEditRequests'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
 function orderDragEnabled(){ return !!(state.orderSettings && state.orderSettings.dragEnabled); }
@@ -5564,6 +5564,7 @@ const PERMISSION_REGISTRY = [
   {dept:'attendance', deptLabel:'Attendance', id:'attendance_approve_requests', label:'Approve or reject attendance edit requests (and get their alert)'},
   {dept:'attendance', deptLabel:'Attendance', id:'attendance_delete_entries', label:'Delete an attendance record'},
   {dept:'attendance', deptLabel:'Attendance', id:'attendance_print', label:'Print an attendance sheet'},
+  {dept:'attendance', deptLabel:'Attendance', id:'attendance_mark_absent', label:'Mark days as Absent for a staff member (shows on the printed sheet) and remove those marks'},
   // GMP checklists
   {dept:'gmp', deptLabel:'GMP checklists', id:'gmp_delete', label:'Delete a GMP log entry or calibration record'},
   // Customers
@@ -5624,7 +5625,7 @@ const PERMISSION_DEFAULTS = {};
   inh('colorsheets_view', ['colorsheets_print']);
   inh('colorsheets_edit', ['colorsheets_add','colorsheets_delete']);
   roles(['Admin'], ['blending_delete_batch','guide_delete_batch','costing_delete_products','costing_delete_versions','costing_delete_rows','gmp_delete','settings_login_activity_delete']);
-  roles(AS, ['orders_color_tags','boxcount_edit_any','boxcount_delete','boxcount_alert','attendance_view_all','attendance_approve_requests','attendance_delete_entries','attendance_print','rnd_edit_chemists','rnd_view_locations']);
+  roles(AS, ['orders_color_tags','boxcount_edit_any','boxcount_delete','boxcount_alert','attendance_view_all','attendance_approve_requests','attendance_delete_entries','attendance_print','attendance_mark_absent','rnd_edit_chemists','rnd_view_locations']);
   roles(AS, ['orders_boxcount_history']);   // previous days' box counts used to be hard-coded to Admin + Sub Admin (other roles had the switch); a role with a saved value keeps it
   PERMISSION_DEFAULTS.boxcount_use = {page:'orders'};
   PERMISSION_DEFAULTS.blending_view_archive = {page:'blending'};   // everyone who can open Mixing and Filling can look at its archive
@@ -5867,7 +5868,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 26;   // 26: 'blendArchive' (the Mixing and Filling archive) joins the blending page.    // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
+const PAGE_DATA_KEYS_VERSION = 27;   // 27: 'attendanceAbsences' (absent marks on the attendance sheet) joins the attendance page.    // 26: 'blendArchive' (the Mixing and Filling archive) joins the blending page.    // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
 // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
 // (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
@@ -5907,7 +5908,7 @@ const PAGE_DATA_KEYS = {
   ordersprocess: ['orders','branding'],
   gmp: ['gmpChecklistEntries','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','staff'],
   rnd: ['rndProjects','rndChemists','rndAttendance'],
-  attendance: ['tempAttendance','attendanceEditRequests'],
+  attendance: ['tempAttendance','attendanceEditRequests','attendanceAbsences'],
   staff: ['staff','staffCategories'],
   chat: ['chat','chatTheme','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'],
@@ -7219,6 +7220,7 @@ let state = {
   gmpMaintenanceMachines: [], gmpMaintenanceEntries: [], gmpHygieneRoster: [],
   tempAttendance: [],
   attendanceEditRequests: [],
+  attendanceAbsences: [],   // days marked Absent on the attendance sheet (see the Attendance absent note)
   _attEditAlert: null,
   blendBatches: [],
   blendStages: [],
@@ -14243,7 +14245,7 @@ function renderAttendanceEditRequestsList(){
   </div>`;
 }
 function renderAttendanceStaffList(){
-  const names = [...new Set((state.tempAttendance||[]).map(a=>a.staffName))].sort((a,b)=>a.localeCompare(b));
+  const names = [...new Set([...(state.tempAttendance||[]), ...(state.attendanceAbsences||[])].map(a=>a.staffName))].sort((a,b)=>a.localeCompare(b));
   return `
   <div class="panel">
     <div class="panel-head"><h3>Records — Staff</h3></div>
@@ -14293,11 +14295,15 @@ function renderAttendanceStaffReport(staffName){
   const entries = (state.tempAttendance||[]).filter(a=>a.staffName===staffName && (a.date||'').slice(0,7)===ym);
   const byDate = {};
   entries.forEach(a=>{ (byDate[a.date] = byDate[a.date]||[]).push(a); });
-  const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
+  const absentByDate = {};   // days marked Absent (a real check-in on the same day wins over an old mark)
+  attAbsencesFor(staffName, ym).forEach(a=>{ if(!byDate[a.date]) absentByDate[a.date] = a; });
+  const absentCount = Object.keys(absentByDate).length, canMark = can('attendance_mark_absent');
+  const dates = [...new Set([...Object.keys(byDate), ...Object.keys(absentByDate)])].sort((a,b)=>new Date(b)-new Date(a));
   const dayLabel = d => new Date(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   const locLink = a => a && a.lat ? `<a href="${rndMapsLink(a.lat,a.lng)}" target="_blank" rel="noopener" class="rnd-loc-link">${locPinIcon()}View</a>` : `<span class="hint">—</span>`;
   return `
   <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+    ${canMark ? `<button type="button" class="btn btn-sm" data-att-mark-absent="${escAttr(staffName)}">Mark absent…</button>` : ''}
     ${can('attendance_print') ? `<button type="button" class="btn btn-sm" data-att-print-staff="${escAttr(staffName)}">🖨 Print attendance sheet</button>` : ''}
   </div>
   <div class="panel">
@@ -14312,12 +14318,20 @@ function renderAttendanceStaffReport(staffName){
         <button type="button" class="btn-text" data-att-month-next aria-label="Next month">›</button>
       </div>
     </div>
+    ${absentCount ? `<div class="hint" style="padding:0 16px 10px;">${absentCount} day${absentCount===1?'':'s'} marked absent this month.</div>` : ''}
     ${dates.length===0 ? `<div class="empty-state" style="padding:20px;">No attendance recorded for ${fmtMonthLabel(ym)}.</div>` : `
     <div class="rnd-desktop-table">
     <table class="data-table">
       <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Login location</th><th>Logout location</th><th></th></tr></thead>
       <tbody>
         ${dates.map(d=>{
+          const ab = absentByDate[d];
+          if(ab) return `
+          <tr>
+            <td>${esc(dayLabel(d))}</td>
+            <td colspan="4"><span class="pill" style="background:var(--danger-soft);color:var(--danger);font-weight:700;">Absent</span></td>
+            <td style="text-align:right;white-space:nowrap;">${canMark?`<button type="button" class="btn-text" data-del-absent="${ab.id}" title="Remove the absent mark" style="color:#C15B4E;">🗑</button>`:''}</td>
+          </tr>`;
           const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
           return `
           <tr>
@@ -14337,6 +14351,12 @@ function renderAttendanceStaffReport(staffName){
     </div>
     <div class="rnd-mobile-cards">
       ${dates.map(d=>{
+        const ab = absentByDate[d];
+        if(ab) return `
+        <div class="rnd-att-card">
+          <div class="rnd-att-card-top"><div class="rnd-att-card-date">${esc(dayLabel(d))}</div></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span class="pill" style="background:var(--danger-soft);color:var(--danger);font-weight:700;">Absent</span>${canMark?`<button type="button" class="btn-text" data-del-absent="${ab.id}" title="Remove the absent mark" style="color:#C15B4E;margin-left:auto;">🗑</button>`:''}</div>
+        </div>`;
         const inE = byDate[d].find(a=>a.type==='in'), outE = byDate[d].find(a=>a.type==='out');
         return `
         <div class="rnd-att-card">
@@ -14670,19 +14690,32 @@ function attendancePrintData(staffName, ym){
     const day = Number(a.date.slice(8,10));
     (byDay[day] = byDay[day] || {})[a.type] = a;
   });
-  return {y, m, byDay, name: fullNameFor(staffName) || staffName};
+  const absent = {};   // day-of-month -> true for days marked Absent
+  attAbsencesFor(staffName, ym).forEach(a=>{ absent[Number(a.date.slice(8,10))] = true; });
+  return {y, m, byDay, absent, name: fullNameFor(staffName) || staffName};
 }
 function attendancePrintHtml(data, T){
   T = T || printTpl('attendance');
   const n = (k, def)=>peNum(T[k], def);
   const {y, m, byDay, name} = data;
+  const absent = data.absent || {};
   const daysInMonth = new Date(y, m, 0).getDate();
   const monthName = new Date(y, m-1, 1).toLocaleDateString(undefined, {month:'long'});
   const rp = n('rowPad',3), fs = n('fs',100);
-  let rows = '', presentCount = 0, totalOtMinutes = 0;
+  let rows = '', presentCount = 0, absentCount = 0, totalOtMinutes = 0;
   for(let d=1; d<=daysInMonth; d++){
     const inE = byDay[d] && byDay[d].in, outE = byDay[d] && byDay[d].out;
     if(inE || outE) presentCount++;
+    if(!inE && !outE && absent[d]){   // marked Absent: one row, the word across the In / Out columns (a real check-in always wins)
+      absentCount++;
+      rows += `
+    <tr style="border-bottom:1px solid #E7E9E4;background:#FBEFED;">
+      <td style="padding:${rp}px 6px;color:#6B7570;">${d}</td>
+      <td colspan="2" style="padding:${rp}px 6px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#9A3F34;">${esc(T.wAbsent||'Absent')}</td>
+      <td style="padding:${rp}px 6px;color:#C3C9C1;">—</td>
+    </tr>`;
+      continue;
+    }
     const otMins = attendanceOtMinutes(outE);
     totalOtMinutes += otMins;
     rows += `
@@ -14729,7 +14762,8 @@ function attendancePrintHtml(data, T){
       <tbody>${rows}</tbody>
     </table>
     ${T.showSummary===false ? '' : `<div style="display:flex;justify-content:flex-end;gap:28px;margin-top:8px;font-size:11.5px;color:#6B7570;font-family:'Inter',system-ui,sans-serif;">
-      <div>${esc(T.wPresent)} <b style="color:#1C2320;">${presentCount}</b></div>
+      <div>${esc(T.wPresent)} <b style="color:#1C2320;">${presentCount}</b></div>${absentCount ? `
+      <div>${esc(T.wAbsentDays||'Days absent')} <b style="color:#9A3F34;">${absentCount}</b></div>` : ''}
       <div>${esc(T.wTotalOt)} <b style="color:#1C2320;">${totalOtMinutes?fmtOtMinutes(totalOtMinutes):'0m'}</b></div>
     </div>`}
   </div>`;
@@ -14957,6 +14991,162 @@ function deleteAttendanceEntry(id){
       await save('tempAttendance');
     },
   });
+}
+/* ===================== Attendance: mark a person ABSENT (owner, 2026-11-23: "in attendance print we need to mark absent ... one of our employee no longer come again, need to mark all of them to end of the month and need to print") =====================
+   Attendance only ever recorded check-ins / check-outs, so a day nobody checked in was just a blank row. An absent day is now its own record in the deferred key `attendanceAbsences`
+   = [{id, staffName, date:'YYYY-MM-DD', markedBy, markedAt}] (one row per day; NOT mixed into `tempAttendance`, so the check-in page, "seen today" dots and edit requests behave exactly as before).
+   Reached from Attendance -> Records -> a staff member -> "Mark absent" (permission `attendance_mark_absent`). A day that has a real check-in / out is never marked (and a later check-in wins over an old mark).
+   The printed sheet shows "ABSENT" on those days and a "Days absent" figure; the on-screen report lists them with a remove button. */
+function attYmdLocal(d){ return localDateKey(d); }
+function attParseYmd(s){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||'')); return m ? new Date(Number(m[1]), Number(m[2])-1, Number(m[3])) : null; }
+function attDmy(s){ return String(s||'').split('-').reverse().join('/'); }
+function attAbsencesFor(staffName, ym){
+  return (state.attendanceAbsences||[]).filter(a=>a.staffName===staffName && (!ym || (a.date||'').slice(0,7)===ym));
+}
+// Which days a "mark absent" would add: every day from..to, minus weekend days the person chose to skip, days that already have a real check-in / out, and days already marked.
+function attAbsentCompute(staffName, from, to, skipSat, skipSun){
+  const a = attParseYmd(from), b = attParseYmd(to);
+  const out = {days:[], skippedWeekend:0, skippedWorked:0, skippedAlready:0, error:''};
+  if(!a || !b){ out.error = 'Pick both dates.'; return out; }
+  if(a > b){ out.error = 'The first date is after the last date.'; return out; }
+  if((b - a)/86400000 > 400){ out.error = 'Pick a range of up to 400 days.'; return out; }
+  const worked = new Set((state.tempAttendance||[]).filter(x=>x.staffName===staffName).map(x=>x.date));
+  const already = new Set(attAbsencesFor(staffName).map(x=>x.date));
+  for(let d = new Date(a); d <= b; d.setDate(d.getDate()+1)){
+    const key = attYmdLocal(d), dow = d.getDay();
+    if((dow===6 && skipSat) || (dow===0 && skipSun)){ out.skippedWeekend++; continue; }
+    if(worked.has(key)){ out.skippedWorked++; continue; }
+    if(already.has(key)){ out.skippedAlready++; continue; }
+    out.days.push(key);
+  }
+  return out;
+}
+function openAttendanceAbsent(staffName){
+  if(!can('attendance_mark_absent') || !staffName) return;
+  const ym = state._attRecordsMonth || todayStr().slice(0,7);
+  const [y, m] = ym.split('-').map(Number);
+  const last = monthLastDay(y, m);
+  // the first date offered = the day after this person's last real check-in this month (else the 1st); the last date = the end of the month on screen
+  const lastWorked = (state.tempAttendance||[]).filter(a=>a.staffName===staffName && (a.date||'').slice(0,7)===ym).map(a=>a.date).sort().pop();
+  let from = ym + '-01';
+  if(lastWorked){ const d = attParseYmd(lastWorked); d.setDate(d.getDate()+1); from = attYmdLocal(d); }
+  if(from > last) from = last;
+  state._attAbsent = {staffName, ym, from, to:last, skipSat:false, skipSun:false};
+  openModal('attabsent');
+}
+function attendanceAbsentModal(){
+  const s = state._attAbsent; if(!s) return '';
+  const existing = attAbsencesFor(s.staffName, s.ym).length;
+  return `
+  <div class="overlay" id="overlay">
+    <div class="modal" style="max-width:460px;">
+      <h2>Mark absent</h2>
+      <div class="sub"><strong>${esc(fullNameFor(s.staffName) || s.staffName)}</strong> &middot; ${esc(fmtMonthLabel(s.ym))}. Every day in the range that has no check-in or check-out gets an "Absent" mark, and it prints on the attendance sheet.</div>
+      <form id="form-att-absent">
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;"><label>From</label><input type="date" name="from" required value="${escAttr(s.from)}"></div>
+          <div class="field" style="flex:1;"><label>To</label><input type="date" name="to" required value="${escAttr(s.to)}"></div>
+        </div>
+        <div style="margin:-4px 0 12px;"><button type="button" class="btn btn-sm" id="btn-att-absent-eom">To the end of the month</button></div>
+        <div class="field" style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;">
+          <label style="display:flex;align-items:center;gap:7px;font-weight:500;cursor:pointer;"><input type="checkbox" name="skipSat" ${s.skipSat?'checked':''}> Skip Saturdays</label>
+          <label style="display:flex;align-items:center;gap:7px;font-weight:500;cursor:pointer;"><input type="checkbox" name="skipSun" ${s.skipSun?'checked':''}> Skip Sundays</label>
+        </div>
+        <div id="att-absent-preview" class="hint" style="min-height:38px;line-height:1.5;"></div>
+        ${existing ? `<div class="hint" style="margin:6px 0 0;padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>${existing} day${existing===1?'':'s'} already marked absent this month.</span><button type="button" class="btn btn-sm btn-danger" id="btn-att-absent-clear">Remove them</button></div>` : ''}
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-att-absent-save">Mark absent</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+// Keeps the "N days will be marked" line (and the Save button) in step with what is typed, WITHOUT redrawing the window (a redraw would lose the typing).
+function attAbsentRefresh(){
+  const f = document.getElementById('form-att-absent'), s = state._attAbsent; if(!f || !s) return;
+  s.from = f.from.value; s.to = f.to.value; s.skipSat = !!f.skipSat.checked; s.skipSun = !!f.skipSun.checked;
+  const r = attAbsentCompute(s.staffName, s.from, s.to, s.skipSat, s.skipSun);
+  const box = document.getElementById('att-absent-preview'), btn = document.getElementById('btn-att-absent-save');
+  let msg;
+  if(r.error) msg = `<span style="color:var(--danger);">${esc(r.error)}</span>`;
+  else if(!r.days.length) msg = 'Nothing to mark in this range.' + attAbsentSkipText(r);
+  else msg = `<strong style="color:var(--ink);">${r.days.length} day${r.days.length===1?'':'s'}</strong> will be marked absent (${esc(attDmy(r.days[0]))} to ${esc(attDmy(r.days[r.days.length-1]))}).` + attAbsentSkipText(r);
+  if(box) box.innerHTML = msg;
+  if(btn) btn.disabled = !!r.error || !r.days.length;
+}
+function attAbsentSkipText(r){
+  const bits = [];
+  if(r.skippedWeekend) bits.push(`${r.skippedWeekend} weekend day${r.skippedWeekend===1?'':'s'} skipped`);
+  if(r.skippedWorked) bits.push(`${r.skippedWorked} day${r.skippedWorked===1?'':'s'} with a check-in skipped`);
+  if(r.skippedAlready) bits.push(`${r.skippedAlready} already marked`);
+  return bits.length ? `<br><span>${esc(bits.join(' · '))}.</span>` : '';
+}
+async function submitAttendanceAbsent(e){
+  e.preventDefault();
+  if(!can('attendance_mark_absent')) return;
+  const s = state._attAbsent, f = e.target; if(!s) return;
+  const r = attAbsentCompute(s.staffName, f.from.value, f.to.value, !!f.skipSat.checked, !!f.skipSun.checked);
+  if(r.error){ showToast(r.error); return; }
+  if(!r.days.length){ showToast('Nothing to mark in that range'); return; }
+  const me = (state.session && state.session.name) || '', now = new Date().toISOString();
+  const recs = r.days.map(date=>({id:uid('ABS'), staffName:s.staffName, date, markedBy:me, markedAt:now}));
+  const days = r.days.slice(), staff = s.staffName, first = days[0], lastDay = days[days.length-1];
+  state.attendanceAbsences = [...recs, ...(state.attendanceAbsences||[])];
+  if(first.slice(0,7) !== state._attRecordsMonth) state._attRecordsMonth = first.slice(0,7);   // show the month the marks landed in
+  closeModal();
+  const ok = await save('attendanceAbsences');
+  if(!ok){
+    state.attendanceAbsences = (state.attendanceAbsences||[]).filter(x=>!recs.some(rr=>rr.id===x.id));
+    showToast('Could not save the absent marks — please try again'); render(); return;
+  }
+  logActivity(`Marked ${staff} absent for ${days.length} day${days.length===1?'':'s'} (${attDmy(first)} to ${attDmy(lastDay)})`);
+  showToast(`${days.length} day${days.length===1?'':'s'} marked absent`);
+}
+function deleteAttendanceAbsent(id){
+  if(!can('attendance_mark_absent')) return;
+  const a = (state.attendanceAbsences||[]).find(x=>x.id===id); if(!a) return;
+  openConfirmModal({
+    title:'Remove absent mark', danger:true, confirmLabel:'Remove',
+    message:`Remove the absent mark for ${a.staffName} on ${attDmy(a.date)}? The day goes back to a blank row.`,
+    onConfirm: async ()=>{
+      const before = state.attendanceAbsences;
+      state.attendanceAbsences = before.filter(x=>x.id!==id);
+      const ok = await save('attendanceAbsences');
+      if(!ok){ state.attendanceAbsences = before; showToast('Could not remove it — please try again'); render(); return; }
+      logActivity(`Removed the absent mark for ${a.staffName} on ${attDmy(a.date)}`);
+    },
+  });
+}
+function clearAttendanceAbsentMonth(){
+  if(!can('attendance_mark_absent')) return;
+  const s = state._attAbsent; if(!s) return;
+  const mine = attAbsencesFor(s.staffName, s.ym); if(!mine.length) return;
+  openConfirmModal({
+    title:'Remove absent marks', danger:true, confirmLabel:'Remove them',
+    message:`Remove all ${mine.length} absent mark${mine.length===1?'':'s'} for ${s.staffName} in ${fmtMonthLabel(s.ym)}? Those days go back to blank rows.`,
+    onConfirm: async ()=>{
+      const before = state.attendanceAbsences, ids = new Set(mine.map(x=>x.id));
+      state.attendanceAbsences = before.filter(x=>!ids.has(x.id));
+      const ok = await save('attendanceAbsences');
+      if(!ok){ state.attendanceAbsences = before; showToast('Could not remove them — please try again'); render(); return; }
+      logActivity(`Removed ${mine.length} absent mark${mine.length===1?'':'s'} for ${s.staffName} (${s.ym})`);
+      showToast('Absent marks removed');
+    },
+  });
+}
+function wireAttendanceAbsentForm(){
+  const f = document.getElementById('form-att-absent'); if(!f) return;
+  f.addEventListener('submit', submitAttendanceAbsent);
+  ['from','to','skipSat','skipSun'].forEach(n=>{ f[n].addEventListener('input', attAbsentRefresh); f[n].addEventListener('change', attAbsentRefresh); });
+  const eom = document.getElementById('btn-att-absent-eom');
+  if(eom) eom.addEventListener('click', ()=>{
+    const a = attParseYmd(f.from.value) || attParseYmd(todayStr());
+    f.to.value = monthLastDay(a.getFullYear(), a.getMonth()+1);
+    attAbsentRefresh();
+  });
+  const clr = document.getElementById('btn-att-absent-clear'); if(clr) clr.addEventListener('click', clearAttendanceAbsentMonth);
+  attAbsentRefresh();
 }
 // Phone-width navigation: a fixed bottom tab bar with exactly these six icon-only stops.
 // Team chat isn't one of them — it moved to the topbar, right next to Dally. Everything else
@@ -21070,7 +21260,7 @@ function peSampleOrder(){
 function peSampleAttendance(){
   const byDay = {}; const y = 2026, m = 10;
   for(let d=1; d<=31; d++){ if(d%7===0||d%7===6) continue; byDay[d] = {in:{at:new Date(y,m,d,8,30).toISOString()}, out:{at:new Date(y,m,d,d%3===0?19:17,45).toISOString()}}; }
-  return {y, m, byDay, name:'Sample Person'};   // 31 days: the worst case for "one page"
+  return {y, m, byDay, absent:{27:true, 28:true}, name:'Sample Person'};   // 31 days: the worst case for "one page" (27 and 28 show the Absent row)
 }
 function peSampleColorSheet(){
   const real = (state.colorSheets||[])[0]; if(real) return real;
@@ -25055,7 +25245,7 @@ const PRINT_DEFS = {
     title:'Attendance sheet', blurb:'The monthly sheet printed from Attendance records (A4, one page, up to 31 days).',
     groups:[
       {title:'Logo', fields:peLogoFields({mode:'none', h:50, unit:'px', min:20, max:160, step:1, align:'center'})},
-      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wTitle','Document title (the year is added after it)','Attendance Sheet'), PE_TXT('wName','Name','Name'), PE_TXT('wEmp','Employee number','Employee #'), PE_TXT('wMonth','Month','Month'), PE_TXT('wIn','In time column','In Time'), PE_TXT('wOut','Out time column','Out Time'), PE_TXT('wOt','Overtime column','OT Hours'), PE_TXT('wOtNote','Overtime note','(after 6pm)'), PE_TXT('wPresent','Days present','Days present'), PE_TXT('wTotalOt','Total overtime','Total OT')]},
+      {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wTitle','Document title (the year is added after it)','Attendance Sheet'), PE_TXT('wName','Name','Name'), PE_TXT('wEmp','Employee number','Employee #'), PE_TXT('wMonth','Month','Month'), PE_TXT('wIn','In time column','In Time'), PE_TXT('wOut','Out time column','Out Time'), PE_TXT('wOt','Overtime column','OT Hours'), PE_TXT('wOtNote','Overtime note','(after 6pm)'), PE_TXT('wPresent','Days present','Days present'), PE_TXT('wAbsent','Word printed on an absent day','Absent'), PE_TXT('wAbsentDays','Days absent (summary)','Days absent'), PE_TXT('wTotalOt','Total overtime','Total OT')]},
       {title:'Show or hide', fields:[PE_BOOL('showEmp','Employee number box',true), PE_BOOL('showSummary','Days present and total overtime',true)]},
       {title:'Spaces and sizes, by hand (keep it on one page: check the preview with 31 days)', fields:[PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('rowPad','Height of each day row (padding)',3,'px',0,12,.5), PE_NUM('fs','Text size',100,'%',60,140,5)]},
     ],
@@ -25292,6 +25482,7 @@ function renderModal(){
   if(type==='boxcount') return boxCountModal();
   if(type==='editattendance') return editAttendanceModal(id);
   if(type==='attendancecapture') return attendanceCaptureModal();
+  if(type==='attabsent') return attendanceAbsentModal();
   if(type==='customer') return customerFormModal(id==='new'?null:id);
   if(type==='item') return itemFormModal(id==='new'?null:id);
   if(type==='itemcsvformat') return itemCsvFormatModal();
@@ -28225,6 +28416,9 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-att-capture-type]').forEach(b=>b.addEventListener('click', ()=>{ state._attCaptureType = b.dataset.attCaptureType; render(); }));
   if(byIdEl('btn-att-log-time')) byIdEl('btn-att-log-time').onclick = submitAttendanceCapture;
   document.querySelectorAll('[data-delete-att]').forEach(b=>b.addEventListener('click', ()=>deleteAttendanceEntry(b.dataset.deleteAtt)));
+  document.querySelectorAll('[data-att-mark-absent]').forEach(b=>b.addEventListener('click', ()=>openAttendanceAbsent(b.dataset.attMarkAbsent)));
+  document.querySelectorAll('[data-del-absent]').forEach(b=>b.addEventListener('click', ()=>deleteAttendanceAbsent(b.dataset.delAbsent)));
+  if(byIdEl('form-att-absent')) wireAttendanceAbsentForm();
   // Attendance admin: Records hub -> staff list -> one staff's monthly report
   document.querySelectorAll('[data-att-records-open]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsOpen = true; render(); ensureFullNames().then(()=>{ if(!state.modal) render(); }); }));
   document.querySelectorAll('[data-att-staff-row]').forEach(b=>b.addEventListener('click', ()=>{ state._attRecordsStaff = b.dataset.attStaffRow; state._attRecordsMonth = null; render(); }));
@@ -29276,7 +29470,7 @@ function attachShellHandlers(){
 
   // Modal generic — clicking the overlay background closes the modal, except for forms that are
   // easy to half-fill and lose with one stray click (New order, the Add color sheet form ('colorsheetnew'),
-  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), the Mixing and Filling batch forms ('blend:new' = New batch, 'blend:<id>' = the batch window with its variation rows), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
+  // the driver's stop form ('driverstop:<status>:<order>', photo + note), the Profile details form ('profiledetails'), the Mark absent form ('attabsent': dates + weekend ticks), the Add / Edit customer form ('customer:new' / 'customer:<id>'; the colon keeps 'customerimportreview', 'customercsvformat' and 'customercolumns' out), the Mixing and Filling batch forms ('blend:new' = New batch, 'blend:<id>' = the batch window with its variation rows), and the Complaint forms -- both "Log a complaint" and an existing "Complaint details", i.e.
   // 'complaint:new' / 'complaint:<id>'), which only close via their own Cancel/Close/Save controls.
   // 'complaint:' with the colon is deliberate: the other complaint windows ('complaintreasons',
   // 'complaintpriorities', 'complaintphotos:', 'complaintcustomerview:') are not forms and keep
@@ -29286,7 +29480,7 @@ function attachShellHandlers(){
   const overlay = byIdEl('overlay');
   if(overlay) overlay.addEventListener('mousedown', e=>{
     if(e.target!==overlay) return;
-    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('blend:new'))) return;   // 'blend:new' = the New batch form only: the batch window ('blend:<id>') closes on an outside click (owner, 2026-11-22: "dont apply panel closing rule here")
+    if(state.modal && (state.modal.startsWith('order:new') || state.modal.startsWith('colorsheetnew') || state.modal.startsWith('complaint:') || state.modal.startsWith('driverstop:') || state.modal.startsWith('profiledetails') || state.modal.startsWith('customer:') || state.modal.startsWith('blend:new') || state.modal.startsWith('attabsent'))) return;   // 'blend:new' = the New batch form only: the batch window ('blend:<id>') closes on an outside click (owner, 2026-11-22: "dont apply panel closing rule here")
     if(state.modal==='confirmaction' && state._confirmAction && state._confirmAction.sticky) return;   // a Yes / No question that needs an answer: only its own two buttons close it
     closeModal();
   });

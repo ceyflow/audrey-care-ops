@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261122164711">
+<meta name="app-build" content="20261122173039">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1575,6 +1575,17 @@ html{ visibility:hidden; }
   .bcard-foot{font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   @media (min-width:1151px){.blend-board{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));}}
   /* ===== Batch window (Mixing and Filling) + variations (owner, 2026-11-22) ===== */
+  .ba-list{padding:0;overflow:hidden;}
+  .ba-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+  .ba-row:last-child{border-bottom:none;}
+  .ba-row:hover,.ba-row:focus-visible{background:var(--accent-soft);outline:none;}
+  .ba-no{flex:none;min-width:98px;font-weight:800;font-size:14px;color:var(--ink);}
+  .ba-prod{flex:1 1 200px;min-width:0;font-weight:600;font-size:13.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ba-prod i{font-style:normal;font-weight:500;color:var(--muted);margin-left:8px;}
+  .ba-chips{display:flex;gap:8px;align-items:center;flex:none;}
+  .ba-dates{flex:none;text-align:right;font-size:11.5px;line-height:1.45;color:var(--muted);min-width:170px;}
+  .ba-dates b{color:var(--ink);font-weight:700;}
+  @media (max-width:760px){ .ba-row{padding:12px 14px;} .ba-prod{flex-basis:100%;order:2;white-space:normal;} .ba-no{order:1;} .ba-chips{order:1;margin-left:auto;} .ba-dates{order:3;flex-basis:100%;text-align:left;min-width:0;} }
   .bw-drawer{background:#F4F7F5;}
   .bw-drawer .drawer-hero{margin-bottom:12px;padding-top:16px;padding-bottom:16px;}
   .bw-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px;}
@@ -1604,6 +1615,7 @@ html{ visibility:hidden; }
   .bw-pill-done{background:#E5F4EA;border-color:#BFE3CB;color:#1f7a45;}
   .bw-qc.is-current{border-color:rgba(var(--accent-rgb),.55);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.10),0 1px 3px rgba(20,30,25,.07);}
   .bw-qc-grid{display:grid;grid-template-columns:minmax(80px,.7fr) minmax(100px,1fr) auto;gap:0 12px;align-items:end;}
+  .bw-qc-grid.no-ck{grid-template-columns:minmax(80px,1fr) minmax(100px,1.4fr);}
   .bw-qc-grid > .bw-qc-notes{grid-column:1 / -1;}
   .bw-qc-checks{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;min-height:36px;}
   .bw-card .field .qc-chk{display:inline-flex;align-items:center;gap:6px;margin:0;padding:6px 11px 6px 9px;border:1.5px solid var(--border);border-radius:999px;background:#fff;font-size:12.5px;font-weight:700;letter-spacing:0;color:var(--ink);cursor:pointer;user-select:none;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
@@ -3983,7 +3995,7 @@ const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','reci
 // (Bulk SMS's own keys used to live here too — moved to SYNCED_KEYS for the same reason rndProjects
 // was: a "Loading…" flash on every single visit to the page, instead of being there instantly like
 // the rest of the app.)
-const DEFERRED_KEYS = ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','tempAttendance','attendanceEditRequests'];
+const DEFERRED_KEYS = ['blendArchive','gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster','tempAttendance','attendanceEditRequests'];
 const DEFERRED_KEY_PAGES = { gmp: ['gmpLogEntries','gmpCalibrationInstruments','gmpPestPoints','gmpPestEntries','gmpMaintenanceMachines','gmpMaintenanceEntries','gmpHygieneRoster'], attendance: ['tempAttendance','attendanceEditRequests'], myattendance: ['tempAttendance','attendanceEditRequests'] };
 const DEFAULT_ORDER_SETTINGS = {smsAutoSend:true, dragEnabled:false};
 function orderSmsAutoSend(){ return !state.orderSettings || state.orderSettings.smsAutoSend!==false; }
@@ -4000,7 +4012,7 @@ const DEFAULT_BATCH_SHEET_TEMPLATE = {
   headerColor:'#ECECE6', fontSize:'medium',
   trailingSectionOrder:['ph','footer'],
   // logo, words and spaces (Settings -> Prints edits); every value is what the sheet always used
-  logoMode:'company', logoUrl:'', logoH:112, logoAlign:'center',
+  logoMode:'company', logoUrl:'', logoH:44, logoAlign:'left',   // compact header (owner, 2026-11-22: "too much space in upper header"): a small logo beside the company name, not a big centred one
   wCompany:'Audrey Care (Pvt) Ltd.', wDoc:'Batch Sheet', wProduct:'Product', wBatchNo:'Batch number', wVariations:'Variations', wMaterials:'Raw materials', wPrep:'Preparation checking', wQc:'QC details', wStages:'Stage by stage \u2014 floor sign-off',
   padX:24, padY:10, secGap:14, rowPad:6,
 };
@@ -5427,8 +5439,11 @@ const PERMISSION_REGISTRY = [
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_details', label:'Edit a batch\'s details (batch number, quantity, priority, machine, formulation code)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_variations', label:'Add, edit and remove a batch\'s variations (product, fragrance, quantity, unit)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_edit_qc', label:'Type the QC readings (pH, viscosity, notes) on the 1st / 2nd / 3rd QC cards'},
-  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_qc_checks', label:'Tick the QC checks (Color, Fragrance, Viscosity) on the QC cards'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_qc_checks', label:'Tick the QC checks (Color, Fragrance, Viscosity) on the 2nd / 3rd QC cards'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_delete_batch', label:'Delete a batch (asks for the password again)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_view_archive', label:'Open the Archive (batches leave the board 2 hours after the last stage and are kept here forever)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_archive_now', label:'Move a finished batch to the Archive straight away (Archive now in its window)'},
+  {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_restore_archived', label:'Restore a batch from the Archive back to the board'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_manage_stages', label:'Manage the Mixing and Filling stages (Manage Lists button: add, rename, reorder, delete)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_print_sticker', label:'Print the 50 x 50 mm vessel sticker (Print Vessel Sticker, and the question after a batch is transferred)'},
   {dept:'blendingboard', deptLabel:'Blending Department (board)', id:'blending_print_sheet', label:'Print a batch\'s batch sheet from Mixing and Filling (Print batch sheet in the batch window)'},
@@ -5549,6 +5564,8 @@ const PERMISSION_DEFAULTS = {};
   roles(AS, ['orders_color_tags','boxcount_edit_any','boxcount_delete','boxcount_alert','attendance_view_all','attendance_approve_requests','attendance_delete_entries','attendance_print','rnd_edit_chemists','rnd_view_locations']);
   roles(AS, ['orders_boxcount_history']);   // previous days' box counts used to be hard-coded to Admin + Sub Admin (other roles had the switch); a role with a saved value keeps it
   PERMISSION_DEFAULTS.boxcount_use = {page:'orders'};
+  PERMISSION_DEFAULTS.blending_view_archive = {page:'blending'};   // everyone who can open Mixing and Filling can look at its archive
+  roles(AS, ['blending_archive_now','blending_restore_archived']);
   inh('costing_edit', ['costing_transfer_to_sheets']);
   inh('rnd_manage', ['rnd_create_projects','rnd_advance','rnd_edit_projects','rnd_add_chemists','rnd_mark_attendance']);
   inh('staff_manage', ['staff_add','staff_edit','staff_delete','staff_categories']);
@@ -5787,7 +5804,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 25;   // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
+const PAGE_DATA_KEYS_VERSION = 26;   // 26: 'blendArchive' (the Mixing and Filling archive) joins the blending page.    // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
 // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
 // (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
@@ -5816,7 +5833,7 @@ const PAGE_DATA_KEYS = {
   deliveryruns: ['orders'],
   driverrun: [],
   blendingdept: [],
-  blending: ['blendBatches','blendStages','colorSheets'],
+  blending: ['blendBatches','blendStages','colorSheets','blendArchive'],
   recipes: ['recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3'],
   costing: ['costingProducts','suppliers','recipes'],
   customers: ['customers','staff','salesPersonColors'],
@@ -6279,6 +6296,7 @@ function blendIsFinal(b){ const list = blendStageList(); return blendStageIdx(b,
 function blendBatchesInStage(key){ const list = blendStageList(); return (state.blendBatches||[]).filter(b=>blendStageKeyOf(b, list)===key); }
 // A history entry's stage name: the current name of its stage (so a rename shows everywhere), else what it was called when written.
 function blendHistoryLabel(h){
+  if(h && h.restored) return 'Restored from the archive';
   const key = h && (h.stageKey || BLEND_STAGE_KEYS[h.stage]);
   const st = key && blendStageList().find(x=>x.key===key);
   return (st && st.label) || (h && h.stageLabel) || BLEND_STAGES[h && h.stage] || '\u2014';
@@ -6289,6 +6307,88 @@ function blendStageSince(b){
   const hist = (Array.isArray(b.history) ? b.history : []).filter(Boolean);
   for(let i=hist.length-1;i>=0;i--){ if((hist[i].stageKey || BLEND_STAGE_KEYS[hist[i].stage])===key && hist[i].at) return hist[i].at; }
   return b.createdAt;
+}
+/* ===================== Mixing and Filling ARCHIVE (owner, 2026-11-22: "add a button called 'archive' its like packing department archive. after dispatched to stock remaining 2 hours and after that transfer to that archive. archive list remains forever") =====================
+   A batch stays on the board for 2 hours after it reaches the LAST stage ("Dispatched to Stock"), then moves to the archive, which is never cleaned. Unlike the Orders archive (a flag inside the big `orders` row, which is why that row is huge), the archive is its OWN data key `blendArchive`
+   (a DEFERRED key: fetched only when the Archive is opened or a sweep has something to move, never at sign-in), so the live `blendBatches` row stays small however many batches are archived. An archived record is the whole batch plus `archivedAt` / `archivedBy`.
+   Moving = append to `blendArchive` FIRST, then remove from `blendBatches` (a failure in between leaves the batch in both, and the next sweep just finishes the removal: nothing is ever lost). Restore does it the other way round and adds a history entry at the last stage so the batch gets its 2 hours on the board again. */
+const BLEND_ARCHIVE_AFTER_MS = 2*60*60*1000;
+const BLEND_ARCHIVE_PAGE_SIZE = 60;
+function blendArchiveList(){ return Array.isArray(state.blendArchive) ? state.blendArchive : []; }
+function blendFind(id){ return byId(state.blendBatches||[], id) || byId(blendArchiveList(), id); }
+function blendIsArchived(id){ return !byId(state.blendBatches||[], id) && !!byId(blendArchiveList(), id); }
+function canViewBlendArchive(){ return !!state.session && roleCan(state.session.role, 'blending_view_archive'); }
+function canArchiveBlendNow(){ return !!state.session && roleCan(state.session.role, 'blending_archive_now'); }
+function canRestoreBlend(){ return !!state.session && roleCan(state.session.role, 'blending_restore_archived'); }
+// Due = in the last stage for 2 hours or more (a missing / broken time counts as due, so a batch is never stuck on the board forever).
+function blendDueForArchive(b){
+  if(!blendIsFinal(b)) return false;
+  const t = new Date(blendStageSince(b)).getTime();
+  return isNaN(t) || (Date.now() - t >= BLEND_ARCHIVE_AFTER_MS);
+}
+function ensureBlendArchiveLoaded(){
+  if(state._deferredLoaded.blendArchive || state._blendArchiveLoading) return Promise.resolve(false);
+  state._blendArchiveLoading = true;
+  return ensureDeferredKeysLoaded(['blendArchive']).then(f=>{ state._blendArchiveLoading = false; if(f) render(); return f; }).catch(()=>{ state._blendArchiveLoading = false; return false; });
+}
+let _blendArchiveBusy = false;
+async function moveBlendsToArchive(ids, byHand){
+  if(_blendArchiveBusy) return false;
+  _blendArchiveBusy = true;
+  try{
+    await ensureDeferredKeysLoaded(['blendArchive']);
+    const batches = ids.map(id=>byId(state.blendBatches||[], id)).filter(Boolean);
+    if(!batches.length) return false;
+    const now = new Date().toISOString(), me = (state.session && (state.session.staffName || state.session.name)) || '';
+    const have = new Set(blendArchiveList().map(x=>x.id));
+    const add = batches.filter(b=>!have.has(b.id)).map(b=>({...JSON.parse(JSON.stringify(b)), archivedAt: now, archivedBy: byHand ? me : ''}));
+    const beforeArchive = state.blendArchive;
+    if(add.length){
+      state.blendArchive = [...add, ...blendArchiveList()];
+      if(!(await save('blendArchive'))){ state.blendArchive = beforeArchive; return false; }
+    }
+    const gone = new Set(batches.map(b=>b.id)), beforeBoard = state.blendBatches;
+    state.blendBatches = (state.blendBatches||[]).filter(b=>!gone.has(b.id));
+    if(!(await save('blendBatches'))){ state.blendBatches = beforeBoard; return false; }
+    return true;
+  } finally { _blendArchiveBusy = false; }
+}
+// Runs at sign-in and every 2 minutes (with the Orders / Complaints sweeps), but only in the browser of someone who may move batches, so the write is theirs to make.
+async function sweepBlendArchive(){
+  if(!state.session || !canMoveBlendStage()) return false;
+  const due = (state.blendBatches||[]).filter(blendDueForArchive).map(b=>b.id);
+  if(!due.length) return false;
+  return moveBlendsToArchive(due, false);
+}
+function archiveBlendNow(id){
+  const b = byId(state.blendBatches||[], id); if(!b || !canArchiveBlendNow() || !blendIsFinal(b)) return;
+  openConfirmModal({
+    title:'Archive this batch?', confirmLabel:'Archive now',
+    message:`Move batch ${b.batchNo||b.id} to the Archive now instead of waiting for the 2 hours? It is kept there forever.`,
+    onConfirm: async ()=>{
+      if(!(await moveBlendsToArchive([id], true))){ return; }
+      logActivity(`Moved blend batch ${b.batchNo} to the Archive`);
+      showToast('Batch moved to the Archive');
+      closeModal(); render();
+    },
+  });
+}
+async function restoreBlendFromArchive(id){
+  if(!canRestoreBlend()) return;
+  await ensureDeferredKeysLoaded(['blendArchive']);
+  const a = byId(blendArchiveList(), id); if(!a) return;
+  const list = blendStageList(), last = list[list.length-1];
+  const b = JSON.parse(JSON.stringify(a)); delete b.archivedAt; delete b.archivedBy;
+  b.stageKey = last.key; b.stage = list.length-1;
+  b.history = [...(Array.isArray(b.history) ? b.history : []), {...blendHistoryEntry(last, list.length-1), restored:true}];   // a fresh entry at the last stage: it gets its 2 hours on the board again
+  state.blendBatches = [b, ...(state.blendBatches||[])];
+  if(!(await save('blendBatches'))){ state.blendBatches = state.blendBatches.filter(x=>x.id!==id); return; }
+  const beforeArchive = state.blendArchive;
+  state.blendArchive = blendArchiveList().filter(x=>x.id!==id);
+  if(!(await save('blendArchive'))){ state.blendArchive = beforeArchive; }
+  logActivity(`Restored blend batch ${b.batchNo} from the Archive`);
+  showToast('Batch restored to the board');
+  closeModal(); render();
 }
 function blendHistoryEntry(st, idx){ return {stage:idx, stageKey:st.key, stageLabel:st.label, at:new Date().toISOString(), by:(state.session && state.session.name) || ''}; }
 // Puts a batch into a stage: key + the old number + one history entry (no save, no redraw).
@@ -7051,6 +7151,7 @@ let state = {
   orders: [], staff: [], customers: [], suppliers: [], complaints: [], chat: [], inventoryItems: [],
   recipes: [], colorSheets: [], activeBatch: null, activeBatchM1: null, activeBatchM2: null, activeBatchM3: null, batchFocusMode: false, batchFocusKey: null,
   gmpChecklistEntries: [],
+  blendArchive: [],   // Mixing and Filling archive: loaded only when needed (see the Archive note)
   gmpLogEntries: [], gmpCalibrationInstruments: [], gmpPestPoints: [], gmpPestEntries: [],
   gmpMaintenanceMachines: [], gmpMaintenanceEntries: [], gmpHygieneRoster: [],
   tempAttendance: [],
@@ -7816,6 +7917,7 @@ async function loadAll(){
   applyMobileUiRuntime();
   if(sweepCompletedOrders()) save('orders').catch(e=>console.error('archive sweep save failed', e));
   if(sweepClosedComplaints()) save('complaints').catch(e=>console.error('complaint archive sweep save failed', e));
+  sweepBlendArchive().then(moved=>{ if(moved) render(); }).catch(e=>console.error('batch archive sweep failed', e));
   if(state.session){
     sweepExpiredPhotos().then(async (r)=>{
       if(r.orders) await save('orders');
@@ -7903,6 +8005,7 @@ async function loadAll(){
   const runArchiveSweep = async ()=>{
     if(sweepCompletedOrders()){ await save('orders'); render(); }
     if(sweepClosedComplaints()){ await save('complaints'); render(); }
+    if(await sweepBlendArchive()) render();
   };
   runArchiveSweep(); // don't wait for the first interval tick — catch anything already overdue right away
   setInterval(runArchiveSweep, 2*60*1000);
@@ -8769,6 +8872,7 @@ function navSnapshot(){
   if(state.page==='orders' && state.ordersView==='archive') s.oa = 1;
   if(state.page==='recipelibrary' && state._batchSheetId) s.bs = state._batchSheetId;
   if(state.page==='blending' && state._colorSheetsOpen) s.cs = state._colorSheetId || 'list';   // Color sheets: the list, or one open sheet
+  if(state.page==='blending' && state._blendArchiveOpen) s.ba = 1;   // the Mixing and Filling Archive
   return s;
 }
 // What goes in the address bar. Only the parts that can be restored after a refresh (same shapes as before:
@@ -8840,6 +8944,7 @@ function navApply(t){
   // Batch sheets: an open sheet page is a screen of its own.
   state._colorSheetsOpen = false; state._colorSheetId = null; state._colorSheetEdit = false; state._colorSheetDraft = null;
   if(t.page==='blending' && t.cs && canViewColorSheets()){ state._colorSheetsOpen = true; if(t.cs!=='list' && colorSheetById(t.cs)) state._colorSheetId = t.cs; }
+  state._blendArchiveOpen = !!(t.page==='blending' && t.ba && canViewBlendArchive());
   state._batchSheetId = null; state._recipeMenuOpen = null;
   if(t.page==='recipelibrary' && t.bs && byId(state.recipes, t.bs)) startBatchSheetPage(t.bs); else if(state._recipeDraft && state.page!=='recipelibrary') state._recipeDraft = null;
   // Costing: close whatever is open, then re-open exactly what the saved screen had.
@@ -8890,6 +8995,7 @@ function performGoTo(page){
   state._costSel = null;
   state._batchSheetId = null; state._recipeMenuOpen = null;
   state._colorSheetsOpen = false; state._colorSheetId = null; state._colorSheetEdit = false; state._colorSheetDraft = null;
+  state._blendArchiveOpen = false; state._blendArchiveQuery = ''; state._blendArchiveLimit = 0;
   state.filters.gmpSection = null;
   state._attRecordsOpen = false;
   state._attRecordsStaff = null;
@@ -17448,14 +17554,18 @@ function batchVerifyQcCardsHtml(b){
       ${st ? `<div class="bvw-qc ${st.tone}">${esc(st.text)}</div>` : ''}
       ${kv('pH', q.ph)}
       ${kv('Viscosity', q.viscosity)}
-      <div class="bvw-kv"><span>Checked</span><b>${ticked.length ? ticked.map(c=>'✓ '+esc(c.label)).join('  ·  ') : '—'}</b></div>
+      ${blendQcHasChecks(key) ? `<div class="bvw-kv"><span>Checked</span><b>${ticked.length ? ticked.map(c=>'✓ '+esc(c.label)).join('  ·  ') : '—'}</b></div>` : ''}
       ${q.notes.trim() ? `<div class="bvw-notes"><p>${esc(q.notes.trim())}</p></div>` : ''}
     </div>`;
   }).join('');
 }
 function renderBatchVerifyPage(){
   const id = _batchRequestedId || '';
-  const b = (state.blendBatches||[]).find(x=>x.id===id) || (state.blendBatches||[]).find(x=>x.batchNo===id) || null;
+  let b = (state.blendBatches||[]).find(x=>x.id===id) || (state.blendBatches||[]).find(x=>x.batchNo===id) || null;
+  if(!b && id && canViewBatchPage()){   // an old sticker: the batch may already be in the archive (fetched once, then this page redraws)
+    b = blendArchiveList().find(x=>x.id===id) || blendArchiveList().find(x=>x.batchNo===id) || null;
+    if(!b && !state._deferredLoaded.blendArchive){ ensureBlendArchiveLoaded(); return `<div class="bvw-page"><div class="bvw-card"><div class="bvw-big">Looking for this batch…</div></div></div>`; }
+  }
   if(!canViewBatchPage()){
     return `<div class="bvw-page"><div class="bvw-head"><div class="bvw-co">Audrey Care (Pvt) Ltd</div></div><div class="bvw-card"><div class="bvw-big">No access</div><div class="hint">Your role is not allowed to open batch pages. Ask your Admin to switch it on in Settings → User role permission.</div></div>
       <div class="bvw-actions"><button type="button" class="btn btn-primary" id="btn-bvw-open">Open the app</button></div></div>`;
@@ -17539,6 +17649,7 @@ function renderBlendingDeptPage(){
 
 /* ===================== Blending board page ===================== */
 function renderBlendingBoardPage(){
+  if(state._blendArchiveOpen && canViewBlendArchive()) return renderBlendArchivePage();
   if(state._colorSheetsOpen && canViewColorSheets()) return renderColorSheetsPage();
   const stages = blendStageList();
   return `
@@ -17547,6 +17658,7 @@ function renderBlendingBoardPage(){
       ${canManageBlendStages() ? `<button type="button" class="btn-text" id="btn-manage-blend-stages">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+      ${canViewBlendArchive() ? `<button type="button" class="btn" id="btn-open-blend-archive">&#128230; Archive${state._deferredLoaded.blendArchive ? ` (${blendArchiveList().length})` : ''}</button>` : ''}
       ${canViewColorSheets() ? `<button type="button" class="btn" id="btn-open-colorsheets">&#127912; Color sheets</button>` : ''}
       ${canCreateBlendBatch() ? `<button class="btn btn-primary" id="btn-new-blend">+ New batch</button>` : ''}
     </div>
@@ -17562,6 +17674,50 @@ function renderBlendingBoardPage(){
   </div>
   ${renderBlendBoardMobile(stages)}`}
   `;
+}
+// The Archive page (browser-history step `s.ba`): newest first, search, 60 at a time. Opening a row shows the batch window read only.
+function openBlendArchive(){
+  if(!canViewBlendArchive()) return;
+  state._blendArchiveOpen = true; state._colorSheetsOpen = false;
+  render(); window.scrollTo(0, 0);
+}
+function closeBlendArchive(){
+  state._blendArchiveOpen = false;
+  if(navBackIfParent()) return;
+  render();
+}
+function renderBlendArchivePage(){
+  const loaded = !!state._deferredLoaded.blendArchive;
+  if(!loaded) ensureBlendArchiveLoaded();
+  const stages = blendStageList(), lastLabel = stages[stages.length-1].label;
+  const q = (state._blendArchiveQuery||'').trim().toLowerCase();
+  const all = blendArchiveList().slice().sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0));
+  const text = b=>[b.batchNo, stripTags(b.product||''), b.recipeName, b.machine, b.formulationCode, b.qty, (b.variations||[]).map(v=>(v.product||'')+' '+(v.fragrance||'')).join(' ')].join(' ').toLowerCase();
+  const match = q ? all.filter(b=>text(b).includes(q)) : all;
+  const limit = q ? match.length : (state._blendArchiveLimit || BLEND_ARCHIVE_PAGE_SIZE);
+  const rows = match.slice(0, limit), hidden = match.length - rows.length;
+  return `
+  <div id="blend-archive-page">
+    <div class="toolbar">
+      <div class="hint" style="font-weight:600;color:var(--ink);">&#128230; Mixing and Filling &middot; Archive${loaded ? ` (${all.length})` : ''}</div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="search" id="blend-archive-search" class="col-filter-input" placeholder="Search batch no., product, machine, fragrance…" value="${escAttr(state._blendArchiveQuery||'')}" autocomplete="off" style="width:270px;max-width:100%;flex:none;">
+        <button type="button" class="btn" id="btn-blend-archive-close">Back to board</button>
+      </div>
+    </div>
+    <div class="hint" style="margin-bottom:12px;">A batch moves here automatically 2 hours after it reaches “${esc(lastLabel)}”. Everything in the Archive is kept forever.</div>
+    ${!loaded ? `<div class="empty-state">Loading the archive…</div>` : rows.length===0 ? `<div class="empty-state">${q ? 'No archived batch matches your search.' : 'Nothing has been archived yet.'}</div>` : `
+    <div class="panel ba-list">
+      ${rows.map(b=>`
+      <div class="ba-row" data-blend-arch="${escAttr(b.id)}" tabindex="0">
+        <span class="ba-no">${esc(b.batchNo||b.id)}</span>
+        <span class="ba-prod">${esc(stripTags(b.recipeName||b.product||'').trim() || '—')}${b.qty ? `<i>${esc(b.qty)}</i>` : ''}</span>
+        <span class="ba-chips">${b.machine ? machineChipHtml(b.machine) : ''}${batchFormulationCode(b) ? `<span class="bcard-code" title="Formulation code">${esc(batchFormulationCode(b))}</span>` : ''}</span>
+        <span class="ba-dates"><b>${esc(lastLabel)}</b> ${fmtDateTime(blendStageSince(b))}<br>Archived ${fmtDateTime(b.archivedAt)}</span>
+      </div>`).join('')}
+    </div>
+    ${hidden>0 ? `<div style="text-align:center;margin-top:14px;"><button type="button" class="btn" id="btn-blend-archive-more">Show older batches (${hidden} more)</button></div>` : ''}`}
+  </div>`;
 }
 function renderBlendColumn(st, i, stages){
   const style = blendStageStyle(st, i);
@@ -17942,6 +18098,13 @@ function attachColorSheetHandlers(){
   document.querySelectorAll('[data-colorsheet-print]').forEach(b=>b.addEventListener('click', ()=>printColorSheet(b.dataset.colorsheetPrint)));
   document.querySelectorAll('#btn-colorsheets-close').forEach(b=>b.addEventListener('click', closeColorSheetsView));
   if(byIdEl('btn-open-colorsheets')) byIdEl('btn-open-colorsheets').onclick = openColorSheets;
+  if(byIdEl('btn-open-blend-archive')) byIdEl('btn-open-blend-archive').onclick = openBlendArchive;
+  if(byIdEl('btn-blend-archive-close')) byIdEl('btn-blend-archive-close').onclick = closeBlendArchive;
+  if(byIdEl('blend-archive-search')) byIdEl('blend-archive-search').addEventListener('input', e=>{ state._blendArchiveQuery = e.target.value; render(); });
+  if(byIdEl('btn-blend-archive-more')) byIdEl('btn-blend-archive-more').onclick = ()=>{ state._blendArchiveLimit = (state._blendArchiveLimit || BLEND_ARCHIVE_PAGE_SIZE) + BLEND_ARCHIVE_PAGE_SIZE; render(); };
+  document.querySelectorAll('[data-blend-arch]').forEach(r=>{ const open = ()=>openModal('blend:'+r.dataset.blendArch); r.addEventListener('click', open); r.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } }); });
+  if(byIdEl('btn-archive-blend-now')) byIdEl('btn-archive-blend-now').onclick = ()=>{ const id=(state.modal||'').split(':')[1]; if(id) archiveBlendNow(id); };
+  if(byIdEl('btn-restore-blend')) byIdEl('btn-restore-blend').onclick = ()=>{ const id=(state.modal||'').split(':')[1]; if(id) restoreBlendFromArchive(id); };
   if(byIdEl('btn-colorsheet-new')) byIdEl('btn-colorsheet-new').onclick = ()=>{ if(canAddColorSheets()) openModal('colorsheetnew'); };
   if(byIdEl('form-colorsheet-new')) byIdEl('form-colorsheet-new').addEventListener('submit', submitColorSheetNew);
   if(byIdEl('btn-colorsheet-edit')) byIdEl('btn-colorsheet-edit').onclick = startColorSheetEdit;
@@ -20137,7 +20300,7 @@ function batchSheetTemplatePreviewData(){
       {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},   // phrases are not printed
     ], standardPH:'5.5 - 6.5', formulationCode:'SR-V1', priority:'Medium',
     showVariations:true, variations:[{product:'Aloevera', fragrance:'Aloe Green', qty:'40', unit:'5L cans'},{product:'Cucumber', fragrance:'Alo Cucumber', qty:'25', unit:'kg'}],
-    qc:[{key:'qc1', label:'1st QC (Base)', ph:'5.8', viscosity:'4500 cP', notes:'Color matches the standard', checks:{color:true, fragrance:true, viscosity:false}, by:'QC officer', at:'2026-10-12T09:40:00.000Z'},
+    qc:[{key:'qc1', label:'1st QC (Base)', ph:'5.8', viscosity:'4500 cP', notes:'Color matches the standard', checks:{color:false, fragrance:false, viscosity:false}, noChecks:true, by:'QC officer', at:'2026-10-12T09:40:00.000Z'},
         {key:'qc2', label:'2nd QC', ph:'', viscosity:'', notes:'', checks:{color:false, fragrance:false, viscosity:false}, by:'', at:''}],
     showStages:true, stageRows:{}, currentStageKey:'qc1'};
 }
@@ -24342,7 +24505,7 @@ function batchQcPrintHtml(rows, title){
   if(!list.length) return '';
   const box = on => `<span class="bsp-box${on?' on':''}">${on?'✓':''}</span>`;
   const body = list.map(r=>`
-        <tr><td class="c-st">${esc(r.label)}</td><td class="num">${r.ph ? esc(r.ph) : ''}</td><td class="num">${r.viscosity ? esc(r.viscosity) : ''}</td><td class="chk">${box(!!(r.checks && r.checks.color))}</td><td class="chk">${box(!!(r.checks && r.checks.fragrance))}</td><td class="chk">${box(!!(r.checks && r.checks.viscosity))}</td><td class="by">${r.by ? esc(r.by)+(r.at ? '<br><i>'+esc(fmtDateTime(r.at))+'</i>' : '') : ''}</td></tr>
+        <tr><td class="c-st">${esc(r.label)}</td><td class="num">${r.ph ? esc(r.ph) : ''}</td><td class="num">${r.viscosity ? esc(r.viscosity) : ''}</td>${r.noChecks ? '<td class="chk nock" colspan="3"></td>' : `<td class="chk">${box(!!(r.checks && r.checks.color))}</td><td class="chk">${box(!!(r.checks && r.checks.fragrance))}</td><td class="chk">${box(!!(r.checks && r.checks.viscosity))}</td>`}<td class="by">${r.by ? esc(r.by)+(r.at ? '<br><i>'+esc(fmtDateTime(r.at))+'</i>' : '') : ''}</td></tr>
         <tr class="bsp-qc-note"><td colspan="7"><span>Notes:</span> ${r.notes ? esc(r.notes) : ''}</td></tr>`).join('');
   return `
     <div class="bsp-qcwrap"><div class="bsp-sec">${esc(title || 'QC details')}</div>
@@ -24365,10 +24528,11 @@ function blendQcPrintRows(b, form){
     const phEl = open && form.elements['qc_'+key+'_ph'];
     if(phEl){
       const g = n=>form.elements['qc_'+key+'_'+n];
-      q = {...q, ph: phEl.value.trim(), viscosity: g('viscosity').value.trim(), notes: g('notes').value.trim(), checks: {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked}};
+      q = {...q, ph: phEl.value.trim(), viscosity: g('viscosity').value.trim(), notes: g('notes').value.trim()};
+      if(g('chk_color')) q.checks = {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked};
     }
     if(key==='qc3' && !(cur>=si || blendQcHasData(q))) return null;
-    return {key, label: list[si].label, ph:q.ph, viscosity:q.viscosity, notes:q.notes, checks:q.checks, by:q.by, at:q.at};
+    return {key, label: list[si].label, ph:q.ph, viscosity:q.viscosity, notes:q.notes, checks:q.checks, noChecks: !blendQcHasChecks(key), by:q.by, at:q.at};
   }).filter(Boolean);
 }
 // The variations as printed (owner, 2026-11-22: "the exact same structured variation quantities, units"): one row per variation with product, fragrance, quantity and unit, the same four columns
@@ -24426,8 +24590,10 @@ function batchSheetPrintHtml(d, tplOverride, opts){
   const infoCell = c => c ? `<td class="k">${esc(c[0])}</td><td class="v">${c[1] ? esc(c[1]) : blank}</td>` : '<td></td><td></td>';
   const bn = (k, def)=>peNum(tpl[k], def);
   const logoUrl = tpl.showLogo ? printLogoUrl(tpl) : '';
-  const logoMargin = tpl.logoAlign==='left' ? '0 auto 8px 0' : (tpl.logoAlign==='right' ? '0 0 8px auto' : '0 auto 8px');
-  const logo = logoUrl ? `<img class="bsp-logo" src="${escAttr(logoUrl)}" alt="Logo" ${(bn('logoH',112)!==112 || logoMargin!=='0 auto 8px') ? `style="max-height:${bn('logoH',112)}px;margin:${logoMargin};"` : ''}>` : '';
+  const logoH = bn('logoH', 44);
+  const logo = logoUrl ? `<img class="bsp-logo" src="${escAttr(logoUrl)}" alt="Logo" ${logoH!==44 ? `style="max-height:${logoH}px;"` : ''}>` : '';
+  const hAlign = tpl.logoAlign==='center' ? 'center' : (tpl.logoAlign==='right' ? 'right' : 'left');
+  const bnBox = tpl.showBatchNo ? `<div class="bsp-bnbox"><div class="bsp-k">${esc(tpl.wBatchNo)}</div><div class="bsp-bn">${d.batchNo ? esc(d.batchNo) : '&nbsp;'}</div></div>` : '';
   const trailing = batchSheetTrailingSectionsHtml(tpl, {standardPH: d.standardPH});
   const prod = String(d.product||'').trim();
   return `
@@ -24435,17 +24601,24 @@ function batchSheetPrintHtml(d, tplOverride, opts){
   <style>
     .bsp{max-width:720px;margin:0 auto;padding:${bn('padY',10)}px ${bn('padX',24)}px;font-family:'Inter',system-ui,sans-serif;color:#1C2320;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .bsp *{box-sizing:border-box;}
-    .bsp .bsp-top{text-align:center;margin-bottom:12px;}
-    .bsp .bsp-logo{display:block;margin:0 auto 8px;width:auto;height:auto;max-height:112px;max-width:60%;object-fit:contain;}   /* big and clearly visible: about 60% of the sheet's width (owner, 2026-11-21) */
-    .bsp .bsp-co{font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:600;}
-    .bsp .bsp-doc{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6B7570;margin-top:2px;}
-    .bsp .bsp-titlerow{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #1C2320;padding-bottom:8px;margin-bottom:12px;}
+    .bsp .bsp-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 0 8px;}
+    .bsp .bsp-brand{display:flex;align-items:center;gap:10px;min-width:0;}
+    .bsp .bsp-logo{display:block;width:auto;height:auto;max-height:44px;max-width:170px;object-fit:contain;flex:none;}
+    .bsp .bsp-co{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;line-height:1.15;}
+    .bsp .bsp-headr{display:flex;align-items:center;gap:14px;flex:none;}
+    .bsp .bsp-doc{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6B7570;white-space:nowrap;}
+    .bsp .bsp-bnbox{display:flex;align-items:baseline;gap:8px;padding:3px 10px;border:1.4px solid #1C2320;border-radius:6px;}
+    .bsp .bsp-bnbox .bsp-k{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;}
+    .bsp .bsp-h-right{flex-direction:row-reverse;}
+    .bsp .bsp-h-center{flex-direction:column;gap:6px;}
+    .bsp .bsp-h-center .bsp-brand{flex-direction:column;gap:4px;text-align:center;}
+    .bsp .bsp-titlerow{display:flex;align-items:baseline;gap:12px;border-top:1.5px solid #1C2320;border-bottom:1px solid #C9CEC6;padding:6px 0 6px;margin:0 0 9px;}
     .bsp .bsp-k{font-size:11px;color:#6B7570;}
-    .bsp .bsp-product{font-size:20px;font-weight:700;overflow-wrap:anywhere;}
-    .bsp .bsp-bn{font-size:18px;font-weight:700;min-width:130px;border-bottom:1px solid #9AA39C;min-height:24px;text-align:right;}
-    .bsp table.bsp-info{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}
-    .bsp table.bsp-info td.k{padding:5px 8px 5px 0;width:112px;color:#6B7570;vertical-align:top;}
-    .bsp table.bsp-info td.v{padding:5px 14px 5px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;}
+    .bsp .bsp-product{font-size:19px;font-weight:700;overflow-wrap:anywhere;line-height:1.2;}
+    .bsp .bsp-bn{font-size:17px;font-weight:700;min-width:70px;text-align:right;line-height:1.2;}
+    .bsp table.bsp-info{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}
+    .bsp table.bsp-info td.k{padding:3px 8px 3px 0;width:112px;color:#6B7570;vertical-align:top;}
+    .bsp table.bsp-info td.v{padding:3px 14px 3px 0;font-weight:600;border-bottom:1px solid #E7E9E4;vertical-align:top;}
     .bsp .bsp-dash{color:#C3C9C1;font-weight:400;}
     .bsp .bsp-desc{font-size:12px;color:#4A554F;margin:-4px 0 12px;}
     .bsp .bsp-sec{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7570;margin:${bn('secGap',14)}px 0 5px;break-after:avoid;page-break-after:avoid;}   /* a heading never stays alone at the bottom of a page */
@@ -24494,6 +24667,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp table.bsp-qc td.c-st{font-weight:700;white-space:nowrap;width:118px;}
     .bsp table.bsp-qc td.num{text-align:center;font-weight:600;}
     .bsp table.bsp-qc td.chk,.bsp table.bsp-qc th.chk{width:58px;text-align:center;}
+    .bsp table.bsp-qc td.nock{background:repeating-linear-gradient(135deg,#F3F4F1 0 4px,#fff 4px 8px);}
     .bsp table.bsp-qc td.by{width:128px;font-size:10px;line-height:1.3;}
     .bsp table.bsp-qc td.by i{font-style:normal;color:#6B7570;}
     .bsp table.bsp-qc tr.bsp-qc-note td{height:24px;font-size:11px;border-bottom:1.5px solid #9AA39C;}
@@ -24504,11 +24678,11 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp table.bsp-mats tr{break-inside:avoid;page-break-inside:avoid;}
   </style>
   <section class="bsp-main">
-    <div class="bsp-top">${logo}<div class="bsp-co">${esc(tpl.wCompany)}</div><div class="bsp-doc">${esc(tpl.wDoc)}</div></div>
-    <div class="bsp-titlerow">
-      <div style="min-width:0;"><div class="bsp-k">${esc(tpl.wProduct)}</div><div class="bsp-product">${prod ? esc(prod) : blank}</div></div>
-      ${tpl.showBatchNo ? `<div style="text-align:right;flex:none;"><div class="bsp-k">${esc(tpl.wBatchNo)}</div><div class="bsp-bn">${d.batchNo ? esc(d.batchNo) : '&nbsp;'}</div></div>` : ''}
+    <div class="bsp-head bsp-h-${hAlign}">
+      <div class="bsp-brand">${logo}<div class="bsp-brandtxt"><div class="bsp-co">${esc(tpl.wCompany)}</div></div></div>
+      <div class="bsp-headr"><div class="bsp-doc">${esc(tpl.wDoc)}</div>${bnBox}</div>
     </div>
+    <div class="bsp-titlerow"><div class="bsp-k">${esc(tpl.wProduct)}</div><div class="bsp-product">${prod ? esc(prod) : blank}</div></div>
     <table class="bsp-info">${infoRows.map(r=>`<tr>${infoCell(r[0])}${infoCell(r[1])}</tr>`).join('')}</table>
     ${(tpl.showDescription && d.description) ? `<div class="bsp-desc">${esc(d.description)}</div>` : ''}
     ${(mats.length || d.mode!=='record') ? `
@@ -24588,7 +24762,7 @@ function printBatchSheet(recipeId){
 // variations (product / fragrance / quantity / unit), formulation code, priority, machine and the stage-by-stage sign-off table always print. What is typed in the open batch window (even unsaved)
 // is what prints, like the Batch sheet page does for its steps.
 function printDocumentedBatchSheet(batchId){
-  const b = byId(state.blendBatches, batchId); if(!b || !canPrintBlendSheet()) return;
+  const b = blendFind(batchId); if(!b || !canPrintBlendSheet()) return;
   const area = document.getElementById('print-area');
   if(!area) return;
   const f = document.getElementById('form-blend-edit');
@@ -24672,7 +24846,7 @@ const PRINT_DEFS = {
   batchsheet: {
     title:'Batch sheet', blurb:'The printed batch sheet, top to bottom: batch details, raw materials, variations, preparation checking, QC details, the stage sign-off table and the sign-off lines. The switches, colour, font and note order are in the first part; logo, words and spaces below.',
     groups:[
-      {title:'Logo', fields:peLogoFields({mode:'company', h:112, unit:'px', min:20, max:240, step:1, align:'center'})},
+      {title:'Logo', fields:peLogoFields({mode:'company', h:44, unit:'px', min:20, max:240, step:1, align:'left'})},
       {title:'Words', fields:[PE_TXT('wCompany','Company name','Audrey Care (Pvt) Ltd.'), PE_TXT('wDoc','Document title','Batch Sheet'), PE_TXT('wProduct','Product','Product'), PE_TXT('wBatchNo','Batch number','Batch number'), PE_TXT('wVariations','Variations heading','Variations'), PE_TXT('wMaterials','Raw materials heading','Raw materials'), PE_TXT('wPrep','Preparation checking heading','Preparation checking'), PE_TXT('wQc','QC details heading','QC details'), PE_TXT('wStages','Stage sign-off heading','Stage by stage — floor sign-off')]},
       {title:'Spaces, by hand', fields:[PE_NUM('padX','Space at the left and right',24,'px',0,120,1), PE_NUM('padY','Space at the top and bottom',10,'px',0,120,1), PE_NUM('secGap','Space above each heading',14,'px',0,60,1), PE_NUM('rowPad','Height of each table row (padding)',6,'px',0,20,.5)]},
     ],
@@ -24787,7 +24961,7 @@ function vesselStickerHtml(d, T){
   </div>`;
 }
 async function printVesselSticker(batchId, varId){
-  const b = byId(state.blendBatches, batchId); if(!b || !canPrintBlendSticker()) return;
+  const b = blendFind(batchId); if(!b || !canPrintBlendSticker()) return;
   if(!(await ensureQrLib())){ showToast('The QR code could not be made. Check the connection and try again.', 6000); return; }
   const area = document.getElementById('print-area'); if(!area) return;
   const T = printTpl('sticker');
@@ -24802,12 +24976,12 @@ async function printVesselSticker(batchId, varId){
 }
 // The sticker print view: a window with the label at about twice its real size and a Print button. Opened by the "Need to print the batch sticker?" question.
 async function openVesselSticker(batchId, varId){
-  if(!byId(state.blendBatches, batchId) || !canPrintBlendSticker()) return;
+  if(!blendFind(batchId) || !canPrintBlendSticker()) return;
   if(!(await ensureQrLib())){ showToast('The QR code could not be made. Check the connection and try again.', 6000); return; }
   openModal('vesselsticker:'+batchId+(varId ? ':'+varId : ''));
 }
 function vesselStickerModal(batchId, varId){
-  const b = byId(state.blendBatches, batchId); if(!b) return '';
+  const b = blendFind(batchId); if(!b) return '';
   const rows = blendVariationRows(b).filter(r=>r.product||r.fragrance||r.qty);
   const v = varId ? rows.find(r=>r.id===varId) : null;
   return `
@@ -25870,6 +26044,8 @@ const BW_ICONS = {
    A batch saved before this existed keeps its readings in b.qcPH / b.qcViscosity / b.qcNotes: they are read as the qc1 section, and saving qc1 still writes them (the sticker page and any older open page read them). */
 const BLEND_QC_KEYS = ['qc1','qc2','qc3'];
 const BLEND_QC_CHECKS = [{id:'color', label:'Color'},{id:'fragrance', label:'Fragrance'},{id:'viscosity', label:'Viscosity'}];
+// The Color / Fragrance / Viscosity ticks belong to the 2nd (and 3rd) QC only; the 1st QC is just pH, viscosity and notes (owner, 2026-11-22: "in first QC no need to check color, fragrance and viscosity checklists").
+function blendQcHasChecks(key){ return key !== 'qc1'; }
 function blendQcOf(b, key){
   const q = (b.qc && b.qc[key]) || null;
   const legacy = !q && key==='qc1';
@@ -25898,15 +26074,16 @@ function blendQcCardHtml(s, b, canEdit, canTick){
   const draft = (state._blendQcChecks && state._blendQcChecks.forId===b.id) ? state._blendQcChecks.vals : {};
   const pill = s.state==='current' ? '<span class="bw-pill bw-pill-cur">Current stage</span>' : s.state==='done' ? '<span class="bw-pill bw-pill-done">Done</span>' : '<span class="bw-pill">Saved earlier</span>';
   const n = 'qc_'+s.key+'_';
+  const ticks = blendQcHasChecks(s.key);
   return `
   <section class="bw-card bw-qc ${s.state==='current'?'is-current':''}" data-qc-key="${s.key}">
     <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.qc}</span>${esc(s.label)}${pill}</div></div>
-    <div class="bw-qc-grid">
+    <div class="bw-qc-grid${ticks?'':' no-ck'}">
       <div class="field"><label>pH</label><input name="${n}ph" value="${escAttr(s.q.ph)}" placeholder="e.g. 5.8" autocomplete="off" ${at}></div>
       <div class="field"><label>Viscosity</label><input name="${n}viscosity" value="${escAttr(s.q.viscosity)}" placeholder="e.g. 4500 cP" autocomplete="off" ${at}></div>
-      <div class="field bw-qc-ck"><label>Checked</label>
+      ${ticks ? `<div class="field bw-qc-ck"><label>Checked</label>
         <div class="bw-qc-checks">${BLEND_QC_CHECKS.map(c=>{ const k = s.key+'.'+c.id; const on = (k in draft) ? !!draft[k] : s.q.checks[c.id]; return `<label class="qc-chk${canTick?'':' dis'}"><input type="checkbox" class="bw-qc-chk" name="${n}chk_${c.id}" data-qc-k="${k}" ${on?'checked':''} ${dis}><span>${c.label}</span></label>`; }).join('')}</div>
-      </div>
+      </div>` : ''}
       <div class="field bw-qc-notes"><label>Notes</label><textarea name="${n}notes" rows="2" ${at} placeholder="Shown on the page the sticker's QR code opens">${escBody(s.q.notes)}</textarea></div>
     </div>
     ${s.q.by ? `<div class="bw-hint bw-qc-by">Last saved by ${esc(s.q.by)}${s.q.at ? ' · '+fmtDateTime(s.q.at) : ''}</div>` : ''}
@@ -25938,7 +26115,7 @@ function applyBlendEditForm(f, b){
     const prev = blendQcOf(b, key);
     const next = {
       ph: mayType ? ph.value.trim() : prev.ph, viscosity: mayType ? g('viscosity').value.trim() : prev.viscosity, notes: mayType ? g('notes').value.trim() : prev.notes,
-      checks: mayTick ? {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked} : {...prev.checks}
+      checks: (mayTick && blendQcHasChecks(key) && g('chk_color')) ? {color: !!g('chk_color').checked, fragrance: !!g('chk_fragrance').checked, viscosity: !!g('chk_viscosity').checked} : {...prev.checks}
     };
     const same = next.ph===prev.ph.trim() && next.viscosity===prev.viscosity.trim() && next.notes===prev.notes.trim() && BLEND_QC_CHECKS.every(c=>next.checks[c.id]===prev.checks[c.id]);
     if(same && !(b.qc && b.qc[key])) return;   // nothing typed, nothing saved before
@@ -25953,13 +26130,14 @@ function applyBlendEditForm(f, b){
 // while the window scrolls: Print batch sheet, Print Vessel Sticker and Delete on the left, Next stage and Save on the right. Every id / name the handlers use is unchanged.
 // It closes on a click outside it (the Panel closing Rule is NOT applied here, owner's decision).
 function renderBlendDrawer(id){
-  const b = byId(state.blendBatches,id); if(!b) return '';
+  const b = blendFind(id); if(!b) return '';
+  const arch = blendIsArchived(id);   // an archived batch can be looked at and printed, never edited (Restore puts it back on the board)
   const stages = blendStageList(), idx = blendStageIdx(b, stages);
   const style = blendStageStyle(stages[idx], idx);
-  const canAdv = canAdvanceBlend(idx);
-  const ro = !canEditBlendDetails(), roVar = !canEditBlendVariations();   // details and variations are separate permissions
+  const canAdv = !arch && canAdvanceBlend(idx);
+  const ro = arch || !canEditBlendDetails(), roVar = arch || !canEditBlendVariations();   // details and variations are separate permissions
   const roAttr = ro ? 'readonly' : '';
-  const qcCan = canEditBlendQc(), qcTick = canTickBlendQc(), canSave = canSaveBlendWindow();
+  const qcCan = !arch && canEditBlendQc(), qcTick = !arch && canTickBlendQc(), canSave = !arch && canSaveBlendWindow();
   const priority = PRIORITIES.includes(b.priority) ? b.priority : 'Medium';
   const d = blendVarDraft(id, b);
   const nextLabel = blendNextActionLabel(b);
@@ -25972,7 +26150,7 @@ function renderBlendDrawer(id){
     <button class="drawer-close" id="btn-cancel-modal" aria-label="Close" style="color:#fff;">✕</button>
     <div class="drawer-hero">
       <div>
-        <button type="button" class="back" id="btn-drawer-back-close">← Back to board</button>
+        <button type="button" class="back" id="btn-drawer-back-close">${arch ? '← Back to the Archive' : '← Back to board'}</button>
         <h2>${esc([stripTags(b.product||'').trim(), b.qty].filter(Boolean).join(' '))}</h2>
         <div class="sub">${esc(b.batchNo)} · ${esc(stages[idx].label)} · created ${fmtDateTime(b.createdAt)}</div>
       </div>
@@ -25990,7 +26168,7 @@ function renderBlendDrawer(id){
       <div class="bw-run-arrow" aria-hidden="true">→</div>
       <div class="bw-run-r"><span>Completed</span><b>${fmtDateTime(b.completedAt)}</b>${b.completedBy?`<i>by ${esc(b.completedBy)}</i>`:''}</div>
     </div>` : ''}
-    ${!canSave ? `<div class="bw-hint" style="margin:0 0 12px;">View only.</div>` : ''}
+    ${arch ? `<div class="bw-hint" style="margin:0 0 12px;">📦 Archived ${fmtDateTime(b.archivedAt)}${b.archivedBy?' by '+esc(b.archivedBy):''}. View only.</div>` : (!canSave ? `<div class="bw-hint" style="margin:0 0 12px;">View only.</div>` : '')}
     <form id="form-blend-edit" data-batch-id="${b.id}">
       <section class="bw-card">
         <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.details}</span>Batch details</div></div>
@@ -26021,9 +26199,11 @@ function renderBlendDrawer(id){
         <div class="bw-foot-l">
           ${printSheet ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-blend-sheet" title="Prints the batch, formulation code, variations and a sign-off line for every stage">${BW_ICONS.print}<span class="bw-t-long">Print batch sheet</span><span class="bw-t-short">Sheet</span></button>` : ''}
           ${printSticker ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-vessel-sticker" data-sticker-var="">${BV_ICON_TAG}<span class="bw-t-long">Print Vessel Sticker</span><span class="bw-t-short">Sticker</span></button>` : ''}
-          ${canDeleteBlendBatch() ? `<button type="button" class="btn btn-sm btn-danger bw-btn" id="btn-delete-blend" title="Asks for your password">${TRASH_ICON_SVG}<span>Delete</span></button>` : ''}
+          ${(!arch && canDeleteBlendBatch()) ? `<button type="button" class="btn btn-sm btn-danger bw-btn" id="btn-delete-blend" title="Asks for your password">${TRASH_ICON_SVG}<span>Delete</span></button>` : ''}
+          ${(!arch && blendIsFinal(b) && canArchiveBlendNow()) ? `<button type="button" class="btn btn-sm bw-btn" id="btn-archive-blend-now" title="Move it to the Archive now instead of waiting 2 hours">📦<span>Archive now</span></button>` : ''}
         </div>
         <div class="bw-foot-r">
+          ${(arch && canRestoreBlend()) ? `<button type="button" class="btn" id="btn-restore-blend">Restore to the board</button>` : ''}
           ${canAdv && nextLabel ? `<button type="button" class="btn" id="btn-advance-blend">${esc(nextLabel)}</button>` : ''}
           ${canSave ? `<button type="submit" class="btn btn-primary">Save</button>` : `<button type="button" class="btn" id="btn-cancel-modal-2">Close</button>`}
         </div>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261124180500">
+<meta name="app-build" content="20261124193000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -2148,6 +2148,15 @@ html{ visibility:hidden; }
   .rc-menu{position:absolute;z-index:31;top:38px;right:10px;min-width:200px;padding:6px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 36px -12px rgba(20,30,70,.28);display:flex;flex-direction:column;gap:2px;}
   .rc-menu-item{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:6px 10px;border:none;border-radius:9px;background:transparent;font:600 13px/1 inherit;font-family:inherit;text-align:left;cursor:pointer;}
   .rc-menu-item:hover,.rc-menu-item.on{background:var(--bg);}
+  /* "A batch is already running" window: pick the machine for the new batch */
+  .cm-choices{display:flex;flex-direction:column;gap:8px;margin:2px 0 14px;}
+  .cm-choice{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:12px;background:var(--panel,#fff);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
+  .cm-choice i{width:10px;height:10px;border-radius:50%;flex:none;}
+  .cm-choice .cm-l{font-weight:700;}
+  .cm-choice em{margin-left:auto;font-style:normal;font-size:12.5px;color:var(--muted);text-align:right;}
+  .cm-choice b{width:16px;text-align:center;color:var(--accent-deep,var(--accent));}
+  .cm-choice.on{border-color:var(--accent);background:rgba(var(--accent-rgb,31,95,191),.09);}
+  .cm-choice:disabled{opacity:.5;cursor:not-allowed;}
   .rc-menu-item i,.rc-machine i{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;}
   .rc-menu-item b{margin-left:auto;color:var(--accent-dark);}
   .rc-menu-label{padding:8px 10px 3px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
@@ -22544,32 +22553,33 @@ function batchSlotBusy(machine){
 }
 // Is a batch of THIS sheet running right now? (its card then says "Batch running")
 function recipeRunning(recipeId){ return runningBatches().some(x=>x.b.recipeId===recipeId); }
-// Start a batch from a sheet, asking first when another batch is already running (owner, 2026-11-24: "currently running a batch, want to start another one? if yes start another one with the current one so we can process 2 together").
-// Several batches can run at once, one per machine: when the sheet's own slot is taken (no machine chosen and the no-machine slot is busy) the new batch runs on the first FREE machine, without changing the sheet.
-// A sheet whose own machine is busy is refused (pick another machine on the sheet). Returns true when the batch started.
+// Start a batch from a sheet. When another batch is already running (even one made from THIS same sheet) a window asks which machine the new one should use, then it runs together with the others
+// (owner, 2026-11-24: "currently running a batch, want to process a new one, if so select a machine"). One batch per machine: busy machines are shown but cannot be picked; the sheet itself keeps its own machine choice.
+// With nothing running the batch simply starts on the sheet's machine. Returns true when the batch started.
 async function startBatchGuarded(recipeId, extra){
   const r = byId(state.recipes, recipeId); if(!r) return false;
-  if(recipeRunning(recipeId)){ showToast('"'+r.name+'" is already running in the Production Guide'); return false; }
   const running = runningBatches();
+  let machine = r.machine || '';
   if(running.length){
+    const free = BATCH_MACHINES.filter(m=>!batchSlotBusy(m.id));
+    if(!free.length){ showToast('Every machine is busy. Finish or stop a running batch first.'); return false; }
     const names = running.map(x=>(x.b.recipeName||x.b.productName||'a batch')+(x.b.machine?' ('+x.b.machine+')':'')).join(', ');
-    const go = await new Promise(resolve=>{
+    const chosen = await new Promise(resolve=>{
       openConfirmModal({
-        title:'A batch is already running', confirmLabel:'Yes, start another', cancelLabel:'No', sticky:true,
-        message:`${names} ${running.length===1?'is':'are'} running in the Production Guide. Do you want to start "${r.name}" as well, so they run together?`,
-        onConfirm: ()=>resolve(true), onCancel: ()=>resolve(false),
+        title:'A batch is already running', confirmLabel:'Start this batch', cancelLabel:'Cancel', sticky:true,
+        message:`${names} ${running.length===1?'is':'are'} running in the Production Guide. To process "${r.name}" as well, select a machine for it:`,
+        choices: BATCH_MACHINES.map(m=>{
+          const busy = batchSlotBusy(m.id), x = running.find(y=>(y.b.machine||'')===m.id);
+          return {value:m.id, label:m.id, color:m.color, disabled:busy, sub: busy ? 'Busy' + (x ? ' \u00B7 '+(x.b.recipeName||x.b.productName||'a batch') : '') : 'Free'};
+        }),
+        choiceValue: free.some(m=>m.id===machine) ? machine : free[0].id,   // the sheet's own machine when it is free, else the first free one
+        onConfirm: v=>resolve(v||null), onCancel: ()=>resolve(null),
       });
     });
-    if(!go) return false;
+    if(!chosen) return false;
+    machine = chosen;
   }
-  const mine = r.machine || '';
-  let machine = mine;
-  if(batchSlotBusy(mine)){
-    if(mine){ showToast(batchBusyMessage(mine)); return false; }
-    const free = BATCH_MACHINES.find(m=>!batchSlotBusy(m.id));
-    if(!free){ showToast('Every machine is busy. Finish or stop a running batch first.'); return false; }
-    machine = free.id;
-  }
+  if(batchSlotBusy(machine)){ showToast(batchBusyMessage(machine)); return false; }
   return await startBatch(recipeId, Object.assign({}, extra||{}, {machine}));
 }
 function batchBusyMessage(machine){
@@ -23444,7 +23454,6 @@ function clearBatchSheetRunFields(recipeId){
 async function startBatchFromCard(recipeId){
   const r = byId(state.recipes, recipeId); if(!r || !canStartBatchRun()) return;
   state._recipeMenuOpen = null;
-  if(recipeRunning(recipeId)){ showToast('"'+r.name+'" is already running in the Production Guide'); render(); return; }
   // The size box is emptied after every start, so a sheet with no saved size cannot be started from the card: open the sheet to type it.
   if(!(Number(r.batchSizeKg)>0)){ showToast('Type the batch size on the batch sheet, then press Start the batch'); openBatchSheetModal(recipeId); return; }
   const started = await startBatchGuarded(recipeId, Object.assign(r.batchNo ? {batchNo:r.batchNo} : {}, {batchSizeKg: r.batchSizeKg||0}));
@@ -23479,7 +23488,7 @@ function renderRecipeLibraryPage(){
           ${hasMenu ? `<button type="button" class="rc-dots" data-recipe-menu="${r.id}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${menuOpen}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
         </div>
         ${menuOpen ? `<div class="rc-menu" role="menu">
-          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}" ${batchRunning?'disabled':''}>${batchRunning ? '\u25CF Batch running' : '\u25B6 Start the batch'}</button>` : ''}
+          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}">${batchRunning ? '\u25B6 Start another batch' : '\u25B6 Start the batch'}</button>` : ''}
           ${canMachine ? `<div class="rc-menu-label">Machine</div>
           ${BATCH_MACHINES.map(m=>`<button type="button" role="menuitem" class="rc-menu-item ${r.machine===m.id?'on':''}" data-machine-recipe="${r.id}" data-machine-value="${m.id}"><i style="background:${m.color};"></i><span style="color:${m.color};">${m.id}</span>${r.machine===m.id?'<b>\u2713</b>':''}</button>`).join('')}
           ${r.machine ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-clear" data-machine-recipe="${r.id}" data-machine-value="">Clear machine</button>` : ''}` : ''}
@@ -24773,7 +24782,7 @@ function recipeBatchSheetInner(recipeId, asPage){
   // same draft + step-editor-row markup/handlers as the full recipe form.
   const canEditSteps = !!state.session && roleCan(state.session.role, 'costing_edit_steps') && state._recipeDraft && state._recipeDraft.id===r.id;
   const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
-  const batchActive = recipeRunning(r.id);   // a batch of THIS sheet is running (starting another sheet's batch while others run asks first)
+  const batchActive = recipeRunning(r.id);   // a batch of THIS sheet is running: the button then says "Start another batch" (a second run is allowed, it asks for a machine first)
   const tpl = batchSheetTemplate();
   const batchNoVal = (state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || '';
   const leftHtml = `
@@ -24860,7 +24869,7 @@ function recipeBatchSheetInner(recipeId, asPage){
       <div class="modal-actions" style="justify-content:center;margin-top:22px;flex-wrap:wrap;">
         <button type="button" class="btn" id="${asPage?'btn-close-batchsheet':'btn-cancel-modal'}">Close</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
-        ${canStartBatchRun() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
+        ${canStartBatchRun() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}">${batchActive?'Start another batch':'Start the batch'}</button>` : ''}
       </div>`;
   return `
   ${asPage ? '<div id="batchsheet-page" class="bsmc-page bs2">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
@@ -26177,13 +26186,14 @@ function confirmActionModal(){
       <h2>${esc(c.title)}</h2>
       ${c.sub?`<div class="sub">${esc(c.sub)}</div>`:''}
       <p>${esc(c.message)}</p>
+      ${c.choices ? `<div class="cm-choices" role="radiogroup">${c.choices.map(ch=>`<button type="button" role="radio" aria-checked="${c.choiceValue===ch.value}" class="cm-choice${c.choiceValue===ch.value?' on':''}" data-cm-choice="${escAttr(ch.value)}" ${ch.disabled?'disabled':''}><i style="background:${ch.color||'var(--accent)'};"></i><span class="cm-l">${esc(ch.label)}</span><em>${esc(ch.sub||'')}</em><b aria-hidden="true">${c.choiceValue===ch.value?'\u2713':''}</b></button>`).join('')}</div>` : ''}
       ${c.requirePassword ? `
       <div class="field"><label>Confirm your password to continue</label><input type="password" id="confirm-action-password" autocomplete="off"></div>
       <div class="hint" id="confirm-action-password-error" style="color:var(--danger);"></div>
       ` : ''}
       <div class="modal-actions">
         <button type="button" class="btn" id="btn-cancel-confirm-action">${esc(c.cancelLabel||'Cancel')}</button>
-        <button type="button" class="btn ${c.danger?'btn-danger':'btn-primary'}" id="btn-confirm-action">${esc(c.confirmLabel||'OK')}</button>
+        <button type="button" class="btn ${c.danger?'btn-danger':'btn-primary'}" id="btn-confirm-action" ${(c.choices && !c.choices.some(ch=>ch.value===c.choiceValue && !ch.disabled))?'disabled':''}>${esc(c.confirmLabel||'OK')}</button>
       </div>
     </div>
   </div>`;
@@ -26226,7 +26236,7 @@ async function runConfirmedAction(){
     }
   }
   state._confirmAction = null;
-  if(c.onConfirm) await c.onConfirm();
+  if(c.onConfirm) await c.onConfirm(c.choiceValue);
   // onConfirm may itself have opened a NEW overlay (e.g. a validation alert) — leave it be
   // instead of closing/clearing it out from under itself.
   if(state._confirmAction || state._promptAction || state._alertInfo){ render(); return; }
@@ -29367,6 +29377,7 @@ function attachShellHandlers(){
     showToast('Saved as "'+name+'"');
   });
   if(byIdEl('btn-confirm-action')) byIdEl('btn-confirm-action').onclick = runConfirmedAction;
+  document.querySelectorAll('[data-cm-choice]').forEach(b=>b.addEventListener('click', ()=>{ if(b.disabled || !state._confirmAction) return; state._confirmAction.choiceValue = b.dataset.cmChoice; render(); }));
   if(byIdEl('btn-cancel-confirm-action')) byIdEl('btn-cancel-confirm-action').onclick = ()=>{
     const c = state._confirmAction;
     closeOverlayModal(c && c._returnTo);

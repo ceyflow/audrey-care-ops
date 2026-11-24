@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125033000">
+<meta name="app-build" content="20261125073000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1549,6 +1549,75 @@ html{ visibility:hidden; }
     .card:hover{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95), 0 10px 22px rgba(31,55,90,.12);}
   }
   .column-body.drag-over{background:var(--accent-soft);border-radius:6px;}
+  /* Team Members */
+  .tm-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+  .tm-stats{display:flex;gap:10px;flex-wrap:wrap;}
+  .tm-stat{display:flex;flex-direction:column;gap:1px;min-width:104px;padding:10px 16px;background:#fff;border:1.5px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(19,32,30,.04);}
+  .tm-stat b{font-size:22px;font-weight:800;color:var(--ink);line-height:1.1;}
+  .tm-stat span{font-size:11.5px;font-weight:600;color:var(--muted);}
+  .tm-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .tm-search{display:flex;align-items:center;gap:8px;height:40px;min-width:230px;padding:0 13px;background:#fff;border:1.5px solid var(--border);border-radius:11px;color:var(--muted);transition:border-color .15s,box-shadow .15s;}
+  .tm-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14);}
+  .tm-search input{flex:1;min-width:0;border:none;outline:none;background:none;font:inherit;font-size:14px;color:var(--ink);}
+  .tm-sec{margin-bottom:22px;}
+  .tm-sec-h{display:flex;align-items:center;gap:9px;padding-bottom:9px;margin-bottom:12px;border-bottom:1px solid var(--border);}
+  .tm-sec-h h3{margin:0;font-size:15px;font-weight:800;color:var(--ink);}
+  .tm-count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);font-size:12px;font-weight:800;}
+  .tm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .tm-none{padding:16px;border:1.5px dashed #C9D6CD;border-radius:12px;text-align:center;font-size:13px;color:var(--muted);background:#FBFCFB;}
+  .tm-nomatch{padding:30px;text-align:center;color:var(--muted);font-size:14px;}
+  .tm-card{display:flex;flex-direction:column;gap:14px;padding:16px;background:#fff;border:1.5px solid var(--border);border-radius:16px;box-shadow:0 1px 2px rgba(19,32,30,.04);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+  .tm-card:hover{transform:translateY(-2px);border-color:rgba(var(--accent-rgb),.5);box-shadow:0 12px 26px rgba(19,32,30,.09);}
+  .tm-who{display:flex;align-items:center;gap:14px;min-width:0;}
+  .tm-av{position:relative;flex:none;border-radius:50%;box-shadow:0 0 0 3px var(--accent-soft);}
+  .tm-av-x{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;border:2px solid #fff;border-radius:50%;background:#7C8A82;color:#fff;cursor:pointer;padding:0;}
+  .tm-av-x:hover{background:#C15B4E;}
+  .tm-txt{min-width:0;}
+  .tm-name{font-size:15.5px;font-weight:800;color:var(--ink);overflow-wrap:anywhere;line-height:1.25;}
+  .tm-title{margin-top:2px;font-size:13px;color:var(--muted);overflow-wrap:anywhere;}
+  .tm-title i{font-style:normal;color:#B3BCB6;}
+  .tm-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .tm-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 8px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
+  .tm-btn:hover{background:var(--accent-soft);border-color:rgba(var(--accent-rgb),.5);color:var(--accent-dark);}
+  .tm-btn svg{flex:none;}
+  .tm-danger{color:#C15B4E;}
+  .tm-danger:hover{background:#FCEEEB;border-color:#EBC3BC;color:#B04436;}
+  /* Sidebar order window */
+  .so-wrap{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:20px;align-items:start;}
+  .so-groups{display:flex;flex-direction:column;gap:14px;min-width:0;}
+  .so-group{background:#fff;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(19,32,30,.04);}
+  .so-group-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 16px;background:linear-gradient(180deg,rgba(var(--accent-rgb),.10),rgba(var(--accent-rgb),.04));border-bottom:1px solid var(--border);}
+  .so-group-h h4{margin:0;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-dark);}
+  .so-group-n{font-size:11.5px;font-weight:600;color:var(--muted);}
+  .so-list.nav-order-list{margin:0;padding:12px;gap:8px;}
+  .so-row.nav-order-row{gap:11px;padding:8px 10px 8px 8px;background:#fff;border:1.5px solid var(--border);border-radius:12px;box-shadow:0 1px 2px rgba(19,32,30,.03);transition:border-color .15s,box-shadow .15s,transform .15s,opacity .15s;}
+  .so-row.nav-order-row:hover{border-color:rgba(var(--accent-rgb),.55);box-shadow:0 6px 16px rgba(19,32,30,.08);}
+  .so-row.nav-order-row.dragging{opacity:.45;transform:scale(.99);border-style:dashed;border-color:var(--accent);}
+  .so-grip{display:grid;place-items:center;width:24px;height:30px;color:#9AA7A0;cursor:grab;}
+  .so-row:hover .so-grip{color:var(--accent-dark);}
+  .so-ico{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);}
+  .so-ico svg{width:18px;height:18px;color:inherit;}
+  .so-name{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .so-ren-pill{margin-left:8px;padding:1px 8px;border-radius:999px;background:#EEF1EF;color:var(--muted);font-size:10.5px;font-weight:700;font-style:normal;letter-spacing:.02em;}
+  .so-pen{display:grid;place-items:center;width:32px;height:32px;border:none;border-radius:9px;background:none;color:var(--muted);cursor:pointer;flex:none;}
+  .so-pen:hover{background:var(--accent-soft);color:var(--accent-dark);}
+  .so-child.nav-order-row{margin-left:56px;padding:5px 8px 5px 12px;gap:9px;background:#F7F9F8;border:1px solid #E6ECE8;border-radius:9px;box-shadow:none;cursor:default;}
+  .so-child .so-name{font-size:12.5px;font-weight:600;color:#3F4D44;}
+  .so-child-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.55;flex:none;}
+  .so-child .so-pen{width:28px;height:28px;}
+  .so-preview-card{position:sticky;top:92px;background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 1px 2px rgba(19,32,30,.04);}
+  .so-pv-title{font-size:13px;font-weight:800;color:var(--ink);}
+  .so-pv-sub{font-size:11.5px;color:var(--muted);margin:1px 0 10px;}
+  .so-pv-list{display:flex;flex-direction:column;gap:2px;}
+  .so-pv-item{display:flex;align-items:center;gap:9px;padding:5px 6px;border-radius:9px;font-size:13px;font-weight:600;color:var(--ink);}
+  .so-pv-item:nth-child(odd){background:#F7F9F8;}
+  .so-pv-n{width:18px;text-align:right;font-size:11px;font-weight:700;color:#9AA7A0;font-variant-numeric:tabular-nums;}
+  .so-pv-ico{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent-dark);flex:none;}
+  .so-pv-ico svg{width:14px;height:14px;}
+  .so-pv-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  @media (max-width:900px){ .so-wrap{grid-template-columns:minmax(0,1fr);} .so-preview-card{position:static;order:-1;} }
+  @media (max-width:760px){ .tm-grid{grid-template-columns:minmax(0,1fr);} .tm-stat{flex:1;min-width:0;} .tm-search{flex:1 1 100%;} .tm-tools .btn{flex:1;} .so-child.nav-order-row{margin-left:34px;} }
+  @media (prefers-reduced-motion:reduce){ .tm-card,.tm-card:hover{transition:none;transform:none;} }
   .nav-order-list{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
   .nav-order-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13.5px;font-weight:500;cursor:grab;transition:opacity .15s,border-color .15s;}
   .nav-order-row:hover{border-color:var(--accent);}
@@ -20138,95 +20207,137 @@ function renderStaffPage(){
     </div>
   </div>`;
 }
+// Team Members (owner, 2026-11-25: "improve ui design in team members"): a summary strip + a search box, then one section per category with a card per person
+// (big photo, name, title, Edit / Photo / Remove). Same ids and data- attributes as before, so every handler is unchanged. The search filters the cards in place (no redraw, so typing is never interrupted).
+const TM_ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const TM_ICON_CAM = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const TM_ICON_X = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+const TM_ICON_SEARCH = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+function tmMemberCard(s){
+  const canEdit = can('staff_edit'), canDel = can('staff_delete');
+  const key = (String(s.name||'')+' '+String(s.title||'')).toLowerCase();
+  return `
+  <article class="tm-card" data-tm-key="${escAttr(key)}">
+    <div class="tm-who">
+      <div class="tm-av">${staffAvatarHtml(s.name, 56)}${(canEdit && s.photo) ? `<button type="button" class="tm-av-x" data-remove-staff-photo="${s.id}" title="Remove the photo" aria-label="Remove the photo">${TM_ICON_X}</button>` : ''}</div>
+      <div class="tm-txt"><div class="tm-name">${esc(s.name)}</div><div class="tm-title">${s.title ? esc(s.title) : '<i>No title</i>'}</div></div>
+    </div>
+    ${(canEdit || canDel) ? `<div class="tm-acts">
+      ${canEdit ? `<button type="button" class="tm-btn" data-edit-staff="${s.id}">${TM_ICON_EDIT}<span>Edit</span></button>
+      <label class="tm-btn" title="${s.photo?'Change the photo':'Add a photo'}">${TM_ICON_CAM}<span>Photo</span>
+        <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
+      </label>` : ''}
+      ${canDel ? `<button type="button" class="tm-btn tm-danger" data-remove-staff="${s.id}" title="Remove this person">${TRASH_ICON_SVG}<span>Remove</span></button>` : ''}
+    </div>` : ''}
+  </article>`;
+}
 function renderStaffTeamPage(){
   const cats = (state.staffCategories && state.staffCategories.length) ? state.staffCategories : DEFAULT_STAFF_CATEGORIES;
   const uncategorized = state.staff.filter(s=>!cats.find(c=>c.key===s.category));
   const groups = [...cats.map(c=>({key:c.key, label:c.label, members:state.staff.filter(s=>s.category===c.key)})),
     ...(uncategorized.length ? [{key:'', label:'Uncategorized', members:uncategorized}] : [])];
+  const withPhoto = state.staff.filter(s=>s.photo).length;
   return `
-  <div class="toolbar">
-    ${can('staff_categories') ? `<button type="button" class="btn-text" id="btn-manage-staff-categories">⚙ Manage categories</button>` : '<div></div>'}
-    ${can('staff_add') ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
+  <div class="tm-top">
+    <div class="tm-stats">
+      <div class="tm-stat"><b>${state.staff.length}</b><span>Team member${state.staff.length===1?'':'s'}</span></div>
+      <div class="tm-stat"><b>${groups.filter(g=>g.members.length).length}</b><span>Categor${groups.filter(g=>g.members.length).length===1?'y':'ies'}</span></div>
+      <div class="tm-stat"><b>${withPhoto}</b><span>With a photo</span></div>
+    </div>
+    <div class="tm-tools">
+      <label class="tm-search">${TM_ICON_SEARCH}<input type="search" id="tm-search" placeholder="Search by name or title" value="${escAttr(state._tmQuery||'')}" autocomplete="off" aria-label="Search the team"></label>
+      ${can('staff_categories') ? `<button type="button" class="btn" id="btn-manage-staff-categories">⚙ Manage categories</button>` : ''}
+      ${can('staff_add') ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
+    </div>
   </div>
-  ${state.staff.length===0 ? `<div class="panel"><div class="empty-state">No staff added yet.</div></div>` :
-    groups.map(g=>`
-    <div class="panel" style="margin-bottom:16px;">
-      <div class="panel-head"><h3>${esc(g.label)} <span class="hint" style="font-weight:400;">(${g.members.length})</span></h3></div>
-      ${g.members.length===0 ? `<div class="empty-state">No one in this category yet.</div>` : `
-      <div class="rnd-desktop-table">
-      <table class="data-table">
-        <thead><tr><th>Photo</th><th>Name</th><th>Title</th>${(can('staff_edit') || can('staff_delete'))?'<th>Actions</th>':''}</tr></thead>
-        <tbody>
-          ${g.members.map(s=>`
-          <tr>
-            <td>${staffAvatarHtml(s.name, 40)}</td>
-            <td>${esc(s.name)}</td>
-            <td>${s.title ? esc(s.title) : '<span class="hint">—</span>'}</td>
-            ${(can('staff_edit') || can('staff_delete'))?`<td class="row-actions">
-              ${can('staff_edit') ? `<button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
-              <label class="btn btn-sm" style="cursor:pointer;">${s.photo?'Change photo':'Add photo'}
-                <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
-              </label>
-              ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}">Remove photo</button>`:''}` : ''}
-              ${can('staff_delete') ? `<button class="btn btn-sm btn-danger" data-remove-staff="${s.id}">Remove</button>` : ''}
-            </td>`:''}
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      </div>
-      <div class="rnd-mobile-cards">
-        ${g.members.map(s=>`
-        <div class="list-card">
-          <div class="list-card-top">
-            ${staffAvatarHtml(s.name, 36)}
-            <span class="list-card-title">${esc(s.name)}</span>
-          </div>
-          <div class="list-card-fields">
-            <div class="list-card-field"><span class="list-card-label">Title</span><span>${s.title ? esc(s.title) : '<span class="hint">—</span>'}</span></div>
-          </div>
-          ${(can('staff_edit') || can('staff_delete'))?`
-          <div class="list-card-actions" style="flex-wrap:wrap;">
-            ${can('staff_edit') ? `<button type="button" class="btn btn-sm" data-edit-staff="${s.id}">Edit</button>
-            <label class="btn btn-sm" style="cursor:pointer;flex:1;text-align:center;">${s.photo?'Change photo':'Add photo'}
-              <input type="file" class="staff-photo-input" data-staff="${s.id}" accept="image/*" style="display:none;">
-            </label>
-            ${s.photo?`<button class="btn btn-sm" data-remove-staff-photo="${s.id}" style="flex-basis:100%;">Remove photo</button>`:''}` : ''}
-            ${can('staff_delete') ? `<button class="btn btn-sm btn-danger" data-remove-staff="${s.id}" style="flex-basis:100%;">Remove</button>` : ''}
-          </div>` : ''}
-        </div>`).join('')}
-      </div>`}
-    </div>`).join('')}
+  ${state.staff.length===0 ? `<div class="panel"><div class="empty-state">No staff added yet.</div></div>` : `
+  <div id="tm-body">
+  ${groups.map(g=>`
+    <section class="tm-sec" data-tm-sec>
+      <div class="tm-sec-h"><h3>${esc(g.label)}</h3><span class="tm-count">${g.members.length}</span></div>
+      ${g.members.length===0 ? `<div class="tm-none">No one in this category yet.</div>` : `<div class="tm-grid">${g.members.map(tmMemberCard).join('')}</div>`}
+    </section>`).join('')}
+  <div class="tm-nomatch" id="tm-nomatch" style="display:none;">No one matches that search.</div>
+  </div>`}
   `;
+}
+// Search by name / title: hides the cards that do not match and the categories left empty by it (no redraw).
+function tmApplySearch(){
+  const inp = document.getElementById('tm-search'); if(!inp) return;
+  const q = inp.value.trim().toLowerCase(); state._tmQuery = inp.value;
+  let shown = 0;
+  document.querySelectorAll('#tm-body [data-tm-sec]').forEach(sec=>{
+    const cards = [...sec.querySelectorAll('.tm-card')];
+    let any = 0;
+    cards.forEach(c=>{ const ok = !q || c.dataset.tmKey.includes(q); c.style.display = ok ? '' : 'none'; if(ok) any++; });
+    shown += any;
+    sec.style.display = (q && cards.length && !any) || (q && !cards.length) ? 'none' : '';
+  });
+  const nm = document.getElementById('tm-nomatch'); if(nm) nm.style.display = (q && !shown) ? '' : 'none';
 }
 
 /* ===================== Settings ===================== */
+// Sidebar order (owner, 2026-11-25: "improve ui design in ... sidebar order changing window"): one card per group with draggable rows (grip, icon tile, name, rename pencil), the pages inside a menu as small chips, and a live
+// "Sidebar preview" that follows every drag. Same classes / data- attributes as before (.nav-order-list[data-nav-group], .nav-order-row[data-nav-item], data-rename-nav-item, #btn-save-nav-order) so the drag, save and rename code is unchanged.
+const SO_ICON_GRIP = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>';
+function soPreviewItems(order){
+  const allowed = mySessionPages();
+  return NAV.flatMap(g=>{
+    let items = g.items.filter(it=>allowed.includes(it.id) || (it.children && it.children.some(c=>allowed.includes(c.id)))).filter(it=>!(it.hideWhenHas && allowed.includes(it.hideWhenHas)));
+    const saved = order ? order[g.group] : (state.navOrder && state.navOrder[g.group]);
+    if(saved && saved.length){ const by = {}; items.forEach(i=>{ by[i.id] = i; }); items = [...saved.map(id=>by[id]).filter(Boolean), ...items.filter(i=>!saved.includes(i.id))]; }
+    return items;
+  });
+}
+function soPreviewHtml(order){
+  return soPreviewItems(order).map((it,i)=>`<div class="so-pv-item"><span class="so-pv-n">${i+1}</span><span class="so-pv-ico">${sidebarIcon(it)}</span><span class="so-pv-t">${esc(navLabel(it))}</span></div>`).join('');
+}
+function soCollectOrder(){
+  const o = {};
+  document.querySelectorAll('.nav-order-list[data-nav-group]').forEach(l=>{ o[l.dataset.navGroup] = [...l.querySelectorAll('.nav-order-row:not(.nav-order-child)')].map(r=>r.dataset.navItem); });
+  return o;
+}
+function soRefreshPreview(){ const box = document.getElementById('so-preview'); if(box) box.innerHTML = soPreviewHtml(soCollectOrder()); }
 function renderSidebarOrderPanel(){
   const groups = NAV
     .map(g => ({ ...g, items: orderedNavItems(g.group, g.items) }))
     .filter(g => g.items.length > 1);
+  const pen = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
   return `
   <div class="panel" id="settings-sidebar-order">
-    <div class="panel-head"><h3>Sidebar order</h3><button type="button" class="btn btn-primary btn-sm" id="btn-save-nav-order">Save order</button></div>
+    <div class="panel-head"><h3>Sidebar order</h3>
+      <div style="display:flex;gap:8px;"><button type="button" class="btn btn-sm" id="btn-reset-nav-order">Reset to the default order</button><button type="button" class="btn btn-primary btn-sm" id="btn-save-nav-order">Save order</button></div>
+    </div>
     <div class="panel-body">
-      <div class="hint" style="margin-bottom:14px;">Drag items to change the order they appear in the sidebar for everyone, then save.</div>
-      ${groups.map(g=>`
-      <div class="hint" style="font-weight:600;color:var(--ink);margin:0 0 6px;">${esc(g.group)}</div>
-      <div class="nav-order-list" data-nav-group="${esc(g.group)}">
-        ${g.items.map(it=>`
-        <div class="nav-order-row" draggable="true" data-nav-item="${it.id}" style="justify-content:space-between;">
-          <span style="display:flex;align-items:center;gap:8px;overflow:hidden;">
-            <span class="nav-order-handle">⋮⋮</span>${icon(it.icon)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(navLabel(it))}</span>
-          </span>
-          <button type="button" class="btn btn-sm" data-rename-nav-item="${it.id}" title="Rename" style="flex-shrink:0;">✏️</button>
+      <div class="hint" style="margin-bottom:14px;">Drag a row by its handle to change the order the pages appear in the sidebar for everyone, then press <b>Save order</b>. The pencil renames a page. Groups follow each other in the order shown on the right; groups with a single page have nothing to reorder.</div>
+      <div class="so-wrap">
+        <div class="so-groups">
+          ${groups.map(g=>`
+          <section class="so-group">
+            <div class="so-group-h"><h4>${esc(g.group)}</h4><span class="so-group-n">${g.items.length} pages</span></div>
+            <div class="nav-order-list so-list" data-nav-group="${esc(g.group)}">
+              ${g.items.map(it=>`
+              <div class="nav-order-row so-row" draggable="true" data-nav-item="${it.id}">
+                <span class="so-grip nav-order-handle" title="Drag to move">${SO_ICON_GRIP}</span>
+                <span class="so-ico">${sidebarIcon(it)}</span>
+                <span class="so-name">${esc(navLabel(it))}${(state.navLabels && state.navLabels[it.id]) ? '<em class="so-ren-pill">renamed</em>' : ''}</span>
+                <button type="button" class="so-pen" data-rename-nav-item="${it.id}" title="Rename" aria-label="Rename ${escAttr(navLabel(it))}">${pen}</button>
+              </div>
+              ${(it.children||[]).map(c=>`
+              <div class="nav-order-row nav-order-child so-child" data-nav-item="${c.id}">
+                <span class="so-child-dot" aria-hidden="true"></span>
+                <span class="so-name">${esc(navLabel(c))}</span>
+                <button type="button" class="so-pen" data-rename-nav-item="${c.id}" title="Rename" aria-label="Rename ${escAttr(navLabel(c))}">${pen}</button>
+              </div>`).join('')}`).join('')}
+            </div>
+          </section>`).join('')}
         </div>
-        ${(it.children||[]).map(c=>`
-        <div class="nav-order-row nav-order-child" data-nav-item="${c.id}" style="justify-content:space-between;padding-left:30px;">
-          <span style="display:flex;align-items:center;gap:8px;overflow:hidden;">
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">– ${esc(navLabel(c))}</span>
-          </span>
-          <button type="button" class="btn btn-sm" data-rename-nav-item="${c.id}" title="Rename" style="flex-shrink:0;">✏️</button>
-        </div>`).join('')}`).join('')}
-      </div>`).join('')}
+        <aside class="so-preview-card">
+          <div class="so-pv-title">Sidebar preview</div>
+          <div class="so-pv-sub">How the menu will read for you</div>
+          <div id="so-preview" class="so-pv-list">${soPreviewHtml()}</div>
+        </aside>
+      </div>
     </div>
   </div>`;
 }
@@ -28383,7 +28494,10 @@ function attachShellHandlers(){
       if(!dragging || dragging.closest('.nav-order-list')!==list) return;
       e.preventDefault();
       const after = navDragAfterElement(list, e.clientY);
+      // a menu's own pages (the small rows under it) travel with it: they used to stay behind when the menu was moved
+      const kids = []; for(let n = dragging.nextElementSibling; n && n.classList.contains('nav-order-child'); n = n.nextElementSibling) kids.push(n);
       if(after==null) list.appendChild(dragging); else list.insertBefore(dragging, after);
+      let prev = dragging; kids.forEach(k=>{ list.insertBefore(k, prev.nextSibling); prev = k; });
     });
   });
   if(byIdEl('btn-save-nav-order')) byIdEl('btn-save-nav-order').onclick = async ()=>{
@@ -28396,6 +28510,16 @@ function attachShellHandlers(){
     showToast('Sidebar order saved');
   };
   document.querySelectorAll('[data-rename-nav-item]').forEach(b=>b.addEventListener('click', ()=>renameNavItem(b.dataset.renameNavItem)));
+  // the preview on the right follows every move
+  if(byIdEl('so-preview')){
+    document.querySelectorAll('.so-list').forEach(l=>{ l.addEventListener('dragover', soRefreshPreview); l.addEventListener('drop', soRefreshPreview); });
+    document.querySelectorAll('.so-row').forEach(r=>r.addEventListener('dragend', soRefreshPreview));
+  }
+  if(byIdEl('btn-reset-nav-order')) byIdEl('btn-reset-nav-order').onclick = ()=>openConfirmModal({
+    title:'Reset the sidebar order', confirmLabel:'Reset', danger:true,
+    message:'Go back to the default sidebar order for everyone? Renamed pages keep their new names.',
+    onConfirm: async ()=>{ const before = state.navOrder; state.navOrder = {}; if(!(await save('navOrder'))){ state.navOrder = before; return; } showToast('Sidebar order reset'); },
+  });
 
   // Box Count (daily packing log)
   if(byIdEl('btn-box-count')) byIdEl('btn-box-count').onclick = ()=>{ if(canUseBoxCount()) openModal('boxcount'); };
@@ -29317,6 +29441,7 @@ function attachShellHandlers(){
     if(file) uploadStaffPhoto(inp.dataset.staff, file);
   }));
   document.querySelectorAll('[data-remove-staff-photo]').forEach(b=>b.addEventListener('click', ()=>removeStaffPhoto(b.dataset.removeStaffPhoto)));
+  if(byIdEl('tm-search')){ byIdEl('tm-search').addEventListener('input', tmApplySearch); tmApplySearch(); }
 
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);

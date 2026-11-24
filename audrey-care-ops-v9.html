@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125013000">
+<meta name="app-build" content="20261125033000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -5630,7 +5630,7 @@ const PERMISSION_REGISTRY = [
   {dept:'attendance', deptLabel:'Attendance', id:'attendance_print', label:'Print an attendance sheet'},
   {dept:'attendance', deptLabel:'Attendance', id:'attendance_mark_absent', label:'Mark days as Absent for a staff member (shows on the printed sheet) and remove those marks'},
   // GMP checklists
-  {dept:'gmp', deptLabel:'GMP checklists', id:'gmp_delete', label:'Delete a GMP log entry or calibration record'},
+  {dept:'gmp', deptLabel:'Documents (GMP checklists)', id:'gmp_delete', label:'Delete a GMP log entry or calibration record'},
   // Customers
   {dept:'customers', deptLabel:'Customers', id:'customers_add', label:'Add a customer'},
   {dept:'customers', deptLabel:'Customers', id:'customers_edit', label:'Edit a customer (and the sales person colours)'},
@@ -6393,6 +6393,20 @@ function canStartBatchRun(){ return !!state.session && roleCan(state.session.rol
    still draws something), because the position of a stage changes when the list is edited. History entries carry `stageKey` + `stageLabel` the same way. The LAST stage in the list is the
    finished one (nothing can be advanced past it, Dally does not count it as active). A stage that still holds batches cannot be deleted (Manage Lists lists them). Records here have `key`, not `id`,
    on purpose: the merging save only diffs arrays whose records have an `id`, and a re-ordered list must be saved exactly as it is. */
+/* ===================== BLENDING DEPARTMENT MAP (read this first; details in .claude/CLAUDE.md "Blending department map") =====================
+   PAGES      blendingdept (hub) -> costing | recipelibrary (Batch sheets) | recipes (Production Guide) | blending (Mixing and Filling).
+   DATA KEYS  (app_data, one row each; role_data_access decides who reads / writes)
+              costingProducts  costing + Process template   | recipes            the batch sheets
+              activeBatch, activeBatchM1/M2/M3  RUNNING batches, one slot per machine (BATCH_SLOT_KEYS)
+              blendBatches     the Mixing and Filling board  | blendArchive      finished batches after 2 h (deferred key)
+              blendStages      the board's stages            | qcChecklists      the QC checkboxes per QC stage (Settings -> QC checklists)
+              colorSheets      the colour sheets
+   FLOW       Process template -> Transfer to batch sheets -> startBatchGuarded -> startBatch (slot) -> Production Guide (nextBatchStep / timer)
+              -> askFinishTransfer -> transferFinishedBatch -> finishBatchIntoBlendingBoard (board, stage 1) -> advanceBlendBatch / moveBlendToStage
+              -> moveBlendsToArchive (sweepBlendArchive, 2 h after the LAST stage).
+   RULES      A change that is drawn first and saved after (a step, a stage move, a delete, a new batch) is ALWAYS: one press at a time (a busy flag / blendMoveTooSoon),
+              drawn at once, and PUT BACK with a message when the save fails (no ghost step / card). Never `await` a slow save inside an openConfirmModal onConfirm
+              (the window waits for it and people press Yes / Delete twice). A run that is already on the board is never added again (same batch no. + sheet + start time). */
 const BLEND_STAGE_PALETTE = ['#2E6FB7','#8A5CC2','#C2792B','#2E8B57','#C0496F','#3B8E9B','#8C7A2E','#5B6770'];
 function blendStageList(){
   const saved = Array.isArray(state.blendStages) ? state.blendStages.filter(x=>x && x.key && String(x.label||'').trim()) : [];
@@ -6525,6 +6539,15 @@ function blendPlaceInStage(b, st, idx){
   b.stageKey = st.key; b.stage = idx;
   if(!Array.isArray(b.history)) b.history = [];
   b.history.push(blendHistoryEntry(st, idx));
+}
+// A batch changes stage on screen first and is saved after: a quick second press must not move it two stages (same 900 ms rule as the Orders board), and a save that fails puts the batch back.
+const _blendMoveAt = {};
+function blendMoveTooSoon(id){ const now = Date.now(); if(now - (_blendMoveAt[id]||0) < 900) return true; _blendMoveAt[id] = now; return false; }
+function blendStageSnap(b){ return {stageKey:b.stageKey, stage:b.stage, hist:Array.isArray(b.history) ? b.history.length : 0}; }
+function blendStageRestore(b, snap){
+  b.stageKey = snap.stageKey; b.stage = snap.stage;
+  if(Array.isArray(b.history)) b.history.length = Math.min(b.history.length, snap.hist);
+  showToast('Could not move the batch: the connection failed. It is back where it was, try again.', 5000);
 }
 function canAdvanceBlend(stageIdx){ return canMoveBlendStage() && stageIdx < blendStageList().length-1; }
 function canPrintBlendSticker(){ return !!state.session && roleCan(state.session.role, 'blending_print_sticker'); }
@@ -7204,6 +7227,7 @@ const ICONS = {
   star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/>',
   headset:'<path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/><path d="M19.5 19v.5a3 3 0 0 1-3 3h-3"/>',
   wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2 2.8-2.8z"/>',
+  droplet:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
   pest:'<circle cx="12" cy="13.5" r="4"/><path d="M12 9.5V6.5"/><path d="M9.3 7.7 7.5 5.9"/><path d="M14.7 7.7l1.8-1.8"/><path d="M8 13.5H4"/><path d="M20 13.5h-4"/><path d="M9 17l-2 2.8"/><path d="M15 17l2 2.8"/>',
   box:'<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/><path d="M7.5 5l9 4"/>',
   close:'<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
@@ -7225,7 +7249,7 @@ const SIDEBAR_ICONS = {
   itemlist:'<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   ordersprocess:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
   deliveryruns:'<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
-  gmp:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  gmp:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',   /* Documents: a text document */
   rnd:'<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
   staff:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   chat:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
@@ -8082,7 +8106,8 @@ async function loadAll(){
     if(hashPage && pageAllowed(hashPage)) state.page = hashPage;
     // A refresh while a GMP card is open should land back in that card, not the hub — same idea
     // as the costing drill-down restore just below, one level deep instead of two.
-    if(state.page==='gmp' && hashParts[1]) state.filters.gmpSection = hashParts[1];
+    if(state.page==='gmp' && hashParts[1]){ if(hashParts[1]==='gmp' || hashParts[1]==='wwt') state.filters.docsTab = hashParts[1]; else { state.filters.gmpSection = hashParts[1]; state.filters.docsTab = 'gmp'; } }
+    if(state.page==='staff' && hashParts[1]==='team') state.filters.staffTab = 'team';
     // Same one-level restore for Settings: a refresh while a panel is open should land back in
     // that panel, not the Jump to grid.
     if(state.page==='settings' && hashParts[1]) state._settingsOpenPanel = hashParts[1];
@@ -8988,7 +9013,8 @@ async function logOut(){
 function navSnapshot(){
   const f = state.filters || {};
   const s = { page: state.page };
-  if(state.page==='gmp' && f.gmpSection) s.gmp = f.gmpSection;
+  if(state.page==='gmp'){ if(f.gmpSection) s.gmp = f.gmpSection; else if(f.docsTab) s.dt = f.docsTab; }
+  if(state.page==='staff' && f.staffTab) s.st = f.staffTab;
   if(state.page==='settings' && state._settingsOpenPanel) s.set = state._settingsOpenPanel;
   if(state.page==='costing' && state._costingOpenProductId){
     s.cp = state._costingOpenProductId;
@@ -9012,6 +9038,8 @@ function navSnapshot(){
 function navHash(s){
   let h = '#' + s.page;
   if(s.gmp) h += '/' + s.gmp;
+  else if(s.dt) h += '/' + s.dt;
+  else if(s.st) h += '/' + s.st;
   else if(s.set) h += '/' + s.set;
   else if(s.cp){ h += '/' + encodeURIComponent(s.cp); if(s.cv) h += '/' + encodeURIComponent(s.cv); }
   return h;
@@ -9023,7 +9051,8 @@ function navFromHash(){
     const page = (parts[0]||'').toLowerCase();
     if(!page) return null;
     const s = { page };
-    if(page==='gmp' && parts[1]) s.gmp = decodeURIComponent(parts[1]);
+    if(page==='gmp' && parts[1]){ const g = decodeURIComponent(parts[1]); if(g==='gmp' || g==='wwt') s.dt = g; else s.gmp = g; }
+    if(page==='staff' && parts[1]==='team') s.st = 'team';
     if(page==='settings' && parts[1]) s.set = decodeURIComponent(parts[1]);
     if(page==='costing' && parts[1]){ s.cp = decodeURIComponent(parts[1]); if(parts[2]) s.cv = decodeURIComponent(parts[2]); }
     return s;
@@ -9066,7 +9095,7 @@ function navApply(t){
   if(!t || !t.page || !pageAllowed(t.page)) return false;
   const f = state.filters;
   state.page = t.page; state.modal = null; state.sidebarOpen = false; state._moreFabOpen = false;
-  f.gmpSection = t.gmp || null;
+  f.gmpSection = t.gmp || null; f.docsTab = t.gmp ? 'gmp' : (t.dt || null); f.staffTab = t.st || null;
   state._settingsOpenPanel = t.set || null;
   state._attEditRequestsOpen = !!t.aer;
   state._attRecordsOpen = !!(t.ar || t.as);
@@ -9128,7 +9157,7 @@ function performGoTo(page){
   state._batchSheetId = null; state._recipeMenuOpen = null;
   state._colorSheetsOpen = false; state._colorSheetId = null; state._colorSheetEdit = false; state._colorSheetDraft = null;
   state._blendArchiveOpen = false; state._blendArchiveQuery = ''; state._blendArchiveLimit = 0;
-  state.filters.gmpSection = null;
+  state.filters.gmpSection = null; state.filters.docsTab = null; state.filters.staffTab = null;
   state._attRecordsOpen = false;
   state._attRecordsStaff = null;
   state._attRecordsMonth = null;
@@ -9699,6 +9728,7 @@ function attachBlendVariationHandlers(){
   }, {passive:true});
   const add = document.getElementById('btn-bv-additem'); if(add) add.onclick = addBlendVariationItem;
 }
+let _creatingBlend = false;
 async function createBlendBatch(e){
   e.preventDefault();
   if(!canCreateBlendBatch()) return;
@@ -9715,8 +9745,12 @@ async function createBlendBatch(e){
     createdAt: new Date().toISOString(),
     history: [blendHistoryEntry(stages[0], 0)]
   };
+  if(_creatingBlend) return;   // a double press on "Add batch" made the batch twice
+  _creatingBlend = true;
   state.blendBatches.unshift(batch);
-  if(!(await save('blendBatches'))) return;
+  let saved = false;
+  try{ saved = await save('blendBatches'); } finally { _creatingBlend = false; }
+  if(!saved){ state.blendBatches = state.blendBatches.filter(x=>x.id!==batch.id); render(); return; }   // no unsaved "ghost" card
   logActivity(`Created blend batch ${batch.batchNo}`);
   closeModal();
   showToast('Batch added');
@@ -9729,8 +9763,10 @@ async function advanceBlendBatch(id){
   const next = list[i+1];
   const openForm = document.getElementById('form-blend-edit');
   if(openForm && openForm.dataset.batchId===id && canSaveBlendWindow()) applyBlendEditForm(openForm, b);   // whatever is typed in the open window is kept, then the batch moves on
-  blendPlaceInStage(b, next, i+1);
-  if(!(await save('blendBatches'))) return;
+  if(blendMoveTooSoon(id)) return;
+  const snap = blendStageSnap(b);
+  blendPlaceInStage(b, next, i+1); render();
+  if(!(await save('blendBatches'))){ blendStageRestore(b, snap); render(); return; }
   logActivity(`Moved blend batch ${b.batchNo} to ${next.label}`);
   showToast(i+1===list.length-1 && next.key==='dispatched' ? 'Batch dispatched to stock' : 'Moved to '+next.label);
 }
@@ -9749,8 +9785,10 @@ async function moveBlendToStage(id, stageKey){
   const b = byId(state.blendBatches, id); if(!b || !canMoveBlendStage()) return;
   const list = blendStageList(), idx = list.findIndex(x=>x.key===stageKey);
   if(idx<0 || blendStageKeyOf(b, list)===stageKey) return;
-  blendPlaceInStage(b, list[idx], idx);
-  if(!(await save('blendBatches'))) return;
+  if(blendMoveTooSoon(id)) return;
+  const snap = blendStageSnap(b);
+  blendPlaceInStage(b, list[idx], idx); render();
+  if(!(await save('blendBatches'))){ blendStageRestore(b, snap); render(); return; }
   logActivity(`Moved blend batch ${b.batchNo} to ${list[idx].label}`);
   showToast('Moved to '+list[idx].label);
 }
@@ -9761,11 +9799,13 @@ function deleteBlendBatch(id){
   openConfirmModal({
     title: 'Delete batch', danger: true, confirmLabel: 'Delete', requirePassword: true,
     message: `Delete batch ${b.batchNo||b.id}${b.product?' ('+stripTags(b.product).trim()+')':''}? This cannot be undone. Type your password to confirm.`,
-    onConfirm: async ()=>{
+    // Instant, with rollback (like deleting a batch sheet): the batch disappears AT ONCE and the save runs in the background. It must NOT be awaited here: the confirm window waits for onConfirm.
+    onConfirm: ()=>{
       if(!canDeleteBlendBatch()) return;
+      const index = state.blendBatches.findIndex(x=>x.id===id);
       state.blendBatches = state.blendBatches.filter(x=>x.id!==id);
-      if(!(await save('blendBatches'))) return;
-      logActivity(`Deleted blend batch ${b.batchNo}`);
+      const putBack = ()=>{ if(!byId(state.blendBatches, id)) state.blendBatches.splice(Math.min(index<0?0:index, state.blendBatches.length), 0, b); showToast('Could not delete batch '+(b.batchNo||'')+' - it is back, please try again', 5000); render(); };
+      save('blendBatches').then(ok=>{ if(ok) logActivity(`Deleted blend batch ${b.batchNo}`); else putBack(); }).catch(e=>{ console.error('delete blend batch failed', e); putBack(); });
     },
   });
 }
@@ -14106,45 +14146,45 @@ function renderWelcomeScreen(role){
 
 /* ===================== Shell (sidebar + topbar + page) ===================== */
 const NAV = [
+  // Sidebar order (owner, 2026-11-25: "update side bar order"): the sidebar is these groups one after another as ONE flat list.
+  // Attendance now lives under Staff (Staff -> Attendance); its own sidebar row is only drawn for a role that has Attendance but not the Staff page (hideWhenHas).
   {group:'Overview', items:[{id:'dashboard', label:'Dashboard', icon:'dashboard'}]},
-  {group:'Operations', items:[
+  {group:'Sales', items:[
     {id:'orders', label:'Orders board', icon:'orders'},
-    {id:'blendingdept', label:'Blending Department', icon:'blender', children:[
-      {id:'costing', label:'Costing & recipe'},
-      {id:'recipelibrary', label:'Batch sheets'},
-      {id:'recipes', label:'Production Guide'},
-      {id:'blending', label:'Mixing and Filling'},
-    ]},
     {id:'customercare', label:'Customer Care', icon:'headset', children:[
       {id:'orderinquiry', label:'Order inquiry'},
       {id:'complaints', label:'Complaints'},
       {id:'ongoingorders', label:'Ongoing orders'},
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
+    {id:'ratings', label:'Customer ratings', icon:'star'},
+    {id:'bulksms', label:'Bulk SMS', icon:'send'},
+  ]},
+  {group:'Operations', items:[
+    {id:'blendingdept', label:'Blending Department', icon:'blender', children:[
+      {id:'costing', label:'Costing & recipe'},
+      {id:'recipelibrary', label:'Batch sheets'},
+      {id:'recipes', label:'Production Guide'},
+      {id:'blending', label:'Mixing and Filling'},
+    ]},
     {id:'suppliers', label:'Suppliers', icon:'suppliers'},
     {id:'itemlist', label:'Item List', icon:'box'},
     {id:'ordersprocess', label:'Orders Process', icon:'list'},
-  ]},
-  {group:'Delivery', items:[
     {id:'deliveryruns', label:'Delivery runs', icon:'truck'},
     {id:'driverrun', label:'My delivery run', icon:'truck'},
-  ]},
-  {group:'GMP', items:[
-    {id:'gmp', label:'GMP checklists', icon:'gmp'},
   ]},
   {group:'R&D', items:[
     {id:'rnd', label:'R&D', icon:'flask'},
   ]},
+  {group:'Documents', items:[
+    {id:'gmp', label:'Documents', icon:'gmp'},
+  ]},
   {group:'Team', items:[
     {id:'staff', label:'Staff', icon:'staff'},
+    {id:'attendance', label:'Attendance', icon:'clock', hideWhenHas:'staff'},
     {id:'chat', label:'Chat', icon:'chat'},
   ]},
-  {group:'Attendance', items:[
-    {id:'attendance', label:'Attendance', icon:'clock'},
-  ]},
   {group:'Other', items:[
-    {id:'bulksms', label:'Bulk SMS', icon:'send'},
-    {id:'ratings', label:'Customer ratings', icon:'star'},
     {id:'settings', label:'Settings', icon:'settings'},
   ]},
 ];
@@ -14187,7 +14227,7 @@ const GRID_ICONS = {
   customercare: '<path d="M4 14v-3a8 8 0 1 1 16 0v3" /><path d="M18 19c0 1.657 -2.686 3 -6 3" /><path d="M4 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" /><path d="M15 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" />',
   customers: '<path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />',
   suppliers: '<path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5" />',
-  gmp: '<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M9 14l2 2l4 -4" />',
+  gmp: '<path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 9l1 0" /><path d="M9 13l6 0" /><path d="M9 17l6 0" />',
   rnd: '<path d="M9 3l6 0" /><path d="M10 9l4 0" /><path d="M10 3v6l-4 11a.7 .7 0 0 0 .5 1h11a.7 .7 0 0 0 .5 -1l-4 -11v-6" />',
   staff: '<path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1" /><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M17 10h2a2 2 0 0 1 2 2v1" /><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M3 13v-1a2 2 0 0 1 2 -2h2" />',
   chat: '<path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" />',
@@ -16064,9 +16104,9 @@ const PAGE_META = {
   deliveryruns:{title:'Delivery runs', sub:'Send AC deliveries out with the lorry and follow every stop.'},
   driverrun:{title:'My delivery run', sub:'Your stops for today. Mark each one as you go.'},
   ordersprocess:{title:'Orders Process', sub:'A quick look at the orders board — processing and invoicing.'},
-  gmp:{title:'GMP', sub:'Cleaning, inspections, maintenance, pest control and customer feedback — no paper needed.'},
+  gmp:{title:'Documents', sub:'GMP checklists and waste water treatment information.'},
   rnd:{title:'R&D', sub:'New product development and improvements — formulas, sample tests, chemist attendance, and progress.'},
-  staff:{title:'Staff', sub:'People working across the pipeline.'},
+  staff:{title:'Staff', sub:'Team members and attendance.'},
   chat:{title:'Chat', sub:'Team chat and private messages.'},
   bulksms:{title:'Bulk SMS', sub:'Send one message to a list of customers at once.'},
   ratings:{title:'Customer ratings', sub:'What customers said about their delivery experience.'},
@@ -16108,11 +16148,11 @@ function renderShell(freshPage){
         <span class="tagline">Operations</span>
       </div>
       <nav class="nav-group" aria-label="Main navigation">
-        ${navGroups.flatMap(g=>g.items).map((it,ni)=>`
-        <a href="#${it.id}" class="nav-item ${state.page===it.id?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="--i:${ni}" ${state.page===it.id?'aria-current="page"':''}>
+        ${navGroups.flatMap(g=>g.items).filter(it=>!(it.hideWhenHas && allowed.includes(it.hideWhenHas))).map((it,ni)=>{ const isOn = state.page===it.id || (it.id==='staff' && state.page==='attendance'); return `
+        <a href="#${it.id}" class="nav-item ${isOn?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="--i:${ni}" ${isOn?'aria-current="page"':''}>
           <span class="nav-ico">${sidebarIcon(it)}</span><span class="nav-label">${esc(navLabel(it))}</span>
           ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
-        </a>`).join('')}
+        </a>`; }).join('')}
       </nav>
     </aside>
 
@@ -19226,8 +19266,14 @@ function renderSuppliersPage(){
 }
 
 /* ===================== GMP page (document attachments) ===================== */
+// Documents (owner, 2026-11-25: "rename GMP checklist to Documents ... 2 small cards named GMP Checklists and Waste Water Treatment"): the page id stays `gmp` (permissions, data grants, links), only the words changed.
+// state.filters.docsTab: null = the two cards, 'gmp' = the GMP checklists (its own hub + sections below), 'wwt' = Waste Water Treatment (the plant information is still to come).
 function renderGmpPage(){
-  const section = state.filters.gmpSection;
+  const f = state.filters;
+  const tab = f.docsTab || (f.gmpSection ? 'gmp' : null);
+  if(tab==='wwt') return renderWasteWaterPage();
+  if(!tab) return renderDocumentsHub();
+  const section = f.gmpSection;
   const inner = section==='cleaning' ? renderGmpChecklistsSection()
     : section==='inspections' ? renderGmpInspectionsSection()
     : section==='maintenance' ? renderGmpMaintenanceSection()
@@ -19236,6 +19282,30 @@ function renderGmpPage(){
     : null;
   if(!inner) return renderGmpHub();
   return inner;
+}
+function renderDocumentsHub(){
+  const cards = [
+    {id:'gmp', label:'GMP Checklists', icon:'gmp'},
+    {id:'wwt', label:'Waste Water Treatment', icon:'droplet'},
+  ];
+  return `
+  <div class="landing-section">
+    <div class="landing-section-title">Documents</div>
+    <div class="landing-grid">
+      ${cards.map((c,i)=>`
+      <button type="button" class="landing-card" data-docs-tab="${c.id}">
+        <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
+        <span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
+function renderWasteWaterPage(){
+  return `
+  <div class="panel">
+    <div class="panel-head"><h3>Waste Water Treatment</h3></div>
+    <div class="panel-body"><div class="empty-state">The treatment plant information will be added here.</div></div>
+  </div>`;
 }
 function renderGmpHub(){
   const cards = [
@@ -20047,7 +20117,28 @@ function renderComplaintsTable(rows, opts){
   </div>`;
 }
 /* ===================== Staff page ===================== */
+// Staff (owner, 2026-11-25: "when clicking staff showing small 2 cards 'Team Members' and 'Attendance'"): the hub; Team Members = the people list below, Attendance = the real Attendance page (its own history step, Back returns here).
+// A role with only one of the two pages goes straight to it.
 function renderStaffPage(){
+  const canAtt = pageAllowed('attendance');
+  if(state.filters.staffTab==='team' || !canAtt) return renderStaffTeamPage();
+  const cards = [
+    {label:'Team Members', icon:'staff', attr:'data-staff-tab="team"'},
+    {label:'Attendance', icon:'clock', attr:'data-nav="attendance"'},
+  ];
+  return `
+  <div class="landing-section">
+    <div class="landing-section-title">Staff</div>
+    <div class="landing-grid">
+      ${cards.map((c,i)=>`
+      <button type="button" class="landing-card" ${c.attr}>
+        <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
+        <span>${esc(c.label)}</span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
+function renderStaffTeamPage(){
   const cats = (state.staffCategories && state.staffCategories.length) ? state.staffCategories : DEFAULT_STAFF_CATEGORIES;
   const uncategorized = state.staff.filter(s=>!cats.find(c=>c.key===s.category));
   const groups = [...cats.map(c=>({key:c.key, label:c.label, members:state.staff.filter(s=>s.category===c.key)})),
@@ -23389,6 +23480,9 @@ async function stopBatchTimer(key){
   render();
   await saveBatchTimerChange(key, b, before);
 }
+// A second press of Next / Previous while the first is still being saved used to move TWO steps (the step was changed first and saved after): one press at a time per batch, the new step is drawn at once,
+// and a save that fails puts the old step back (before, the screen showed a step the server never got).
+const _stepBusy = {};
 async function nextBatchStep(key){
   key = resolveBatchKey(key); if(!key) return;
   if(!canGuideRun()) return;
@@ -23398,22 +23492,31 @@ async function nextBatchStep(key){
   // "can finish the batch even during the countdown, and the message should pop up quickly"): the "is this still the same batch?" check used to come
   // first, so the popup waited for a server round trip. That check still runs when Yes is answered (transferFinishedBatch).
   if(b.currentStep >= b.steps.length-1){ askFinishTransfer(key); return; }
-  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
-  b.currentStep += 1;
-  const step = b.steps[b.currentStep];
-  b.status = 'running'; b.timer = null;   // a new step starts without a timer
-  if(!(await saveActiveBatchVerified(key))) return;
-  showToast((b.machine ? b.machine+' — ' : '')+'Now: '+batchStepLabel(step, b.batchSizeKg)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
+  if(_stepBusy[key]) return;
+  _stepBusy[key] = true;
+  try{
+    const was = {currentStep:b.currentStep, timer:b.timer, status:b.status};
+    b.currentStep += 1; b.status = 'running'; b.timer = null;   // a new step starts without a timer
+    const step = b.steps[b.currentStep];
+    render();
+    if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
+    if(!(await saveActiveBatchVerified(key))){ if(state[key]===b){ Object.assign(b, was); render(); } return; }
+    showToast((b.machine ? b.machine+' — ' : '')+'Now: '+batchStepLabel(step, b.batchSizeKg)+(step.amount?(' — '+step.amount):'')+(step.temperature?(' — '+step.temperature+'°C'):''));
+  } finally { delete _stepBusy[key]; }
 }
 async function prevBatchStep(key){
   key = resolveBatchKey(key); if(!key) return;
   if(!canGuideRun()) return;
-  const b = state[key]; if(!b || b.currentStep<=0) return;
-  stopAlertSound(key);
-  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
-  b.currentStep -= 1;
-  b.status = 'running'; b.timer = null;
-  await saveActiveBatchVerified(key); render();
+  const b = state[key]; if(!b || b.currentStep<=0 || _stepBusy[key]) return;
+  _stepBusy[key] = true;
+  try{
+    stopAlertSound(key);
+    const was = {currentStep:b.currentStep, timer:b.timer, status:b.status};
+    b.currentStep -= 1; b.status = 'running'; b.timer = null;
+    render();
+    if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
+    if(!(await saveActiveBatchVerified(key))){ if(state[key]===b){ Object.assign(b, was); render(); } }
+  } finally { delete _stepBusy[key]; }
 }
 /* Finishing a batch (owner, 2026-11-22: "when finishing a batch dont auto push to mixing and filling stage, ask ... yes or no, if yes ask 'Need to print the batch sticker' yes or no, if yes sticker print option appear").
    Finish -> "Transfer it to Mixing and Filling?"  Yes: the batch is added to Mixing and Filling (finishBatchIntoBlendingBoard), then "Need to print the batch sticker?"  Yes: the vessel sticker print view opens.
@@ -23427,14 +23530,19 @@ function askFinishTransfer(key){
   openConfirmModal({
     title: 'Batch finished', sticky: true, confirmLabel: 'Yes', cancelLabel: 'No',
     message: `${name}${b.batchNo ? ' ('+b.batchNo+')' : ''} is finished. Do you want to transfer it to Mixing and Filling?`,
-    onConfirm: ()=>transferFinishedBatch(key),
+    // NOT returned: the question closes at once (a slow save kept it open and a second Yes made the batch twice); the work goes on in the background
+    onConfirm: ()=>{ showToast('Moving it to Mixing and Filling…'); transferFinishedBatch(key); },
   });
 }
+const _finishBusy = {};
 async function transferFinishedBatch(key){
   key = resolveBatchKey(key); if(!key) return;
-  const b = state[key]; if(!b) return;
-  if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
-  await finishBatchIntoBlendingBoard(b, key);
+  const b = state[key]; if(!b || _finishBusy[key]) return;
+  _finishBusy[key] = true;
+  try{
+    if(!await verifyActiveBatchStillCurrent(key, b.id)){ dropStaleActiveBatch(key); return; }
+    await finishBatchIntoBlendingBoard(b, key);
+  } finally { delete _finishBusy[key]; }
 }
 function askPrintVesselSticker(batchId){
   if(!canPrintBlendSticker()) return;   // a role without the sticker switch is not asked
@@ -23529,8 +23637,16 @@ async function finishBatchIntoBlendingBoard(b, key){
     completedAt: new Date().toISOString(), completedBy: state.session.name,
     productionSteps: b.steps.map(copyRunStep),
   };
+  // Already on the board (another tablet finished the same run, or a repeated Yes): nothing is added twice, the slot is just cleared. Same test as the clean-up at load (batch no. + sheet + start time).
+  if((state.blendBatches||[]).some(bb=>bb.batchNo===batch.batchNo && bb.recipeId===b.recipeId && bb.startedAt===b.startedAt)){
+    state[key] = null; kvSet(key, null).catch(()=>{}); stopAlertSound(key);
+    if(state.batchFocusKey===key) state.batchFocusKey = null;
+    if(!runningBatches().length){ stopBatchTicker(); state.batchFocusMode = false; }
+    render(); showToast('This batch is already in Mixing and Filling');
+    return;
+  }
   state.blendBatches.unshift(batch);
-  if(!(await save('blendBatches'))) return;
+  if(!(await save('blendBatches'))){ state.blendBatches = state.blendBatches.filter(x=>x.id!==batch.id); render(); return; }   // no unsaved "ghost" card on the board
   state[key] = null;
   // Not saveActiveBatchVerified(): the transfer above already landed and is the part that
   // matters — this is just clearing the now-stale slot behind it. That save's own
@@ -29082,8 +29198,10 @@ function attachShellHandlers(){
   // Opening a card is a new screen: navCommit() (end of render) adds the browser history entry, so the
   // browser's own Back button returns to the hub in one step. There is no "‹ GMP" button any more.
   document.querySelectorAll('[data-gmp-section]').forEach(b=>b.addEventListener('click', ()=>{
-    state.filters.gmpSection = b.dataset.gmpSection; render();
+    state.filters.gmpSection = b.dataset.gmpSection; state.filters.docsTab = 'gmp'; render();
   }));
+  document.querySelectorAll('[data-docs-tab]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.docsTab = b.dataset.docsTab; state.filters.gmpSection = null; render(); }));
+  document.querySelectorAll('[data-staff-tab]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.staffTab = b.dataset.staffTab; render(); }));
   document.querySelectorAll('[data-gmp-inspection-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpInspectionId = b.dataset.gmpInspectionSelect; render(); }));
   document.querySelectorAll('[data-gmp-maintenance-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpMaintenanceSub = b.dataset.gmpMaintenanceSelect; render(); }));
   document.querySelectorAll('[data-gmp-feedback-select]').forEach(b=>b.addEventListener('click', ()=>{ state.filters.gmpFeedbackSub = b.dataset.gmpFeedbackSelect; render(); }));

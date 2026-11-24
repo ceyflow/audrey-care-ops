@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261124203000">
+<meta name="app-build" content="20261124213000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1637,8 +1637,6 @@ html{ visibility:hidden; }
   @media (max-width:760px){ .bw-footer{bottom:calc(-22px - env(safe-area-inset-bottom));margin:6px -22px calc(-22px - env(safe-area-inset-bottom));padding:12px 22px calc(12px + env(safe-area-inset-bottom));} .bw-run{flex-wrap:wrap;} }
   .bv-wrap{position:relative;}
   /* Variations (owner, 2026-11-24, second pass: "improve the design of variation part and manage space"): a labelled "New item" box, the added items as clean cards, and the vessel sticker of the picked / just added item beside them. */
-  .bv-body{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start;}
-  .bv-body.has-stk{grid-template-columns:minmax(0,1fr) 232px;}
   .bv-main{min-width:0;display:flex;flex-direction:column;gap:12px;}
   .bv-new{border:1.5px solid rgba(var(--accent-rgb),.28);border-radius:14px;background:linear-gradient(180deg,rgba(var(--accent-rgb),.08),rgba(var(--accent-rgb),.03));padding:12px 14px 14px;transition:border-color .15s,box-shadow .15s,background .15s;}
   .bv-new:focus-within{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(var(--accent-rgb),.13);}
@@ -1658,9 +1656,6 @@ html{ visibility:hidden; }
   .bv-additem:active{transform:scale(.97);}
   .bv-lines{display:flex;flex-direction:column;gap:8px;}
   .bv-line{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;column-gap:10px;align-items:center;padding:10px 8px 10px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff;transition:border-color .15s,background .15s,box-shadow .15s;}
-  .bv-line.stk{cursor:pointer;}
-  .bv-line.stk:hover{border-color:rgba(var(--accent-rgb),.55);}
-  .bv-line.bv-sel{border-color:var(--accent);background:rgba(var(--accent-rgb),.06);box-shadow:inset 3px 0 0 var(--accent);}
   .bv-n{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:12px;font-weight:800;}
   .bv-info{min-width:0;display:flex;flex-direction:column;gap:1px;}
   .bv-pn{font-size:14px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
@@ -1673,30 +1668,17 @@ html{ visibility:hidden; }
   .bv-btns{display:flex;align-items:center;justify-content:flex-end;gap:2px;}
   .bv-x{display:grid;place-items:center;width:32px;height:34px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:9px;}
   .bv-x:hover{background:#FCEEEB;color:#C15B4E;}
+  .bv-st{color:var(--accent-dark);}
   .bv-st:hover{background:var(--accent-soft);color:var(--accent-dark);}
-  .bv-sel .bv-st{color:var(--accent-dark);background:var(--accent-soft);}
   @media (prefers-reduced-motion:no-preference){ .bv-line.bv-just{animation:bv-flash 1.6s ease-out;} @keyframes bv-flash{0%{background:rgba(var(--accent-rgb),.22);transform:translateX(-6px);}25%{transform:none;}100%{background:transparent;}} }
   .bv-totals{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:10px 14px;border-radius:12px;background:var(--accent-soft);}
   .bv-tot-l{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);}
   .bv-tot{display:inline-flex;align-items:baseline;gap:7px;}
   .bv-tot b{font-size:15px;font-weight:800;color:var(--ink);}
   .bv-tot i{font-style:normal;font-size:12px;color:var(--muted);}
-  .bv-stk{position:sticky;top:8px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:#fff;}
-  .bv-stk-h{align-self:stretch;display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-dark);}
-  .bv-stk-h em{font-style:normal;font-weight:700;letter-spacing:0;text-transform:none;color:var(--muted);}
-  .bv-stk-for{align-self:stretch;text-align:center;font-size:13px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
-  .bv-stk-for span{display:block;margin-top:1px;font-size:11.5px;font-weight:600;color:var(--muted);}
-  .bv-stk-card{padding:8px;border-radius:10px;background:#E8EDEA;max-width:100%;overflow:hidden;}
-  .bv-stk-card .vsticker{box-shadow:0 1px 5px rgba(20,25,20,.28);}
-  .bv-stk-wait{padding:34px 10px;font-size:12px;color:var(--muted);text-align:center;}
-  .bv-stk .bw-btn{width:100%;justify-content:center;}
-  .bv-stk-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 8px;text-align:center;font-size:12.5px;line-height:1.45;color:var(--muted);border:1.5px dashed #C9D6CD;border-radius:12px;background:#FBFCFB;}
-  .bv-stk-empty svg{width:26px;height:26px;color:var(--accent);}
   .vs-preview{display:flex;justify-content:center;padding:16px;background:var(--bg);border-radius:12px;margin:6px 0 10px;}
   .vs-preview-card{zoom:2.4;box-shadow:0 1px 6px rgba(20,25,20,.25);background:#fff;}
   @media (max-width:760px){
-    .bv-body.has-stk{grid-template-columns:minmax(0,1fr);}
-    .bv-stk{position:static;}
     .bv-fields{grid-template-columns:repeat(2,minmax(0,1fr));}
     .bv-f-prod,.bv-f-frag,.bv-additem{grid-column:1 / -1;}
     .bv-f-qty,.bv-f-unit{grid-column:span 1;}
@@ -9515,18 +9497,18 @@ function blendVarCommitPending(d){
 const BV_ICON_PLUS = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const BV_ICON_TAG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.2"/></svg>';
 // One added item: a number badge, the product with its fragrance underneath, the quantity as a pill (a can unit also shows its litres) and the buttons. With a sticker panel the whole line is clickable and shows THAT item's vessel sticker.
-function blendVariationRowHtml(r, ro, i, stk, sel){
+function blendVariationRowHtml(r, ro, i, stk){
   const title = r.product || r.fragrance || 'Item';
   const sub = r.product && r.fragrance ? r.fragrance : '';
   const lit = blendVarLitres(r);
   const qty = r.qty ? `<span class="bv-qpill"><b>${esc(r.qty)}</b>${r.unit ? ' '+esc(r.unit) : ''}</span>${lit!==null && /can/i.test(r.unit||'') ? `<span class="bv-ltr">= ${esc(fmtQty(lit))} L</span>` : ''}` : '<span class="bv-ltr">no quantity</span>';
   return `
-  <div class="bv-line${stk?' stk':''}${sel?' bv-sel':''}${state._bvJust===r.id?' bv-just':''}" id="bv-row-${r.id}" data-bv-row="${r.id}">
+  <div class="bv-line${state._bvJust===r.id?' bv-just':''}" id="bv-row-${r.id}" data-bv-row="${r.id}">
     <span class="bv-n" aria-hidden="true">${(i||0)+1}</span>
     <div class="bv-info"><b class="bv-pn">${esc(title)}</b>${sub ? `<span class="bv-fr">${esc(sub)}</span>` : ''}</div>
     <div class="bv-qty">${qty}</div>
     <span class="bv-btns">
-      ${stk ? `<button type="button" class="bv-x bv-st" data-bv-stk="${r.id}" title="Show this item's vessel sticker" aria-label="Show this item's vessel sticker">${BV_ICON_TAG}</button>` : ''}
+      ${stk ? `<button type="button" class="bv-x bv-st" data-bv-stk="${r.id}" title="Print the vessel sticker for this item" aria-label="Print the vessel sticker for this item">${BV_ICON_TAG}</button>` : ''}
       ${ro ? '' : `<button type="button" class="bv-x bv-del" data-bv-del="${r.id}" title="Remove this item" aria-label="Remove this item">${TRASH_ICON_SVG}</button>`}
     </span>
   </div>`;
@@ -9545,50 +9527,31 @@ function renderBlendVarTotals(){
   el.innerHTML = html ? `<span class="bv-tot-l">Total</span>${html}` : '';
   el.style.display = html ? '' : 'none';
 }
-// Which item's vessel sticker the panel shows: the one picked (or just added), else the latest.
-function blendStickerSelId(d){
-  if(!d || !d.rows.length) return '';
-  return d.stk && d.rows.some(r=>r.id===d.stk) ? d.stk : d.rows[d.rows.length-1].id;
-}
 function blendVariationsSectionHtml(d, ro, savedBatch){
   const e = d.entry || blendNewEntry();
-  const stkOn = !!(savedBatch && canPrintBlendSticker());   // the sticker needs a saved batch (its QR holds the batch's address)
-  const sel = stkOn ? blendStickerSelId(d) : '';
-  const rowsHtml = d.rows.map((r,i)=>blendVariationRowHtml(r, ro, i, stkOn, r.id===sel)).join('');
+  const stkOn = !!(savedBatch && canPrintBlendSticker());   // the sticker icon needs a saved batch (the QR holds the batch's address); it works for an item added a moment ago, before Save
+  const rowsHtml = d.rows.map((r,i)=>blendVariationRowHtml(r, ro, i, stkOn)).join('');
   const totals = blendVarTotalsHtml(d.rows);
   const unit = blendNormUnit(e.unit) || '5L cans';
-  const selRow = sel ? d.rows.find(r=>r.id===sel) : null;
-  const stkHtml = !stkOn ? '' : `
-    <aside class="bv-stk" id="bv-stk">
-      <div class="bv-stk-h"><span>Vessel sticker</span><em>50 × 50 mm</em></div>
-      ${selRow ? `
-      <div class="bv-stk-for" id="bv-stk-for">${esc(selRow.product || selRow.fragrance || 'Item')}${selRow.qty ? `<span>${esc(selRow.qty+(selRow.unit?' '+selRow.unit:''))}</span>` : ''}</div>
-      <div class="bv-stk-card" id="bv-stk-card"><div class="bv-stk-wait">Making the sticker…</div></div>
-      <button type="button" class="btn btn-sm btn-primary bw-btn" id="btn-bv-stk-print">${BV_ICON_TAG}<span>Print sticker</span></button>` : `
-      <div class="bv-stk-empty">${BV_ICON_TAG}<span>Add an item and its vessel sticker appears here, ready to print.</span></div>`}
-    </aside>`;
   return `
   <section class="bv-wrap bw-card">
     <div class="bw-card-head">
       <div class="bw-card-title"><span class="bw-ico">${BW_ICONS.layers}</span>Variations${d.rows.length ? `<span class="bv-count">${d.rows.length}</span>` : ''}</div>
     </div>
-    <div class="bv-body${stkOn?' has-stk':''}">
-      <div class="bv-main">
-        ${ro ? '' : `
-        <div class="bv-new" id="bv-entry" data-frag-id="${escAttr(e.fragranceId||'')}">
-          <div class="bv-new-h"><span class="bv-n-new" aria-hidden="true">+</span>New item</div>
-          <div class="bv-fields">
-            <label class="bv-fl bv-f-prod"><span>Product</span><input id="bv-e-prod" value="${escAttr(e.product)}" placeholder="e.g. Aloevera" autocomplete="off"></label>
-            <label class="bv-fl bv-f-frag"><span>Fragrance</span><input id="bv-e-frag" data-bv-pick="frag" value="${escAttr(e.fragrance)}" placeholder="Search the Item List" autocomplete="off"></label>
-            <label class="bv-fl bv-f-qty"><span>Quantity</span><input id="bv-e-qty" value="${escAttr(e.qty)}" inputmode="decimal" placeholder="0" autocomplete="off"></label>
-            <label class="bv-fl bv-f-unit"><span>Unit</span><select id="bv-e-unit">${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${unit===u?'selected':''}>${u}</option>`).join('')}</select></label>
-            <button type="button" class="bv-additem" id="btn-bv-additem">${BV_ICON_PLUS}<span>Add item</span></button>
-          </div>
-        </div>`}
-        ${d.rows.length ? `<div class="bv-lines">${rowsHtml}</div>` : `<div class="bv-noitems">${ro ? 'No variations.' : 'No items added yet. Fill in the box above and press Add item.'}</div>`}
-        <div class="bv-totals" id="bv-totals" ${totals?'':'style="display:none;"'}>${totals ? `<span class="bv-tot-l">Total</span>${totals}` : ''}</div>
-      </div>
-      ${stkHtml}
+    <div class="bv-main">
+      ${ro ? '' : `
+      <div class="bv-new" id="bv-entry" data-frag-id="${escAttr(e.fragranceId||'')}">
+        <div class="bv-new-h"><span class="bv-n-new" aria-hidden="true">+</span>New item</div>
+        <div class="bv-fields">
+          <label class="bv-fl bv-f-prod"><span>Product</span><input id="bv-e-prod" value="${escAttr(e.product)}" placeholder="e.g. Aloevera" autocomplete="off"></label>
+          <label class="bv-fl bv-f-frag"><span>Fragrance</span><input id="bv-e-frag" data-bv-pick="frag" value="${escAttr(e.fragrance)}" placeholder="Search the Item List" autocomplete="off"></label>
+          <label class="bv-fl bv-f-qty"><span>Quantity</span><input id="bv-e-qty" value="${escAttr(e.qty)}" inputmode="decimal" placeholder="0" autocomplete="off"></label>
+          <label class="bv-fl bv-f-unit"><span>Unit</span><select id="bv-e-unit">${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${unit===u?'selected':''}>${u}</option>`).join('')}</select></label>
+          <button type="button" class="bv-additem" id="btn-bv-additem">${BV_ICON_PLUS}<span>Add item</span></button>
+        </div>
+      </div>`}
+      ${d.rows.length ? `<div class="bv-lines">${rowsHtml}</div>` : `<div class="bv-noitems">${ro ? 'No variations.' : 'No items added yet. Fill in the box above and press Add item.'}</div>`}
+      <div class="bv-totals" id="bv-totals" ${totals?'':'style="display:none;"'}>${totals ? `<span class="bv-tot-l">Total</span>${totals}` : ''}</div>
     </div>
     <div id="bv-dropdown" class="bv-dropdown" style="display:none;"></div>
   </section>`;
@@ -9601,27 +9564,6 @@ function blendRenderKeepScroll(){
   render();
   holders.forEach(h=>{ const sel = '.'+String(h.cls).trim().split(/\s+/)[0]; const el = document.querySelector(sel); if(el) el.scrollTop = h.top; });
 }
-// The sticker panel: the sticker of the picked / just added item, drawn from what is typed in the open window (so it works before Save).
-async function blendFillStickerPreview(){
-  const card = document.getElementById('bv-stk-card'); if(!card) return;
-  const d = state._blendVarDraft; const id = blendStickerSelId(d);
-  const bid = (state.modal||'').split(':')[1]; const b = bid ? blendFind(bid) : null;
-  if(!b || !id) return;
-  const row = d.rows.find(r=>r.id===id);
-  const forEl = document.getElementById('bv-stk-for');
-  if(forEl && row) forEl.innerHTML = esc(row.product || row.fragrance || 'Item') + (row.qty ? `<span>${esc(row.qty+(row.unit?' '+row.unit:''))}</span>` : '');
-  const ok = await ensureQrLib();
-  const c2 = document.getElementById('bv-stk-card');
-  if(!c2 || blendStickerSelId(state._blendVarDraft)!==id) return;   // redrawn or another item picked meanwhile
-  if(!ok){ c2.innerHTML = '<div class="bv-stk-wait">The QR code could not load. Check the connection.</div>'; return; }
-  c2.innerHTML = vesselStickerHtml(vesselStickerData(b, id));
-}
-function selectBlendStickerRow(id){
-  const d = state._blendVarDraft; if(!d || !d.rows.some(r=>r.id===id)) return;
-  d.stk = id;
-  document.querySelectorAll('.bv-line').forEach(el=>el.classList.toggle('bv-sel', el.dataset.bvRow===id));
-  blendFillStickerPreview();
-}
 // "Add item": the typed row becomes an item in the list below (it flashes once so it is clearly seen), the entry row is emptied for the next one.
 function addBlendVariationItem(){
   syncBlendVarDraftFromDOM();
@@ -9633,7 +9575,7 @@ function addBlendVariationItem(){
   if(!(parseFloat(qty.replace(',', '.'))>0)){ showToast('Type the quantity'); focus('bv-e-qty'); return; }
   const r = {id:uid('VAR'), product, fragrance, fragranceId:e.fragranceId||'', qty, unit: blendNormUnit(e.unit) || '5L cans'};
   d.rows.push(r); d.entry = {...blendNewEntry(), unit:r.unit};   // the next item starts with the same unit
-  state._bvJust = r.id; d.stk = r.id;   // the sticker panel switches to the item just added
+  state._bvJust = r.id;
   blendRenderKeepScroll();
   // render() puts every typed box back to what it held BEFORE (captureOpenFormFields), so the emptied entry row is written again here, after the redraw.
   const setV = (id, v)=>{ const el = document.getElementById(id); if(el) el.value = v; };
@@ -9646,7 +9588,6 @@ function removeBlendVariationRow(rowId){
   syncBlendVarDraftFromDOM();
   const d = state._blendVarDraft; if(!d) return;
   d.rows = d.rows.filter(r=>r.id!==rowId);
-  if(d.stk===rowId) d.stk = '';
   blendRenderKeepScroll();
 }
 // The suggestion list under the FRAGRANCE box only (owner, 2026-11-22: "dont add suggestion to product space, just need typing space to that"): the Product box is a plain typing box.
@@ -9655,10 +9596,8 @@ function attachBlendVariationHandlers(){
   document.querySelectorAll('body > .bv-dropdown').forEach(x=>x.remove());   // the list from the previous redraw
   const wrap = document.querySelector('.bv-wrap'); if(!wrap) return;
   wrap.querySelectorAll('[data-bv-del]').forEach(b=>b.addEventListener('click', ()=>removeBlendVariationRow(b.dataset.bvDel)));
-  wrap.querySelectorAll('.bv-line.stk').forEach(row=>row.addEventListener('click', e=>{ if(e.target.closest('[data-bv-del]')) return; selectBlendStickerRow(row.dataset.bvRow); }));
-  const stkPrint = document.getElementById('btn-bv-stk-print');
-  if(stkPrint) stkPrint.onclick = ()=>{ const bid = (state.modal||'').split(':')[1]; if(bid) printVesselSticker(bid, blendStickerSelId(state._blendVarDraft)); };
-  blendFillStickerPreview();
+  // the tag icon on a line prints THAT item's vessel sticker (also for an item added a moment ago, before Save: the sticker is drawn from what is typed in the window)
+  wrap.querySelectorAll('[data-bv-stk]').forEach(b=>b.addEventListener('click', ()=>{ const bid = (state.modal||'').split(':')[1]; if(bid) printVesselSticker(bid, b.dataset.bvStk); }));
   const entry = document.getElementById('bv-entry'); if(!entry) return;   // read-only window: no entry row
   ensureBlendInventoryNames();
   const dd = wrap.querySelector('.bv-dropdown'); if(!dd) return;

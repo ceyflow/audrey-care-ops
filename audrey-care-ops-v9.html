@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261124193000">
+<meta name="app-build" content="20261124213000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1636,52 +1636,56 @@ html{ visibility:hidden; }
   @media (max-width:760px){ .bw-qc-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .bw-qc-grid > .bw-qc-ck{grid-column:1 / -1;} .bw-qc-checks{flex-wrap:wrap;} .bw-fgrid{grid-template-columns:repeat(2,minmax(0,1fr));} .bw-fgrid > .s2,.bw-fgrid > .s3,.bw-fgrid > .s4{grid-column:span 1;} .bw-fgrid > .s4,.bw-fgrid > .sfull{grid-column:1 / -1;} }
   @media (max-width:760px){ .bw-footer{bottom:calc(-22px - env(safe-area-inset-bottom));margin:6px -22px calc(-22px - env(safe-area-inset-bottom));padding:12px 22px calc(12px + env(safe-area-inset-bottom));} .bw-run{flex-wrap:wrap;} }
   .bv-wrap{position:relative;}
-  /* Variations, ERP style (owner, 2026-11-24): a header row, ONE entry row with an "Add item" button, then the items added so far. All rows share one grid so the columns line up. */
-  .bv-table{--bv-cols:30px minmax(0,1.25fr) minmax(0,1.45fr) 92px 104px 116px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff;}
-  .bv-th,.bv-entry,.bv-line{display:grid;grid-template-columns:var(--bv-cols);column-gap:12px;align-items:center;padding:0 14px;}
-  .bv-th{height:36px;background:#F3F6F4;border-bottom:2px solid var(--accent);font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
-  .bv-entry{padding-top:14px;padding-bottom:14px;background:#FBFCFB;border-bottom:1px solid var(--border);}
-  .bv-entry:focus-within{background:#fff;}
-  .bv-cell{min-width:0;}
-  .bv-cell input,.bv-cell select{width:100%;min-width:0;height:40px;box-sizing:border-box;}
-  .bv-n{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:12px;font-weight:800;}
-  .bv-n-new{background:transparent;border:1.5px dashed var(--accent);font-size:15px;line-height:1;}
-  .bv-additem{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 14px;border-radius:9px;border:none;background:var(--accent);color:#fff;font:700 13px inherit;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(var(--accent-rgb),.28);transition:background .15s,transform .1s;}
+  /* Variations (owner, 2026-11-24, second pass: "improve the design of variation part and manage space"): a labelled "New item" box, the added items as clean cards, and the vessel sticker of the picked / just added item beside them. */
+  .bv-main{min-width:0;display:flex;flex-direction:column;gap:12px;}
+  .bv-new{border:1.5px solid rgba(var(--accent-rgb),.28);border-radius:14px;background:linear-gradient(180deg,rgba(var(--accent-rgb),.08),rgba(var(--accent-rgb),.03));padding:12px 14px 14px;transition:border-color .15s,box-shadow .15s,background .15s;}
+  .bv-new:focus-within{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(var(--accent-rgb),.13);}
+  .bv-new-h{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-dark);}
+  .bv-n-new{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1.5px dashed var(--accent);font-size:14px;line-height:1;font-weight:700;}
+  .bv-fields{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;}
+  .bv-fl{display:flex;flex-direction:column;gap:5px;min-width:0;margin:0;}
+  .bv-fl>span{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+  .bv-fl input,.bv-fl select{width:100%;min-width:0;height:42px;box-sizing:border-box;padding:0 12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s;}
+  .bv-fl select{padding-right:8px;}
+  .bv-fl input::placeholder{color:#A5AFA9;}
+  .bv-fl input:focus,.bv-fl select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16);}
+  .bv-f-prod,.bv-f-frag{grid-column:span 3;}
+  .bv-f-qty,.bv-f-unit,.bv-additem{grid-column:span 2;}
+  .bv-additem{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:42px;padding:0 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font:700 13.5px inherit;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(var(--accent-rgb),.28);transition:background .15s,transform .1s;}
   .bv-additem:hover{background:var(--accent-dark);}
   .bv-additem:active{transform:scale(.97);}
-  .bv-line{min-height:46px;padding-top:8px;padding-bottom:8px;border-bottom:1px solid #EEF1EF;font-size:13.5px;}
-  .bv-line:last-child{border-bottom:none;}
-  .bv-line .bv-c{min-width:0;overflow-wrap:anywhere;color:var(--ink);}
-  .bv-line .bv-p{font-weight:700;}
-  .bv-line .bv-f{color:#3F4D44;}
-  .bv-line .bv-q{font-weight:700;font-variant-numeric:tabular-nums;}
-  .bv-line .bv-c i{font-style:normal;color:#B3BCB6;}
-  .bv-noitems{padding:20px 14px;text-align:center;font-size:13px;color:var(--muted);}
+  .bv-lines{display:flex;flex-direction:column;gap:8px;}
+  .bv-line{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;column-gap:10px;align-items:center;padding:10px 8px 10px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff;transition:border-color .15s,background .15s,box-shadow .15s;}
+  .bv-n{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:12px;font-weight:800;}
+  .bv-info{min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .bv-pn{font-size:14px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;}
+  .bv-fr{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;}
+  .bv-qty{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+  .bv-qpill{display:inline-flex;align-items:baseline;gap:5px;padding:4px 11px;border-radius:999px;background:var(--accent-soft);font-size:12.5px;font-weight:600;color:var(--accent-dark);white-space:nowrap;}
+  .bv-qpill b{font-size:14px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .bv-ltr{font-size:11px;color:var(--muted);white-space:nowrap;}
+  .bv-noitems{padding:22px 14px;text-align:center;font-size:13px;color:var(--muted);border:1.5px dashed #C9D6CD;border-radius:12px;background:#FBFCFB;}
   .bv-btns{display:flex;align-items:center;justify-content:flex-end;gap:2px;}
   .bv-x{display:grid;place-items:center;width:32px;height:34px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:9px;}
   .bv-x:hover{background:#FCEEEB;color:#C15B4E;}
+  .bv-st{color:var(--accent-dark);}
   .bv-st:hover{background:var(--accent-soft);color:var(--accent-dark);}
   @media (prefers-reduced-motion:no-preference){ .bv-line.bv-just{animation:bv-flash 1.6s ease-out;} @keyframes bv-flash{0%{background:rgba(var(--accent-rgb),.22);transform:translateX(-6px);}25%{transform:none;}100%{background:transparent;}} }
-  .bv-totals{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;margin-top:12px;padding:10px 14px;border-radius:12px;background:var(--accent-soft);}
+  .bv-totals{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:10px 14px;border-radius:12px;background:var(--accent-soft);}
   .bv-tot-l{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);}
   .bv-tot{display:inline-flex;align-items:baseline;gap:7px;}
   .bv-tot b{font-size:15px;font-weight:800;color:var(--ink);}
   .bv-tot i{font-style:normal;font-size:12px;color:var(--muted);}
-  .bv-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:22px 16px;border:1.5px dashed #C9D6CD;border-radius:14px;background:#FBFCFB;}
-  .bv-empty-t{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;}
   .vs-preview{display:flex;justify-content:center;padding:16px;background:var(--bg);border-radius:12px;margin:6px 0 10px;}
   .vs-preview-card{zoom:2.4;box-shadow:0 1px 6px rgba(20,25,20,.25);background:#fff;}
   @media (max-width:760px){
-    .bv-th{display:none;}
-    .bv-entry{grid-template-columns:minmax(0,1fr) minmax(0,1fr);row-gap:10px;padding:12px;}
-    .bv-entry .bv-n{display:none;}
-    .bv-entry .bv-p,.bv-entry .bv-f,.bv-entry .bv-additem{grid-column:1 / -1;}
-    .bv-entry .bv-cell::before{content:attr(data-l);display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
-    .bv-line{grid-template-columns:26px minmax(0,1fr) auto;row-gap:2px;padding:10px 12px;}
-    .bv-line .bv-n{grid-row:1 / span 3;align-self:start;}
-    .bv-line .bv-c{grid-column:2;}
-    .bv-line .bv-q,.bv-line .bv-u{display:inline;}
-    .bv-line .bv-btns{grid-column:3;grid-row:1 / span 3;}
+    .bv-fields{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .bv-f-prod,.bv-f-frag,.bv-additem{grid-column:1 / -1;}
+    .bv-f-qty,.bv-f-unit{grid-column:span 1;}
+    .bv-line{grid-template-columns:26px minmax(0,1fr) auto;row-gap:4px;padding:10px;}
+    .bv-line .bv-n{grid-row:1 / span 2;align-self:start;}
+    .bv-line .bv-qty{grid-column:2;grid-row:2;flex-direction:row;align-items:center;gap:8px;}
+    .bv-line .bv-btns{grid-column:3;grid-row:1 / span 2;}
   }
   .bv-dropdown{z-index:3000;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(20,25,20,.22);max-height:300px;overflow-y:auto;padding:4px;}
   .bv-grp{padding:8px 10px 4px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
@@ -9492,17 +9496,19 @@ function blendVarCommitPending(d){
 }
 const BV_ICON_PLUS = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const BV_ICON_TAG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.2"/></svg>';
-function blendVariationRowHtml(r, ro, saved, i){
-  const qty = r.qty ? esc(r.qty) : '—';
+// One added item: a number badge, the product with its fragrance underneath, the quantity as a pill (a can unit also shows its litres) and the buttons. With a sticker panel the whole line is clickable and shows THAT item's vessel sticker.
+function blendVariationRowHtml(r, ro, i, stk){
+  const title = r.product || r.fragrance || 'Item';
+  const sub = r.product && r.fragrance ? r.fragrance : '';
+  const lit = blendVarLitres(r);
+  const qty = r.qty ? `<span class="bv-qpill"><b>${esc(r.qty)}</b>${r.unit ? ' '+esc(r.unit) : ''}</span>${lit!==null && /can/i.test(r.unit||'') ? `<span class="bv-ltr">= ${esc(fmtQty(lit))} L</span>` : ''}` : '<span class="bv-ltr">no quantity</span>';
   return `
-  <div class="bv-line${state._bvJust===r.id?' bv-just':''}" id="bv-row-${r.id}">
+  <div class="bv-line${state._bvJust===r.id?' bv-just':''}" id="bv-row-${r.id}" data-bv-row="${r.id}">
     <span class="bv-n" aria-hidden="true">${(i||0)+1}</span>
-    <span class="bv-c bv-p" data-l="Product">${r.product ? esc(r.product) : '<i>—</i>'}</span>
-    <span class="bv-c bv-f" data-l="Fragrance">${r.fragrance ? esc(r.fragrance) : '<i>—</i>'}</span>
-    <span class="bv-c bv-q" data-l="Quantity">${qty}</span>
-    <span class="bv-c bv-u" data-l="Unit">${r.unit ? esc(r.unit) : '<i>—</i>'}</span>
+    <div class="bv-info"><b class="bv-pn">${esc(title)}</b>${sub ? `<span class="bv-fr">${esc(sub)}</span>` : ''}</div>
+    <div class="bv-qty">${qty}</div>
     <span class="bv-btns">
-      ${(saved && canPrintBlendSticker()) ? `<button type="button" class="bv-x bv-st" data-sticker-var="${r.id}" title="Print the vessel sticker for this variation" aria-label="Print the vessel sticker for this variation">${BV_ICON_TAG}</button>` : ''}
+      ${stk ? `<button type="button" class="bv-x bv-st" data-bv-stk="${r.id}" title="Print the vessel sticker for this item" aria-label="Print the vessel sticker for this item">${BV_ICON_TAG}</button>` : ''}
       ${ro ? '' : `<button type="button" class="bv-x bv-del" data-bv-del="${r.id}" title="Remove this item" aria-label="Remove this item">${TRASH_ICON_SVG}</button>`}
     </span>
   </div>`;
@@ -9522,9 +9528,9 @@ function renderBlendVarTotals(){
   el.style.display = html ? '' : 'none';
 }
 function blendVariationsSectionHtml(d, ro, savedBatch){
-  const savedIds = new Set(savedBatch ? blendVariationRows(savedBatch).map(x=>x.id) : []);
   const e = d.entry || blendNewEntry();
-  const rowsHtml = d.rows.map((r,i)=>blendVariationRowHtml(r, ro, savedIds.has(r.id), i)).join('');
+  const stkOn = !!(savedBatch && canPrintBlendSticker());   // the sticker icon needs a saved batch (the QR holds the batch's address); it works for an item added a moment ago, before Save
+  const rowsHtml = d.rows.map((r,i)=>blendVariationRowHtml(r, ro, i, stkOn)).join('');
   const totals = blendVarTotalsHtml(d.rows);
   const unit = blendNormUnit(e.unit) || '5L cans';
   return `
@@ -9532,23 +9538,31 @@ function blendVariationsSectionHtml(d, ro, savedBatch){
     <div class="bw-card-head">
       <div class="bw-card-title"><span class="bw-ico">${BW_ICONS.layers}</span>Variations${d.rows.length ? `<span class="bv-count">${d.rows.length}</span>` : ''}</div>
     </div>
-    ${ro ? '' : `<div class="bw-hint">Type the product, pick the fragrance from the Item List, add the quantity, then press <b>Add item</b>.</div>`}
-    <div class="bv-table">
-      <div class="bv-th" aria-hidden="true"><span>#</span><span>Product</span><span>Fragrance</span><span>Quantity</span><span>Unit</span><span></span></div>
+    <div class="bv-main">
       ${ro ? '' : `
-      <div class="bv-entry" id="bv-entry" data-frag-id="${escAttr(e.fragranceId||'')}">
-        <span class="bv-n bv-n-new" aria-hidden="true">+</span>
-        <div class="bv-cell bv-p" data-l="Product"><input id="bv-e-prod" class="bv-in" value="${escAttr(e.product)}" placeholder="e.g. Aloevera" autocomplete="off" aria-label="Product"></div>
-        <div class="bv-cell bv-f" data-l="Fragrance"><input id="bv-e-frag" class="bv-in" data-bv-pick="frag" value="${escAttr(e.fragrance)}" placeholder="Search the Item List" autocomplete="off" aria-label="Fragrance"></div>
-        <div class="bv-cell bv-q" data-l="Quantity"><input id="bv-e-qty" class="bv-in" value="${escAttr(e.qty)}" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Quantity"></div>
-        <div class="bv-cell bv-u" data-l="Unit"><select id="bv-e-unit" class="bv-in" aria-label="Unit">${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-        <button type="button" class="bv-additem" id="btn-bv-additem">${BV_ICON_PLUS}<span>Add item</span></button>
+      <div class="bv-new" id="bv-entry" data-frag-id="${escAttr(e.fragranceId||'')}">
+        <div class="bv-new-h"><span class="bv-n-new" aria-hidden="true">+</span>New item</div>
+        <div class="bv-fields">
+          <label class="bv-fl bv-f-prod"><span>Product</span><input id="bv-e-prod" value="${escAttr(e.product)}" placeholder="e.g. Aloevera" autocomplete="off"></label>
+          <label class="bv-fl bv-f-frag"><span>Fragrance</span><input id="bv-e-frag" data-bv-pick="frag" value="${escAttr(e.fragrance)}" placeholder="Search the Item List" autocomplete="off"></label>
+          <label class="bv-fl bv-f-qty"><span>Quantity</span><input id="bv-e-qty" value="${escAttr(e.qty)}" inputmode="decimal" placeholder="0" autocomplete="off"></label>
+          <label class="bv-fl bv-f-unit"><span>Unit</span><select id="bv-e-unit">${BLEND_VAR_UNITS.map(u=>`<option value="${u}" ${unit===u?'selected':''}>${u}</option>`).join('')}</select></label>
+          <button type="button" class="bv-additem" id="btn-bv-additem">${BV_ICON_PLUS}<span>Add item</span></button>
+        </div>
       </div>`}
-      ${d.rows.length ? `<div class="bv-lines">${rowsHtml}</div>` : `<div class="bv-noitems">${ro ? 'No variations.' : 'No items added yet. Fill the row above and press Add item.'}</div>`}
+      ${d.rows.length ? `<div class="bv-lines">${rowsHtml}</div>` : `<div class="bv-noitems">${ro ? 'No variations.' : 'No items added yet. Fill in the box above and press Add item.'}</div>`}
+      <div class="bv-totals" id="bv-totals" ${totals?'':'style="display:none;"'}>${totals ? `<span class="bv-tot-l">Total</span>${totals}` : ''}</div>
     </div>
-    <div class="bv-totals" id="bv-totals" ${totals?'':'style="display:none;"'}>${totals ? `<span class="bv-tot-l">Total</span>${totals}` : ''}</div>
     <div id="bv-dropdown" class="bv-dropdown" style="display:none;"></div>
   </section>`;
+}
+// A redraw (add / remove an item) must not throw the window back to the top: the window's scroll position is put back after it (owner, 2026-11-24: "every time i added another variation the screen goes up, should stay still").
+function blendRenderKeepScroll(){
+  const wrap = document.querySelector('.bv-wrap');
+  const holders = [];
+  for(let el = wrap; el && el!==document.body; el = el.parentElement){ if(el.scrollHeight>el.clientHeight+1){ const cs = getComputedStyle(el); if(/auto|scroll/.test(cs.overflowY)) holders.push({cls:el.className, top:el.scrollTop}); } }
+  render();
+  holders.forEach(h=>{ const sel = '.'+String(h.cls).trim().split(/\s+/)[0]; const el = document.querySelector(sel); if(el) el.scrollTop = h.top; });
 }
 // "Add item": the typed row becomes an item in the list below (it flashes once so it is clearly seen), the entry row is emptied for the next one.
 function addBlendVariationItem(){
@@ -9562,19 +9576,19 @@ function addBlendVariationItem(){
   const r = {id:uid('VAR'), product, fragrance, fragranceId:e.fragranceId||'', qty, unit: blendNormUnit(e.unit) || '5L cans'};
   d.rows.push(r); d.entry = {...blendNewEntry(), unit:r.unit};   // the next item starts with the same unit
   state._bvJust = r.id;
-  render();
+  blendRenderKeepScroll();
   // render() puts every typed box back to what it held BEFORE (captureOpenFormFields), so the emptied entry row is written again here, after the redraw.
   const setV = (id, v)=>{ const el = document.getElementById(id); if(el) el.value = v; };
   setV('bv-e-prod', ''); setV('bv-e-frag', ''); setV('bv-e-qty', ''); setV('bv-e-unit', r.unit);
   const box = document.getElementById('bv-entry'); if(box) box.dataset.fragId = '';
-  focus('bv-e-prod');
+  { const pe = document.getElementById('bv-e-prod'); if(pe) pe.focus({preventScroll:true}); }
   setTimeout(()=>{ if(state._bvJust===r.id) state._bvJust = null; }, 1800);
 }
 function removeBlendVariationRow(rowId){
   syncBlendVarDraftFromDOM();
   const d = state._blendVarDraft; if(!d) return;
   d.rows = d.rows.filter(r=>r.id!==rowId);
-  render();
+  blendRenderKeepScroll();
 }
 // The suggestion list under the FRAGRANCE box only (owner, 2026-11-22: "dont add suggestion to product space, just need typing space to that"): the Product box is a plain typing box.
 // Picking an Item List name fills the Fragrance of that row (and remembers which Item List entry it was). Arrow keys move through the list, Enter picks, Esc closes.
@@ -9582,6 +9596,8 @@ function attachBlendVariationHandlers(){
   document.querySelectorAll('body > .bv-dropdown').forEach(x=>x.remove());   // the list from the previous redraw
   const wrap = document.querySelector('.bv-wrap'); if(!wrap) return;
   wrap.querySelectorAll('[data-bv-del]').forEach(b=>b.addEventListener('click', ()=>removeBlendVariationRow(b.dataset.bvDel)));
+  // the tag icon on a line prints THAT item's vessel sticker (also for an item added a moment ago, before Save: the sticker is drawn from what is typed in the window)
+  wrap.querySelectorAll('[data-bv-stk]').forEach(b=>b.addEventListener('click', ()=>{ const bid = (state.modal||'').split(':')[1]; if(bid) printVesselSticker(bid, b.dataset.bvStk); }));
   const entry = document.getElementById('bv-entry'); if(!entry) return;   // read-only window: no entry row
   ensureBlendInventoryNames();
   const dd = wrap.querySelector('.bv-dropdown'); if(!dd) return;

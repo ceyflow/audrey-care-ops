@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261124213000">
+<meta name="app-build" content="20261124223000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -25505,11 +25505,18 @@ function vesselStickerHtml(d, T){
   T = T || printTpl('sticker');
   const n = (k, def)=>peNum(T[k], def);
   const line = (show, k, v)=> show===false ? '' : `<div class="vs-l"><span>${esc(k)}</span> <b>${v ? esc(v) : '—'}</b></div>`;
-  const qrBox = n('qrSize',14)+2*n('qrPad',1);
   const logoUrl = printLogoUrl(T);
   const logoImg = logoUrl ? `<img class="vs-logo" src="${escAttr(logoUrl)}" alt="" style="height:${n('logoH',6)}mm;width:auto;max-width:40%;">` : '';
   const nameInner = d.name2 ? `<div class="ln">${esc(d.name1)}</div><div class="ln">${esc(d.name2)}</div>` : `<div class="one">${esc(d.name1||'Batch')}</div>`;
   const align = T.logoAlign==='left' || T.logoAlign==='center' ? T.logoAlign : 'right';
+  // The QR code grows UPWARD (owner, 2026-11-24: "QR code should large to upper side ... dont large below side, shouldnt remove below texts"): the QR and the company name stay at the bottom of the label, the empty writing space gives way,
+  // and the QR can never grow beyond what is left above the company name, so nothing below it is pushed off the label.
+  const lineCount = [T.showParent, T.showMachine, T.showMfd, T.showSize].filter(x=>x!==false).length;
+  const headH = !logoImg ? n('nameH',7.6) : (align==='center' ? n('logoH',6) + n('nameH',7.6) : Math.max(n('nameH',7.6), n('logoH',6)));
+  const coH = T.showCompany===false ? 0 : n('coSize',6)*0.3528 + 0.4;
+  const qrAvail = n('labelH',50) - n('padT',1.6) - n('padB',1.2) - headH - lineCount*n('lineH',2.55) - coH - 2*n('qrPad',1);
+  const qrSz = Math.max(4, Math.min(n('qrSize',14), qrAvail));
+  const qrBox = qrSz + 2*n('qrPad',1);
   const head = !logoImg ? `<div class="vs-name">${nameInner}</div>`
     : (align==='center'
       ? `<div style="text-align:center;flex:none;">${logoImg}</div><div class="vs-name">${nameInner}</div>`
@@ -25524,9 +25531,9 @@ function vesselStickerHtml(d, T){
     .vsticker .vs-name .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .vsticker .vs-l{flex:none;height:${n('lineH',2.55)}mm;font-size:${n('lineSize',6.3)}pt;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .vsticker .vs-l b{font-weight:800;}
-    .vsticker .vs-write{flex:none;height:${n('writeH',10.5)}mm;}
-    .vsticker .vs-qrbox{flex:none;width:${qrBox}mm;height:${qrBox}mm;margin:0 auto;padding:${n('qrPad',1)}mm;background:#fff;}
-    .vsticker .vs-qr{display:block;width:${n('qrSize',14)}mm;height:${n('qrSize',14)}mm;}
+    .vsticker .vs-write{flex:0 1 ${n('writeH',10.5)}mm;min-height:0;}   /* gives way when the QR code grows */
+    .vsticker .vs-qrbox{flex:none;width:${qrBox}mm;height:${qrBox}mm;margin:auto auto 0;padding:${n('qrPad',1)}mm;background:#fff;}
+    .vsticker .vs-qr{display:block;width:${qrSz}mm;height:${qrSz}mm;}
     .vsticker .vs-co{flex:none;text-align:center;font-size:${n('coSize',6)}pt;font-weight:700;line-height:1;margin-top:.4mm;white-space:nowrap;}
   </style>
     ${head}

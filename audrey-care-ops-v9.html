@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261124223000">
+<meta name="app-build" content="20261125013000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1040,15 +1040,26 @@ html{ visibility:hidden; }
   /* Desktop/PC keeps the original solid-gradient horizontal bar. The duotone grid-tile look
      (icon badge on top, label below) is scoped to mobile only, in the @media block below --
      it was designed to match the mobile Sections home grid and was never meant for desktop. */
-  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
-  .landing-card{position:relative;display:flex;align-items:center;gap:8px;background:var(--accent-grad);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease;}
-  .landing-card:hover{box-shadow:0 10px 24px rgba(var(--accent-rgb),.28);}
-  .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(var(--accent-rgb),.28);}
-  /* .landing-card-icon wraps the same duotone icon markup used on mobile -- on desktop it's
-     shrunk back down to a plain small icon (no colored badge box) to match the pill card. */
-  .landing-card-icon{width:15px;height:15px;border-radius:0;background:none;display:inline-flex;flex:none;}
-  .landing-card-icon i{width:15px !important;height:15px !important;}
-  .landing-card-icon svg{width:15px;height:15px;}
+  .landing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:14px;}
+  /* Hub cards (owner, 2026-11-24: "improve small cards in every sections"): a white card with a coloured icon tile, a bold name and a small arrow, filling the row evenly instead of small left-aligned blue pills. */
+  .landing-card{position:relative;display:flex;align-items:center;gap:13px;min-height:68px;background:#fff;color:var(--ink);border:1.5px solid var(--border);border-radius:14px;padding:12px 40px 12px 14px;font-size:14px;font-weight:700;line-height:1.25;font-family:inherit;cursor:pointer;text-align:left;box-shadow:0 1px 2px rgba(19,32,30,.04);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+  .landing-card::after{content:'';position:absolute;right:15px;top:50%;width:16px;height:16px;margin-top:-8px;background:currentColor;opacity:.28;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center/contain no-repeat;transition:transform .18s ease,opacity .18s ease;}
+  .landing-card:hover{transform:translateY(-2px);border-color:rgba(var(--accent-rgb),.55);box-shadow:0 12px 26px rgba(19,32,30,.10);}
+  .landing-card:hover::after{transform:translateX(3px);opacity:.7;color:var(--accent-dark);}
+  .landing-card:active{transform:translateY(0) scale(.985);}
+  .landing-card:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.22);}
+  .landing-card-selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset, 0 10px 24px rgba(var(--accent-rgb),.16);}
+  /* the icon sits in a soft coloured tile; it does a small hop when the card is hovered (only with motion allowed) */
+  .landing-card-icon{width:42px;height:42px;border-radius:12px;display:inline-grid;place-items:center;flex:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1);}
+  .landing-card-icon i{width:22px !important;height:22px !important;}
+  .landing-card-icon svg{width:22px;height:22px;}
+  .landing-card-icon-blue{background:var(--s-received-soft);color:var(--s-received);}
+  .landing-card-icon-orange{background:var(--s-blending-soft);color:var(--s-blending);}
+  .landing-card-icon-purple{background:var(--s-idea-soft);color:var(--s-idea);}
+  .landing-card-icon-maroon{background:var(--s-rndreview-soft);color:var(--s-rndreview);}
+  .landing-card-icon-accent{background:var(--accent-soft);color:var(--accent-dark);}
+  @media (prefers-reduced-motion:no-preference){ .landing-card:hover .landing-card-icon{transform:translateY(-2px) rotate(-6deg) scale(1.08);} }
+  @media (prefers-reduced-motion:reduce){ .landing-card,.landing-card:hover{transition:none;transform:none;} }
   .landing-card .landing-card-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 0 0 2px #fff;}
   #settings-jump-grid .landing-card{cursor:grab;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
 
@@ -1063,11 +1074,12 @@ html{ visibility:hidden; }
     .landing-card{
       flex-direction:column;align-items:center;gap:8px;
       background:#fff;color:var(--ink);border:none;border-radius:16px;padding:16px 6px;
-      font-size:11px;text-align:center;
+      font-size:11px;text-align:center;font-weight:600;
       box-shadow:0 1px 2px rgba(19,32,30,.04), 0 8px 20px rgba(19,32,30,.05);
     }
-    .landing-card::before{content:none;}
-    .landing-card:hover{box-shadow:0 1px 2px rgba(19,32,30,.04), 0 10px 24px rgba(19,32,30,.08);}
+    .landing-card::before,.landing-card::after{content:none;}
+    .landing-card{min-height:0;border:none;}
+    .landing-card:hover{transform:none;box-shadow:0 1px 2px rgba(19,32,30,.04), 0 10px 24px rgba(19,32,30,.08);}
     .landing-card-selected{box-shadow:0 0 0 2px var(--ink) inset, 0 10px 24px rgba(20,25,20,.12);}
     .landing-card-icon{width:40px;height:40px;border-radius:12px;}
     .landing-card-icon i{width:21px !important;height:21px !important;}
@@ -1614,10 +1626,10 @@ html{ visibility:hidden; }
   .bw-pill-cur{background:var(--ui-solid,var(--accent-dark));border-color:transparent;color:#fff;}
   .bw-pill-done{background:#E5F4EA;border-color:#BFE3CB;color:#1f7a45;}
   .bw-qc.is-current{border-color:rgba(var(--accent-rgb),.55);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.10),0 1px 3px rgba(20,30,25,.07);}
-  .bw-qc-grid{display:grid;grid-template-columns:minmax(80px,.7fr) minmax(100px,1fr) auto;gap:0 12px;align-items:end;}
-  .bw-qc-grid.no-ck{grid-template-columns:minmax(80px,1fr) minmax(100px,1.4fr);}
+  .bw-qc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;align-items:end;}
+  .bw-qc-grid > .bw-qc-ck{grid-column:1 / -1;}
   .bw-qc-grid > .bw-qc-notes{grid-column:1 / -1;}
-  .bw-qc-checks{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;min-height:36px;}
+  .bw-qc-checks{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:36px;}
   .bw-card .field .qc-chk{display:inline-flex;align-items:center;gap:6px;margin:0;padding:6px 11px 6px 9px;border:1.5px solid var(--border);border-radius:999px;background:#fff;font-size:12.5px;font-weight:700;letter-spacing:0;color:var(--ink);cursor:pointer;user-select:none;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;}
   .bw-card .field .qc-chk input{width:15px;height:15px;min-width:15px;margin:0;padding:0;border:0;background:none;box-shadow:none;accent-color:var(--ui-deep,var(--accent-dark));cursor:pointer;}
   .qc-chk:hover{border-color:var(--accent);}
@@ -1629,12 +1641,17 @@ html{ visibility:hidden; }
   .bv-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);}
   .bw-footer{position:sticky;bottom:-28px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px -34px -28px;padding:14px 34px calc(14px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--border);box-shadow:0 -10px 24px -14px rgba(20,30,25,.25);}
   .bw-foot-l,.bw-foot-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .bw-foot-l{flex:1 1 auto;}
+  .bw-foot-r{flex:1 1 auto;justify-content:flex-end;}   /* the right group always hugs the right edge, also when the bar has to wrap */
+  .bw-footer .btn{white-space:nowrap;}
   .bw-btn{display:inline-flex;align-items:center;gap:7px;}
   .bw-btn svg{flex:none;}
   .bw-t-short{display:none;}
   @media (max-width:760px){ .bw-t-long{display:none;} .bw-t-short{display:inline;} .bw-footer .btn{padding-left:12px;padding-right:12px;} }
   @media (max-width:760px){ .bw-qc-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .bw-qc-grid > .bw-qc-ck{grid-column:1 / -1;} .bw-qc-checks{flex-wrap:wrap;} .bw-fgrid{grid-template-columns:repeat(2,minmax(0,1fr));} .bw-fgrid > .s2,.bw-fgrid > .s3,.bw-fgrid > .s4{grid-column:span 1;} .bw-fgrid > .s4,.bw-fgrid > .sfull{grid-column:1 / -1;} }
-  @media (max-width:760px){ .bw-footer{bottom:calc(-22px - env(safe-area-inset-bottom));margin:6px -22px calc(-22px - env(safe-area-inset-bottom));padding:12px 22px calc(12px + env(safe-area-inset-bottom));} .bw-run{flex-wrap:wrap;} }
+  @media (max-width:760px){ .bw-footer{bottom:calc(-22px - env(safe-area-inset-bottom));margin:6px -22px calc(-22px - env(safe-area-inset-bottom));padding:12px 22px calc(12px + env(safe-area-inset-bottom));gap:8px;} .bw-run{flex-wrap:wrap;}
+    /* balanced rows on a phone: the small buttons share the first row equally, the next-stage button takes the room beside Save on the second */
+    .bw-foot-l,.bw-foot-r{flex:1 1 100%;gap:8px;} .bw-foot-l .btn{flex:1 1 0;justify-content:center;} .bw-foot-r .btn{flex:1 1 auto;justify-content:center;} .bw-foot-r .btn-primary{flex:0 0 36%;} }
   .bv-wrap{position:relative;}
   /* Variations (owner, 2026-11-24, second pass: "improve the design of variation part and manage space"): a labelled "New item" box, the added items as clean cards, and the vessel sticker of the picked / just added item beside them. */
   .bv-main{min-width:0;display:flex;flex-direction:column;gap:12px;}
@@ -2152,6 +2169,25 @@ html{ visibility:hidden; }
   .rc-menu{position:absolute;z-index:31;top:38px;right:10px;min-width:200px;padding:6px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 36px -12px rgba(20,30,70,.28);display:flex;flex-direction:column;gap:2px;}
   .rc-menu-item{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:6px 10px;border:none;border-radius:9px;background:transparent;font:600 13px/1 inherit;font-family:inherit;text-align:left;cursor:pointer;}
   .rc-menu-item:hover,.rc-menu-item.on{background:var(--bg);}
+  /* Settings -> QC checklists */
+  .qcc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start;}
+  .qcc-card{border:1.5px solid var(--border);border-radius:14px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px;}
+  .qcc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .qcc-head h4{margin:0;font-size:15px;font-weight:800;color:var(--ink);}
+  .qcc-switch{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:10px;background:var(--accent-soft);font-size:13px;cursor:pointer;}
+  .qcc-switch input{width:17px;height:17px;accent-color:var(--ui-deep,var(--accent-dark));}
+  .qcc-label{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  .qcc-list{display:flex;flex-direction:column;gap:7px;}
+  .qcc-row{display:grid;grid-template-columns:24px minmax(0,1fr) 32px 32px 32px;gap:6px;align-items:center;}
+  .qcc-n{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);font-size:11px;font-weight:800;}
+  .qcc-row input[type=text]{width:100%;min-width:0;height:38px;box-sizing:border-box;padding:0 11px;border:1.5px solid var(--border);border-radius:9px;font:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none;}
+  .qcc-row input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14);}
+  .qcc-b{display:grid;place-items:center;width:32px;height:34px;border:none;background:none;border-radius:8px;color:var(--muted);cursor:pointer;}
+  .qcc-b:hover:not(:disabled){background:var(--accent-soft);color:var(--accent-dark);}
+  .qcc-b:disabled{opacity:.3;cursor:default;}
+  .qcc-del:hover:not(:disabled){background:#FCEEEB;color:#C15B4E;}
+  .qcc-none{padding:14px;text-align:center;font-size:12.5px;color:var(--muted);border:1.5px dashed #C9D6CD;border-radius:10px;}
+  .qcc-add{align-self:flex-start;}
   /* "A batch is already running" window: pick the machine for the new batch */
   .cm-choices{display:flex;flex-direction:column;gap:8px;margin:2px 0 14px;}
   .cm-choice{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:12px;background:var(--panel,#fff);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
@@ -4100,7 +4136,7 @@ const DALLY_ORB_JSON = 'assets/dally-orb/orb.json?v=' + ((document.querySelector
 // Separate keys instead of one array: every slot keeps the single-object save / verify code that was already hardened, and two tablets working on different
 // machines can never overwrite each other. A fourth machine needs its own key here (and in BATCH_MACHINES, PAGE_DATA_KEYS.recipes, role_data_access).
 const BATCH_SLOT_KEYS = ['activeBatchM1','activeBatchM2','activeBatchM3','activeBatch'];
-const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','blendStages','colorSheets','printTemplates','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
+const SYNCED_KEYS = ['orders','staff','customers','suppliers','complaints','recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3','gmpChecklistEntries','blendBatches','blendStages','qcChecklists','colorSheets','printTemplates','branding','navOrder','deliveryLines','staffCategories','theme','smsTemplates','orderSettings','complaintCategories','complaintPriorities','navLabels','costingProducts','batchSheetTemplate','rndChemists','rndAttendance','rndProjects','loginHistory','settingsCardOrder','userRoles','loginCustomization','salesPersonColors','batchDisplay','dallySettings','personalNotes','bulkSmsTemplates','smsCampaigns','outstandingReminderTemplate','outstandingRecipients','boxCounts','inventoryItems','systemNotices'];
 // Fetched lazily the first time their own page is opened, instead of on every single login and
 // refresh — each is confined to one feature (verified: no dashboard/sidebar/topbar/AI-assistant
 // reference, no realtime-notification coupling, no loadAll() seed-on-empty logic to worry about),
@@ -5629,6 +5665,7 @@ const PERMISSION_REGISTRY = [
   {dept:'settings', deptLabel:'Settings', id:'settings_appearance', label:'Panel: Appearance (colours and theme)'},
   {dept:'settings', deptLabel:'Settings', id:'settings_mobile', label:'Panel: Mobile appearance'},
   {dept:'settings', deptLabel:'Settings', id:'settings_alert_sounds', label:'Panel: Machine alert sounds'},
+  {dept:'settings', deptLabel:'Settings', id:'settings_qc_checklists', label:'Panel: QC checklists (add / rename / remove the checkboxes of each QC stage)'},
   {dept:'settings', deptLabel:'Settings', id:'settings_login_activity', label:'Panel: Login activity (who signed in, when, from where)'},
   {dept:'settings', deptLabel:'Settings', id:'settings_login_activity_delete', label:'Delete a line of the Login activity list'},
   {dept:'settings', deptLabel:'Settings', id:'settings_sms', label:'Panel: SMS settings (the wording customers are texted)'},
@@ -5664,7 +5701,7 @@ const PERMISSION_DEFAULTS = {};
   inh('customers_manage', ['customers_add','customers_edit','customers_delete','customers_import','customers_export','customers_columns']);
   inh('suppliers_manage', ['suppliers_add','suppliers_edit','suppliers_delete','suppliers_import']);
   inh('itemlist_manage', ['itemlist_add','itemlist_edit','itemlist_delete','itemlist_import','itemlist_export','itemlist_columns']);
-  inh('settings_access', ['settings_complaint_access','settings_sidebar_order','settings_template','settings_prints','settings_login_page','settings_appearance','settings_mobile','settings_alert_sounds','settings_login_activity','settings_sms']);
+  inh('settings_access', ['settings_complaint_access','settings_sidebar_order','settings_template','settings_prints','settings_login_page','settings_appearance','settings_mobile','settings_alert_sounds','settings_qc_checklists','settings_login_activity','settings_sms']);
 })();
 // R&D Officer chemists always keep what they need to do their job (see roleCan): the old umbrella plus everything split out of it.
 const RND_OFFICER_FLOOR = ['rnd_manage','notes_access','rnd_create_projects','rnd_advance','rnd_edit_projects','rnd_add_chemists','rnd_mark_attendance'];
@@ -5896,7 +5933,7 @@ function renderRolePermissionBody(r){
 // without it, since the database silently omits rows the role isn't listed for. Bumping this
 // forces every role to resync next time any Admin's session touches loadAll() (see there), closing
 // that gap without relying on anyone remembering to re-save roles by hand.
-const PAGE_DATA_KEYS_VERSION = 27;   // 27: 'attendanceAbsences' (absent marks on the attendance sheet) joins the attendance page.    // 26: 'blendArchive' (the Mixing and Filling archive) joins the blending page.    // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
+const PAGE_DATA_KEYS_VERSION = 28;   // 28: 'qcChecklists' (Settings -> QC checklists) joins the blending page.    // 27: 'attendanceAbsences' (absent marks on the attendance sheet) joins the attendance page.    // 26: 'blendArchive' (the Mixing and Filling archive) joins the blending page.    // 25: 'printTemplates' (Settings -> Prints edits) joins the settings page. 24: 'blendStages' (editable Mixing and Filling stages) joins the blending page. 23: 'activityLog' is no longer a role data key (activity log = database rows): the next Admin load resyncs every role without it
 // 22: running batches get one key per machine (activeBatchM1..M3): the next Admin load grants them to the roles that have the Production Guide
 // (was 21)   // 20: 'mixingStepTemplates' removed from the page -> data map (owner, 2026-11-21): the next Admin load resyncs every role without it
 // Which SYNCED_KEYS each page actually reads or writes (including modals opened from it) —
@@ -5925,7 +5962,7 @@ const PAGE_DATA_KEYS = {
   deliveryruns: ['orders'],
   driverrun: [],
   blendingdept: [],
-  blending: ['blendBatches','blendStages','colorSheets','blendArchive'],
+  blending: ['blendBatches','blendStages','qcChecklists','colorSheets','blendArchive'],
   recipes: ['recipes','activeBatch','activeBatchM1','activeBatchM2','activeBatchM3'],
   costing: ['costingProducts','suppliers','recipes'],
   customers: ['customers','staff','salesPersonColors'],
@@ -5941,7 +5978,7 @@ const PAGE_DATA_KEYS = {
   chat: ['chat','chatTheme','staff'],
   bulksms: ['bulkSmsTemplates','customers','smsCampaigns','outstandingReminderTemplate','outstandingRecipients'],
   ratings: ['orders'],
-  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','printTemplates','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
+  settings: ['complaintCategories','complaintPriorities','navOrder','navLabels','branding','batchSheetTemplate','printTemplates','qcChecklists','theme','orderSettings','loginHistory','smsTemplates','settingsCardOrder','userRoles','loginCustomization'],
 };
 // Every mutating action across every page calls logActivity() — which now just adds one small row through the database function log_activity
 // (any signed-in person may), and only an Admin reads the log back (activity_log_recent), so it needs no role data key at all.
@@ -7252,6 +7289,7 @@ let state = {
   _attEditAlert: null,
   blendBatches: [],
   blendStages: [],
+  qcChecklists: {},
   printTemplates: {},
   rndProjects: [],
   rndChemists: [],
@@ -13313,6 +13351,7 @@ let _headerMenuOutsideClickBound = false;
 function render(){
   // The Process template PAGE is not a modal, so the modal field-snapshot below does not cover it: pull everything typed into the draft first.
   if(state._costingProcessPage && state._templateDraft){ try{ syncTemplateDraftStepFieldsFromDOM(); }catch(e){} }
+  if(state._qcCfgDraft){ try{ qcccSyncFromDOM(); }catch(e){} }   // Settings -> QC checklists is a page, not a modal: what is typed is copied into its draft before any redraw
   // Any re-render while Team Chat is open rebuilds #chat-messages from scratch, which resets its
   // scroll to the top -- not just from chat's own actions (renderKeepChatScroll already covered
   // those) but from anything else that happens to call render() while chat is the open page: the
@@ -18065,8 +18104,7 @@ function batchVerifyQcCardsHtml(b){
     return `<div class="bvw-card">
       <div class="bvw-k">${esc(list[si].label)}</div>
       ${st ? `<div class="bvw-qc ${st.tone}">${esc(st.text)}</div>` : ''}
-      ${kv('pH', q.ph)}
-      ${kv('Viscosity', q.viscosity)}
+      ${blendQcHasReadings(key) ? kv('pH', q.ph) + kv('Viscosity', q.viscosity) : ''}
       ${blendQcHasChecks(key) ? `<div class="bvw-kv"><span>Checked</span><b>${ticked.length ? ticked.map(c=>'✓ '+esc(c.label)).join('  ·  ') : '—'}</b></div>` : ''}
       ${q.notes.trim() ? `<div class="bvw-notes"><p>${esc(q.notes.trim())}</p></div>` : ''}
     </div>`;
@@ -20813,8 +20851,8 @@ function batchSheetTemplatePreviewData(){
       {type:'phrase', lines:[{name:'Water',percent:70}], instruction:'Add the water and start the heater', temperature:'45', waitMinutes:20},   // phases are not printed
     ], standardPH:'5.5 - 6.5', formulationCode:'SR-V1', priority:'Medium',
     showVariations:true, variations:[{product:'Aloevera', fragrance:'Aloe Green', qty:'40', unit:'5L cans'},{product:'Cucumber', fragrance:'Alo Cucumber', qty:'25', unit:'kg'}],
-    qc:[{key:'qc1', label:'1st QC (Base)', ph:'5.8', viscosity:'4500 cP', notes:'Color matches the standard', checks:{viscosity:true, color:true, fragrance:false}, checkSet:blendQcChecksFor('qc1'), by:'QC officer', at:'2026-10-12T09:40:00.000Z'},
-        {key:'qc2', label:'2nd QC', ph:'', viscosity:'', notes:'', checks:{}, checkSet:blendQcChecksFor('qc2'), by:'', at:''}],
+    qc:[{key:'qc1', label:'1st QC (Base)', ph:'5.8', viscosity:'4500 cP', notes:'Color matches the standard', checks:{viscosity:true, color:true, fragrance:false}, checkSet:blendQcChecksFor('qc1'), readings:blendQcHasReadings('qc1'), by:'QC officer', at:'2026-10-12T09:40:00.000Z'},
+        {key:'qc2', label:'2nd QC', ph:'', viscosity:'', notes:'', checks:{}, checkSet:blendQcChecksFor('qc2'), readings:blendQcHasReadings('qc2'), by:'', at:''}],
     showStages:true, stageRows:{}, currentStageKey:'qc1'};
 }
 // The whole printed sheet as one small thumbnail for Settings -> Prints edits -> Batch sheet (a long sheet continues onto a second page when printed).
@@ -21500,6 +21538,90 @@ function attachPrintEditHandlers(){
   if(byIdEl('btn-pe-logo-remove')) byIdEl('btn-pe-logo-remove').onclick = ()=>{ const t = peDraftTpl(state._peId); t.logoUrl = ''; if(t.logoMode==='custom') t.logoMode = PRINT_DEFS[state._peId].groups[0] && printDefaults(state._peId).logoMode!=='custom' ? printDefaults(state._peId).logoMode : 'none'; render(); };
   if(byIdEl('pe-preview')) peRefreshPreview();
 }
+/* ---- Settings -> QC checklists (owner, 2026-11-24: "in settings should be able to add QC checkboxes, steps. remove ph and viscosity spaces from 2nd QC") ----
+   One card per QC stage (1st / 2nd / 3rd): a switch for its pH + Viscosity boxes and the list of checkboxes shown on that stage's card in the batch window, on the printed QC table and on the QR page.
+   Saved as app_data key `qcChecklists` = {qc1:{readings, checks:[{id,label}]}, qc2:{..}, qc3:{..}}; a stage never saved uses BLEND_QC_DEFAULTS. A box keeps its id when renamed (old ticks follow the name); a removed box's old ticks stay in the batch record, hidden. */
+function qcStageTitle(key){ const st = blendStageList().find(x=>x.key===key); return st ? st.label : ({qc1:'1st QC', qc2:'2nd QC', qc3:'3rd QC'})[key] || key; }
+function qcccDraft(){
+  if(!state._qcCfgDraft){ const d = {}; BLEND_QC_KEYS.forEach(k=>{ const c = qcConfig(k); d[k] = {readings:c.readings, checks:c.checks.map(x=>({...x}))}; }); state._qcCfgDraft = d; }
+  return state._qcCfgDraft;
+}
+// What is typed in the boxes goes into the draft before anything redraws the panel.
+function qcccSyncFromDOM(){
+  const form = document.getElementById('form-qc-checklists'); const d = state._qcCfgDraft; if(!form || !d) return;
+  BLEND_QC_KEYS.forEach(k=>{
+    const rd = form.querySelector(`[data-qcc-readings="${k}"]`); if(rd) d[k].readings = !!rd.checked;
+    d[k].checks.forEach(c=>{ const inp = form.querySelector(`[data-qcc-label="${k}:${c.id}"]`); if(inp) c.label = inp.value; });
+  });
+}
+function renderQcChecklistsPanel(){
+  const d = qcccDraft();
+  const up = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>';
+  const down = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  return `
+  <div class="panel" id="settings-qc-checklists">
+    <div class="panel-head"><h3>QC checklists</h3></div>
+    <div class="panel-body">
+      <div class="hint" style="margin-bottom:14px;">The checkboxes people tick on each QC stage of a batch (Mixing and Filling), on the printed batch sheet and on the page the sticker's QR code opens. Add, rename, reorder or remove boxes, and switch the pH and Viscosity boxes on or off for each stage. A removed box disappears from the screens; ticks already saved on old batches are kept but no longer shown.</div>
+      <form id="form-qc-checklists">
+        <div class="qcc-grid">
+        ${BLEND_QC_KEYS.map(k=>`
+          <section class="qcc-card" data-qcc-card="${k}">
+            <div class="qcc-head"><h4>${esc(qcStageTitle(k))}</h4><span class="hint">${d[k].checks.length} checkbox${d[k].checks.length===1?'':'es'}</span></div>
+            <label class="qcc-switch"><input type="checkbox" data-qcc-readings="${k}" ${d[k].readings?'checked':''}><span>Show the <b>pH</b> and <b>Viscosity</b> boxes</span></label>
+            <div class="qcc-label">Checkboxes</div>
+            <div class="qcc-list">
+              ${d[k].checks.length ? d[k].checks.map((c,i)=>`
+              <div class="qcc-row">
+                <span class="qcc-n">${i+1}</span>
+                <input type="text" data-qcc-label="${k}:${c.id}" value="${escAttr(c.label)}" maxlength="40" placeholder="e.g. Weight" autocomplete="off" aria-label="Checkbox ${i+1} name">
+                <button type="button" class="qcc-b" data-qcc-up="${k}:${c.id}" ${i===0?'disabled':''} title="Move up" aria-label="Move up">${up}</button>
+                <button type="button" class="qcc-b" data-qcc-down="${k}:${c.id}" ${i===d[k].checks.length-1?'disabled':''} title="Move down" aria-label="Move down">${down}</button>
+                <button type="button" class="qcc-b qcc-del" data-qcc-del="${k}:${c.id}" title="Remove this checkbox" aria-label="Remove this checkbox">${TRASH_ICON_SVG}</button>
+              </div>`).join('') : '<div class="qcc-none">No checkboxes on this stage.</div>'}
+            </div>
+            <button type="button" class="btn btn-sm qcc-add" data-qcc-add="${k}">+ Add checkbox</button>
+          </section>`).join('')}
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start;margin-top:16px;gap:10px;">
+          <button type="submit" class="btn btn-primary">Save checklists</button>
+          <button type="button" class="btn" id="btn-qcc-reset">Reset to the original</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function qcccFind(ref){ const [k, id] = String(ref).split(':'); const d = qcccDraft(); const list = d[k] ? d[k].checks : null; return {k, id, list, i: list ? list.findIndex(c=>c.id===id) : -1}; }
+function qcccAdd(k){
+  qcccSyncFromDOM(); const d = qcccDraft(); if(!d[k]) return;
+  const id = 'qk'+Math.random().toString(36).slice(2,8);
+  d[k].checks.push({id, label:''}); state._qcccFocus = k+':'+id; render();
+}
+function qcccMove(ref, delta){
+  qcccSyncFromDOM(); const f = qcccFind(ref); if(f.i<0) return;
+  const j = f.i+delta; if(j<0 || j>=f.list.length) return;
+  const [it] = f.list.splice(f.i,1); f.list.splice(j,0,it); render();
+}
+function qcccRemove(ref){ qcccSyncFromDOM(); const f = qcccFind(ref); if(f.i<0) return; f.list.splice(f.i,1); render(); }
+async function saveQcChecklists(){
+  if(!(isAdmin() || can('settings_qc_checklists'))) return;
+  qcccSyncFromDOM(); const d = qcccDraft(); const out = {};
+  for(const k of BLEND_QC_KEYS){
+    const seen = new Set(), checks = [];
+    for(const c of d[k].checks){
+      const label = String(c.label||'').trim(); if(!label) continue;
+      const low = label.toLowerCase();
+      if(seen.has(low)){ showToast(`"${label}" is listed twice on ${qcStageTitle(k)}`); return; }
+      seen.add(low); checks.push({id:c.id, label});
+    }
+    out[k] = {readings: !!d[k].readings, checks};
+  }
+  const before = state.qcChecklists;
+  state.qcChecklists = out; state._qcCfgDraft = null;
+  if(!(await save('qcChecklists'))){ state.qcChecklists = before; state._qcCfgDraft = null; render(); return; }
+  logActivity('Changed the QC checklists');
+  showToast('QC checklists saved'); render();
+}
 const SETTINGS_PANEL_RENDERERS = {
   'settings-complaint-access': renderComplaintAccessPanel,
   'settings-sidebar-order': renderSidebarOrderPanel,
@@ -21510,6 +21632,7 @@ const SETTINGS_PANEL_RENDERERS = {
   'settings-appearance': renderAppearancePanel,
   'settings-mobile-appearance': renderMobileAppearancePanel,
   'settings-timer-alert-sound': renderTimerAlertSoundPanel,
+  'settings-qc-checklists': renderQcChecklistsPanel,
   'settings-secure-accounts': renderSecureAccountsPanel,
   'settings-user-roles': renderUserRolesPanel,
   'settings-role-permissions': renderRolePermissionsPanel,
@@ -21543,6 +21666,7 @@ function renderSettingsPage(){
     {id:'settings-appearance', label:'Appearance', icon:'star', adminOnly:false, perm:'settings_appearance'},
     {id:'settings-mobile-appearance', label:'Mobile appearance', icon:'star', adminOnly:false, perm:'settings_mobile'},
     {id:'settings-timer-alert-sound', label:'Machine alert sounds', icon:'headset', adminOnly:false, perm:'settings_alert_sounds'},
+    {id:'settings-qc-checklists', label:'QC checklists', icon:'list', adminOnly:false, perm:'settings_qc_checklists'},
     {id:'settings-secure-accounts', label:'User account setup', icon:'customers', adminOnly:true},
     {id:'settings-user-roles', label:'User roles', icon:'staff', adminOnly:true},
     {id:'settings-role-permissions', label:'User role permission', icon:'fingerprint', adminOnly:true},
@@ -25067,7 +25191,7 @@ function batchQcPrintHtml(rows, title){
   if(!list.length) return '';
   const box = on => `<span class="bsp-box${on?' on':''}">${on?'✓':''}</span>`;
   const body = list.map(r=>`
-        <tr><td class="c-st">${esc(r.label)}</td><td class="num">${r.ph ? esc(r.ph) : ''}</td><td class="num">${r.viscosity ? esc(r.viscosity) : ''}</td><td class="bsp-cks">${(r.checkSet||[]).map(c=>`<span class="bsp-ckl">${box(!!(r.checks && r.checks[c.id]))}${esc(c.label)}</span>`).join('')}</td><td class="by">${r.by ? esc(r.by)+(r.at ? '<br><i>'+esc(fmtDateTime(r.at))+'</i>' : '') : ''}</td></tr>
+        <tr><td class="c-st">${esc(r.label)}</td>${r.readings===false ? '<td class="nock" colspan="2"></td>' : `<td class="num">${r.ph ? esc(r.ph) : ''}</td><td class="num">${r.viscosity ? esc(r.viscosity) : ''}</td>`}<td class="bsp-cks">${(r.checkSet||[]).map(c=>`<span class="bsp-ckl">${box(!!(r.checks && r.checks[c.id]))}${esc(c.label)}</span>`).join('')}</td><td class="by">${r.by ? esc(r.by)+(r.at ? '<br><i>'+esc(fmtDateTime(r.at))+'</i>' : '') : ''}</td></tr>
         <tr class="bsp-qc-note"><td colspan="5"><span>Notes:</span> ${r.notes ? esc(r.notes) : ''}</td></tr>`).join('');
   return `
     <div class="bsp-qcwrap"><div class="bsp-sec">${esc(title || 'QC details')}</div>
@@ -25086,15 +25210,15 @@ function blendQcPrintRows(b, form){
   return BLEND_QC_KEYS.map(key=>{
     const si = list.findIndex(x=>x.key===key); if(si<0) return null;
     let q = blendQcOf(b, key);
-    const phEl = open && form.elements['qc_'+key+'_ph'];
-    if(phEl){
+    const notesEl = open && form.elements['qc_'+key+'_notes'];
+    if(notesEl){
       const g = n=>form.elements['qc_'+key+'_'+n];
-      q = {...q, ph: phEl.value.trim(), viscosity: g('viscosity').value.trim(), notes: g('notes').value.trim()};
-      const set = blendQcChecksFor(key);
-      if(set.length && g('chk_'+set[0].id)) q.checks = Object.assign({}, q.checks, Object.fromEntries(set.map(c=>[c.id, !!g('chk_'+c.id).checked])));
+      q = {...q, ph: g('ph') ? g('ph').value.trim() : q.ph, viscosity: g('viscosity') ? g('viscosity').value.trim() : q.viscosity, notes: notesEl.value.trim()};
+      const set = blendQcChecksFor(key).filter(c=>g('chk_'+c.id));
+      if(set.length) q.checks = Object.assign({}, q.checks, Object.fromEntries(set.map(c=>[c.id, !!g('chk_'+c.id).checked])));
     }
     if(key==='qc3' && !(cur>=si || blendQcHasData(q, key))) return null;
-    return {key, label: list[si].label, ph:q.ph, viscosity:q.viscosity, notes:q.notes, checks:q.checks, checkSet: blendQcChecksFor(key), by:q.by, at:q.at};
+    return {key, label: list[si].label, ph:q.ph, viscosity:q.viscosity, notes:q.notes, checks:q.checks, checkSet: blendQcChecksFor(key), readings: blendQcHasReadings(key), by:q.by, at:q.at};
   }).filter(Boolean);
 }
 // The variations as printed (owner, 2026-11-22: "the exact same structured variation quantities, units"): one row per variation with product, fragrance, quantity and unit, the same four columns
@@ -25236,6 +25360,7 @@ function batchSheetPrintHtml(d, tplOverride, opts){
     .bsp table.bsp-qc td.num{text-align:center;font-weight:600;}
     .bsp table.bsp-qc td.chk,.bsp table.bsp-qc th.chk{width:58px;text-align:center;}
     .bsp table.bsp-qc td.bsp-cks{font-size:10.5px;line-height:1.9;}
+    .bsp table.bsp-qc td.nock{background:repeating-linear-gradient(135deg,#f1f1f1 0,#f1f1f1 3px,#fff 3px,#fff 7px);}   /* a QC stage with no pH / Viscosity boxes */
     .bsp table.bsp-qc th{text-align:left;}
     .bsp table.bsp-qc th.num{text-align:center;}
     .bsp .bsp-ckl{display:inline-flex;align-items:center;gap:4px;margin-right:12px;white-space:nowrap;}
@@ -26629,28 +26754,37 @@ const BW_ICONS = {
    A batch saved before this existed keeps its readings in b.qcPH / b.qcViscosity / b.qcNotes: they are read as the qc1 section, and saving qc1 still writes them (the sticker page and any older open page read them). */
 const BLEND_QC_KEYS = ['qc1','qc2','qc3'];
 // Tick boxes per QC stage (owner, 2026-11-24: "in 1st QC add checkboxes viscosity, color, fragrance"; "in 2nd QC remove current one and add checkboxes Weight, Hand Print Code, Insert and Lid, QC Sticker").
-// A 3rd QC uses the 2nd QC's list. Ticks saved earlier under other ids stay in the record but are not shown on that stage.
-const BLEND_QC_CHECK_SETS = {
-  qc1: [{id:'viscosity', label:'Viscosity'},{id:'color', label:'Color'},{id:'fragrance', label:'Fragrance'}],
-  qc2: [{id:'weight', label:'Weight'},{id:'handPrintCode', label:'Hand Print Code'},{id:'insertLid', label:'Insert and Lid'},{id:'qcSticker', label:'QC Sticker'}],
+// These are only the STARTING lists: Settings -> QC checklists (app_data key `qcChecklists` = {qc1:{readings, checks:[{id,label}]}, qc2:{..}, qc3:{..}}) lets the Admin add / rename / reorder / remove the boxes of every QC stage and
+// switch the pH + Viscosity boxes on or off per stage (owner, 2026-11-24: "2nd QC remove ph and viscosity spaces", "in settings should be able to add QC checkboxes"). A stage with nothing saved uses the starting list.
+// Ticks saved earlier under an id that is no longer in the list stay in the record but are not shown. A box keeps its id when it is renamed, so old ticks follow the new name.
+const BLEND_QC_DEFAULTS = {
+  qc1: {readings:true,  checks:[{id:'viscosity', label:'Viscosity'},{id:'color', label:'Color'},{id:'fragrance', label:'Fragrance'}]},
+  qc2: {readings:false, checks:[{id:'weight', label:'Weight'},{id:'handPrintCode', label:'Hand Print Code'},{id:'insertLid', label:'Insert and Lid'},{id:'qcSticker', label:'QC Sticker'}]},
+  qc3: {readings:true,  checks:[{id:'weight', label:'Weight'},{id:'handPrintCode', label:'Hand Print Code'},{id:'insertLid', label:'Insert and Lid'},{id:'qcSticker', label:'QC Sticker'}]},
 };
-BLEND_QC_CHECK_SETS.qc3 = BLEND_QC_CHECK_SETS.qc2;
-const BLEND_QC_CHECKS = [...BLEND_QC_CHECK_SETS.qc1, ...BLEND_QC_CHECK_SETS.qc2];   // every tick id that can exist
-function blendQcChecksFor(key){ return BLEND_QC_CHECK_SETS[key] || []; }
+function qcConfig(key){
+  const d = BLEND_QC_DEFAULTS[key] || {readings:true, checks:[]};
+  const sv = (state.qcChecklists && typeof state.qcChecklists==='object' && !Array.isArray(state.qcChecklists)) ? state.qcChecklists[key] : null;
+  const checks = sv && Array.isArray(sv.checks) ? sv.checks.filter(c=>c && c.id && String(c.label||'').trim()).map(c=>({id:String(c.id), label:String(c.label).trim()})) : d.checks.map(c=>({...c}));
+  return {readings: sv && typeof sv.readings==='boolean' ? sv.readings : d.readings, checks};
+}
+function blendQcChecksFor(key){ return qcConfig(key).checks; }
 function blendQcHasChecks(key){ return blendQcChecksFor(key).length>0; }
+function blendQcHasReadings(key){ return qcConfig(key).readings; }   // the pH + Viscosity boxes of that QC stage
 function blendQcOf(b, key){
   const q = (b.qc && b.qc[key]) || null;
   const legacy = !q && key==='qc1';
   const c = (q && q.checks) || {};
+  const ids = new Set([...blendQcChecksFor(key).map(x=>x.id), ...Object.keys(c)]);
   return {
     ph: String(q ? (q.ph||'') : legacy ? (b.qcPH||'') : ''),
     viscosity: String(q ? (q.viscosity||'') : legacy ? (b.qcViscosity||'') : ''),
     notes: String(q ? (q.notes||'') : legacy ? (b.qcNotes||'') : ''),
-    checks: Object.fromEntries(BLEND_QC_CHECKS.map(x=>[x.id, !!c[x.id]])),
+    checks: Object.fromEntries([...ids].map(id=>[id, !!c[id]])),
     by: q ? (q.by||'') : '', at: q ? (q.at||'') : ''
   };
 }
-function blendQcHasData(q, key){ return !!(q.ph.trim() || q.viscosity.trim() || q.notes.trim() || blendQcChecksFor(key).some(c=>q.checks[c.id])); }
+function blendQcHasData(q, key){ return !!((blendQcHasReadings(key) && (q.ph.trim() || q.viscosity.trim())) || q.notes.trim() || blendQcChecksFor(key).some(c=>q.checks[c.id])); }
 // The QC sections to show on a batch: a QC stage the batch has reached (or passed), or one that already holds readings; in the order of the stage list.
 function blendQcSections(b){
   const list = blendStageList(), cur = blendStageIdx(b, list);
@@ -26666,15 +26800,15 @@ function blendQcCardHtml(s, b, canEdit, canTick){
   const draft = (state._blendQcChecks && state._blendQcChecks.forId===b.id) ? state._blendQcChecks.vals : {};
   const pill = s.state==='current' ? '<span class="bw-pill bw-pill-cur">Current stage</span>' : s.state==='done' ? '<span class="bw-pill bw-pill-done">Done</span>' : '<span class="bw-pill">Saved earlier</span>';
   const n = 'qc_'+s.key+'_';
-  const tickList = blendQcChecksFor(s.key), ticks = tickList.length>0;
+  const tickList = blendQcChecksFor(s.key), ticks = tickList.length>0, rd = blendQcHasReadings(s.key);
   return `
   <section class="bw-card bw-qc ${s.state==='current'?'is-current':''}" data-qc-key="${s.key}">
     <div class="bw-card-head"><div class="bw-card-title"><span class="bw-ico">${BW_ICONS.qc}</span>${esc(s.label)}${pill}</div></div>
-    <div class="bw-qc-grid${ticks?'':' no-ck'}">
-      <div class="field"><label>pH</label><input name="${n}ph" value="${escAttr(s.q.ph)}" placeholder="e.g. 5.8" autocomplete="off" ${at}></div>
-      <div class="field"><label>Viscosity</label><input name="${n}viscosity" value="${escAttr(s.q.viscosity)}" placeholder="e.g. 4500 cP" autocomplete="off" ${at}></div>
+    <div class="bw-qc-grid${rd?'':' no-rd'}">
+      ${rd ? `<div class="field"><label>pH</label><input name="${n}ph" value="${escAttr(s.q.ph)}" placeholder="e.g. 5.8" autocomplete="off" ${at}></div>
+      <div class="field"><label>Viscosity</label><input name="${n}viscosity" value="${escAttr(s.q.viscosity)}" placeholder="e.g. 4500 cP" autocomplete="off" ${at}></div>` : ''}
       ${ticks ? `<div class="field bw-qc-ck"><label>Checked</label>
-        <div class="bw-qc-checks">${tickList.map(c=>{ const k = s.key+'.'+c.id; const on = (k in draft) ? !!draft[k] : s.q.checks[c.id]; return `<label class="qc-chk${canTick?'':' dis'}"><input type="checkbox" class="bw-qc-chk" name="${n}chk_${c.id}" data-qc-k="${k}" ${on?'checked':''} ${dis}><span>${c.label}</span></label>`; }).join('')}</div>
+        <div class="bw-qc-checks">${tickList.map(c=>{ const k = s.key+'.'+c.id; const on = (k in draft) ? !!draft[k] : s.q.checks[c.id]; return `<label class="qc-chk${canTick?'':' dis'}"><input type="checkbox" class="bw-qc-chk" name="${n}chk_${c.id}" data-qc-k="${k}" ${on?'checked':''} ${dis}><span>${esc(c.label)}</span></label>`; }).join('')}</div>
       </div>` : ''}
       <div class="field bw-qc-notes"><label>Notes</label><textarea name="${n}notes" rows="2" ${at} placeholder="Shown on the page the sticker's QR code opens">${escBody(s.q.notes)}</textarea></div>
     </div>
@@ -26703,14 +26837,17 @@ function applyBlendEditForm(f, b){
   if(!mayType && !mayTick) return;
   const qc = Object.assign({}, b.qc || {});
   BLEND_QC_KEYS.forEach(key=>{
-    const ph = f.elements['qc_'+key+'_ph']; if(!ph) return;   // that section is not on screen
+    const notesEl = f.elements['qc_'+key+'_notes']; if(!notesEl) return;   // that section is not on screen
     const g = n=>f.elements['qc_'+key+'_'+n];
+    const phEl = g('ph'), viEl = g('viscosity');   // a stage with the pH / Viscosity boxes switched off has neither: its saved readings are left as they are
     const prev = blendQcOf(b, key);
+    const set = blendQcChecksFor(key).filter(c=>g('chk_'+c.id));
     const next = {
-      ph: mayType ? ph.value.trim() : prev.ph, viscosity: mayType ? g('viscosity').value.trim() : prev.viscosity, notes: mayType ? g('notes').value.trim() : prev.notes,
-      checks: (mayTick && blendQcHasChecks(key) && g('chk_'+blendQcChecksFor(key)[0].id)) ? Object.assign({}, prev.checks, Object.fromEntries(blendQcChecksFor(key).map(c=>[c.id, !!g('chk_'+c.id).checked]))) : {...prev.checks}
+      ph: mayType && phEl ? phEl.value.trim() : prev.ph, viscosity: mayType && viEl ? viEl.value.trim() : prev.viscosity, notes: mayType ? notesEl.value.trim() : prev.notes,
+      checks: (mayTick && set.length) ? Object.assign({}, prev.checks, Object.fromEntries(set.map(c=>[c.id, !!g('chk_'+c.id).checked]))) : {...prev.checks}
     };
-    const same = next.ph===prev.ph.trim() && next.viscosity===prev.viscosity.trim() && next.notes===prev.notes.trim() && BLEND_QC_CHECKS.every(c=>next.checks[c.id]===prev.checks[c.id]);
+    const ids = new Set([...Object.keys(next.checks), ...Object.keys(prev.checks)]);
+    const same = next.ph===prev.ph.trim() && next.viscosity===prev.viscosity.trim() && next.notes===prev.notes.trim() && [...ids].every(id=>!!next.checks[id]===!!prev.checks[id]);
     if(same && !(b.qc && b.qc[key])) return;   // nothing typed, nothing saved before
     next.by = same ? prev.by : (state.session && state.session.name) || ''; next.at = same ? prev.at : new Date().toISOString();
     qc[key] = next;
@@ -26790,8 +26927,8 @@ function renderBlendDrawer(id){
 
       <div class="bw-footer">
         <div class="bw-foot-l">
-          ${printSheet ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-blend-sheet" title="Prints the batch, formulation code, variations and a sign-off line for every stage">${BW_ICONS.print}<span class="bw-t-long">Print batch sheet</span><span class="bw-t-short">Sheet</span></button>` : ''}
-          ${printSticker ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-vessel-sticker" data-sticker-var="">${BV_ICON_TAG}<span class="bw-t-long">Print Vessel Sticker</span><span class="bw-t-short">Sticker</span></button>` : ''}
+          ${printSheet ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-blend-sheet" title="Prints the batch, formulation code, variations and a sign-off line for every stage">${BW_ICONS.print}<span class="bw-t-long">Print sheet</span><span class="bw-t-short">Sheet</span></button>` : ''}
+          ${printSticker ? `<button type="button" class="btn btn-sm bw-btn" id="btn-print-vessel-sticker" data-sticker-var="">${BV_ICON_TAG}<span class="bw-t-long">Vessel sticker</span><span class="bw-t-short">Sticker</span></button>` : ''}
           ${(!arch && canDeleteBlendBatch()) ? `<button type="button" class="btn btn-sm btn-danger bw-btn" id="btn-delete-blend" title="Asks for your password">${TRASH_ICON_SVG}<span>Delete</span></button>` : ''}
           ${(!arch && blendIsFinal(b) && canArchiveBlendNow()) ? `<button type="button" class="btn btn-sm bw-btn" id="btn-archive-blend-now" title="Move it to the Archive now instead of waiting 2 hours">📦<span>Archive now</span></button>` : ''}
         </div>
@@ -27654,7 +27791,7 @@ function attachShellHandlers(){
   document.querySelectorAll('[data-settings-jump]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
     state._settingsOpenPanel = el.dataset.settingsJump;
-    state._peDraft = null; state._batchSheetTemplateDraft = null;   // Prints edits opens with the saved templates, not an old unsaved draft
+    state._peDraft = null; state._batchSheetTemplateDraft = null; state._qcCfgDraft = null;   // Prints edits / QC checklists open with the saved version, not an old unsaved draft
     render();
   }));
   if(byIdEl('btn-more-fab-toggle')) byIdEl('btn-more-fab-toggle').onclick = ()=>{ state._moreFabOpen = !state._moreFabOpen; render(); };
@@ -30094,6 +30231,21 @@ function attachShellHandlers(){
     const sel = b.closest('tr') && b.closest('tr').querySelector('select[data-machine-sound]');
     if(sel) playAlertSoundById(sel.value, dur);
   }));
+  // Settings -> QC checklists
+  if(byIdEl('form-qc-checklists')){
+    byIdEl('form-qc-checklists').addEventListener('submit', e=>{ e.preventDefault(); saveQcChecklists(); });
+    document.querySelectorAll('[data-qcc-add]').forEach(b=>b.addEventListener('click', ()=>qcccAdd(b.dataset.qccAdd)));
+    document.querySelectorAll('[data-qcc-up]').forEach(b=>b.addEventListener('click', ()=>qcccMove(b.dataset.qccUp, -1)));
+    document.querySelectorAll('[data-qcc-down]').forEach(b=>b.addEventListener('click', ()=>qcccMove(b.dataset.qccDown, 1)));
+    document.querySelectorAll('[data-qcc-del]').forEach(b=>b.addEventListener('click', ()=>qcccRemove(b.dataset.qccDel)));
+    document.querySelectorAll('[data-qcc-readings]').forEach(cb=>cb.addEventListener('change', ()=>{ qcccSyncFromDOM(); }));
+    if(byIdEl('btn-qcc-reset')) byIdEl('btn-qcc-reset').onclick = ()=>openConfirmModal({
+      title:'Reset the QC checklists', confirmLabel:'Reset', danger:true,
+      message:'Go back to the original checkboxes on every QC stage (and the original pH / Viscosity boxes)? Ticks already saved on batches are not touched.',
+      onConfirm: async ()=>{ const before = state.qcChecklists; state.qcChecklists = {}; state._qcCfgDraft = null; if(!(await save('qcChecklists'))){ state.qcChecklists = before; return; } logActivity('Reset the QC checklists'); showToast('QC checklists reset'); },
+    });
+    if(state._qcccFocus){ const el = document.querySelector(`[data-qcc-label="${state._qcccFocus}"]`); state._qcccFocus = null; if(el) el.focus({preventScroll:false}); }
+  }
 
 
   // Branding / template customization

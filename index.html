@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261123112457">
+<meta name="app-build" content="20261124162030">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -6851,7 +6851,7 @@ function gmpFieldHtml(field, data){
   const v = data ? data[field.key] : undefined;
   const todayIso = todayStr();
   if(field.type==='text') return `<div class="field"><label>${esc(field.label)}</label><input data-gf="${field.key}" value="${escAttr(v||'')}"></div>`;
-  if(field.type==='textarea') return `<div class="field"><label>${esc(field.label)}</label><textarea data-gf="${field.key}" rows="3">${esc(v||'')}</textarea></div>`;
+  if(field.type==='textarea') return `<div class="field"><label>${esc(field.label)}</label><textarea data-gf="${field.key}" rows="3">${escBody(v||'')}</textarea></div>`;
   if(field.type==='date') return `<div class="field"><label>${esc(field.label)}</label><input type="date" data-gf="${field.key}" value="${escAttr(v||todayIso)}"></div>`;
   if(field.type==='select') return `<div class="field"><label>${esc(field.label)}</label><select data-gf="${field.key}"><option value="">—</option>${(field.options||[]).map(o=>`<option value="${escAttr(o)}" ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
   if(field.type==='yesno') return `<div class="field"><label>${esc(field.label)}</label><select data-gf="${field.key}"><option value="">—</option><option value="Yes" ${v==='Yes'?'selected':''}>Yes</option><option value="No" ${v==='No'?'selected':''}>No</option></select></div>`;
@@ -19339,7 +19339,7 @@ function renderGmpPestSection(){
   <div class="panel" style="margin-top:14px;max-width:520px;">
     <div class="field"><label>Observed by (Cleaning Staff)</label><input data-gmp-pest-field="observedBy" value="${escAttr(entry?entry.observedBy||'':'')}"></div>
     <div class="field"><label>Checked by (Production Supervisor)</label><input data-gmp-pest-field="checkedBy" value="${escAttr(entry?entry.checkedBy||'':'')}"></div>
-    <div class="field"><label>Remarks</label><textarea data-gmp-pest-field="remarks" rows="2">${esc(entry?entry.remarks||'':'')}</textarea></div>
+    <div class="field"><label>Remarks</label><textarea data-gmp-pest-field="remarks" rows="2">${escBody(entry?entry.remarks||'':'')}</textarea></div>
   </div>`}
   `;
 }
@@ -20141,7 +20141,7 @@ function outstandingTemplateModal(){
       </div>
       <form id="form-outstanding-template">
         <div class="field"><label>Template text</label>
-          <textarea name="text" id="outstanding-template-text" required style="min-height:150px;" placeholder="e.g. Hi {name}, our records show an outstanding balance of {amount} on your account. Please settle at your earliest convenience.">${esc(draft)}</textarea>
+          <textarea name="text" id="outstanding-template-text" required style="min-height:150px;" placeholder="e.g. Hi {name}, our records show an outstanding balance of {amount} on your account. Please settle at your earliest convenience.">${escBody(draft)}</textarea>
         </div>
         <div class="modal-actions" style="justify-content:space-between;">
           <button type="button" class="btn" id="btn-preview-outstanding-template-draft">👁 Preview</button>
@@ -20364,7 +20364,7 @@ function manageBulkSmsTemplatesModal(){
         <div class="sub">Templates are available in the Campaign tab's Template dropdown.</div>
         <form id="form-bulksms-template">
           <div class="field"><label>Template name</label><input name="name" autocomplete="off" required value="${escAttr(form.name)}" placeholder="e.g. Soap"></div>
-          <div class="field"><label>Message</label><textarea name="message" required style="min-height:140px;" placeholder="Type the template message…">${esc(form.message)}</textarea></div>
+          <div class="field"><label>Message</label><textarea name="message" required style="min-height:140px;" placeholder="Type the template message…">${escBody(form.message)}</textarea></div>
           <div class="modal-actions">
             <button type="button" class="btn" id="btn-cancel-bulksms-template">Cancel</button>
             <button type="submit" class="btn btn-primary">Save template</button>
@@ -21551,7 +21551,7 @@ function renderSmsTemplatesPanel(){
           <div class="sms-tpl-icon sms-tpl-icon-${icon.cls}" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon.svg}</svg></div>
           <div class="sms-tpl-main">
             <label>${esc(SMS_TEMPLATE_INFO[key].label)}</label>
-            <textarea name="sms_${key}" data-sms-preview-src="${key}" style="min-height:56px;">${esc(smsTemplate(key))}</textarea>
+            <textarea name="sms_${key}" data-sms-preview-src="${key}" style="min-height:56px;">${escBody(smsTemplate(key))}</textarea>
             <div class="hint">Placeholders: ${SMS_TEMPLATE_INFO[key].placeholders.map(p=>`{${p}}`).join(', ')}</div>
           </div>
           <div class="sms-tpl-preview">
@@ -22490,6 +22490,36 @@ function batchSlotBusy(machine){
   if(state[k] && state[k].status!=='completed') return true;
   return runningBatches().some(x=>(x.b.machine||'')===(machine||''));
 }
+// Is a batch of THIS sheet running right now? (its card then says "Batch running")
+function recipeRunning(recipeId){ return runningBatches().some(x=>x.b.recipeId===recipeId); }
+// Start a batch from a sheet, asking first when another batch is already running (owner, 2026-11-24: "currently running a batch, want to start another one? if yes start another one with the current one so we can process 2 together").
+// Several batches can run at once, one per machine: when the sheet's own slot is taken (no machine chosen and the no-machine slot is busy) the new batch runs on the first FREE machine, without changing the sheet.
+// A sheet whose own machine is busy is refused (pick another machine on the sheet). Returns true when the batch started.
+async function startBatchGuarded(recipeId, extra){
+  const r = byId(state.recipes, recipeId); if(!r) return false;
+  if(recipeRunning(recipeId)){ showToast('"'+r.name+'" is already running in the Production Guide'); return false; }
+  const running = runningBatches();
+  if(running.length){
+    const names = running.map(x=>(x.b.recipeName||x.b.productName||'a batch')+(x.b.machine?' ('+x.b.machine+')':'')).join(', ');
+    const go = await new Promise(resolve=>{
+      openConfirmModal({
+        title:'A batch is already running', confirmLabel:'Yes, start another', cancelLabel:'No', sticky:true,
+        message:`${names} ${running.length===1?'is':'are'} running in the Production Guide. Do you want to start "${r.name}" as well, so they run together?`,
+        onConfirm: ()=>resolve(true), onCancel: ()=>resolve(false),
+      });
+    });
+    if(!go) return false;
+  }
+  const mine = r.machine || '';
+  let machine = mine;
+  if(batchSlotBusy(mine)){
+    if(mine){ showToast(batchBusyMessage(mine)); return false; }
+    const free = BATCH_MACHINES.find(m=>!batchSlotBusy(m.id));
+    if(!free){ showToast('Every machine is busy. Finish or stop a running batch first.'); return false; }
+    machine = free.id;
+  }
+  return await startBatch(recipeId, Object.assign({}, extra||{}, {machine}));
+}
 function batchBusyMessage(machine){
   const x = runningBatches().find(y=>(y.b.machine||'')===(machine||'')) || runningBatches().find(y=>y.key===batchKeyForMachine(machine));
   const who = x ? (x.b.recipeName||x.b.productName||'another batch') : 'another batch';
@@ -23017,15 +23047,24 @@ async function submitRecipe(e){
   logActivity(`${wasEdit?'Edited':'Created'} recipe ${fields.name}`);
   showToast('Recipe saved');
 }
+// Costing "Production method" (owner, 2026-11-24): older text held literal <br> tags ("Mix water with IPA gradually<br>jskf...") that showed as text inside the box. Turned into real line breaks when the box is opened and when it is saved.
+function plainMethodText(t){ return String(t||'').replace(/<br\s*\/?>/gi, '\n'); }
 function deleteRecipe(id){
-  const r = byId(state.recipes, id);
+  const r = byId(state.recipes, id); if(!r) return;
   openConfirmModal({
     title: 'Delete recipe', danger: true, confirmLabel: 'Delete',
-    message: `Delete "${r?r.name:'this recipe'}"? This does not affect any batch currently running.`,
-    onConfirm: async ()=>{
+    message: `Delete "${r.name}"? This does not affect any batch currently running.`,
+    // Instant (owner, 2026-11-24: "sometimes its not deleting quickly need to delete twice"): the card disappears AT ONCE and the save runs in the background. It must NOT be awaited here:
+    // the confirm window waits for onConfirm, so a slow save left the window open and the sheet on screen, and people pressed Delete again. A failed save puts the sheet back with a message.
+    onConfirm: ()=>{
+      const index = state.recipes.findIndex(x=>x.id===id);
       state.recipes = state.recipes.filter(x=>x.id!==id);
-      if(!(await save('recipes'))) return;
-      logActivity(`Deleted recipe ${r?r.name:id}`);
+      if(state._batchSheetId===id) state._batchSheetId = null;
+      save('recipes').then(ok=>{
+        if(ok){ logActivity(`Deleted recipe ${r.name}`); return; }
+        if(!byId(state.recipes, id)){ state.recipes.splice(Math.min(index<0?0:index, state.recipes.length), 0, r); }
+        showToast('Could not delete "'+r.name+'" - it is back, please try again', 5000); render();
+      }).catch(e=>{ console.error('delete recipe failed', e); if(!byId(state.recipes, id)) state.recipes.unshift(r); showToast('Could not delete "'+r.name+'" - it is back, please try again', 5000); render(); });
     },
   });
 }
@@ -23037,12 +23076,13 @@ async function startBatch(recipeId, extra){
   const r = byId(state.recipes, recipeId); if(!r) return false;
   if(!canStartBatchRun()){ showToast('You do not have permission to start a batch'); return false; }
   if(!r.steps.length){ showToast('Add at least one production step to this recipe (Batch sheet) before starting a batch'); return false; }
-  if(batchSlotBusy(r.machine||'')){ showToast(batchBusyMessage(r.machine||'')); return false; }
   extra = extra || {};
-  const key = batchKeyForMachine(r.machine||'');
+  const machine = extra.machine !== undefined ? extra.machine : (r.machine||'');   // a batch started together with another one may run on a free machine without changing the sheet's own choice
+  if(batchSlotBusy(machine)){ showToast(batchBusyMessage(machine)); return false; }
+  const key = batchKeyForMachine(machine);
   state[key] = {
     id: uid('BATCH'), recipeId: r.id, recipeName: r.name,
-    machine: r.machine || '',   // the machine chosen on the batch sheet card: its own slot, shown on the Production Guide card, picks the alert sound
+    machine: machine,   // the machine chosen on the batch sheet card: its own slot, shown on the Production Guide card, picks the alert sound
     productName: extra.productName || r.name, qty: extra.qty || '',
     batchNo: extra.batchNo || uid('BLD'), variation: extra.variation || '', batchSizeKg: extra.batchSizeKg || r.batchSizeKg || 0,
     // A preparation step's checklist array/items are objects, not primitives — {...s} alone
@@ -23060,7 +23100,7 @@ async function startBatch(recipeId, extra){
   if(!(await saveActiveBatchVerified(key))){ state[key] = null; render(); return false; }   // never leave an unsaved "ghost" batch on screen
   state.batchFocusMode = false; state.batchFocusKey = null;   // a new batch never pops the big screen open by itself
   startBatchTicker();
-  showToast('Batch started: '+r.name+(r.machine ? ' on '+r.machine : ''));
+  showToast('Batch started: '+r.name+(machine ? ' on '+machine : ''));
   return true;
 }
 // A batch's slot is a single shared object, not an array-of-records, so it gets none of the
@@ -23345,10 +23385,10 @@ function clearBatchSheetRunFields(recipeId){
 async function startBatchFromCard(recipeId){
   const r = byId(state.recipes, recipeId); if(!r || !canStartBatchRun()) return;
   state._recipeMenuOpen = null;
-  if(batchSlotBusy(r.machine||'')){ showToast(batchBusyMessage(r.machine||'')); render(); return; }
+  if(recipeRunning(recipeId)){ showToast('"'+r.name+'" is already running in the Production Guide'); render(); return; }
   // The size box is emptied after every start, so a sheet with no saved size cannot be started from the card: open the sheet to type it.
   if(!(Number(r.batchSizeKg)>0)){ showToast('Type the batch size on the batch sheet, then press Start the batch'); openBatchSheetModal(recipeId); return; }
-  const started = await startBatch(recipeId, Object.assign(r.batchNo ? {batchNo:r.batchNo} : {}, {batchSizeKg: r.batchSizeKg||0}));
+  const started = await startBatchGuarded(recipeId, Object.assign(r.batchNo ? {batchNo:r.batchNo} : {}, {batchSizeKg: r.batchSizeKg||0}));
   if(started){ clearBatchSheetRunFields(recipeId); goTo('recipes'); } else render();
 }
 function renderRecipeLibraryPage(){
@@ -23371,7 +23411,8 @@ function renderRecipeLibraryPage(){
       const matCount = (r.materials||[]).length;
       const totalPct = recipeMaterialsTotalPercent(r.materials);
       const menuOpen = state._recipeMenuOpen===r.id;
-      const batchRunning = batchSlotBusy(r.machine||'');   // a batch is already running on THIS sheet's machine
+      const batchRunning = recipeRunning(r.id);   // a batch of THIS sheet is running (other batches running do not block: starting asks first)
+      const runEntry = runningBatches().find(x=>x.b.recipeId===r.id);
       return `
       <div class="recipe-card${matCount ? ' clickable-card' : ''}" style="position:relative;${matCount ? 'cursor:pointer;' : ''}" ${matCount ? `data-open-batchsheet-card="${r.id}" tabindex="0" title="Open the batch sheet"` : ''}>
         <div class="rc-head">
@@ -23379,12 +23420,13 @@ function renderRecipeLibraryPage(){
           ${hasMenu ? `<button type="button" class="rc-dots" data-recipe-menu="${r.id}" aria-label="More actions" aria-haspopup="menu" aria-expanded="${menuOpen}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>` : ''}
         </div>
         ${menuOpen ? `<div class="rc-menu" role="menu">
-          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}" ${batchRunning?'disabled':''}>${batchRunning ? (r.machine ? esc(r.machine)+' is busy' : 'A batch is running') : '\u25B6 Start the batch'}</button>` : ''}
+          ${canStart ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-start" data-start-recipe="${r.id}" ${batchRunning?'disabled':''}>${batchRunning ? '\u25CF Batch running' : '\u25B6 Start the batch'}</button>` : ''}
           ${canMachine ? `<div class="rc-menu-label">Machine</div>
           ${BATCH_MACHINES.map(m=>`<button type="button" role="menuitem" class="rc-menu-item ${r.machine===m.id?'on':''}" data-machine-recipe="${r.id}" data-machine-value="${m.id}"><i style="background:${m.color};"></i><span style="color:${m.color};">${m.id}</span>${r.machine===m.id?'<b>\u2713</b>':''}</button>`).join('')}
           ${r.machine ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-clear" data-machine-recipe="${r.id}" data-machine-value="">Clear machine</button>` : ''}` : ''}
           ${canDelete ? `<button type="button" role="menuitem" class="rc-menu-item rc-menu-danger" data-delete-recipe="${r.id}">Delete</button>` : ''}
         </div>` : ''}
+        ${batchRunning ? `<div><span class="pill" style="background:#E3F4EA;color:#1B7F4B;font-weight:700;">\u25CF Running${runEntry && runEntry.b.machine ? ' \u00B7 '+esc(runEntry.b.machine) : ''}</span></div>` : ''}
         ${r.machine ? `<div>${machineChipHtml(r.machine)}</div>` : ''}
         ${r.description ? `<div class="rc-meta">${esc(r.description)}</div>` : ''}
         ${matCount ? `<div class="rc-meta">${matCount} raw material${matCount===1?'':'s'} · ${totalPct.toFixed(1)}%${r.batchSizeKg?(' · ref. '+r.batchSizeKg+'kg batch'):''}</div>` : ''}
@@ -23409,7 +23451,7 @@ function renderCostingPage(){
       batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
       fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
       notes: version.notes||'',
-      productionMethod: version.productionMethod||'',
+      productionMethod: plainMethodText(version.productionMethod),
     };
     // Older saved versions may still have water sitting at the old 100% target (or any
     // other stale value) — re-balance it against the current target the moment the sheet
@@ -23537,7 +23579,7 @@ function costingStartVersionSheet(product, version){
     batchColors: JSON.parse(JSON.stringify(version.batchColors||{})),
     fixedCosts: version.fixedCosts ? JSON.parse(JSON.stringify(version.fixedCosts)) : undefined,
     notes: version.notes||'',
-    productionMethod: version.productionMethod||'',
+    productionMethod: plainMethodText(version.productionMethod),
   };
   costingAutoBalanceWater(state._costingDraft, null);
   state._costingDirty = false;
@@ -23750,7 +23792,7 @@ function renderCostingProductSheet(product, version){
   ` : ''}
   <div style="margin:2px 0 16px;">
     ${admin
-      ? `<textarea id="cst-sheetfield-notes" class="cst-sheet-field" data-sheetfield="notes" placeholder="Notes about this version…" style="width:100%;min-height:44px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.notes||'')}</textarea>`
+      ? `<textarea id="cst-sheetfield-notes" class="cst-sheet-field" data-sheetfield="notes" placeholder="Notes about this version…" style="width:100%;min-height:44px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${escBody(draft.notes||'')}</textarea>`
       : (draft.notes ? `<div class="hint" style="white-space:pre-wrap;">${esc(draft.notes)}</div>` : '')}
   </div>
   <div class="panel" style="overflow-x:auto;">
@@ -23855,8 +23897,8 @@ function renderCostingProductSheet(product, version){
     <div style="width:100%;max-width:640px;">
       <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">Production method</label>
       ${admin
-        ? `<textarea id="cst-sheetfield-productionmethod" class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:160px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${esc(draft.productionMethod||'')}</textarea>`
-        : (draft.productionMethod ? `<div class="hint" style="white-space:pre-wrap;text-align:left;">${esc(draft.productionMethod)}</div>` : '<div class="hint">—</div>')}
+        ? `<textarea id="cst-sheetfield-productionmethod" class="cst-sheet-field" data-sheetfield="productionMethod" placeholder="e.g. mixing order, temperature, timing…" style="width:100%;min-height:160px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px 11px;font:inherit;font-size:13px;color:var(--ink);">${escBody(plainMethodText(draft.productionMethod))}</textarea>`
+        : (draft.productionMethod ? `<div class="hint" style="white-space:pre-wrap;text-align:left;">${esc(plainMethodText(draft.productionMethod))}</div>` : '<div class="hint">—</div>')}
     </div>
   </div>
   ${admin ? `<div id="costing-material-dropdown" class="ac-dropdown" style="display:none;position:fixed;animation:none;"></div>` : ''}
@@ -24577,7 +24619,7 @@ function recipeFormModal(){
         <div class="field-row">
           <div class="field"><label>Standard finished product pH (optional)</label><input name="standardPH" value="${escAttr(d.standardPH)}" placeholder="e.g. 5.5 - 6.5"></div>
         </div>
-        <div class="field"><label>Combine together (optional)</label><textarea name="combineNote" placeholder="e.g. White Oil, Palm Oil, Stearic Acid, Cetyl Alcohol, Cetareth 20, GMS 40, BHT, EGDS" style="min-height:60px;">${esc(d.combineNote)}</textarea></div>
+        <div class="field"><label>Combine together (optional)</label><textarea name="combineNote" placeholder="e.g. White Oil, Palm Oil, Stearic Acid, Cetyl Alcohol, Cetareth 20, GMS 40, BHT, EGDS" style="min-height:60px;">${escBody(d.combineNote)}</textarea></div>
 
         <div class="hint" style="font-weight:600;color:var(--ink);margin:14px 0 8px;">Production Steps</div>
         <div id="step-editor-list">
@@ -24672,7 +24714,7 @@ function recipeBatchSheetInner(recipeId, asPage){
   // same draft + step-editor-row markup/handlers as the full recipe form.
   const canEditSteps = !!state.session && roleCan(state.session.role, 'costing_edit_steps') && state._recipeDraft && state._recipeDraft.id===r.id;
   const draftSteps = canEditSteps ? state._recipeDraft.steps : r.steps;
-  const batchActive = batchSlotBusy(r.machine||'');   // this sheet's machine already runs a batch
+  const batchActive = recipeRunning(r.id);   // a batch of THIS sheet is running (starting another sheet's batch while others run asks first)
   const tpl = batchSheetTemplate();
   const batchNoVal = (state._recipeDraft && state._recipeDraft.id===r.id && state._recipeDraft.batchNo) || '';
   const leftHtml = `
@@ -24759,7 +24801,7 @@ function recipeBatchSheetInner(recipeId, asPage){
       <div class="modal-actions" style="justify-content:center;margin-top:22px;flex-wrap:wrap;">
         <button type="button" class="btn" id="${asPage?'btn-close-batchsheet':'btn-cancel-modal'}">Close</button>
         ${canEditSteps ? `<button type="button" class="btn" id="btn-save-batchsheet-steps">Save</button>` : ''}
-        ${canStartBatchRun() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?(r.machine ? esc(r.machine)+' is busy' : 'Batch running'):'Start the batch'}</button>` : ''}
+        ${canStartBatchRun() ? `<button type="button" class="btn btn-primary" id="btn-start-batch-from-sheet" data-recipe-id="${r.id}" ${batchActive?'disabled':''}>${batchActive?'Batch running':'Start the batch'}</button>` : ''}
       </div>`;
   return `
   ${asPage ? '<div id="batchsheet-page" class="bsmc-page bs2">' : '<div class="overlay" id="overlay"><div class="modal" style="max-width:680px;">'}
@@ -29205,7 +29247,7 @@ function attachShellHandlers(){
     version.batchColors = JSON.parse(JSON.stringify(draft.batchColors||{}));
     version.fixedCosts = JSON.parse(JSON.stringify(draft.fixedCosts||[]));
     version.notes = draft.notes||'';
-    version.productionMethod = draft.productionMethod||'';
+    version.productionMethod = plainMethodText(draft.productionMethod);
     version.editedBy = state.session.staffName || state.session.name;
     version.editedAt = new Date().toISOString();
     if(!(await save('costingProducts'))) return;
@@ -29231,7 +29273,7 @@ function attachShellHandlers(){
       batchColors: JSON.parse(JSON.stringify(draft.batchColors||{})),
       fixedCosts: JSON.parse(JSON.stringify(draft.fixedCosts||[])),
       notes: draft.notes||'',
-      productionMethod: draft.productionMethod||'',
+      productionMethod: plainMethodText(draft.productionMethod),
       createdBy: who, createdAt: now, editedBy: who, editedAt: now,
     };
     if(!product.versions) product.versions = [];
@@ -29298,7 +29340,7 @@ function attachShellHandlers(){
     if(batchSheetDirty()){ await saveBatchSheetSteps(recipeId); if(batchSheetDirty()) return; }
     // The size box is emptied after each start, so it must be typed for this run.
     if(rcp && !(sheetBatchKg(rcp)>0)){ showToast('Type the batch size first'); const kgEl = document.getElementById('sheet-batch-kg'); if(kgEl) kgEl.focus(); return; }
-    const started = await startBatch(recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
+    const started = await startBatchGuarded(recipeId, Object.assign(batchNo ? {batchNo} : {}, rcp ? {batchSizeKg: sheetBatchKg(rcp)} : {}));
     // zero-step recipes show a toast and stay open instead. Recipe library and the batch-running
     // view (Production Guide) are separate pages now: once the batch is started it appears there (owner, 2026-11-21).
     if(started){ clearBatchSheetRunFields(recipeId); state._batchSheetId = null; state._recipeDraft = null; closeModal(); goTo('recipes'); }

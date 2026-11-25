@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125120000">
+<meta name="app-build" content="20261125150000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -572,7 +572,7 @@ html{ visibility:hidden; }
   .dash-period-btn{border:none;background:none;font-size:12px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer;font-family:inherit;}
   .dash-period-btn.active{background:var(--accent);color:#fff;}
   /* ---- Orders overview chart (see dashOrdersChartHtml) ---- */
-  .oc{--oc-h:230px;--oc-top:36px;}   /* chart height, and headroom above the top gridline for the Peak flag */
+  .oc{--oc-h:230px;--oc-top:36px;--oc-pick:#0E9F77;--oc-prev:#9AA5BF;}   /* chart height, and headroom above the top gridline for the Peak flag */
   .oc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
   .oc-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;}
   .oc-sub{margin-top:2px;font-size:12px;color:var(--muted);}
@@ -586,7 +586,8 @@ html{ visibility:hidden; }
   .oc-badge.down{background:#FCEEEB;color:#A33F32;}
   .oc-key{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;}
   .oc-key-recv{background:var(--accent-dark);}
-  .oc-key-done{background:#2B5FC1;}
+  .oc-key-done{background:var(--oc-pick);}
+  .oc-key-prev{background:var(--oc-prev);}
   .oc-plot{position:relative;padding-left:34px;display:flow-root;}   /* flow-root: the canvas's top margin must not collapse out of the box the axis is measured from */
   .oc-y{position:absolute;left:0;top:var(--oc-top);height:var(--oc-h);width:30px;pointer-events:none;}
   .oc-yl{position:absolute;right:6px;transform:translateY(-50%);font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
@@ -597,14 +598,15 @@ html{ visibility:hidden; }
   .oc-grid line.base{stroke:#C8D3CC;stroke-dasharray:none;}
   .oc-line{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke;}
   .oc-line-recv{stroke:var(--accent-dark);stroke-width:2.8;}
-  .oc-line-done{stroke:#2B5FC1;stroke-width:2;opacity:.9;}
+  .oc-line-done{stroke:var(--oc-pick);stroke-width:2.6;}
+  .oc-line-prev{fill:none;stroke:var(--oc-prev);stroke-width:2;stroke-dasharray:5 5;vector-effect:non-scaling-stroke;stroke-linecap:round;}
   .oc-dot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;box-sizing:border-box;pointer-events:none;background:#fff;border:2px solid var(--accent-dark);transition:transform .12s ease,background .12s ease;}
-  .oc-dot-done{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-color:#2B5FC1;}
+  .oc-dot-done{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-color:var(--oc-pick);}
   .oc-dense .oc-dot{width:6px;height:6px;margin:-3px 0 0 -3px;border-width:1.5px;}
   .oc-dense .oc-dot-done{width:5px;height:5px;margin:-2.5px 0 0 -2.5px;}
   .oc-dot.peak{width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--accent-dark);border-color:#fff;box-shadow:0 0 0 2px var(--accent-dark);}
   .oc-dot.on{transform:scale(1.55);background:var(--accent-dark);}
-  .oc-dot-done.on{background:#2B5FC1;}
+  .oc-dot-done.on{background:var(--oc-pick);}
   .oc-flag{position:absolute;left:min(max(var(--fx),34px),calc(100% - 34px));transform:translate(-50%,calc(-100% - 12px));padding:3px 9px;border-radius:999px;background:var(--ink);color:#fff;font-size:10.5px;font-weight:700;white-space:nowrap;pointer-events:none;}
   .oc-guide{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--accent);display:none;pointer-events:none;}
   .oc-tip{position:absolute;z-index:3;display:none;min-width:136px;padding:9px 11px;border-radius:12px;background:#fff;border:1px solid var(--border);box-shadow:0 12px 28px rgba(20,40,30,.18);font-size:12px;pointer-events:none;}
@@ -618,6 +620,23 @@ html{ visibility:hidden; }
   .oc-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--muted);}
   .oc-legend span{display:inline-flex;align-items:center;gap:6px;}
   .oc-legend-hint{margin-left:auto;font-size:11.5px;}
+
+  .oc-ctl{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:-4px 0 6px;}
+  .oc-seg{display:inline-flex;gap:2px;padding:3px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .oc-seg-b{border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;}
+  .oc-seg-b.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,32,66,.14);}
+  .oc-chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .oc-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;}
+  .oc-chip.on{color:var(--ink);border-color:var(--ink);}
+  .oc-chip:not(.on){opacity:.6;}
+  .oc-chip:not(.on) .oc-key{background:transparent;box-shadow:inset 0 0 0 2px var(--oc-prev);}
+  .oc-seg-b:focus-visible,.oc-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .oc-bar{position:absolute;bottom:0;border-radius:5px 5px 0 0;pointer-events:none;transform-origin:bottom;min-height:2px;}
+  .oc-bar.z{min-height:2px;height:2px!important;opacity:.3;}
+  .oc-bar-recv{background:var(--accent-dark);}
+  .oc-bar-done{background:var(--oc-pick);}
+  .oc-bar.on{filter:brightness(1.12);}
+  .oc-tip-net{margin-top:3px;padding-top:3px;border-top:1px solid var(--border);}
   @media (max-width:760px){
     .oc-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
     .oc-kpi{padding:10px 12px;}
@@ -630,12 +649,14 @@ html{ visibility:hidden; }
     .oc-play .oc-area{animation:oc-reveal 1s cubic-bezier(.4,0,.2,1) both;}
     .oc-play .oc-dot,.oc-play .oc-flag{animation:oc-pop .35s cubic-bezier(.2,.9,.3,1.3) both;animation-delay:calc(var(--x,1) * .95s);}
     .oc-play .oc-flag{animation:oc-fade .3s ease-out both;animation-delay:1s;}
+    .oc-play .oc-bar{animation:oc-grow .6s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--x,0) * .5s);}
     .oc-play .oc-kpi{animation:oc-rise .45s ease-out both;}
     .oc-play .oc-kpi:nth-child(2){animation-delay:.06s;} .oc-play .oc-kpi:nth-child(3){animation-delay:.12s;} .oc-play .oc-kpi:nth-child(4){animation-delay:.18s;}
   }
   @keyframes oc-draw{from{stroke-dashoffset:1;}to{stroke-dashoffset:0;}}
   @keyframes oc-reveal{from{clip-path:inset(0 100% 0 0);}to{clip-path:inset(0 0 0 0);}}
   @keyframes oc-pop{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
+  @keyframes oc-grow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
   @keyframes oc-fade{from{opacity:0;}to{opacity:1;}}
   @keyframes oc-rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
   /* Two donut groups ("This Month vs Last" + "This Month by Priority") side by side on a wide
@@ -16577,11 +16598,13 @@ function ordersOverviewSeries(days){
   const buckets = [];
   for(let i=0;i<nBuckets;i++) buckets.push({date: new Date(start.getTime()+i*bucketSize*dayMs), count:0, done:0});
   let prevCount = 0, prevDone = 0;
+  const prevRecv = new Array(nBuckets).fill(0), prevPick = new Array(nBuckets).fill(0);   // the window just before, bucket by bucket (the "Compare with before" line)
   // counts the order in its bucket; true when it falls in the equal-length window just before (for the % change)
   const place = (iso, key)=>{
     const idx = Math.floor((new Date(iso).getTime() - start.getTime()) / (dayMs*bucketSize));
     if(idx>=0 && idx<nBuckets){ buckets[idx][key]++; return false; }
-    return idx<0 && idx>=-nBuckets;
+    if(idx<0 && idx>=-nBuckets){ (key==='count'?prevRecv:prevPick)[idx+nBuckets]++; return true; }
+    return false;
   };
   orders.forEach(o=>{
     if(o.createdAt && place(o.createdAt,'count')) prevCount++;
@@ -16593,7 +16616,7 @@ function ordersOverviewSeries(days){
   const changePct = pct(total, prevCount);
   const doneChangePct = pct(doneTotal, prevDone);
   const peakIdx = buckets.reduce((best,b,i)=>b.count>buckets[best].count?i:best, 0);
-  return {buckets, total, changePct, bucketSize, peakIdx, days, doneTotal, doneChangePct, prevCount, prevDone, avgPerDay: total/days};
+  return {buckets, total, changePct, bucketSize, peakIdx, days, doneTotal, doneChangePct, prevCount, prevDone, prevRecv, prevPick, avgPerDay: total/days};
 }
 function computeDashboardAnalytics(){
   const orders = state.orders;
@@ -16904,11 +16927,46 @@ function ocNiceMax(max){
   const top = Math.max(step*2, Math.ceil(target/step)*step);
   return {step, top};
 }
+// The chart's own view choices (owner picked "Flexible", 2026-11-25): style Area / Line / Bars, which series show, and "Compare with before".
+// Remembered per device (localStorage, optional), never saved to the shared data.
+function ocView(){
+  if(!state._ocView){
+    let v = {}; try{ v = JSON.parse(localStorage.getItem('audrey_oc_view')||'{}')||{}; }catch(e){}
+    state._ocView = {type: ['area','line','bars'].includes(v.type)?v.type:'area', recv: v.recv!==false, pick: v.pick!==false, prev: !!v.prev};
+  }
+  return state._ocView;
+}
+function ocSetView(patch){
+  const v = Object.assign(ocView(), patch);
+  if(!v.recv && !v.pick){ if(patch.recv===false) v.pick = true; else v.recv = true; }   // never an empty chart
+  try{ localStorage.setItem('audrey_oc_view', JSON.stringify(v)); }catch(e){}
+  render();
+}
+// Smooth curve through the points that never overshoots (no dip below zero between two empty days). Points are [x, y] in the 0-100 box.
+function ocSmoothPath(p){
+  const n = p.length; if(n<2) return '';
+  const dx = [], m = [], t = [];
+  for(let i=0;i<n-1;i++){ dx[i] = p[i+1][0]-p[i][0]; m[i] = dx[i] ? (p[i+1][1]-p[i][1])/dx[i] : 0; }
+  t[0] = m[0]; t[n-1] = m[n-2];
+  for(let i=1;i<n-1;i++) t[i] = m[i-1]*m[i]<=0 ? 0 : (m[i-1]+m[i])/2;
+  for(let i=0;i<n-1;i++){
+    if(m[i]===0){ t[i] = t[i+1] = 0; continue; }
+    const a = t[i]/m[i], b = t[i+1]/m[i], q = a*a+b*b;
+    if(q>9){ const k = 3/Math.sqrt(q); t[i] = k*a*m[i]; t[i+1] = k*b*m[i]; }
+  }
+  const f = v=>v.toFixed(2);
+  let d = 'M'+f(p[0][0])+','+f(p[0][1]);
+  for(let i=0;i<n-1;i++) d += 'C'+f(p[i][0]+dx[i]/3)+','+f(p[i][1]+t[i]*dx[i]/3)+' '+f(p[i+1][0]-dx[i]/3)+','+f(p[i+1][1]-t[i+1]*dx[i]/3)+' '+f(p[i+1][0])+','+f(p[i+1][1]);
+  return d;
+}
 function dashOrdersChartHtml(ov, dashPeriod, periods){
+  const view = ocView(), type = view.type, bars = type==='bars';
+  const showR = view.recv, showP = view.pick, showPrev = view.prev && showR && !bars;
   const n = ov.buckets.length;
-  const maxV = Math.max(1, ...ov.buckets.map(b=>Math.max(b.count,b.done)));
+  const maxV = Math.max(1, ...ov.buckets.map(b=>Math.max(showR?b.count:0, showP?b.done:0)), ...(showPrev ? ov.prevRecv : [0]));
   const {step, top} = ocNiceMax(maxV);
-  const xPct = i => n>1 ? i*100/(n-1) : 50;
+  // lines / areas run edge to edge; bars sit in the middle of their own slot
+  const xPct = i => bars ? (i+.5)*100/n : (n>1 ? i*100/(n-1) : 50);
   const yPct = v => 100 - (v/top)*100;
   const fmtDay = d => d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
   const fmtWd = d => d.toLocaleDateString(undefined,{weekday:'short'});
@@ -16916,19 +16974,42 @@ function dashOrdersChartHtml(ov, dashPeriod, periods){
   const label = b => weekly ? (()=>{ const e = new Date(b.date.getTime()+(ov.bucketSize-1)*86400000); return fmtDay(b.date)+' – '+fmtDay(e); })() : fmtWd(b.date)+', '+fmtDay(b.date);
   const narrow = window.innerWidth<=760;
   const every = n<=7 ? 1 : (n<=14 ? (narrow?3:2) : (narrow?7:5));
-  const pts = ov.buckets.map(b=>({l:label(b), r:b.count, d:b.done}));
-  const recvLine = ov.buckets.map((b,i)=>`${xPct(i).toFixed(2)},${yPct(b.count).toFixed(2)}`).join(' ');
-  const doneLine = ov.buckets.map((b,i)=>`${xPct(i).toFixed(2)},${yPct(b.done).toFixed(2)}`).join(' ');
-  const area = `0,100 ${recvLine} ${xPct(n-1).toFixed(2)},100`;
+  const pts = ov.buckets.map((b,i)=>({l:label(b), r:b.count, d:b.done, p:ov.prevRecv[i]}));
+  const recvPts = ov.buckets.map((b,i)=>[xPct(i), yPct(b.count)]);
+  const donePts = ov.buckets.map((b,i)=>[xPct(i), yPct(b.done)]);
+  const prevPts = ov.prevRecv.map((v,i)=>[xPct(i), yPct(v)]);
+  const recvPath = ocSmoothPath(recvPts), donePath = ocSmoothPath(donePts), prevPath = ocSmoothPath(prevPts);
+  const areaOf = (path, ptsArr)=> `${path}L${ptsArr[n-1][0].toFixed(2)},100L${ptsArr[0][0].toFixed(2)},100Z`;
   const ticks = []; for(let v=0; v<=top; v+=step) ticks.push(v);
   const peak = ov.buckets[ov.peakIdx];
-  const bestDone = ov.buckets.reduce((bi,b,i)=>b.done>ov.buckets[bi].done?i:bi, 0);
   const upDown = v => `<span class="oc-badge ${v>=0?'up':'down'}">${v>=0?'▲':'▼'} ${Math.abs(v)}%</span>`;
   const periodTxt = `vs previous ${ov.days} days`;
   const avg = ov.avgPerDay>=10 ? Math.round(ov.avgPerDay) : (Math.round(ov.avgPerDay*10)/10);
   const empty = ov.total===0 && ov.doneTotal===0;
+  const seg = (k,l)=>`<button type="button" class="oc-seg-b ${type===k?'on':''}" data-oc-type="${k}" aria-pressed="${type===k}">${l}</button>`;
+  const chip = (k,l,cls,on)=>`<button type="button" class="oc-chip ${on?'on':''}" data-oc-chip="${k}" aria-pressed="${on}"><i class="oc-key ${cls}"></i>${l}</button>`;
+  let marks = '';
+  if(bars){
+    const slot = 100/n, two = showR && showP, bw = Math.min(slot*(two?.34:.5), 4.2);
+    ov.buckets.forEach((b,i)=>{
+      const cx = (i+.5)*slot;
+      [['r',b.count,'oc-bar-recv',showR,two?-1:0],['d',b.done,'oc-bar-done',showP,two?1:0]].forEach(([k,v,cls,on,side])=>{
+        if(!on) return;
+        const left = cx + side*(bw/2+.25) - bw/2;
+        marks += `<i class="oc-bar ${cls}${v?'':' z'}" data-i="${i}" style="left:${left.toFixed(2)}%;width:${bw.toFixed(2)}%;height:${v?(v/top*100).toFixed(2):0}%;--x:${(cx/100).toFixed(3)}"></i>`;
+      });
+    });
+  } else {
+    ov.buckets.forEach((b,i)=>{
+      if(showP) marks += `<i class="oc-dot oc-dot-done" data-i="${i}" style="left:${xPct(i).toFixed(2)}%;top:${yPct(b.done).toFixed(2)}%;--x:${(xPct(i)/100).toFixed(3)}"></i>`;
+    });
+    ov.buckets.forEach((b,i)=>{
+      if(showR) marks += `<i class="oc-dot oc-dot-recv${i===ov.peakIdx&&b.count>0?' peak':''}" data-i="${i}" style="left:${xPct(i).toFixed(2)}%;top:${yPct(b.count).toFixed(2)}%;--x:${(xPct(i)/100).toFixed(3)}"></i>`;
+    });
+    if(showR && peak.count>0) marks += `<span class="oc-flag" style="--fx:${xPct(ov.peakIdx).toFixed(2)}%;top:${yPct(peak.count).toFixed(2)}%">Peak &middot; ${peak.count}</span>`;
+  }
   return `
-  <div class="oc${n>20?' oc-dense':''}" id="dash-orders-chart">
+  <div class="oc${n>20?' oc-dense':''}${bars?' oc-bars':''}" id="dash-orders-chart">
     <div class="oc-head">
       <div>
         <div class="oc-title"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V13M12 20V8M20 20V4"/></svg>Orders overview</div>
@@ -16944,26 +17025,34 @@ function dashOrdersChartHtml(ov, dashPeriod, periods){
       <div class="oc-kpi"><div class="oc-kpi-l">Daily average</div><div class="oc-kpi-n">${avg}</div><div class="oc-kpi-s"><span>orders received a day</span></div></div>
       <div class="oc-kpi"><div class="oc-kpi-l">Busiest ${weekly?'week':'day'}</div><div class="oc-kpi-n">${peak.count}</div><div class="oc-kpi-s"><span>${esc(peak.count>0 ? label(peak) : 'no orders yet')}</span></div></div>
     </div>
+    <div class="oc-ctl">
+      <div class="oc-seg" role="group" aria-label="Chart style">${seg('area','Area')}${seg('line','Line')}${seg('bars','Bars')}</div>
+      <div class="oc-chips" role="group" aria-label="What to show">${chip('recv','Received','oc-key-recv',showR)}${chip('pick','Picked up','oc-key-done',showP)}${bars?'':chip('prev','Compare with before','oc-key-prev',view.prev)}</div>
+    </div>
     <div class="oc-plot">
       <div class="oc-y" aria-hidden="true">${ticks.map(v=>`<span class="oc-yl" style="top:${yPct(v).toFixed(2)}%">${v}</span>`).join('')}</div>
-      <div class="oc-canvas" tabindex="0" role="img" aria-label="Orders received and picked up, ${esc(periods[dashPeriod]===7?'last 7 days':'last '+periods[dashPeriod]+' days')}. Use the arrow keys to read each point." data-oc-pts="${escAttr(JSON.stringify(pts))}" data-oc-top="${top}">
+      <div class="oc-canvas" tabindex="0" role="img" aria-label="Orders received and picked up, ${esc(periods[dashPeriod]===7?'last 7 days':'last '+periods[dashPeriod]+' days')}. Use the arrow keys to read each point." data-oc-pts="${escAttr(JSON.stringify(pts))}" data-oc-top="${top}" data-oc-type="${type}" data-oc-show="${showR?'r':''}${showP?'d':''}${showPrev?'p':''}">
         <svg class="oc-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <defs><linearGradient id="oc-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+          <defs>
+            <linearGradient id="oc-grad-r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent-dark)" stop-opacity=".24"/><stop offset="1" stop-color="var(--accent-dark)" stop-opacity="0"/></linearGradient>
+            <linearGradient id="oc-grad-p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--oc-pick)" stop-opacity=".22"/><stop offset="1" stop-color="var(--oc-pick)" stop-opacity="0"/></linearGradient>
+          </defs>
           <g class="oc-grid">${ticks.map(v=>`<line class="${v===0?'base':''}" x1="0" x2="100" y1="${yPct(v).toFixed(2)}" y2="${yPct(v).toFixed(2)}"/>`).join('')}</g>
-          <polygon class="oc-area" points="${area}" fill="url(#oc-grad)"/>
-          <polyline class="oc-line oc-line-done" pathLength="1" points="${doneLine}"/>
-          <polyline class="oc-line oc-line-recv" pathLength="1" points="${recvLine}"/>
+          ${bars ? '' : `
+          ${showPrev ? `<path class="oc-line oc-line-prev" d="${prevPath}"/>` : ''}
+          ${type==='area' && showP ? `<path class="oc-area" d="${areaOf(donePath, donePts)}" fill="url(#oc-grad-p)"/>` : ''}
+          ${type==='area' && showR ? `<path class="oc-area" d="${areaOf(recvPath, recvPts)}" fill="url(#oc-grad-r)"/>` : ''}
+          ${showP ? `<path class="oc-line oc-line-done" pathLength="1" d="${donePath}"/>` : ''}
+          ${showR ? `<path class="oc-line oc-line-recv" pathLength="1" d="${recvPath}"/>` : ''}`}
         </svg>
-        ${ov.buckets.map((b,i)=>`<i class="oc-dot oc-dot-done" data-i="${i}" style="left:${xPct(i).toFixed(2)}%;top:${yPct(b.done).toFixed(2)}%;--x:${(xPct(i)/100).toFixed(3)}"></i>`).join('')}
-        ${ov.buckets.map((b,i)=>`<i class="oc-dot oc-dot-recv${i===ov.peakIdx&&b.count>0?' peak':''}" data-i="${i}" style="left:${xPct(i).toFixed(2)}%;top:${yPct(b.count).toFixed(2)}%;--x:${(xPct(i)/100).toFixed(3)}"></i>`).join('')}
-        ${peak.count>0 ? `<span class="oc-flag" style="--fx:${xPct(ov.peakIdx).toFixed(2)}%;top:${yPct(peak.count).toFixed(2)}%">Peak &middot; ${peak.count}</span>` : ''}
+        ${marks}
         ${empty ? `<div class="oc-empty">No orders in this period yet</div>` : ''}
         <div class="oc-guide"></div>
         <div class="oc-tip" role="status"></div>
       </div>
       <div class="oc-x">${ov.buckets.map((b,i)=> (i%every===0 || i===n-1) ? `<span class="oc-xl" style="left:${xPct(i).toFixed(2)}%">${weekly ? esc(fmtDay(b.date)) : (n<=7 ? `${esc(fmtWd(b.date))}<br><b>${b.date.getDate()}</b>` : esc(fmtDay(b.date)))}</span>` : '').join('')}</div>
     </div>
-    <div class="oc-legend"><span><i class="oc-key oc-key-recv"></i>Received</span><span><i class="oc-key oc-key-done"></i>Picked up</span><span class="oc-legend-hint">${narrow?'Touch':'Hover'} the chart to read any ${weekly?'week':'day'}</span></div>
+    <div class="oc-legend">${showR?'<span><i class="oc-key oc-key-recv"></i>Received</span>':''}${showP?'<span><i class="oc-key oc-key-done"></i>Picked up</span>':''}${showPrev?`<span><i class="oc-key oc-key-prev"></i>Received in the previous ${ov.days} days</span>`:''}<span class="oc-legend-hint">${narrow?'Touch':'Hover'} the chart to read any ${weekly?'week':'day'}</span></div>
   </div>`;
 }
 // Readout for any point: hover (mouse), touch / drag (phone), or the arrow keys. Bound on every render (the chart is rebuilt each time).
@@ -16972,21 +17061,37 @@ function attachDashOrdersChart(){
   const canvas = root.querySelector('.oc-canvas'); const tip = root.querySelector('.oc-tip'); const guide = root.querySelector('.oc-guide');
   let pts = []; try{ pts = JSON.parse(canvas.dataset.ocPts||'[]'); }catch(e){}
   const top = parseFloat(canvas.dataset.ocTop)||1; const n = pts.length; if(!n) return;
+  // Picked up is green; when the workspace colour itself is green the two series would look alike, so Picked up turns orange then.
+  try{
+    const hex = (getComputedStyle(root).getPropertyValue('--accent-dark')||'').trim();
+    if(/^#[0-9a-f]{6}$/i.test(hex)){
+      const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, bl = parseInt(hex.slice(5,7),16)/255;
+      const mx = Math.max(r,g,bl), mn = Math.min(r,g,bl), d = mx-mn; let h = 0;
+      if(d>0.08){ h = mx===r ? ((g-bl)/d)%6 : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h = (h*60+360)%360; if(h>=80 && h<=190) root.style.setProperty('--oc-pick','#E8871E'); }
+    }
+  }catch(e){}
+  const bars = canvas.dataset.ocType==='bars', sh = canvas.dataset.ocShow||'r';
+  const hasR = sh.includes('r'), hasD = sh.includes('d'), hasP = sh.includes('p');
   let active = -1;
-  const hide = ()=>{ active = -1; tip.style.display = 'none'; guide.style.display = 'none'; root.querySelectorAll('.oc-dot.on').forEach(d=>d.classList.remove('on')); };
+  const hide = ()=>{ active = -1; tip.style.display = 'none'; guide.style.display = 'none'; root.querySelectorAll('.oc-dot.on,.oc-bar.on').forEach(d=>d.classList.remove('on')); };
   const show = i=>{
     i = Math.max(0, Math.min(n-1, i)); if(i===active) return; active = i;
-    const W = canvas.clientWidth, H = canvas.clientHeight; const x = n>1 ? i/(n-1)*W : W/2; const pt = pts[i];
-    tip.innerHTML = `<div class="oc-tip-l">${esc(pt.l)}</div><div class="oc-tip-r"><i class="oc-key oc-key-recv"></i>Received<b>${pt.r}</b></div><div class="oc-tip-r"><i class="oc-key oc-key-done"></i>Picked up<b>${pt.d}</b></div>`;
+    const W = canvas.clientWidth, H = canvas.clientHeight; const x = bars ? (i+.5)/n*W : (n>1 ? i/(n-1)*W : W/2); const pt = pts[i];
+    let rows = '';
+    if(hasR) rows += `<div class="oc-tip-r"><i class="oc-key oc-key-recv"></i>Received<b>${pt.r}</b></div>`;
+    if(hasD) rows += `<div class="oc-tip-r"><i class="oc-key oc-key-done"></i>Picked up<b>${pt.d}</b></div>`;
+    if(hasP) rows += `<div class="oc-tip-r"><i class="oc-key oc-key-prev"></i>Before<b>${pt.p}</b></div>`;
+    if(hasR && hasD){ const net = pt.r-pt.d; rows += `<div class="oc-tip-r oc-tip-net">Net<b>${net>0?'+':''}${net}</b></div>`; }
+    tip.innerHTML = `<div class="oc-tip-l">${esc(pt.l)}</div>${rows}`;
     tip.style.display = 'block'; guide.style.display = 'block'; guide.style.left = x+'px';
     const tw = tip.offsetWidth, th = tip.offsetHeight;
     tip.style.left = Math.max(0, Math.min(W-tw, x-tw/2))+'px';
-    const yHigh = H - (Math.max(pt.r,pt.d)/top)*H;
+    const yHigh = H - (Math.max(hasR?pt.r:0, hasD?pt.d:0, hasP?pt.p:0)/top)*H;
     tip.style.top = (yHigh-th-14 >= -6 ? yHigh-th-14 : Math.min(H-th, yHigh+16))+'px';
-    root.querySelectorAll('.oc-dot.on').forEach(d=>d.classList.remove('on'));
-    root.querySelectorAll('.oc-dot[data-i="'+i+'"]').forEach(d=>d.classList.add('on'));
+    root.querySelectorAll('.oc-dot.on,.oc-bar.on').forEach(d=>d.classList.remove('on'));
+    root.querySelectorAll('.oc-dot[data-i="'+i+'"],.oc-bar[data-i="'+i+'"]').forEach(d=>d.classList.add('on'));
   };
-  const fromEvent = e=>{ const r = canvas.getBoundingClientRect(); const f = r.width ? (e.clientX-r.left)/r.width : 0; return n>1 ? Math.round(f*(n-1)) : 0; };
+  const fromEvent = e=>{ const r = canvas.getBoundingClientRect(); const f = r.width ? (e.clientX-r.left)/r.width : 0; return bars ? Math.floor(f*n) : (n>1 ? Math.round(f*(n-1)) : 0); };
   canvas.addEventListener('pointermove', e=>show(fromEvent(e)));
   canvas.addEventListener('pointerdown', e=>show(fromEvent(e)));
   canvas.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse') hide(); });
@@ -16995,8 +17100,11 @@ function attachDashOrdersChart(){
     if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); show(active<0 ? (e.key==='ArrowRight'?0:n-1) : active+(e.key==='ArrowRight'?1:-1)); }
     else if(e.key==='Home'){ e.preventDefault(); show(0); } else if(e.key==='End'){ e.preventDefault(); show(n-1); } else if(e.key==='Escape') hide();
   });
+  // style / series buttons
+  root.querySelectorAll('[data-oc-type]').forEach(b=>{ if(b.tagName==='BUTTON') b.addEventListener('click', ()=>ocSetView({type:b.dataset.ocType})); });
+  root.querySelectorAll('[data-oc-chip]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.ocChip, v = ocView(); ocSetView({[k]: !v[k]}); }));
   // a touch outside the chart closes the readout it left open
-  if(!window.__ocAwayBound){ window.__ocAwayBound = true; document.addEventListener('pointerdown', e=>{ if(!e.target.closest || e.target.closest('.oc-canvas')) return; document.querySelectorAll('.oc-dot.on').forEach(d=>d.classList.remove('on')); document.querySelectorAll('.oc-tip,.oc-guide').forEach(x=>x.style.display='none'); }); }
+  if(!window.__ocAwayBound){ window.__ocAwayBound = true; document.addEventListener('pointerdown', e=>{ if(!e.target.closest || e.target.closest('.oc-canvas')) return; document.querySelectorAll('.oc-dot.on,.oc-bar.on').forEach(d=>d.classList.remove('on')); document.querySelectorAll('.oc-tip,.oc-guide').forEach(x=>x.style.display='none'); }); }
 }
 function renderDashboard(){
   const orders = activeOrders();

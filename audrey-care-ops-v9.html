@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125233000">
+<meta name="app-build" content="20261126030000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -623,6 +623,55 @@ html{ visibility:hidden; }
   .oc-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--muted);}
   .oc-legend span{display:inline-flex;align-items:center;gap:6px;}
   .oc-legend-hint{margin-left:auto;font-size:11.5px;}
+  .sp{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .sp-ring{position:relative;width:150px;height:150px;flex:none;}
+  .sp-ring svg{width:150px;height:150px;display:block;overflow:visible;}
+  .sp-track{stroke:var(--border);opacity:.55;}
+  .sp-seg{cursor:pointer;outline:none;transition:stroke-width .25s ease,opacity .25s ease,filter .25s ease;}
+  .sp-seg.on,.sp-seg:focus-visible{stroke-width:21;filter:drop-shadow(0 3px 7px rgba(20,35,60,.28));}
+  .sp.hovering .sp-seg:not(.on){opacity:.4;}
+  .sp-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 26px;}
+  .sp-big{font-size:28px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.02em;}
+  .sp-cap{font-size:10.5px;font-weight:600;color:var(--muted);line-height:1.25;max-width:84px;overflow:hidden;text-overflow:ellipsis;}
+  .sp-legend{flex:1;min-width:170px;}
+  .sp-row{display:flex;align-items:center;gap:9px;font-size:13px;padding:6px 8px;margin:0 -8px;border-radius:9px;border-bottom:1px solid transparent;transition:background .15s;}
+  .sp-row i{width:10px;height:10px;border-radius:50%;flex:none;}
+  .sp-row .sp-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sp-row b{font-variant-numeric:tabular-nums;} .sp-row small{width:34px;text-align:right;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums;}
+  .sp-row.z{opacity:.5;} .sp-row[data-i]{cursor:default;} .sp-row.on{background:var(--bg);}
+  @media (prefers-reduced-motion:reduce){.sp-seg,.sp-row{transition:none;}}
+  .bd-panel{--oc-pick:#0E9F77;}
+  .bd-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0 16px;}
+  .bd-tile{border:1px solid var(--border);border-radius:14px;padding:11px 14px;background:var(--bg);min-width:0;display:flex;flex-direction:column;}
+  .bd-tile span{font-size:11.5px;font-weight:600;color:var(--muted);}
+  .bd-tile b{font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .bd-tile small{font-size:11.5px;color:var(--muted);overflow-wrap:anywhere;}
+  .bd-tile.ok b{color:var(--oc-pick);} .bd-tile.warn b{color:#C77A0F;}
+  .bd-cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:22px;align-items:start;}
+  .bd-legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .bd-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .bd-legend i,.bd-pair i{display:block;}
+  .bd-legend i{width:10px;height:10px;border-radius:50%;} .bd-legend i.s{background:var(--accent-dark);} .bd-legend i.f{background:var(--oc-pick);}
+  .bd-chart{display:flex;gap:8px;height:210px;}
+  .bd-y{display:flex;flex-direction:column;justify-content:space-between;font-size:10.5px;color:var(--muted);padding-bottom:20px;text-align:right;min-width:20px;font-variant-numeric:tabular-nums;}
+  .bd-bars{flex:1;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:4px;align-items:end;border-bottom:1px solid var(--border);background:repeating-linear-gradient(to top,transparent 0,transparent calc(50% - .5px),var(--border) calc(50% - .5px),var(--border) 50%,transparent 50%) ;}
+  .bd-col{display:flex;flex-direction:column;height:100%;min-width:0;}
+  .bd-pair{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:2px;}
+  .bd-pair i{width:min(14px,38%);border-radius:4px 4px 0 0;min-height:0;}
+  .bd-pair i.s{background:var(--accent-dark);} .bd-pair i.f{background:var(--oc-pick);}
+  .bd-col small{height:20px;text-align:center;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:visible;padding-top:4px;}
+  .bd-empty{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center;}
+  .bd-h{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .bd-stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 24px;align-items:center;gap:10px;margin-bottom:7px;font-size:12.5px;}
+  .bd-sn{display:inline-flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .bd-sn i{width:9px;height:9px;border-radius:50%;flex:none;}
+  .bd-sbar{height:7px;border-radius:7px;background:var(--bg);overflow:hidden;display:block;} .bd-sbar span{display:block;height:100%;border-radius:7px;min-width:0;}
+  .bd-stage b{text-align:right;font-variant-numeric:tabular-nums;}
+  .bd-machines{display:grid;gap:7px;}
+  .bd-m{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:7px 11px;font-size:12.5px;background:#fff;}
+  .bd-m.on{background:var(--bg);}
+  .bd-mn{display:inline-flex;align-items:center;gap:7px;font-weight:700;white-space:nowrap;} .bd-mn i{width:9px;height:9px;border-radius:50%;}
+  .bd-ms{color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;} .bd-m.on .bd-ms{color:var(--ink);font-weight:600;}
+  @media (max-width:900px){.bd-cols{grid-template-columns:minmax(0,1fr);}.bd-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
   .oc-ctl{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:-4px 0 6px;}
   .oc-seg{display:inline-flex;gap:2px;padding:3px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
@@ -3691,6 +3740,51 @@ html{ visibility:hidden; }
   @media (max-width:420px){ .track-card{padding:30px 20px 28px;border-radius:18px;} .tk-chip{font-size:10px;padding:3px 8px;} }
   /* ---------------- AC lorry runs: driver page, office page, customer tracking block ---------------- */
   .lorry-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:10px;box-shadow:0 1px 2px rgba(20,25,20,.04);}
+  /* ---- Delivery runs (office) ---- */
+  .dr-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;}
+  .dr-tile{background:#fff;border:1px solid var(--border);border-radius:14px;padding:11px 14px;display:flex;flex-direction:column;min-width:0;}
+  .dr-tile span{font-size:11.5px;font-weight:600;color:var(--muted);}
+  .dr-tile b{font-size:28px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .dr-tile small{font-size:11.5px;color:var(--muted);}
+  .dr-tile.live b{color:var(--accent-dark);} .dr-tile.ok b{color:#2E9E5B;} .dr-tile.warn b{color:#C77A0F;}
+  .dr-layout{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:18px;align-items:start;}
+  .dr-left{position:sticky;top:96px;}
+  .dr-new{margin-top:0;padding:16px;}
+  .dr-new-h{font-weight:800;font-size:16px;margin-bottom:12px;color:var(--ink);}
+  .dr-step{display:flex;gap:12px;margin-bottom:14px;}
+  .dr-stepn{flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent-dark);color:#fff;font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;}
+  .dr-stepbody{flex:1;min-width:0;}
+  .dr-lab{display:block;font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink);}
+  .dr-lab .hint{font-weight:500;margin-left:4px;}
+  .dr-driver{display:flex;align-items:center;gap:10px;}
+  .dr-driver select{flex:1;min-width:0;}
+  .dr-dav{width:34px;height:34px;border-radius:50%;overflow:hidden;display:inline-flex;flex:none;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent-dark);}
+  .dr-dav svg,.dr-dav i{width:18px;height:18px;}
+  .dr-pick{max-height:340px;}
+  .dr-none{border:1.5px dashed var(--border);border-radius:10px;padding:14px;color:var(--muted);font-size:12.5px;text-align:center;}
+  .dr-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;margin-top:2px;}
+  .dr-sum{font-size:13px;color:var(--muted);} .dr-sum b{color:var(--ink);}
+  .dr-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .dr-tab{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--border);background:#fff;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .dr-tab i{font-style:normal;font-size:11.5px;background:var(--bg);border-radius:999px;padding:0 8px;}
+  .dr-tab.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark);} .dr-tab.on i{background:#fff;}
+  .dr-run{margin-top:0;margin-bottom:12px;padding:16px;border-left:4px solid var(--border);}
+  .dr-run.dr-active{border-left-color:var(--accent-dark);} .dr-run.dr-planned{border-left-color:#E0A030;} .dr-run.dr-finished{border-left-color:#2E9E5B;}
+  .dr-run-top{display:flex;align-items:center;gap:12px;}
+  .dr-rav{width:42px;height:42px;border-radius:50%;overflow:hidden;flex:none;display:inline-flex;}
+  .dr-run-id{flex:1;min-width:0;display:flex;flex-direction:column;} .dr-run-id b{font-size:15px;}
+  .dr-prog{margin:12px 0 4px;} .dr-prog .lorry-progress{margin:0 0 6px;height:7px;}
+  .dr-prog-t{font-size:12.5px;color:var(--muted);} .dr-prog-t b{color:var(--ink);} .dr-prog-t .ok{color:#2E9E5B;font-weight:600;} .dr-prog-t .warn{color:#B56F0C;font-weight:600;} .dr-prog-t .bad{color:#C23B33;font-weight:600;}
+  .dr-line{margin-top:12px;position:relative;}
+  .dr-stop{display:flex;align-items:flex-start;gap:12px;padding:0 0 14px;position:relative;}
+  .dr-stop:last-child{padding-bottom:2px;}
+  .dr-stop:not(:last-child):before{content:"";position:absolute;left:11px;top:26px;bottom:0;width:2px;background:var(--border);}
+  .dr-dot{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--border);background:#fff;color:var(--muted);font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;position:relative;z-index:1;}
+  .dr-stop.ok .dr-dot{background:#2E9E5B;border-color:#2E9E5B;color:#fff;} .dr-stop.warn .dr-dot{background:#F0B340;border-color:#F0B340;color:#5b4300;} .dr-stop.bad .dr-dot{background:#D9695C;border-color:#D9695C;color:#fff;}
+  .dr-stop.ok:not(:last-child):before{background:#2E9E5B;}
+  .dr-stop-main{flex:1;min-width:0;} .dr-stop-name{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;} .dr-stop-name b{font-size:14px;}
+  .dr-empty{display:flex;align-items:center;gap:14px;margin-top:0;padding:22px;color:var(--accent-dark);} .dr-empty svg,.dr-empty i{width:34px;height:34px;flex:none;} .dr-empty div{display:flex;flex-direction:column;color:var(--ink);}
+  @media (max-width:1000px){.dr-layout{grid-template-columns:minmax(0,1fr);}.dr-left{position:static;}.dr-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}}
   .lorry-card:first-child{margin-top:0;}
   .lorry-h{font-weight:700;font-size:14px;color:var(--ink);margin-bottom:8px;}
   .lorry-run-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
@@ -13716,7 +13810,7 @@ function renderInner(){
   app.innerHTML = renderShell(freshPage);
   attachShellHandlers();
   if(freshPage){
-    animateStatCards(); animatePipelineDonut(); animateMonthDonuts(); animateDashboardCharts(); animateSectionsTiles();
+    animateStatCards(); animatePipelineDonut(); animateMonthDonuts(); animateDashboardCharts(); animateSmoothPies(); animateSectionsTiles();
     // A fresh render (page refresh, or navigating in) leaves #chat-messages at its default
     // scroll position (top, oldest message) -- jump straight to the latest message instead,
     // same as every other chat app. renderKeepChatScroll handles in-page actions (like/edit/
@@ -16064,6 +16158,14 @@ function lorryEligibleOrders(){
   return (state.orders || []).filter(o => o.courierService === 'AC Delivery' && String(o.stage) === '3'
     && o.deliveryOutcome !== 'Delivered' && o.deliveryOutcome !== 'Returned' && !taken.has(o.id));
 }
+/* Delivery runs (office) — redesigned (owner, 2026-11-25: "improve delivery runs ui design"): a summary strip, a two-step builder (driver, then the orders in the order he will deliver them)
+   beside the runs, which are grouped by tab (On the road / Not started / Finished) with a progress bar and a stop timeline. Same ids / data- attributes as before, so every handler is unchanged. */
+function runStatusKind(r){
+  const stops = r.stops || [];
+  if(r.status==='active') return 'active';
+  if(r.status==='planned') return 'planned';
+  return 'finished';
+}
 function renderDeliveryRunsPage(){
   const loaded = state._lorryLoaded && state._lorryLoaded.deliveryruns;
   if(!loaded) return `<div class="lorry-card"><div class="hint">Loading delivery runs…</div></div>`;
@@ -16072,39 +16174,70 @@ function renderDeliveryRunsPage(){
   const drivers = state._lorryDrivers || [];
   const elig = lorryEligibleOrders();
   draft.orderIds = draft.orderIds.filter(id => elig.some(o => o.id === id));
-  const newRun = `<div class="lorry-card">
-    <div class="lorry-h">New delivery run</div>
-    ${drivers.length ? `<div class="field"><label>Driver</label><select id="run-driver">
-        <option value="">Choose a driver…</option>
-        ${drivers.map(d => `<option value="${escAttr(d.id)}" ${draft.driverId===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>`
+  const runs = state._runs || [];
+  const nActive = runs.filter(r=>runStatusKind(r)==='active').length, nPlanned = runs.filter(r=>runStatusKind(r)==='planned').length;
+  const nFin = runs.filter(r=>runStatusKind(r)==='finished').length, today = todayStr();
+  const finToday = runs.filter(r=>runStatusKind(r)==='finished' && String(r.runDate||'').slice(0,10)===today).length;
+  let tab = state._runTab; if(!['active','planned','finished','all'].includes(tab)) tab = nActive ? 'active' : (nPlanned ? 'planned' : (nFin ? 'finished' : 'active'));
+  const shown = tab==='all' ? runs : runs.filter(r=>runStatusKind(r)===tab);
+  const tile = (label, n, sub, cls)=>`<div class="dr-tile ${cls||''}"><span>${label}</span><b>${n}</b><small>${sub}</small></div>`;
+  const chosenDriver = drivers.find(d=>d.id===draft.driverId);
+  const tabBtn = (k,l,n)=>`<button type="button" class="dr-tab${tab===k?' on':''}" data-run-tab="${k}">${l}<i>${n}</i></button>`;
+  const newRun = `<div class="lorry-card dr-new">
+    <div class="dr-new-h">New delivery run</div>
+    <div class="dr-step"><span class="dr-stepn">1</span><div class="dr-stepbody">
+      <label class="dr-lab" for="run-driver">Driver</label>
+      ${drivers.length ? `<div class="dr-driver">${chosenDriver ? `<span class="dr-dav">${staffAvatarHtml(chosenDriver.name, 34)}</span>` : `<span class="dr-dav dr-dav-empty">${icon('truck')}</span>`}
+        <select id="run-driver"><option value="">Choose a driver…</option>${drivers.map(d => `<option value="${escAttr(d.id)}" ${draft.driverId===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>`
       : `<div class="lorry-note lorry-note-warn">There is no Driver account yet. Add one in Settings → User account setup with the access level <b>Driver</b>.</div>`}
-    <div class="field"><label>Orders on the lorry <span class="hint">AC Delivery orders marked “Picked up by delivery”. Tap them in the order he will deliver.</span></label>
-      ${elig.length ? `<div class="lorry-pick">${elig.map(o => {
+    </div></div>
+    <div class="dr-step"><span class="dr-stepn">2</span><div class="dr-stepbody">
+      <div class="dr-lab">Orders on the lorry <span class="hint">Tap them in the order he will deliver. Waiting: ${elig.length}</span></div>
+      ${elig.length ? `<div class="lorry-pick dr-pick">${elig.map(o => {
         const idx = draft.orderIds.indexOf(o.id);
         return `<button type="button" class="lorry-pick-row ${idx>=0?'on':''}" data-run-pick="${escAttr(o.id)}">
           <span class="lorry-seq">${idx>=0 ? idx+1 : ''}</span>
           <span class="lorry-pick-main"><b>${esc(o.customer || '—')}</b><span class="hint">${esc(o.orderNumber || o.id)}${o.address ? ' · ' + esc(o.address) : ''}</span></span></button>`; }).join('')}</div>`
-      : `<div class="hint">No AC Delivery orders are waiting. An order shows here once it is moved to “Picked up by delivery”.</div>`}</div>
-    <div class="lorry-head-actions">
-      <button class="btn btn-primary btn-sm" id="btn-run-create" ${draft.driverId && draft.orderIds.length ? '' : 'disabled'}>Create run (${draft.orderIds.length})</button>
-      ${draft.orderIds.length ? `<button class="btn btn-sm" id="btn-run-clear">Clear</button>` : ''}
-    </div></div>`;
-  const runs = state._runs || [];
-  const runCards = runs.length ? runs.map(renderRunCard).join('') : `<div class="lorry-card"><div class="hint">No runs yet.</div></div>`;
-  return err + newRun + `<div class="lorry-sec">Runs</div>` + runCards;
+      : `<div class="dr-none">No AC Delivery orders are waiting. An order shows here once it is moved to “Picked up by delivery”.</div>`}
+    </div></div>
+    <div class="dr-foot"><span class="dr-sum">${draft.orderIds.length ? `<b>${draft.orderIds.length}</b> stop${draft.orderIds.length===1?'':'s'}${chosenDriver ? ' for <b>'+esc(chosenDriver.name)+'</b>' : ''}` : 'Nothing picked yet'}</span>
+      <div class="lorry-head-actions" style="margin:0;">
+        ${draft.orderIds.length ? `<button class="btn btn-sm" id="btn-run-clear">Clear</button>` : ''}
+        <button class="btn btn-primary btn-sm" id="btn-run-create" ${draft.driverId && draft.orderIds.length ? '' : 'disabled'}>Create run (${draft.orderIds.length})</button>
+      </div></div></div>`;
+  const runCards = shown.length ? shown.map(renderRunCard).join('')
+    : `<div class="lorry-card dr-empty">${icon('truck')}<div><b>${tab==='active' ? 'No lorry is on the road' : tab==='planned' ? 'No run is waiting to start' : tab==='finished' ? 'No finished runs yet' : 'No runs yet'}</b><span class="hint">${draft.orderIds.length || elig.length ? 'Create a run on the left.' : 'Orders show here once they are moved to “Picked up by delivery”.'}</span></div></div>`;
+  return err + `
+  <div class="dr-tiles">
+    ${tile('On the road', nActive, nActive ? 'lorry out now' : 'no lorry out', nActive ? 'live' : '')}
+    ${tile('Not started', nPlanned, 'ready for the driver')}
+    ${tile('Finished today', finToday, `${nFin} finished in all`, 'ok')}
+    ${tile('Waiting for a lorry', elig.length, 'AC orders picked up by delivery', elig.length ? 'warn' : '')}
+  </div>
+  <div class="dr-layout">
+    <div class="dr-left">${newRun}</div>
+    <div class="dr-right">
+      <div class="dr-tabs" role="tablist" aria-label="Runs">${tabBtn('active','On the road',nActive)}${tabBtn('planned','Not started',nPlanned)}${tabBtn('finished','Finished',nFin)}${tabBtn('all','All',runs.length)}</div>
+      ${runCards}
+    </div>
+  </div>`;
 }
 function renderRunCard(r){
   const stops = r.stops || [];
   const cancelled = r.status === 'finished' && stops.some(s => s.status === 'pending');
-  const doneN = stops.filter(s => s.status !== 'pending').length;
+  const doneN = stops.filter(s => s.status !== 'pending').length, pct = stops.length ? Math.round(doneN*100/stops.length) : 0;
+  const nOk = stops.filter(s=>s.status==='delivered').length, nNot = stops.filter(s=>s.status==='not_home').length, nRet = stops.filter(s=>s.status==='returned').length;
   const label = r.status === 'active' ? 'On the road' : (r.status === 'planned' ? 'Not started' : (cancelled ? 'Ended early' : 'Finished'));
-  return `<div class="lorry-card lorry-run">
-    <div class="lorry-run-top"><div><div class="lorry-run-id">${esc(r.id)} · ${esc(r.driverName || '')}</div>
-      <div class="hint">${esc(r.runDate || '')} · ${doneN} of ${stops.length} done${r.startedAt ? ' · started ' + esc(fmtTimeOnly(r.startedAt)) : ''}</div></div>
+  const dot = {delivered:'ok', not_home:'warn', returned:'bad', pending:''};
+  return `<div class="lorry-card lorry-run dr-run dr-${runStatusKind(r)}">
+    <div class="dr-run-top"><span class="dr-rav">${staffAvatarHtml(r.driverName || '?', 42)}</span>
+      <div class="dr-run-id"><b>${esc(r.driverName || 'Driver')}</b><span class="hint">${esc(r.id)} · ${esc(r.runDate || '')}${r.startedAt ? ' · started ' + esc(fmtTimeOnly(r.startedAt)) : ''}</span></div>
       <span class="pill ${r.status==='active'?'pill-active':(r.status==='planned'?'pill-hold':'pill-low')}">${label}</span></div>
-    <div class="lorry-stoplist">${stops.map(s => `<div class="lorry-stoprow">
-      <span class="lorry-seq">${s.seq}</span>
-      <div class="lorry-stop-main"><div><b>${esc(s.customer || '—')}</b> <span class="hint">${esc(s.orderNumber || s.orderId)}</span></div>
+    <div class="dr-prog"><div class="lorry-progress"><span style="width:${pct}%"></span></div>
+      <div class="dr-prog-t"><b>${doneN} of ${stops.length}</b> done${(nOk||nNot||nRet) ? ` · <span class="ok">${nOk} delivered</span>${nNot?` · <span class="warn">${nNot} not at home</span>`:''}${nRet?` · <span class="bad">${nRet} returned</span>`:''}` : ''}</div></div>
+    <div class="dr-line">${stops.map(s => `<div class="dr-stop ${dot[s.status]||''}">
+      <span class="dr-dot">${s.status==='delivered' ? '✓' : s.seq}</span>
+      <div class="dr-stop-main"><div class="dr-stop-name"><b>${esc(s.customer || '—')}</b><span class="hint">${esc(s.orderNumber || s.orderId)}</span></div>
         ${s.address ? `<div class="hint">${esc(s.address)}</div>` : ''}
         ${s.note ? `<div class="hint">“${esc(s.note)}”</div>` : ''}
         ${s.at ? `<div class="hint">${esc(fmtDateTime(s.at))}</div>` : ''}</div>
@@ -16143,6 +16276,7 @@ function attachLorryHandlers(){
       render();
     });
     if($('btn-run-clear')) $('btn-run-clear').onclick = () => { draft.orderIds = []; render(); };
+    document.querySelectorAll('[data-run-tab]').forEach(b => b.onclick = () => { state._runTab = b.getAttribute('data-run-tab'); render(); });
     if($('btn-run-create')) $('btn-run-create').onclick = lorryCreateRun;
     document.querySelectorAll('[data-run-cancel]').forEach(b => b.onclick = () => {
       const id = b.getAttribute('data-run-cancel');
@@ -17213,12 +17347,8 @@ function dashOrdersChartHtml(ov, dashPeriod, periods){
   </div>`;
 }
 // Readout for any point: hover (mouse), touch / drag (phone), or the arrow keys. Bound on every render (the chart is rebuilt each time).
-function attachDashOrdersChart(){
-  const root = document.getElementById('dash-orders-chart'); if(!root) return;
-  const canvas = root.querySelector('.oc-canvas'); const tip = root.querySelector('.oc-tip'); const guide = root.querySelector('.oc-guide');
-  let pts = []; try{ pts = JSON.parse(canvas.dataset.ocPts||'[]'); }catch(e){}
-  const top = parseFloat(canvas.dataset.ocTop)||1; const n = pts.length; if(!n) return;
-  // Picked up is green; when the workspace colour itself is green the two series would look alike, so Picked up turns orange then.
+// Picked up / Finished is green; when the workspace colour itself is green the two series would look alike, so it turns orange then.
+function ocApplyPickColor(root){
   try{
     const hex = (getComputedStyle(root).getPropertyValue('--accent-dark')||'').trim();
     if(/^#[0-9a-f]{6}$/i.test(hex)){
@@ -17227,6 +17357,160 @@ function attachDashOrdersChart(){
       if(d>0.08){ h = mx===r ? ((g-bl)/d)%6 : mx===g ? (bl-r)/d+2 : (r-g)/d+4; h = (h*60+360)%360; if(h>=80 && h<=190) root.style.setProperty('--oc-pick','#E8871E'); }
     }
   }catch(e){}
+}
+/* ===================== Dashboard: Blending Department panel (owner, 2026-11-25: "in dashboard, need to add not only packing details add to blending department charts also") =====================
+   Under the Orders overview: tiles (running now / on the board / finished and started in the chosen period / waiting 24 h or more), a Started-vs-Finished bar chart per day (per week for 90D, the same 7D / 30D / 90D toggle),
+   where the board batches are by stage, and the three machines. Data: the Mixing and Filling board (`blendBatches`), the archive once loaded (deferred key, fetched here once per visit for roles that may open the Archive),
+   and the running slots (`runningBatches()`). Only shown to a role that has a Blending page. Nothing is stored. */
+/* ===================== Smooth pie (donut) chart (owner, 2026-11-25: "give me pie charts smooth") =====================
+   ONE component for the Dashboard pies: rounded, gapped slices that draw themselves in one after another, a centre that shows the total and switches to the slice you point at (hover / touch / keyboard focus),
+   and a legend with the same hover link. `items` = [{label, value, color}]; a zero slice has no arc but keeps its legend row. Final sizes are in the markup (so it still looks right with no script / reduced motion);
+   `animateSmoothPies()` replays the draw-in on a fresh Dashboard visit and `attachSmoothPies()` binds the hover after every render. */
+const SP_R = 54, SP_C = 2*Math.PI*SP_R, SP_W = 15;
+function smoothPieHtml(id, items, o){
+  o = o || {};
+  const live = items.filter(x=>x.value>0), total = live.reduce((n,x)=>n+x.value,0);
+  const gap = live.length>1 ? 4 : 0, cap = o.caption || '';
+  let acc = 0;
+  const segs = live.map(x=>{
+    const len = x.value/total*SP_C, single = live.length===1;
+    const vis = single ? SP_C : Math.max(0.01, len-gap-SP_W);
+    const seg = {...x, vis, off: single ? 0 : acc+gap/2+SP_W/2, pct: Math.round(x.value/total*100)};
+    acc += len; return seg;
+  });
+  const data = segs.map(g=>({l:g.label, v:g.value, p:g.pct}));
+  let li = -1;
+  return `
+  <div class="sp" id="${escAttr(id)}" data-total="${o.center!=null?escAttr(o.center):total}" data-cap="${escAttr(cap)}" data-items="${escAttr(JSON.stringify(data))}">
+    <div class="sp-ring">
+      <svg viewBox="0 0 150 150" role="img" aria-label="${escAttr((o.title||'Chart')+': '+(live.length?live.map(g=>g.label+' '+g.value).join(', '):'nothing yet'))}">
+        <g style="transform:rotate(-90deg);transform-origin:75px 75px;">
+          <circle class="sp-track" cx="75" cy="75" r="${SP_R}" fill="none" stroke-width="${SP_W}"/>
+          ${segs.map((g,i)=>`<circle class="sp-seg" data-i="${i}" tabindex="0" cx="75" cy="75" r="${SP_R}" fill="none" stroke-width="${SP_W}" stroke-linecap="${segs.length===1?'butt':'round'}" style="stroke:${g.color}" stroke-dasharray="${g.vis.toFixed(2)} ${(SP_C-g.vis).toFixed(2)}" stroke-dashoffset="${(-g.off).toFixed(2)}"><title>${esc(g.label)}: ${g.value} (${g.pct}%)</title></circle>`).join('')}
+        </g>
+      </svg>
+      <div class="sp-center"><b class="sp-big">${o.center!=null?esc(o.center):total}</b><span class="sp-cap">${esc(cap)}</span></div>
+    </div>
+    <div class="sp-legend">${items.map(x=>{ const has = x.value>0; if(has) li++; return `<div class="sp-row${has?'':' z'}"${has?` data-i="${li}"`:''}><i style="background:${x.color}"></i><span class="sp-l">${esc(x.label)}</span><b>${x.value}</b>${has&&live.length>1?`<small>${Math.round(x.value/total*100)}%</small>`:''}</div>`; }).join('')}</div>
+  </div>`;
+}
+function animateSmoothPies(){
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  document.querySelectorAll('.sp').forEach(sp=>{
+    sp.querySelectorAll('.sp-seg').forEach((c,i)=>{
+      const fin = c.getAttribute('stroke-dasharray');
+      c.style.transition = 'none'; c.setAttribute('stroke-dasharray', `0.01 ${SP_C.toFixed(2)}`); c.getBoundingClientRect();
+      c.style.transition = `stroke-dasharray 1s cubic-bezier(.22,1,.36,1) ${i*90}ms, stroke-width .25s ease, opacity .25s ease, filter .25s ease`;
+      requestAnimationFrame(()=>{ c.setAttribute('stroke-dasharray', fin); });
+    });
+    const big = sp.querySelector('.sp-big'), t = parseInt(sp.dataset.total,10);
+    if(big && !isNaN(t) && String(t)===String(sp.dataset.total)){
+      big.textContent = '0'; const t0 = performance.now(), dur = 900;
+      const tick = now=>{ const k = Math.min(1,(now-t0)/dur); big.textContent = Math.round(t*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(tick); else big.textContent = t; };
+      requestAnimationFrame(tick);
+    }
+  });
+}
+function attachSmoothPies(){
+  document.querySelectorAll('.sp').forEach(sp=>{
+    let items = []; try{ items = JSON.parse(sp.dataset.items||'[]'); }catch(e){}
+    const big = sp.querySelector('.sp-big'), cap = sp.querySelector('.sp-cap'), total = sp.dataset.total, capText = sp.dataset.cap||'';
+    const set = i=>{
+      sp.classList.toggle('hovering', i!=null);
+      sp.querySelectorAll('[data-i]').forEach(el=>el.classList.toggle('on', i!=null && el.dataset.i===String(i)));
+      if(!big || !cap) return;
+      if(i!=null && items[i]){ big.textContent = items[i].v; cap.textContent = items[i].l+(items.length>1?' · '+items[i].p+'%':''); }
+      else { big.textContent = total; cap.textContent = capText; }
+    };
+    sp.addEventListener('pointerover', e=>{ const el = e.target.closest && e.target.closest('[data-i]'); if(el && sp.contains(el)) set(Number(el.dataset.i)); });
+    sp.addEventListener('pointerleave', ()=>set(null));
+    sp.addEventListener('focusin', e=>{ const el = e.target.closest && e.target.closest('[data-i]'); if(el) set(Number(el.dataset.i)); });
+    sp.addEventListener('focusout', ()=>set(null));
+  });
+}
+function dashShowBlending(){
+  return !!state.session && Array.isArray(state.blendBatches) && (isAdmin() || pageAllowed('blending') || pageAllowed('recipes') || pageAllowed('blendingdept'));
+}
+// when a batch reached the LAST stage (the dispatch time); null when it has not
+function blendFinishedAt(b){
+  const list = blendStageList(), last = list[list.length-1].key;
+  const h = (Array.isArray(b.history)?b.history:[]).filter(Boolean);
+  for(let i=h.length-1;i>=0;i--){ if(!h[i].restored && (h[i].stageKey || BLEND_STAGE_KEYS[h[i].stage])===last && h[i].at) return h[i].at; }
+  return (blendIsFinal(b) && b.completedAt) ? b.completedAt : null;
+}
+function blendStartedAt(b){ return b.startedAt || ((Array.isArray(b.history)&&b.history[0]&&b.history[0].at) || b.createdAt); }
+function dashBlendSeries(days){
+  const dayMs = 86400000, today0 = new Date(); today0.setHours(0,0,0,0);
+  const size = days>60 ? 7 : 1, n = Math.ceil(days/size), start = new Date(today0.getTime()-(n*size-1)*dayMs);
+  const buckets = []; for(let i=0;i<n;i++) buckets.push({date:new Date(start.getTime()+i*size*dayMs), s:0, f:0});
+  const seen = new Set(); let started = 0, finished = 0, kg = 0; const byMachine = {};
+  [...(state.blendBatches||[]), ...blendArchiveList()].forEach(b=>{
+    if(!b || seen.has(b.id)) return; seen.add(b.id);
+    const idx = iso=>{ const t = new Date(iso).getTime(); return isNaN(t) ? -1 : Math.floor((t-start.getTime())/(dayMs*size)); };
+    const si = idx(blendStartedAt(b)); if(si>=0 && si<n){ buckets[si].s++; started++; }
+    const fa = blendFinishedAt(b); if(fa){ const fi = idx(fa); if(fi>=0 && fi<n){ buckets[fi].f++; finished++; kg += Number(b.batchSizeKg)||0; const mk = b.machine||''; byMachine[mk] = (byMachine[mk]||0)+1; } }
+  });
+  return {buckets, size, started, finished, kg, byMachine};
+}
+function dashBlendingHtml(dashPeriod, periods){
+  const days = periods[dashPeriod], ser = dashBlendSeries(days), list = blendStageList(), weekly = ser.size>1;
+  const board = state.blendBatches||[], open = board.filter(b=>!blendIsFinal(b)), running = runningBatches();
+  const waiting = open.filter(b=>{ const t = new Date(blendStageSince(b)).getTime(); return !isNaN(t) && Date.now()-t >= 24*3600e3; }).length;
+  const maxV = Math.max(2, Math.ceil(Math.max(0, ...ser.buckets.map(b=>Math.max(b.s,b.f)))/2)*2);   // an even top, so the middle label is a whole number
+  const n = ser.buckets.length, every = n<=7 ? 1 : (n<=14 ? 2 : 5);
+  const fmtDay = d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  const lbl = b=>weekly ? fmtDay(b.date) : (n<=7 ? b.date.toLocaleDateString(undefined,{weekday:'short'}) : fmtDay(b.date));
+  const loadingHist = canViewBlendArchive() && !state._deferredLoaded.blendArchive;
+  const counts = list.map(st=>board.filter(b=>blendStageKeyOf(b, list)===st.key).length), maxC = Math.max(1, ...counts);
+  const tile = (label, v, sub, cls)=>`<div class="bd-tile ${cls||''}"><span>${label}</span><b>${v}</b>${sub?`<small>${sub}</small>`:''}</div>`;
+  return `
+  <div class="bd-panel" id="dash-blend">
+    <div class="oc-head">
+      <div>
+        <div class="oc-title"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v6l-5.2 8.4A2.6 2.6 0 0 0 7.03 20.5h9.94a2.6 2.6 0 0 0 2.23-3.9L14 8V2"/><path d="M8.5 2h7"/><path d="M6.5 15h11"/></svg>Blending Department</div>
+        <div class="oc-sub">Batches started and finished${weekly?', per week':', per day'}</div>
+      </div>
+      <div class="dash-period-toggle">${Object.keys(periods).map(k=>`<button type="button" class="dash-period-btn ${k===dashPeriod?'active':''}" data-dash-period="${k}">${k.toUpperCase()}</button>`).join('')}</div>
+    </div>
+    <div class="bd-tiles">
+      ${tile('Running now', running.length, running.length ? running.map(x=>x.b.machine||'').filter(Boolean).join(' · ') : 'nothing on the Production Guide')}
+      ${tile('On the board', open.length, 'not yet dispatched')}
+      ${tile('Finished', ser.finished, `in the last ${days} days${ser.kg>0?` · ${fmtQty(Math.round(ser.kg*10)/10)} kg`:''}${loadingHist?' · loading history…':''}`, 'ok')}
+      ${tile('Started', ser.started, `in the last ${days} days`)}
+      ${tile('Waiting 24 h or more', waiting, 'in the same stage', waiting?'warn':'')}
+    </div>
+    <div class="bd-cols">
+      <div class="bd-chart-card">
+        <div class="bd-legend"><span><i class="s"></i>Started</span><span><i class="f"></i>Finished</span></div>
+        <div class="bd-chart" role="img" aria-label="Batches started and finished">
+          <div class="bd-y"><span>${maxV}</span><span>${Math.round(maxV/2)}</span><span>0</span></div>
+          <div class="bd-bars" style="--n:${n}">${ser.buckets.map((b,i)=>`
+            <div class="bd-col" title="${esc(weekly?'Week of '+fmtDay(b.date):b.date.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'}))}: ${b.s} started, ${b.f} finished">
+              <div class="bd-pair"><i class="s" style="height:${b.s?Math.max(4,b.s/maxV*100):0}%"></i><i class="f" style="height:${b.f?Math.max(4,b.f/maxV*100):0}%"></i></div>
+              <small>${(i%every===0 || i===n-1) ? esc(lbl(b)) : ''}</small>
+            </div>`).join('')}</div>
+        </div>
+        ${ser.started===0 && ser.finished===0 ? `<div class="bd-empty">No batches started or finished in this period yet</div>` : ''}
+        <div class="bd-h" style="margin-top:18px">Machines</div>
+        <div class="bd-machines">${BATCH_MACHINES.map(m=>{ const r = running.find(x=>(x.b.machine||'')===m.id); const since = r && r.b.startedAt ? oqAgo(r.b.startedAt) : '';
+          return `<div class="bd-m ${r?'on':''}"><span class="bd-mn"><i style="background:${m.color}"></i>${esc(m.id)}</span><span class="bd-ms">${r ? esc(stripTags(String(r.b.recipeName||r.b.product||'Batch')).replace(/\s*[—–-]\s*version\s*\d+.*$/i,''))+(since?' · '+since:'') : 'Free'}</span></div>`; }).join('')}</div>
+      </div>
+      <div class="bd-side">
+        <div class="bd-h">Where the board batches are</div>
+        ${smoothPieHtml('pie-blend-stage', list.map((st,i)=>({label:st.label, value:counts[i], color:blendStageStyle(st,i).c})), {caption:'on the board', title:'Board batches by stage'})}
+        <div class="bd-h" style="margin-top:18px">Finished by machine <span class="hint">last ${days} days</span></div>
+        ${smoothPieHtml('pie-blend-machine', [...BATCH_MACHINES.map(m=>({label:m.id, value:ser.byMachine[m.id]||0, color:m.color})), {label:'No machine', value:ser.byMachine['']||0, color:'#9AA5BF'}], {caption:'finished', title:'Finished batches by machine'})}
+      </div>
+    </div>
+  </div>`;
+}
+function attachDashBlendPanel(){ const el = document.getElementById('dash-blend'); if(el) ocApplyPickColor(el); }
+function attachDashOrdersChart(){
+  const root = document.getElementById('dash-orders-chart'); if(!root) return;
+  const canvas = root.querySelector('.oc-canvas'); const tip = root.querySelector('.oc-tip'); const guide = root.querySelector('.oc-guide');
+  let pts = []; try{ pts = JSON.parse(canvas.dataset.ocPts||'[]'); }catch(e){}
+  const top = parseFloat(canvas.dataset.ocTop)||1; const n = pts.length; if(!n) return;
+  ocApplyPickColor(root);
   const bars = canvas.dataset.ocType==='bars', sh = canvas.dataset.ocShow||'r';
   const hasR = sh.includes('r'), hasD = sh.includes('d'), hasP = sh.includes('p');
   let active = -1;
@@ -17322,6 +17606,8 @@ function renderDashboard(){
   });
 
   const an = computeDashboardAnalytics();
+  // the Blending panel counts finished batches that have already moved to the archive: fetch it once per visit (a no-op when it is loaded or this role may not read it)
+  if(dashShowBlending() && canViewBlendArchive() && !state._deferredLoaded.blendArchive) setTimeout(()=>{ ensureBlendArchiveLoaded(); }, 0);
 
   // "Orders Overview" line chart: period comes from state._dashPeriod (set by the 7D/30D/90D
   // pills below, click handler in attachShellHandlers), defaulting to 7D on first visit.
@@ -17421,6 +17707,13 @@ function renderDashboard(){
     </div>
   </div>`}
 
+  ${(dashSectionsCfg.blending===false || !dashShowBlending()) ? '' : `
+  <div class="panel dg-span2" style="margin-top:16px;">
+    <div class="panel-body">
+      ${dashBlendingHtml(dashPeriod, DASH_PERIODS)}
+    </div>
+  </div>`}
+
   ${dashSectionsCfg.monthCompare===false ? '' : `
   <div class="panel dg-span2" style="margin-top:16px;">
     <div class="panel-body">
@@ -17449,19 +17742,7 @@ function renderDashboard(){
         <div class="dash-month-divider"></div>
         <div class="dash-month-group">
           <div class="analytics-card-title" style="margin-bottom:10px;">This Month by Priority</div>
-          <div class="dash-donut-wrap">
-            <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
-              <svg viewBox="0 0 96 96" width="96" height="96">
-                <circle cx="48" cy="48" r="42" fill="none" stroke="var(--border)" stroke-width="12"/>
-                ${prioritySegs.map(seg=>`<circle class="dash-month-arc" cx="48" cy="48" r="42" fill="none" stroke-width="12" stroke-linecap="butt" style="stroke:${seg.color};"
-                  data-final-dasharray="${seg.len.toFixed(2)} ${(donutCirc-seg.len).toFixed(2)}" stroke-dasharray="${seg.len.toFixed(2)} ${(donutCirc-seg.len).toFixed(2)}" stroke-dashoffset="${(-seg.start).toFixed(2)}" transform="rotate(-90 48 48)"/>`).join('')}
-              </svg>
-              <div class="dash-donut-num" id="dash-priority-total" data-target="${an.thisMonthCount}">${an.thisMonthCount}</div>
-            </div>
-            <div class="dash-donut-legend">
-              ${prioritySegs.map(seg=>`<div class="dash-donut-legend-item"><span class="dash-donut-dot" style="background:${seg.color};"></span>${seg.key}<span class="dash-donut-legend-val" id="dash-priority-val-${seg.key.toLowerCase()}" data-target="${seg.count}">${seg.count}</span></div>`).join('')}
-            </div>
-          </div>
+          ${smoothPieHtml('pie-priority', prioritySegs.map(g=>({label:g.key, value:g.count, color:g.color})), {caption:'completed this month', title:'This month by priority'})}
         </div>
       </div>
     </div>
@@ -17499,29 +17780,8 @@ function renderDashboard(){
 
   <div class="panel" style="margin-top:20px;">
     <div class="panel-head"><h3>Pipeline overview</h3>${openComplaints>0?`<a href="#complaints" data-nav="complaints" class="analytics-badge down" style="text-decoration:none;">${openComplaints} open complaint${openComplaints===1?'':'s'}</a>`:''}</div>
-    <div class="panel-body" style="display:flex;align-items:center;gap:30px;flex-wrap:wrap;">
-      <div id="pipeline-donut" style="position:relative;width:150px;height:150px;flex-shrink:0;">
-        <svg viewBox="0 0 150 150" width="150" height="150" style="overflow:visible;">
-          <g style="transform:rotate(-90deg);transform-origin:75px 75px;">
-            ${total===0 ? `<circle cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" style="stroke:var(--border);" stroke-dasharray="${DONUT_CIRC} 0"/>` :
-              donutSegs.map(seg=>`<circle class="pipeline-seg" cx="75" cy="75" r="${DONUT_R}" fill="none" stroke-width="22" stroke-linecap="butt" style="stroke:${seg.color};" stroke-dasharray="${seg.len.toFixed(2)} ${(DONUT_CIRC-seg.len).toFixed(2)}" stroke-dashoffset="${(-seg.start).toFixed(2)}"/>`).join('')}
-          </g>
-        </svg>
-        <div style="position:absolute;top:22px;left:22px;width:106px;height:106px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;"><span id="pipeline-total-num" class="stat-num" data-target="${total}">${total}</span></div>
-          <div class="hint" style="font-size:10.5px;">in motion</div>
-        </div>
-      </div>
-      <div style="flex:1;min-width:220px;">
-        ${STAGES.map((s,i)=>{
-          const style = STAGE_STYLE[STAGE_KEYS[i]];
-          return `<div style="display:flex;align-items:center;gap:9px;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border);">
-            <span style="width:9px;height:9px;border-radius:50%;background:${style.c};flex-shrink:0;"></span>
-            ${esc(s)}
-            <span style="margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;">${counts[i]}</span>
-          </div>`;
-        }).join('')}
-      </div>
+    <div class="panel-body">
+      ${smoothPieHtml('pie-pipeline', STAGES.map((st,i)=>({label:st, value:counts[i], color:STAGE_STYLE[STAGE_KEYS[i]].c})), {caption:'in motion', title:'Orders by stage'})}
     </div>
   </div>
 
@@ -30826,7 +31086,7 @@ function attachShellHandlers(){
   // while Settings > Mobile appearance is the open panel (desktop, where the preview column
   // exists at all -- see the @media(max-width:1100px) rule hiding it below that width).
   if(byIdEl('mobile-ui-preview-frame')) refreshMobileUiPreview();
-  attachDashOrdersChart();
+  attachDashOrdersChart(); attachDashBlendPanel(); attachSmoothPies();
   attachColorSheetHandlers();
 
   if(byIdEl('form-customer')) byIdEl('form-customer').addEventListener('submit', submitCustomer);

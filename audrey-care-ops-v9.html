@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125073000">
+<meta name="app-build" content="20261125093000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -4421,6 +4421,19 @@ function snapshotAuthBaseline(){ _syncBaseline.auth = JSON.parse(JSON.stringify(
 function isMergeableRecordArray(arr){
   return Array.isArray(arr) && arr.length>0 && arr.every(r=>r && typeof r==='object' && 'id' in r);
 }
+// FIELD-LEVEL merge of one record that BOTH sides changed (owner report, 2026-11-25: "I edited an order, updated a note and saved but it didn't save"). The merge used to keep ONE whole copy:
+// when this tab had changed the record at all, its whole copy replaced the server's, so a stale tab that only changed `archived` / `stage` (a sweep, a stage move, an auto-SMS flag) wrote its OLD
+// `notes` back over a note someone had just saved, and the other way round. Now every field is decided on its own, against what this tab last knew (the baseline): a field THIS tab changed takes this
+// tab's value, every other field keeps the server's (newer) value, a field this tab removed is removed. Two people changing the SAME field still ends with this tab's value, as before.
+function mergeRecordFields(serverRec, localRec, baseRec){
+  if(!baseRec || typeof baseRec!=='object' || !serverRec || typeof serverRec!=='object') return localRec;
+  const out = {...serverRec};
+  Object.keys(localRec).forEach(k=>{
+    if(JSON.stringify(localRec[k]) !== JSON.stringify(baseRec[k])) out[k] = localRec[k];
+  });
+  Object.keys(baseRec).forEach(k=>{ if(!(k in localRec)) delete out[k]; });
+  return out;
+}
 // Shared by mergeBeforeSave (local-vs-freshly-fetched-server) and the realtime handler
 // (local-vs-incoming-broadcast) — same diff-and-merge rule either way: a server/incoming record
 // wins unless this tab has a genuinely different local copy (vs our last-known-synced baseline),
@@ -4447,7 +4460,7 @@ function reconcileRecordArray(key, serverArr){
       return;
     }
     const localChanged = JSON.stringify(localRec) !== JSON.stringify(baseRec);
-    merged.push(localChanged ? localRec : serverRec);
+    merged.push(localChanged ? mergeRecordFields(serverRec, localRec, baseRec) : serverRec);
   });
   local.forEach(localRec=>{
     if(seen.has(localRec.id)) return;

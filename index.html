@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125104500">
+<meta name="app-build" content="20261125120000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -8591,9 +8591,10 @@ function daysAgo(iso){
 }
 function fmtDateTime(iso){
   const d = new Date(iso);
+  if(!iso || isNaN(d.getTime())) return '—';   // a record with no / broken time never prints "Invalid Date"
   return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
 }
-function fmtDate(iso){ return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+function fmtDate(iso){ const d = new Date(iso); if(!iso || isNaN(d.getTime())) return '—'; return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
 // Local-timezone YYYY-MM-DD for an ISO timestamp — matches what <input type="date"> produces and
 // what fmtDateTime()/fmtDate() actually display (both use toLocaleDateString, i.e. local time).
 // Needed anywhere a date is compared against a date-picker value: iso.slice(0,10) is the UTC
@@ -19303,7 +19304,7 @@ function renderSuppliersPage(){
         <tr class=\"${cEdit?'clickable':''}\" ${cEdit?`data-supplier-row=\"${s.id}\"`:''}>
           ${cDel?`<td onclick="event.stopPropagation()"><input type="checkbox" class="supplier-select-row" data-supplier-id="${s.id}" ${state.selectedSuppliers.has(s.id)?'checked':''}></td>`:''}
           <td>${esc(s.name)}</td><td>${esc(s.vendorId)||'—'}</td>
-          <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></td>
+          <td><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${esc(s.status||'Inactive')}</span></td>
           <td>${fmtDate(s.createdAt)}</td>
           ${cAct?`<td class="row-actions" onclick="event.stopPropagation()">
             ${cEdit?`<button class="btn btn-sm" data-edit-supplier="${s.id}">Edit</button>`:''}
@@ -19322,7 +19323,7 @@ function renderSuppliersPage(){
         </div>
         <div class="list-card-fields">
           <div class="list-card-field"><span class="list-card-label">Vendor ID</span><span>${esc(s.vendorId)||'—'}</span></div>
-          <div class="list-card-field"><span class="list-card-label">Status</span><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${s.status}</span></div>
+          <div class="list-card-field"><span class="list-card-label">Status</span><span class="pill ${s.status==='Active'?'pill-active':'pill-inactive'}">${esc(s.status||'Inactive')}</span></div>
           <div class="list-card-field"><span class="list-card-label">Added</span><span>${fmtDate(s.createdAt)}</span></div>
         </div>
         ${cAct?`<div class="list-card-actions" onclick="event.stopPropagation()">
@@ -25819,6 +25820,7 @@ function ensureQrLib(){
   return _qrLibPromise;
 }
 function qrSvgHtml(text){
+  if(typeof qrcode!=='function') return '<svg class="vs-qr" viewBox="0 0 1 1" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code"></svg>';   // the QR library is not loaded yet: an empty box instead of a crash that would blank the page
   const qr = qrcode(0, 'M'); qr.addData(text, 'Byte'); qr.make();
   const n = qr.getModuleCount(); let d = '';
   for(let r=0;r<n;r++){ let c = 0; while(c<n){ if(qr.isDark(r,c)){ const st = c; while(c<n && qr.isDark(r,c)) c++; d += `M${st} ${r}h${c-st}v1h-${c-st}z`; } else c++; } }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125213000">
+<meta name="app-build" content="20261125233000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -989,6 +989,8 @@ html{ visibility:hidden; }
     position:sticky;left:0;background:#fff;text-align:left;min-width:190px;max-width:190px;white-space:normal;z-index:1;font-weight:500;
   }
   table.checklist-grid th.checklist-task-col{background:var(--bg);z-index:2;}
+  table.checklist-grid th.ck-today{background:var(--accent);color:#fff;}
+  td.checklist-cell.ck-today{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent);}
   .checklist-cell{cursor:pointer;width:30px;height:26px;font-weight:700;font-size:11px;user-select:none;}
   .checklist-cell:hover{outline:2px solid var(--accent);outline-offset:-2px;}
   .checklist-signoff-input{width:70px;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;text-align:center;}
@@ -1074,6 +1076,9 @@ html{ visibility:hidden; }
   .landing-card:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.22);}
   .landing-card-selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset, 0 10px 24px rgba(var(--accent-rgb),.16);}
   /* the icon sits in a soft coloured tile; it does a small hop when the card is hovered (only with motion allowed) */
+  .landing-card-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .landing-card-txt small{font-size:12px;font-weight:600;color:var(--muted);}
+  .landing-card-txt small.warn{color:#B56F0C;} .landing-card-txt small.bad{color:#C23B33;} .landing-card-txt small.ok{color:#2E8B57;}
   .landing-card-icon{width:42px;height:42px;border-radius:12px;display:inline-grid;place-items:center;flex:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1);}
   .landing-card-icon i{width:22px !important;height:22px !important;}
   .landing-card-icon svg{width:22px;height:22px;}
@@ -1673,6 +1678,25 @@ html{ visibility:hidden; }
   .tm-search{display:flex;align-items:center;gap:8px;height:40px;min-width:230px;padding:0 13px;background:#fff;border:1.5px solid var(--border);border-radius:11px;color:var(--muted);transition:border-color .15s,box-shadow .15s;}
   .tm-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14);}
   .tm-search input{flex:1;min-width:0;border:none;outline:none;background:none;font:inherit;font-size:14px;color:var(--ink);}
+  .tm-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;}
+  .tm-chip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--border);background:#fff;border-radius:999px;padding:6px 13px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .tm-chip b{font-size:11.5px;background:var(--bg);border-radius:999px;padding:0 8px;color:var(--muted);}
+  .tm-chip:hover{border-color:var(--accent);}
+  .tm-chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark);} .tm-chip.on b{background:#fff;color:var(--accent-dark);}
+  .tm-viewseg{display:inline-flex;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;height:40px;}
+  .tm-viewseg button{border:0;background:none;padding:0 12px;cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;}
+  .tm-viewseg button.on{background:var(--accent-soft);color:var(--accent-dark);}
+  .tm-phone{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .tm-phone span{flex:1;min-width:0;overflow-wrap:anywhere;}
+  .tm-phone a{width:30px;height:30px;border-radius:50%;display:inline-grid;place-items:center;background:var(--accent-soft);color:var(--accent-dark);text-decoration:none;flex:none;}
+  .tm-phone a:hover{background:var(--accent);color:#fff;}
+  .tm-list .tm-grid{grid-template-columns:minmax(0,1fr);gap:8px;}
+  .tm-list .tm-card{flex-direction:row;align-items:center;gap:16px;padding:9px 14px;border-radius:12px;}
+  .tm-list .tm-who{flex:1 1 220px;}
+  .tm-list .tm-av img,.tm-list .tm-av > span{width:40px !important;height:40px !important;font-size:14px !important;}
+  .tm-list .tm-phone{flex:0 1 210px;}
+  .tm-list .tm-acts{grid-template-columns:repeat(3,auto);flex:none;}
+  @media (max-width:760px){ .tm-list .tm-card{flex-wrap:wrap;} .tm-list .tm-acts{width:100%;grid-template-columns:repeat(3,minmax(0,1fr));} .tm-viewseg{display:none;} }
   .tm-sec{margin-bottom:22px;}
   .tm-sec-h{display:flex;align-items:center;gap:9px;padding-bottom:9px;margin-bottom:12px;border-bottom:1px solid var(--border);}
   .tm-sec-h h3{margin:0;font-size:15px;font-weight:800;color:var(--ink);}
@@ -10994,13 +11018,15 @@ async function addStaffMember(e){
   const name = f.staffName.value.trim();
   const title = f.staffTitle.value.trim();
   const category = f.staffCategory.value;
+  const phone = (f.staffPhone ? f.staffPhone.value : '').trim();
   if(!name) return;
+  if(phone && !/^[0-9+\-\s()]{7,20}$/.test(phone)){ showToast('Enter a valid mobile number (digits, + - and spaces only)'); return; }
   const nameTaken = state.staff.find(s=>s.name.toLowerCase()===name.toLowerCase() && s.id!==editId);
   if(nameTaken){ showToast('Someone with that name is already on the roster'); return; }
   if(editId){
     const s = byId(state.staff, editId); if(!s) return;
     const oldName = s.name;
-    s.name = name; s.title = title; s.category = category;
+    s.name = name; s.title = title; s.category = category; s.phone = phone;
     const saves = [save('staff')];
     if(oldName!==name){
       // Renaming isn't just cosmetic — this name string is the live assignment pointer on
@@ -11020,7 +11046,7 @@ async function addStaffMember(e){
     logActivity(`Edited staff member ${oldName}${oldName!==name?` (renamed to ${name})`:''}`);
     showToast('Staff member updated');
   } else {
-    state.staff.push({id:uid('STF'), name, title, category});
+    state.staff.push({id:uid('STF'), name, title, category, phone});
     if(!(await save('staff'))) return;
     closeModal();
     logActivity(`Added staff member ${name}`);
@@ -14372,9 +14398,9 @@ const NAV = [
       {id:'orderinquiry', label:'Order inquiry'},
       {id:'complaints', label:'Complaints'},
       {id:'ongoingorders', label:'Ongoing orders'},
+      {id:'ratings', label:'Customer ratings'},   // owner, 2026-11-25: Customer ratings lives inside Customer Care (page id, permission and data unchanged)
     ]},
     {id:'customers', label:'Customers', icon:'customers'},
-    {id:'ratings', label:'Customer ratings', icon:'star'},
     {id:'bulksms', label:'Bulk SMS', icon:'send'},
   ]},
   {group:'Operations', items:[
@@ -16378,7 +16404,7 @@ function renderShell(freshPage){
         <span class="tagline">Operations</span>
       </div>
       <nav class="nav-group" aria-label="Main navigation">
-        ${navGroups.flatMap(g=>g.items).filter(it=>!(it.hideWhenHas && allowed.includes(it.hideWhenHas))).map((it,ni)=>{ const isOn = state.page===it.id || (it.id==='staff' && state.page==='attendance'); return `
+        ${navGroups.flatMap(g=>g.items).filter(it=>!(it.hideWhenHas && allowed.includes(it.hideWhenHas))).map((it,ni)=>{ const isOn = state.page===it.id || (it.id==='staff' && state.page==='attendance') || !!(it.children && it.children.some(c=>c.id===state.page)); return `
         <a href="#${it.id}" class="nav-item ${isOn?'active':''} ${(it.id==='chat' && state.chatUnread)?'nav-item-unread':''}" data-nav="${it.id}" style="--i:${ni}" ${isOn?'aria-current="page"':''}>
           <span class="nav-ico">${sidebarIcon(it)}</span><span class="nav-label">${esc(navLabel(it))}</span>
           ${(it.id==='chat' && state.chatUnread)?'<span class="nav-unread-dot"></span>':''}
@@ -18432,12 +18458,20 @@ function renderCard(o){
 }
 
 /* ===================== Customer Care landing ===================== */
+// "4.6 ★ · 38 ratings" under the Customer ratings card
+function ratingsCardSub(){
+  const rated = state.orders.filter(o=>o.customerRating);
+  if(!rated.length) return 'No ratings yet';
+  const avg = rated.reduce((n,o)=>n+o.customerRating,0)/rated.length;
+  return `${avg.toFixed(1)} ★ · ${rated.length} rating${rated.length===1?'':'s'}`;
+}
 function renderCustomerCarePage(){
   const openComplaints = state.complaints.filter(c=>c.status==='Open'||c.status==='In Progress').length;
   const cards = [
     {id:'orderinquiry', label:'Order inquiry', icon:'orders'},
     {id:'complaints', label:'Complaints', icon:'headset', badge: openComplaints || null},
     {id:'ongoingorders', label:'Ongoing orders', icon:'list'},
+    {id:'ratings', label:'Customer ratings', icon:'star', sub: ratingsCardSub()},
   ].filter(c=>pageAllowed(c.id));
   return `
   <div class="landing-section">
@@ -18448,7 +18482,7 @@ function renderCustomerCarePage(){
       <button type="button" class="landing-card" data-nav="${c.id}">
         ${c.badge ? `<span class="landing-card-badge">${c.badge}</span>` : ''}
         <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
-        <span>${esc(c.label)}</span>
+        ${c.sub ? `<span class="landing-card-txt"><span>${esc(c.label)}</span><small>${esc(c.sub)}</small></span>` : `<span>${esc(c.label)}</span>`}
       </button>`).join('')}
     </div>`}
   </div>
@@ -19834,6 +19868,32 @@ function renderWasteWaterPage(){
     <div class="panel-body"><div class="empty-state">The treatment plant information will be added here.</div></div>
   </div>`;
 }
+// One short status line under each GMP card (owner, 2026-11-25: "improve gmp checklists"): what needs attention today, without opening each section.
+function gmpHubStatus(id){
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
+  const inMonth = iso=>{ if(!iso) return false; const t = new Date(iso); return t.getFullYear()===y && t.getMonth()+1===m; };
+  const logs = ids=>ids.reduce((n,i)=>n+gmpLogEntriesFor(i).filter(e=>inMonth(e.at)).length, 0);
+  if(id==='cleaning'){
+    let total = 0, marked = 0, bad = 0;
+    GMP_CHECKLIST_DEFS.forEach(def=>{
+      const e = gmpChecklistEntryFor(def.id, y, m), cells = e ? e.cells : {};
+      def.tasks.filter(t=>t.freq==='Daily').forEach(t=>{ total++; const v = cells[t.code+'_'+d]; if(v){ marked++; if(v==='NOTOK'||v==='REDO') bad++; } });
+    });
+    if(!total) return null;
+    return bad ? {text:`Today ${marked} of ${total} marked · ${bad} need attention`, tone:'bad'} : {text:`Today ${marked} of ${total} daily tasks marked`, tone: marked===total ? 'ok' : (marked ? '' : 'warn')};
+  }
+  if(id==='inspections'){ const n = logs(GMP_INSPECTION_IDS.filter(i=>i!=='employeeHygiene')); return {text: n ? `${n} entr${n===1?'y':'ies'} this month` : 'Nothing logged this month', tone: n ? '' : 'warn'}; }
+  if(id==='maintenance'){
+    const list = state.gmpCalibrationInstruments||[], st = list.map(r=>calibrationDueStatus(r.nextCalibration));
+    const over = st.filter(x=>x==='overdue').length, soon = st.filter(x=>x==='soon').length;
+    if(over) return {text:`${over} calibration${over===1?'':'s'} overdue${soon?` · ${soon} due soon`:''}`, tone:'bad'};
+    if(soon) return {text:`${soon} calibration${soon===1?'':'s'} due within 30 days`, tone:'warn'};
+    return list.length ? {text:'All calibrations up to date', tone:'ok'} : null;
+  }
+  if(id==='pest'){ const e = gmpPestEntryFor(y, m), n = e ? Object.keys(e.cells||{}).length : 0; return {text: n ? `${n} check${n===1?'':'s'} logged this month` : 'Nothing logged this month', tone: n ? '' : 'warn'}; }
+  if(id==='feedback'){ const n = logs(GMP_FEEDBACK_IDS); return {text: n ? `${n} entr${n===1?'y':'ies'} this month` : 'Nothing logged this month', tone: ''}; }
+  return null;
+}
 function renderGmpHub(){
   const cards = [
     {id:'cleaning', label:'Cleaning', icon:'gmp'},
@@ -19846,11 +19906,11 @@ function renderGmpHub(){
   <div class="landing-section">
     <div class="landing-section-title">GMP &amp; Quality</div>
     <div class="landing-grid">
-      ${cards.map((c,i)=>`
+      ${cards.map((c,i)=>{ let st = null; try{ st = gmpHubStatus(c.id); }catch(e){} return `
       <button type="button" class="landing-card" data-gmp-section="${c.id}">
         <span class="landing-card-icon landing-card-icon-${landingCardColor(i)}">${cardDuotoneIcon(c.icon)}</span>
-        <span>${esc(c.label)}</span>
-      </button>`).join('')}
+        ${st ? `<span class="landing-card-txt"><span>${esc(c.label)}</span><small class="${st.tone||''}">${esc(st.text)}</small></span>` : `<span>${esc(c.label)}</span>`}
+      </button>`; }).join('')}
     </div>
   </div>`;
 }
@@ -20269,11 +20329,19 @@ function renderGmpChecklistsSection(){
   const cells = entry ? entry.cells : {};
   const extraRows = gmpChecklistExtraRows(def);
 
+  // the numbers that matter for a cleaning record: what is signed off today, how full the month is, and what was marked NOT OK / REDO
+  const isThisMonth = year===now.getFullYear() && month===now.getMonth()+1, todayDay = isThisMonth ? now.getDate() : 0;
+  const dailyTasks = def.tasks.filter(t=>t.freq==='Daily');
+  const upTo = isThisMonth ? todayDay : (new Date(year, month-1, 1) > now ? 0 : daysInMonth);
+  const filled = dailyTasks.reduce((n,t)=>{ for(let dd=1; dd<=upTo; dd++){ if(cells[t.code+'_'+dd]) n++; } return n; }, 0);
+  const expected = dailyTasks.length*upTo, fillPct = expected ? Math.round(filled/expected*100) : 0;
+  const attention = def.tasks.reduce((n,t)=>{ for(let dd=1; dd<=daysInMonth; dd++){ const v = cells[t.code+'_'+dd]; if(v==='NOTOK'||v==='REDO') n++; } return n; }, 0);
+  const todayMarked = isThisMonth ? dailyTasks.filter(t=>cells[t.code+'_'+todayDay]).length : 0;
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="label">Checklists</div><div class="value"><span class="stat-num" data-target="${defs.length}">${defs.length}</span></div></div>
-    <div class="stat-card"><div class="label">Tasks tracked</div><div class="value"><span class="stat-num" data-target="${def.tasks.length}">${def.tasks.length}</span></div></div>
-    <div class="stat-card"><div class="label">Viewing</div><div class="value" style="font-size:16px;">${MONTH_NAMES[month-1]} ${year}</div></div>
+    ${isThisMonth ? `<div class="stat-card"><div class="label">Marked today</div><div class="value ${todayMarked===dailyTasks.length?'accent':''}">${todayMarked} <span style="font-size:14px;font-weight:600;color:var(--muted);">of ${dailyTasks.length} daily tasks</span></div></div>` : ''}
+    <div class="stat-card"><div class="label">${MONTH_NAMES[month-1]} filled in</div><div class="value">${expected ? fillPct+'%' : '—'} <span style="font-size:14px;font-weight:600;color:var(--muted);">${expected ? `${filled} of ${expected} daily marks` : 'nothing due yet'}</span></div></div>
+    <div class="stat-card"><div class="label">Not OK / Redo</div><div class="value" style="${attention?'color:var(--danger);':''}">${attention} <span style="font-size:14px;font-weight:600;color:var(--muted);">${attention?'need attention':'all clear'}</span></div></div>
   </div>
   <div class="toolbar" style="flex-wrap:wrap;">
     <div class="tabs" style="flex-wrap:wrap;">
@@ -20285,6 +20353,7 @@ function renderGmpChecklistsSection(){
       <button type="button" class="btn btn-sm" id="btn-checklist-prev-month">‹ Prev</button>
       <div style="font-weight:600;font-size:13px;min-width:130px;text-align:center;">${MONTH_NAMES[month-1]} ${year}</div>
       <button type="button" class="btn btn-sm" id="btn-checklist-next-month">Next ›</button>
+      ${(isThisMonth && view!=='calendar') ? `<button type="button" class="btn btn-sm" id="btn-checklist-today" title="Scroll to today's column">Today</button>` : ''}
     </div>
   </div>
   <div class="panel" style="margin-bottom:14px;">
@@ -20303,7 +20372,7 @@ function renderGmpChecklistsSection(){
       <thead>
         <tr>
           <th class="checklist-task-col">Task</th>
-          ${days.map(d=>`<th>${d}</th>`).join('')}
+          ${days.map(d=>`<th class="${d===todayDay?'ck-today':''}">${d}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -20312,9 +20381,9 @@ function renderGmpChecklistsSection(){
           <td class="checklist-task-col">${esc(t.code)}. ${esc(t.label)} <span class="hint">(${esc(t.freq)})</span></td>
           ${days.map(d=>{
             const v = cells[t.code+'_'+d] || '';
-            const color = v ? GMP_CHECKLIST_STATUS_COLOR[v] : 'transparent';
+            const color = v ? GMP_CHECKLIST_STATUS_COLOR[v] : (d===todayDay ? 'rgba(var(--accent-rgb),.10)' : 'transparent');
             const textColor = v ? '#fff' : 'var(--ink)';
-            return `<td class="checklist-cell" style="background:${color};color:${textColor};" data-checklist-cell data-task="${t.code}" data-day="${d}">${v ? (v==='OK'?'OK':v==='NOTOK'?'X':'R') : ''}</td>`;
+            return `<td class="checklist-cell${d===todayDay?' ck-today':''}" style="background:${color};color:${textColor};" data-checklist-cell data-task="${t.code}" data-day="${d}">${v ? (v==='OK'?'OK':v==='NOTOK'?'X':'R') : ''}</td>`;
           }).join('')}
         </tr>`).join('')}
         ${extraRows.map(r=>{
@@ -20671,15 +20740,25 @@ const TM_ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none
 const TM_ICON_CAM = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 const TM_ICON_X = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 const TM_ICON_SEARCH = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+const TM_ICON_PHONE = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
+const TM_ICON_WA = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.5 7.3L3 20l1.3-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg>';
+// A Sri Lankan mobile written any usual way (0772227915, +94 77 222 7915 ...) as the number the phone dialler / WhatsApp wants.
+function tmPhoneLinks(phone){
+  const raw = String(phone||'').trim(), n = normPhone(raw);
+  if(n.length===9) return {tel:'+94'+n, wa:'94'+n};
+  const d = raw.replace(/\D/g,''); return d.length>=8 ? {tel:(raw.startsWith('+')?'+':'')+d, wa:d} : null;
+}
 function tmMemberCard(s){
   const canEdit = can('staff_edit'), canDel = can('staff_delete');
-  const key = (String(s.name||'')+' '+String(s.title||'')).toLowerCase();
+  const key = (String(s.name||'')+' '+String(s.title||'')+' '+String(s.phone||'')).toLowerCase();
+  const pl = s.phone ? tmPhoneLinks(s.phone) : null;
   return `
-  <article class="tm-card" data-tm-key="${escAttr(key)}">
+  <article class="tm-card" data-tm-key="${escAttr(key)}" data-tm-cat="${escAttr(s.category||'')}">
     <div class="tm-who">
       <div class="tm-av">${staffAvatarHtml(s.name, 56)}${(canEdit && s.photo) ? `<button type="button" class="tm-av-x" data-remove-staff-photo="${s.id}" title="Remove the photo" aria-label="Remove the photo">${TM_ICON_X}</button>` : ''}</div>
       <div class="tm-txt"><div class="tm-name">${esc(s.name)}</div><div class="tm-title">${s.title ? esc(s.title) : '<i>No title</i>'}</div></div>
     </div>
+    ${s.phone ? `<div class="tm-phone"><span>${esc(s.phone)}</span>${pl ? `<a href="tel:${escAttr(pl.tel)}" title="Call ${escAttr(s.name)}" aria-label="Call ${escAttr(s.name)}">${TM_ICON_PHONE}</a><a href="https://wa.me/${escAttr(pl.wa)}" target="_blank" rel="noopener" title="WhatsApp ${escAttr(s.name)}" aria-label="WhatsApp ${escAttr(s.name)}">${TM_ICON_WA}</a>` : ''}</div>` : ''}
     ${(canEdit || canDel) ? `<div class="tm-acts">
       ${canEdit ? `<button type="button" class="tm-btn" data-edit-staff="${s.id}">${TM_ICON_EDIT}<span>Edit</span></button>
       <label class="tm-btn" title="${s.photo?'Change the photo':'Add a photo'}">${TM_ICON_CAM}<span>Photo</span>
@@ -20692,9 +20771,12 @@ function tmMemberCard(s){
 function renderStaffTeamPage(){
   const cats = (state.staffCategories && state.staffCategories.length) ? state.staffCategories : DEFAULT_STAFF_CATEGORIES;
   const uncategorized = state.staff.filter(s=>!cats.find(c=>c.key===s.category));
-  const groups = [...cats.map(c=>({key:c.key, label:c.label, members:state.staff.filter(s=>s.category===c.key)})),
-    ...(uncategorized.length ? [{key:'', label:'Uncategorized', members:uncategorized}] : [])];
+  const byName = (a,b)=>String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'});
+  const groups = [...cats.map(c=>({key:c.key, label:c.label, members:state.staff.filter(s=>s.category===c.key).sort(byName)})),
+    ...(uncategorized.length ? [{key:'', label:'Uncategorized', members:uncategorized.slice().sort(byName)}] : [])];
+  const view = tmView(), curCat = state._tmCat || '';
   const withPhoto = state.staff.filter(s=>s.photo).length;
+  const chip = (k,l,n)=>`<button type="button" class="tm-chip${curCat===k?' on':''}" data-tm-cat-chip="${escAttr(k)}">${esc(l)}<b>${n}</b></button>`;
   return `
   <div class="tm-top">
     <div class="tm-stats">
@@ -20704,12 +20786,14 @@ function renderStaffTeamPage(){
     </div>
     <div class="tm-tools">
       <label class="tm-search">${TM_ICON_SEARCH}<input type="search" id="tm-search" placeholder="Search by name or title" value="${escAttr(state._tmQuery||'')}" autocomplete="off" aria-label="Search the team"></label>
+      <div class="tm-viewseg" role="group" aria-label="Layout"><button type="button" data-tm-view="cards" class="${view==='cards'?'on':''}" title="Cards" aria-label="Cards"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button><button type="button" data-tm-view="list" class="${view==='list'?'on':''}" title="List" aria-label="List"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button></div>
       ${can('staff_categories') ? `<button type="button" class="btn" id="btn-manage-staff-categories">⚙ Manage categories</button>` : ''}
       ${can('staff_add') ? `<button class="btn btn-primary" id="btn-new-staff">+ Add staff</button>` : ''}
     </div>
   </div>
+  ${groups.filter(g=>g.members.length).length>1 ? `<div class="tm-chips" role="group" aria-label="Filter by category">${chip('', 'Everyone', state.staff.length)}${groups.filter(g=>g.members.length).map(g=>chip(g.key||'__none', g.label, g.members.length)).join('')}</div>` : ''}
   ${state.staff.length===0 ? `<div class="panel"><div class="empty-state">No staff added yet.</div></div>` : `
-  <div id="tm-body">
+  <div id="tm-body" class="${view==='list'?'tm-list':''}">
   ${groups.map(g=>`
     <section class="tm-sec" data-tm-sec>
       <div class="tm-sec-h"><h3>${esc(g.label)}</h3><span class="tm-count">${g.members.length}</span></div>
@@ -20720,18 +20804,25 @@ function renderStaffTeamPage(){
   `;
 }
 // Search by name / title: hides the cards that do not match and the categories left empty by it (no redraw).
+// the layout choice (cards / list) is per device
+function tmView(){ if(!state._tmView){ let v = ''; try{ v = localStorage.getItem('audrey_tm_view')||''; }catch(e){} state._tmView = v==='list' ? 'list' : 'cards'; } return state._tmView; }
 function tmApplySearch(){
   const inp = document.getElementById('tm-search'); if(!inp) return;
   const q = inp.value.trim().toLowerCase(); state._tmQuery = inp.value;
+  const cat = state._tmCat || '';   // '' = everyone, '__none' = people without a category
   let shown = 0;
   document.querySelectorAll('#tm-body [data-tm-sec]').forEach(sec=>{
     const cards = [...sec.querySelectorAll('.tm-card')];
     let any = 0;
-    cards.forEach(c=>{ const ok = !q || c.dataset.tmKey.includes(q); c.style.display = ok ? '' : 'none'; if(ok) any++; });
+    cards.forEach(c=>{
+      const inCat = !cat || (cat==='__none' ? !c.dataset.tmCat : c.dataset.tmCat===cat);
+      const ok = inCat && (!q || c.dataset.tmKey.includes(q)); c.style.display = ok ? '' : 'none'; if(ok) any++;
+    });
     shown += any;
-    sec.style.display = (q && cards.length && !any) || (q && !cards.length) ? 'none' : '';
+    const filtering = !!q || !!cat;
+    sec.style.display = (filtering && !any) ? 'none' : '';
   });
-  const nm = document.getElementById('tm-nomatch'); if(nm) nm.style.display = (q && !shown) ? '' : 'none';
+  const nm = document.getElementById('tm-nomatch'); if(nm) nm.style.display = ((q || cat) && !shown) ? '' : 'none';
 }
 
 /* ===================== Settings ===================== */
@@ -28232,6 +28323,7 @@ function staffFormModal(id){
       <form id="form-add-staff" data-edit-id="${s?s.id:''}">
         <div class="field"><label>Name</label><input name="staffName" required autocomplete="off" value="${s?escAttr(s.name):''}"></div>
         <div class="field"><label>Title <span class="hint">(optional)</span></label><input name="staffTitle" placeholder="e.g. Production Executive" autocomplete="off" value="${s?escAttr(s.title||''):''}"></div>
+        <div class="field"><label>Mobile number <span class="hint">(optional, shows Call and WhatsApp buttons on the card)</span></label><input name="staffPhone" type="tel" inputmode="tel" placeholder="e.g. 077 222 7915" autocomplete="off" value="${s?escAttr(s.phone||''):''}"></div>
         <div class="field"><label>Category</label>
           <select name="staffCategory">${cats.map(c=>`<option value="${escAttr(c.key)}" ${s&&s.category===c.key?'selected':''}>${esc(c.label)}</option>`).join('')}</select>
         </div>
@@ -29761,6 +29853,10 @@ function attachShellHandlers(){
     if(period && /^\d{4}-\d{1,2}$/.test(period)) return period.split('-').map(Number);
     return [now.getFullYear(), now.getMonth()+1];
   }
+  if(byIdEl('btn-checklist-today')) byIdEl('btn-checklist-today').onclick = ()=>{
+    const sc = document.querySelector('.checklist-scroll'), th = document.querySelector('th.ck-today'); if(!sc || !th) return;
+    sc.scrollTo({left: Math.max(0, sc.scrollLeft + th.getBoundingClientRect().left - sc.getBoundingClientRect().left - sc.clientWidth/2), behavior:'smooth'});
+  };
   if(byIdEl('btn-checklist-prev-month')) byIdEl('btn-checklist-prev-month').onclick = ()=>{
     let [y,m] = currentChecklistPeriod(); m -= 1; if(m<1){ m=12; y-=1; }
     state.filters.gmpChecklistPeriod = y+'-'+m; render();
@@ -29920,6 +30016,15 @@ function attachShellHandlers(){
   }));
   document.querySelectorAll('[data-remove-staff-photo]').forEach(b=>b.addEventListener('click', ()=>removeStaffPhoto(b.dataset.removeStaffPhoto)));
   if(byIdEl('tm-search')){ byIdEl('tm-search').addEventListener('input', tmApplySearch); tmApplySearch(); }
+  document.querySelectorAll('[data-tm-cat-chip]').forEach(b=>b.addEventListener('click', ()=>{
+    state._tmCat = b.dataset.tmCatChip || '';
+    document.querySelectorAll('[data-tm-cat-chip]').forEach(x=>x.classList.toggle('on', x===b)); tmApplySearch();
+  }));
+  document.querySelectorAll('[data-tm-view]').forEach(b=>b.addEventListener('click', ()=>{
+    state._tmView = b.dataset.tmView==='list' ? 'list' : 'cards'; try{ localStorage.setItem('audrey_tm_view', state._tmView); }catch(e){}
+    document.querySelectorAll('[data-tm-view]').forEach(x=>x.classList.toggle('on', x===b));
+    const body = document.getElementById('tm-body'); if(body) body.classList.toggle('tm-list', state._tmView==='list');
+  }));
 
   // Recipes & batch timer
   if(byIdEl('btn-new-recipe')) byIdEl('btn-new-recipe').onclick = ()=>openRecipeModal(null);

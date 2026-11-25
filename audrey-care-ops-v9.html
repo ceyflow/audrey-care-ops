@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261125193000">
+<meta name="app-build" content="20261125213000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1557,9 +1557,39 @@ html{ visibility:hidden; }
   .card[data-order]{cursor:pointer;}
   /* ---- Packing board: List view + Settings popover ---- */
   .os-wrap{position:relative;display:inline-flex;}
+  .os-gear.has:after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-sizing:content-box;}
+  .os-gear{position:relative;}
+  .os-search{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fff;border-radius:10px;padding:0 10px;height:38px;color:var(--muted);}
+  .os-search:focus-within{border-color:var(--accent);}
+  .os-search input{border:0;outline:0;background:none;font:inherit;font-size:13px;width:150px;color:var(--ink);}
+  .os-fpill{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-dark);font:inherit;font-size:12px;font-weight:700;border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap;}
+  .os-fpill b{margin-left:4px;}
+  .osum-row{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 16px;}
+  .osum{display:inline-flex;align-items:baseline;gap:8px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 14px;font:inherit;color:var(--muted);}
+  .osum b{font-size:22px;color:var(--ink);letter-spacing:-.02em;}
+  .osum span{font-size:12px;font-weight:600;}
+  button.osum{cursor:pointer;}
+  button.osum:hover{border-color:var(--accent);}
+  .osum.hi b{color:#D6453D;} .osum.late b{color:#D6453D;} .osum.warn b{color:#C77A0F;} .osum.ok b{color:#2E9E5B;}
+  .osum.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset;}
+  .ol-wait{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--muted);background:var(--bg);border-radius:999px;padding:1px 8px;white-space:nowrap;}
+  .ol-wait.warn{color:#B56F0C;background:#FDF1DC;} .ol-wait.late{color:#C23B33;background:#FCE9E6;}
+  .ol-next{margin-left:auto;border:1px solid var(--border);background:#fff;color:var(--accent-dark);font:inherit;font-size:12px;font-weight:700;border-radius:8px;padding:4px 11px;cursor:pointer;white-space:nowrap;}
+  .ol-next:hover{background:var(--accent-soft);border-color:var(--accent);}
+  .kx{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:11px;color:var(--muted);}
+  .kx-due{font-weight:600;} .kx-due.late{color:#D8453B;font-weight:700;} .kx-who{font-weight:600;}
+  .kx-prod{margin-top:4px;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ol-compact .ol-row{padding:5px 14px;gap:9px;font-size:13px;}
+  .ol-compact .ol-name{font-size:14px;}
+  .ol-compact .ol-head h3{font-size:18px;}
+  .ol-compact .ol-add{padding:7px 14px;}
+  .ol-compact .board-section-title{font-size:17px;margin-bottom:8px;}
+  .ol-compact .card{padding:6px 9px;}
+  .ol-compact .column-body{gap:5px;}
+  .ol-compact .kx{margin-top:3px;}
   .os-gear{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
   .os-gear:hover,.os-gear.on{color:var(--accent-dark);border-color:var(--accent);background:var(--accent-soft);}
-  .os-pop{position:absolute;right:0;top:46px;z-index:60;width:min(560px,calc(100vw - 32px));background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 18px 48px rgba(20,35,60,.2);padding:14px 16px 16px;}
+  .os-pop{position:absolute;right:0;top:46px;z-index:60;width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 150px);overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 18px 48px rgba(20,35,60,.2);padding:14px 16px 16px;}
   .os-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:17px;}
   .os-x{border:0;background:none;font-size:17px;color:var(--muted);cursor:pointer;border-radius:8px;width:30px;height:30px;}
   .os-x:hover{background:var(--bg);}
@@ -17551,15 +17581,19 @@ function renderOrdersPage(){
       ${canManageLists ? `<button type="button" class="btn-text" id="btn-manage-lines">⚙ Manage Lists</button>` : ''}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
+      <label class="os-search">${OL_ICON.search}<input type="search" id="os-search" placeholder="Search orders" value="${escAttr(ordersFilter().q)}" autocomplete="off" aria-label="Search orders"></label>
+      ${ordersFilterCount() ? `<button type="button" class="os-fpill" id="btn-os-clear" title="Clear the filters. Dragging cards is paused while a filter is on.">${ordersFilterCount()} filter${ordersFilterCount()===1?'':'s'} on <b>✕</b></button>` : ''}
       ${canUseBoxCount() ? `<button type="button" class="btn-text" id="btn-box-count" style="font-size:12px;color:var(--muted);">📦 Box Count</button>` : ''}
       <button type="button" class="btn-text" data-orders-view="archive" style="font-size:12px;color:var(--muted);" title="Completed orders auto-move here 2 hours after pickup">Archive${archived.length?` (${archived.length})`:''}</button>
       ${canCreate ? `<button class="btn btn-primary" id="btn-new-order">+ New order</button>` : ''}
       ${ordersSettingsHtml(canManageLists, canCreate, archived.length)}
     </div>
   </div>
-  ${ordersLayout().mode==='list'
-    ? state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryListSection(line, active)).join('')
-    : state.deliveryLines.filter(line=>!line.hidden).map(line=>renderDeliveryBoardSection(line, active)).join('')}
+  ${(()=>{
+    const cfg = ordersLayout(), lines = ordersBoardLines(), visible = boardVisibleOrders(active);
+    const summary = cfg.summary ? ordersSummaryHtml(lines.flatMap(l=>ordersInLine(active, l.key))) : '';
+    return summary + (cfg.mode==='list' ? lines.map(l=>renderDeliveryListSection(l, visible, active)).join('') : lines.map(l=>renderDeliveryBoardSection(l, visible)).join(''));
+  })()}
   ${renderOrdersMobileQueue(active, archived)}
   `;
 }
@@ -17570,15 +17604,83 @@ function renderOrdersPage(){
 function ordersLayout(){
   if(!state._ordersLayout){
     let v = {}; try{ v = JSON.parse(localStorage.getItem('audrey_orders_layout')||'{}') || {}; }catch(e){}
-    const f = v.fields || {};
-    state._ordersLayout = {mode: v.mode==='list' ? 'list' : 'kanban',
-      fields:{num:f.num!==false, stage:f.stage!==false, priority:f.priority!==false, assignee:f.assignee!==false, due:f.due!==false, note:f.note!==false, product:f.product===true},
+    const f = v.fields || {}, k = v.kfields || {};
+    state._ordersLayout = {
+      mode: v.mode==='list' ? 'list' : 'kanban',
+      // the fields of the LIST rows ...
+      fields:{num:f.num!==false, stage:f.stage!==false, priority:f.priority!==false, assignee:f.assignee!==false, due:f.due!==false, note:f.note!==false, product:f.product===true, wait:f.wait===true, next:f.next!==false},
+      // ... and of the KANBAN cards (the first three are what a card always showed, so the board looks the same until someone switches more on)
+      kfields:{num:k.num!==false, priority:k.priority!==false, note:k.note!==false, assignee:k.assignee===true, due:k.due===true, product:k.product===true, wait:k.wait===true},
+      density: v.density==='compact' ? 'compact' : 'comfortable',
+      sort: ['priority','due','waiting'].includes(v.sort) ? v.sort : 'priority',
+      summary: v.summary===true, hidePicked: v.hidePicked===true,
+      hiddenLines:(v.hiddenLines && typeof v.hiddenLines==='object') ? v.hiddenLines : {},
       collapsed:(v.collapsed && typeof v.collapsed==='object') ? v.collapsed : {}};
   }
   return state._ordersLayout;
 }
 function ordersLayoutSave(){ try{ localStorage.setItem('audrey_orders_layout', JSON.stringify(state._ordersLayout)); }catch(e){} }
-const ORDER_LIST_FIELDS = [['num','Order number'],['stage','Stage'],['priority','Priority'],['assignee','Assigned to'],['due','Due date'],['note','Note'],['product','Product']];
+const ORDER_LIST_FIELDS = [['num','Order number'],['stage','Stage'],['priority','Priority'],['assignee','Assigned to'],['due','Due date'],['note','Note'],['product','Product'],['wait','Time in stage'],['next','Move-on button']];
+const ORDER_CARD_FIELDS = [['num','Order number'],['priority','Priority'],['note','Note'],['assignee','Assigned to'],['due','Due date'],['product','Product'],['wait','Time in stage']];
+// Quick filters and the search box: only for this visit of the page (never saved, so tomorrow's board is never half empty by accident).
+function ordersFilter(){ return state._ordersFilter || (state._ordersFilter = {high:false, overdue:false, mine:false, q:''}); }
+function ordersFilterCount(){ const f = ordersFilter(); return (f.high?1:0)+(f.overdue?1:0)+(f.mine?1:0)+(f.q.trim()?1:0); }
+function orderIsOverdue(o){ return o.stage<STAGES.length-1 && !!o.dueDate && o.dueDate<todayStr(); }
+function orderIsMine(o){
+  const me = String(state.session && (state.session.staffName||state.session.name) || '').trim().toLowerCase();
+  return !!me && String(o.assignee||'').trim().toLowerCase()===me;
+}
+// What the board / list actually shows: the picked-up choice, the quick filters and the search applied to the active orders.
+function boardVisibleOrders(active){
+  const cfg = ordersLayout(), f = ordersFilter(), last = STAGES.length-1, q = f.q.trim();
+  return active.filter(o=>{
+    if(cfg.hidePicked && o.stage>=last) return false;
+    if(f.high && o.priority!=='High') return false;
+    if(f.overdue && !orderIsOverdue(o)) return false;
+    if(f.mine && !orderIsMine(o)) return false;
+    if(q && !oqMatches(o, q)) return false;
+    return true;
+  });
+}
+function ordersBoardLines(){ const cfg = ordersLayout(); return state.deliveryLines.filter(l=>!l.hidden && !cfg.hiddenLines[l.key]); }
+// The order of the rows in the List view (the Kanban keeps its own drag order). Picked-up orders always go last.
+function olComparator(){
+  const last = STAGES.length-1, rank = {High:0, Medium:1, Low:2}, sort = ordersLayout().sort;
+  const doneLast = (a,b)=>((a.stage>=last)-(b.stage>=last));
+  const pri = (a,b)=>((rank[a.priority]??1)-(rank[b.priority]??1));
+  const due = (a,b)=>String(a.dueDate||'9999-99-99').localeCompare(String(b.dueDate||'9999-99-99'));
+  const wait = (a,b)=>(new Date(oqStageSince(a)).getTime()-new Date(oqStageSince(b)).getTime());   // waiting longest first
+  const stg = (a,b)=>((a.stage||0)-(b.stage||0)), bo = (a,b)=>(boardOrderOf(a)-boardOrderOf(b));
+  const chain = sort==='due' ? [doneLast,due,pri,stg,bo] : sort==='waiting' ? [doneLast,wait,pri,bo] : [doneLast,pri,stg,bo];
+  return (a,b)=>{ for(const fn of chain){ const r = fn(a,b); if(r) return r; } return 0; };
+}
+function olWaitChip(o){ return `<span class="ol-wait${oqWaitClass(o)}">${OL_ICON.clock}${esc(oqWaitLabel(o))}</span>`; }
+// The four numbers above the board (optional): how much is open, how much is High priority / overdue / waiting a day or more. The first two can be clicked to filter.
+function ordersSummaryHtml(all){
+  const last = STAGES.length-1, open = all.filter(o=>o.stage<last), f = ordersFilter();
+  const high = open.filter(o=>o.priority==='High').length, over = open.filter(orderIsOverdue).length;
+  const day = open.filter(o=>(Date.now()-new Date(oqStageSince(o)).getTime())>=24*3600e3).length;
+  const t = (label, n, cls, attr, on)=> attr ? `<button type="button" class="osum ${cls}${on?' on':''}" ${attr} aria-pressed="${!!on}"><b>${n}</b><span>${label}</span></button>` : `<span class="osum ${cls}"><b>${n}</b><span>${label}</span></span>`;
+  return `<div class="osum-row orders-d-only">${t('Open',open.length,'','')}${t('High priority',high,'hi','data-osum="high"',f.high)}${t('Overdue',over,'late','data-osum="overdue"',f.overdue)}${t('Waiting 24 h or more',day,'warn','')}${t('Picked up',all.length-open.length,'ok','')}</div>`;
+}
+// "Copy list": the orders as they are on screen (filters, hidden lines and the chosen order applied) as plain text, ready to paste into chat.
+async function copyBoardList(){
+  const visible = boardVisibleOrders(activeOrders()), cmp = olComparator(), out = [];
+  ordersBoardLines().forEach(l=>{
+    const rows = ordersInLine(visible, l.key).sort(cmp); if(!rows.length) return;
+    out.push('', `${l.label} (${rows.length})`);
+    rows.forEach(o=>{ const bits = [o.orderNumber||o.id, STAGES[o.stage]||'', o.priority||'Medium']; if(o.dueDate) bits.push('due '+olDueText(o.dueDate)); if(o.assignee) bits.push(o.assignee); out.push(`• ${o.customer} — ${bits.filter(Boolean).join(' · ')}`); });
+  });
+  if(!out.length){ showToast('There is nothing to copy'); return; }
+  const text = `Packing board · ${new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}${out.join('\n')}`;
+  try{ await navigator.clipboard.writeText(text); showToast('List copied'); }
+  catch(e){ const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;'; document.body.appendChild(ta); ta.select(); let ok = false; try{ ok = document.execCommand('copy'); }catch(e2){} ta.remove(); showToast(ok ? 'List copied' : 'Could not copy the list'); }
+}
+function resetOrdersView(){
+  state._ordersLayout = null; state._ordersFilter = null; state._osFieldsOpen = false; state._osLinesOpen = false;
+  try{ localStorage.removeItem('audrey_orders_layout'); }catch(e){}
+  showToast('Board view reset'); render();
+}
 const OL_ICON = {
   flag: c=>`<svg width="15" height="15" viewBox="0 0 24 24" fill="${c}" stroke="${c}" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>`,
   cal: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`,
@@ -17591,33 +17693,59 @@ const OL_ICON = {
   eye: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
   manage: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="2.2"/></svg>`,
   box: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>`,
+  clock: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+  density: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>`,
+  sort: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>`,
+  filter: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>`,
+  copy: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>`,
+  reset: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>`,
+  search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
   plus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`,
 };
 function ordersSettingsHtml(canManageLists, canCreate, archivedCount){
-  const cfg = ordersLayout(), open = !!state._ordersSettingsOpen, fo = !!state._osFieldsOpen;
+  const cfg = ordersLayout(), f = ordersFilter(), open = !!state._ordersSettingsOpen, fo = !!state._osFieldsOpen, lo = !!state._osLinesOpen;
   const item = (attr, icon, label, on, extra)=>`<button type="button" class="os-item${on?' on':''}" ${attr}>${icon}<span>${label}</span>${extra||''}</button>`;
+  const sw = (attr, checked, label)=>`<label class="os-sw"><input type="checkbox" ${attr} ${checked?'checked':''}><span class="os-track"></span><span>${label}</span></label>`;
+  const two = (icon, label, a, b)=>`<div class="os-line">${icon}<span>${label}</span><span class="os-links">${a}<i></i>${b}</span></div>`;
+  const lk = (attr, label, on)=>`<button type="button" ${attr} class="${on?'act':''}">${label}</button>`;
+  const list = cfg.mode==='list', fieldSet = list ? ORDER_LIST_FIELDS : ORDER_CARD_FIELDS, fieldVals = list ? cfg.fields : cfg.kfields;
+  const lines = state.deliveryLines.filter(l=>!l.hidden);
+  const hiddenN = lines.filter(l=>cfg.hiddenLines[l.key]).length;
   const pop = !open ? '' : `
   <div class="os-pop" role="dialog" aria-label="Board settings">
     <div class="os-head"><b>Settings</b><button type="button" class="os-x" id="btn-os-close" aria-label="Close">✕</button></div>
     <div class="os-grid">
       <div class="os-col">
         <div class="os-sec">Display</div>
-        ${item('data-os-mode="list"', OL_ICON.list, 'List', cfg.mode==='list')}
-        ${item('data-os-mode="kanban"', OL_ICON.kanban, 'Kanban', cfg.mode==='kanban')}
+        ${item('data-os-mode="list"', OL_ICON.list, 'List', list)}
+        ${item('data-os-mode="kanban"', OL_ICON.kanban, 'Kanban', !list)}
+        ${two(OL_ICON.density, 'Size', lk('data-os-density="comfortable"','Comfortable',cfg.density==='comfortable'), lk('data-os-density="compact"','Compact',cfg.density==='compact'))}
         ${item('data-os-fields="1"', OL_ICON.fields, 'Display fields', fo, `<i class="os-chev">${fo?'▾':'▸'}</i>`)}
-        ${fo ? `<div class="os-fields">${ORDER_LIST_FIELDS.map(([k,l])=>`<label class="os-sw"><input type="checkbox" data-os-field="${k}" ${cfg.fields[k]?'checked':''}><span class="os-track"></span><span>${l}</span></label>`).join('')}<div class="os-hint">These show in the List view.</div></div>` : ''}
-        <div class="os-line">${OL_ICON.fold}<span>Lists</span><span class="os-links"><button type="button" data-os-fold="collapse">Collapse</button><i></i><button type="button" data-os-fold="expand">Expand</button></span></div>
-        <div class="os-line">${OL_ICON.eye}<span>View</span><span class="os-links"><button type="button" class="act">Active</button><i></i><button type="button" data-orders-view="archive">Archived${archivedCount?` (${archivedCount})`:''}</button></span></div>
+        ${fo ? `<div class="os-fields">${fieldSet.map(([k,l])=>sw(`data-os-field="${k}"`, fieldVals[k], l)).join('')}<div class="os-hint">These are the fields of the ${list?'List rows':'Kanban cards'}. Switch to the other view to set its own.</div></div>` : ''}
+        ${list ? two(OL_ICON.sort, 'Order', lk('data-os-sort="priority"','Priority',cfg.sort==='priority'), `${lk('data-os-sort="due"','Due',cfg.sort==='due')}<i></i>${lk('data-os-sort="waiting"','Waiting',cfg.sort==='waiting')}`) : ''}
+        ${two(OL_ICON.fold, 'Lists', lk('data-os-fold="collapse"','Collapse',false), lk('data-os-fold="expand"','Expand',false))}
+        ${two(OL_ICON.eye, 'View', lk('','Active',true), lk('data-orders-view="archive"', `Archived${archivedCount?` (${archivedCount})`:''}`, false))}
       </div>
       <div class="os-col">
-        <div class="os-sec">Actions</div>
+        <div class="os-sec">Show only</div>
+        ${sw('data-os-flt="high"', f.high, 'High priority')}
+        ${sw('data-os-flt="overdue"', f.overdue, 'Overdue')}
+        ${sw('data-os-flt="mine"', f.mine, 'Assigned to me')}
+        ${sw('data-os-pref="hidePicked"', cfg.hidePicked, 'Hide picked up')}
+        ${sw('data-os-pref="summary"', cfg.summary, 'Summary numbers on top')}
+        ${lines.length>1 ? item('data-os-lines="1"', OL_ICON.filter, 'Delivery lines', lo, `<i class="os-chev">${hiddenN?hiddenN+' hidden ':''}${lo?'▾':'▸'}</i>`) : ''}
+        ${lo && lines.length>1 ? `<div class="os-fields">${lines.map(l=>sw(`data-os-line="${escAttr(l.key)}"`, !cfg.hiddenLines[l.key], esc(l.label))).join('')}</div>` : ''}
+        <div class="os-sec" style="margin-top:12px">Actions</div>
         ${canManageLists ? item('data-os-act="manage"', OL_ICON.manage, 'Manage lists') : ''}
         ${canUseBoxCount() ? item('data-os-act="boxcount"', OL_ICON.box, 'Box Count') : ''}
         ${canCreate ? item('data-os-act="new"', OL_ICON.plus, 'New order') : ''}
+        ${item('data-os-act="copy"', OL_ICON.copy, 'Copy list as text')}
+        ${item('data-os-act="reset"', OL_ICON.reset, 'Reset this view')}
       </div>
     </div>
   </div>`;
-  return `<span class="os-wrap"><button type="button" class="os-gear${open?' on':''}" id="btn-orders-settings" aria-label="Board settings" aria-expanded="${open}" title="Settings">${OL_ICON.gear}</button>${pop}</span>`;
+  const dot = hiddenOrFiltered => hiddenOrFiltered ? ' has' : '';
+  return `<span class="os-wrap"><button type="button" class="os-gear${open?' on':''}${dot(cfg.hidePicked || Object.keys(cfg.hiddenLines).some(k=>cfg.hiddenLines[k]))}" id="btn-orders-settings" aria-label="Board settings" aria-expanded="${open}" title="Settings">${OL_ICON.gear}</button>${pop}</span>`;
 }
 function olDueText(d){
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d||''); if(!m) return '';
@@ -17630,39 +17758,43 @@ function olStatusIcon(o){
   const a = i/(n-1)*2*Math.PI, x = (12+6.2*Math.sin(a)).toFixed(2), y = (12-6.2*Math.cos(a)).toFixed(2);
   return `<span class="ol-st" style="color:${st.c}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12V5.8A6.2 6.2 0 0 1 ${x} ${y}Z" fill="currentColor" stroke="none"/></svg></span>`;
 }
+const OL_NEXT_SHORT = {0:'Start processing', 1:'To checking', 2:'Mark picked up'};
 function olRow(o, f){
   const last = STAGES.length-1, done = o.stage>=last;
   const pr = PRIORITIES.includes(o.priority) ? o.priority : 'Medium', pc = {High:'#E0483E', Medium:'#EE8F1F', Low:'#2E9E5B'}[pr];
   const st = STAGE_STYLE[STAGE_KEYS[Math.max(0, Math.min(last, o.stage||0))]] || STAGE_STYLE[STAGE_KEYS[0]];
   const note = stripTags(o.notes||'').trim();
   const prod = oqProductLines(o.product)[0] || '';
-  const overdue = !done && o.dueDate && o.dueDate < todayStr();
+  const overdue = orderIsOverdue(o);
   const bits = [];
   if(f.num) bits.push(`<span class="ol-num">${esc(o.orderNumber||o.id)}</span>`);
   if(f.stage) bits.push(done ? `<span class="ol-chip ol-chip-done">${OL_ICON.cal}Completed${o.completedAt?' '+esc(olDueText(localDateKey(o.completedAt))):''}</span>` : `<span class="ol-chip" style="color:${st.c};background:${st.bg}">${esc(STAGES[o.stage]||'')}</span>`);
   if(f.priority) bits.push(`<span class="ol-pri" style="color:${pc}">${OL_ICON.flag(pc)}${pr}</span>`);
   if(f.assignee && o.assignee) bits.push(`<span class="ol-who"><i>${esc(String(o.assignee).trim().charAt(0).toUpperCase())}</i>${esc(o.assignee)}</span>`);
   if(f.due && o.dueDate) bits.push(`<span class="ol-due${overdue?' late':''}">${OL_ICON.cal}Due ${esc(olDueText(o.dueDate))}</span>`);
+  if(f.wait) bits.push(olWaitChip(o));
   if(f.product && prod) bits.push(`<span class="ol-prod" title="${escAttr(prod)}">${esc(prod)}</span>`);
   if(f.note && note) bits.push(`<span class="ol-note" ${o.color?`style="background:${escAttr(o.color)}1f;color:${escAttr(o.color)}"`:''} title="${escAttr(note)}">${OL_ICON.note}<span>${esc(note)}</span></span>`);
+  // the way to move an order on from the list (the Kanban does it by dragging): the same rule and the same button text as the phone queue
+  if(f.next && !done && canAdvance(o.stage)) bits.push(`<button type="button" class="ol-next" data-ol-advance="${escAttr(o.id)}" title="${escAttr(NEXT_ACTION_LABEL[o.stage]||'')}">${esc(OL_NEXT_SHORT[o.stage]||'Next')} ›</button>`);
   return `<div class="ol-row${done?' ol-done':''}" data-order-row="${escAttr(o.id)}" role="button" tabindex="0">${olStatusIcon(o)}<span class="ol-name">${esc(o.customer)}</span>${bits.join('')}</div>`;
 }
-function renderDeliveryListSection(line, active){
+function renderDeliveryListSection(line, visible, active){
   const cfg = ordersLayout(), f = cfg.fields, fold = !!cfg.collapsed[line.key];
-  const all = ordersInLine(active, line.key), last = STAGES.length-1;
-  const rank = {High:0, Medium:1, Low:2};
-  const rows = all.slice().sort((a,b)=> ((a.stage>=last)-(b.stage>=last)) || ((rank[a.priority]??1)-(rank[b.priority]??1)) || ((a.stage||0)-(b.stage||0)) || (boardOrderOf(a)-boardOrderOf(b)));
+  const rows = ordersInLine(visible, line.key).sort(olComparator()), last = STAGES.length-1;
+  const all = ordersInLine(active || visible, line.key);   // the progress bar is about the whole line, whatever the filters hide
   const doneN = all.filter(o=>o.stage>=last).length, pct = all.length ? Math.round(doneN/all.length*100) : 0;
   const segs = STAGES.map((_,i)=>({i, n: all.filter(o=>o.stage===i).length})).filter(x=>x.n>0);
   const canCreate = state.session && roleCan(state.session.role, 'orders_create');
+  const filtered = ordersFilterCount()>0 || cfg.hidePicked;
   return `
-  <div class="board-section orders-d-only ol-sec-wrap">
+  <div class="board-section orders-d-only ol-sec-wrap${cfg.density==='compact'?' ol-compact':''}">
     <div class="ol-head">
       <button type="button" class="ol-fold" data-ol-fold="${escAttr(line.key)}" aria-expanded="${!fold}" aria-label="${fold?'Expand':'Collapse'} ${escAttr(line.label)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${fold?'<path d="M9 5l8 7-8 7z"/>':'<path d="M5 9l7 8 7-8z"/>'}</svg></button>
-      <h3>${esc(line.label)}</h3><span class="ol-count">${all.length}</span>
+      <h3>${esc(line.label)}</h3><span class="ol-count">${filtered ? rows.length+' of '+all.length : all.length}</span>
       ${all.length ? `<span class="ol-prog" title="${doneN} of ${all.length} picked up"><b>${pct}%</b><span class="ol-bar">${segs.map(x=>{ const stl = STAGE_STYLE[STAGE_KEYS[x.i]] || STAGE_STYLE[STAGE_KEYS[0]]; return `<span class="ol-seg" style="flex:${x.n};background:${stl.c}"><em>${x.n}</em></span>`; }).join('')}</span></span>` : ''}
     </div>
-    ${fold ? '' : `<div class="ol-box">${rows.map(o=>olRow(o, f)).join('') || '<div class="ol-empty">No orders here yet</div>'}${canCreate ? `<button type="button" class="ol-add" data-new-order-courier="${escAttr(line.key)}">${OL_ICON.plus}<span>New order</span></button>` : ''}</div>`}
+    ${fold ? '' : `<div class="ol-box">${rows.map(o=>olRow(o, f)).join('') || `<div class="ol-empty">${filtered ? 'No orders match' : 'No orders here yet'}</div>`}${canCreate ? `<button type="button" class="ol-add" data-new-order-courier="${escAttr(line.key)}">${OL_ICON.plus}<span>New order</span></button>` : ''}</div>`}
   </div>`;
 }
 /* ===================== Box Count (daily packing log) ===================== */
@@ -18047,14 +18179,14 @@ function renderUnassignedBoardSection(active){
 function renderDeliveryBoardSection(line, active){
   const lineOrders = ordersInLine(active, line.key);
   return `
-  <div class="board-section orders-d-only">
+  <div class="board-section orders-d-only${ordersLayout().density==='compact'?' ol-compact':''}">
     <div class="board-section-title" style="display:flex;align-items:center;gap:14px;">
       <button type="button" class="ol-fold" data-ol-fold="${escAttr(line.key)}" aria-expanded="${!ordersLayout().collapsed[line.key]}" aria-label="${ordersLayout().collapsed[line.key]?'Expand':'Collapse'} ${escAttr(line.label)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ordersLayout().collapsed[line.key]?'<path d="M9 5l8 7-8 7z"/>':'<path d="M5 9l7 8 7-8z"/>'}</svg></button>
       <span>${esc(line.label)}</span>
       ${state.session && roleCan(state.session.role, 'orders_create') ? `<button type="button" class="btn btn-primary btn-sm" data-new-order-courier="${escAttr(line.key)}">+ New order</button>` : ''}
     </div>
     ${ordersLayout().collapsed[line.key] ? '' : `<div class="board">
-      ${STAGES.map((stageName,i)=>renderColumn(stageName, i, lineOrders, line.key)).join('')}
+      ${STAGES.map((stageName,i)=>(ordersLayout().hidePicked && i===STAGES.length-1) ? '' : renderColumn(stageName, i, lineOrders, line.key)).join('')}
     </div>`}
   </div>`;
 }
@@ -18277,16 +18409,25 @@ function renderCard(o){
   // permission above — if one specific account's read of orderSettings ever comes back stale or
   // empty (falling back to the off-by-default DEFAULT_ORDER_SETTINGS), the switch being
   // confirmed ON everywhere else shouldn't matter less than that one unreliable read.
-  const dragOn = state.session && roleCan(state.session.role, 'orders_drag') && (orderDragEnabled() || state.session.role === 'Sub Admin');
+  // dragging is paused while a filter / search hides some cards: the drop saves the order of the cards it can SEE, which would shuffle the hidden ones
+  const dragOn = state.session && roleCan(state.session.role, 'orders_drag') && (orderDragEnabled() || state.session.role === 'Sub Admin') && ordersFilterCount()===0;
   const cardStyle = `${dragOn?'cursor:grab;':''}${o.color?`border-left:4px solid ${o.color};`:''}`;
   const noteText = stripTags(o.notes||'').trim();
+  const kf = ordersLayout().kfields;
+  const extras = [];
+  if(kf.due && o.dueDate) extras.push(`<span class="kx-due${orderIsOverdue(o)?' late':''}">Due ${esc(olDueText(o.dueDate))}</span>`);
+  if(kf.assignee && o.assignee) extras.push(`<span class="kx-who">${esc(o.assignee)}</span>`);
+  if(kf.wait) extras.push(olWaitChip(o));
+  const prodLine = kf.product ? (oqProductLines(o.product)[0] || '') : '';
   return `
   <div class="card" data-order="${o.id}" draggable="${dragOn?'true':'false'}" ${cardStyle?`style="${cardStyle}"`:''}>
-    <div class="top-row"><span class="customer">${esc(o.customer)}</span><span class="order-id">${esc(o.orderNumber||o.id)}</span></div>
-    <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
+    <div class="top-row"><span class="customer">${esc(o.customer)}</span>${kf.num ? `<span class="order-id">${esc(o.orderNumber||o.id)}</span>` : ''}</div>
+    ${kf.priority ? `<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
       <span class="pill pill-${priority.toLowerCase()}">${priority}</span>
-    </div>
-    ${noteText ? `<div style="margin-top:6px;padding:4px 7px;border-radius:6px;font-size:11.5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${o.color?`background:${o.color}1f;color:${o.color};`:'background:var(--bg);color:var(--muted);'}" title="${escAttr(noteText)}">${esc(noteText)}</div>` : ''}
+    </div>` : ''}
+    ${extras.length ? `<div class="kx">${extras.join('')}</div>` : ''}
+    ${prodLine ? `<div class="kx-prod" title="${escAttr(prodLine)}">${esc(prodLine)}</div>` : ''}
+    ${(kf.note && noteText) ? `<div style="margin-top:6px;padding:4px 7px;border-radius:6px;font-size:11.5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${o.color?`background:${o.color}1f;color:${o.color};`:'background:var(--bg);color:var(--muted);'}" title="${escAttr(noteText)}">${esc(noteText)}</div>` : ''}
   </div>`;
 }
 
@@ -28677,14 +28818,38 @@ function attachShellHandlers(){
   if(byIdEl('btn-orders-settings')) byIdEl('btn-orders-settings').onclick = ()=>{ state._ordersSettingsOpen = !state._ordersSettingsOpen; render(); };
   if(byIdEl('btn-os-close')) byIdEl('btn-os-close').onclick = ()=>{ state._ordersSettingsOpen = false; render(); };
   document.querySelectorAll('[data-os-mode]').forEach(b=>b.addEventListener('click', ()=>{ ordersLayout().mode = b.dataset.osMode; ordersLayoutSave(); render(); }));
+  document.querySelectorAll('[data-os-density]').forEach(b=>b.addEventListener('click', ()=>{ ordersLayout().density = b.dataset.osDensity; ordersLayoutSave(); render(); }));
+  document.querySelectorAll('[data-os-sort]').forEach(b=>b.addEventListener('click', ()=>{ ordersLayout().sort = b.dataset.osSort; ordersLayoutSave(); render(); }));
+  document.querySelectorAll('[data-os-flt]').forEach(b=>b.addEventListener('change', ()=>{ ordersFilter()[b.dataset.osFlt] = b.checked; render(); }));
+  document.querySelectorAll('[data-os-pref]').forEach(b=>b.addEventListener('change', ()=>{ ordersLayout()[b.dataset.osPref] = b.checked; ordersLayoutSave(); render(); }));
+  document.querySelectorAll('[data-os-lines]').forEach(b=>b.addEventListener('click', ()=>{ state._osLinesOpen = !state._osLinesOpen; render(); }));
+  document.querySelectorAll('[data-os-line]').forEach(b=>b.addEventListener('change', ()=>{
+    const c = ordersLayout(); c.hiddenLines[b.dataset.osLine] = !b.checked;
+    if(state.deliveryLines.filter(l=>!l.hidden).every(l=>c.hiddenLines[l.key])){ c.hiddenLines[b.dataset.osLine] = false; showToast('Keep at least one delivery line on'); }
+    ordersLayoutSave(); render();
+  }));
+  document.querySelectorAll('[data-osum]').forEach(b=>b.addEventListener('click', ()=>{ const f = ordersFilter(), k = b.dataset.osum; f[k] = !f[k]; render(); }));
+  document.querySelectorAll('[data-ol-advance]').forEach(btn=>btn.addEventListener('click', e=>{
+    e.stopPropagation();   // do not also open the order
+    const id = btn.dataset.olAdvance, o = byId(state.orders, id); if(!o) return;
+    if(NEXT_ACTION_LABEL[o.stage]==='Mark picked up by delivery' && o.courierService==='CityPak'){ state.modal = 'citypak:'+id; render(); return; }
+    advanceOrder(id);
+  }));
+  if(byIdEl('os-search')) byIdEl('os-search').addEventListener('input', e=>{
+    const inp = e.target, pos = inp.selectionStart; ordersFilter().q = inp.value; render();
+    const n = byIdEl('os-search'); if(n){ n.focus(); try{ n.setSelectionRange(pos, pos); }catch(er){} }   // render() rebuilt the box: put the cursor back
+  });
+  if(byIdEl('btn-os-clear')) byIdEl('btn-os-clear').onclick = ()=>{ state._ordersFilter = null; render(); };
   document.querySelectorAll('[data-os-fields]').forEach(b=>b.addEventListener('click', ()=>{ state._osFieldsOpen = !state._osFieldsOpen; render(); }));
-  document.querySelectorAll('[data-os-field]').forEach(b=>b.addEventListener('change', ()=>{ ordersLayout().fields[b.dataset.osField] = b.checked; ordersLayoutSave(); render(); }));
+  document.querySelectorAll('[data-os-field]').forEach(b=>b.addEventListener('change', ()=>{ const c = ordersLayout(); (c.mode==='list' ? c.fields : c.kfields)[b.dataset.osField] = b.checked; ordersLayoutSave(); render(); }));
   document.querySelectorAll('[data-os-fold]').forEach(b=>b.addEventListener('click', ()=>{ const c = ordersLayout(); state.deliveryLines.forEach(l=>{ c.collapsed[l.key] = b.dataset.osFold==='collapse'; }); ordersLayoutSave(); render(); }));
   document.querySelectorAll('[data-os-act]').forEach(b=>b.addEventListener('click', ()=>{
     const act = b.dataset.osAct; state._ordersSettingsOpen = false; render();
     if(act==='manage' && byIdEl('btn-manage-lines')) byIdEl('btn-manage-lines').click();
     else if(act==='boxcount' && canUseBoxCount()) openModal('boxcount');
     else if(act==='new') openModal('order:new');
+    else if(act==='copy') copyBoardList();
+    else if(act==='reset') resetOrdersView();
   }));
   document.querySelectorAll('.ol-row[data-order-row]').forEach(r=>r.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openModal('order:'+r.dataset.orderRow); } }));
   // the Settings popover closes on an outside click / Escape WITHOUT a redraw, so the click that closed it still reaches what was clicked

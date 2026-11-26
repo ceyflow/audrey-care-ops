@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261126110000">
+<meta name="app-build" content="20261126130000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1530,6 +1530,9 @@ html{ visibility:hidden; }
   .rnd-outcome-label{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-block;width:fit-content;background:var(--bg);color:var(--muted);border:none;}
   .rnd-outcome-success{background:var(--accent-soft);color:var(--accent-dark);}
   .rnd-outcome-quarantined{background:var(--danger-soft);color:var(--danger);}
+  .rnd-outcome-label.on,.rnd-stat-tile.on{box-shadow:0 0 0 2px currentColor inset;}
+  .rnd-outcome-all{background:var(--ink);color:#fff;}
+  button.rnd-outcome-label{cursor:pointer;font-family:inherit;}
   .rnd-toolbar-mobile{display:none;}
   @media (max-width:760px){
     .rnd-toolbar-desktop{display:none;}
@@ -19585,6 +19588,11 @@ function renderRndPage(){
   const completedProjects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1);
   const successCount = completedProjects.filter(p=>p.outcome==='success').length;
   const quarantinedCount = completedProjects.filter(p=>p.outcome==='quarantined').length;
+  // A plain "Transfer to Completed" from Review leaves the outcome unset, and those products had NO button to reach them
+  // (owner, 2026-11-26: "i transfer some products to completed from review but i cant see any"): Completed (all) + Not set now exist.
+  const completedCount = completedProjects.length;
+  const unsetCount = completedProjects.filter(p=>!p.outcome).length;
+  const ok = state.filters.rndOutcomeKind, inOutcome = view==='outcome';
   return `
   <div class="rnd-toolbar-desktop">
   <div class="toolbar" style="flex-wrap:wrap;">
@@ -19596,8 +19604,10 @@ function renderRndPage(){
       ? (canAddRndChemist() ? `<button class="btn btn-primary" id="btn-new-rnd-chemist" style="margin-left:auto;">+ Add chemist</button>` : '')
       : `
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
-        <button type="button" class="rnd-outcome-label rnd-outcome-success" data-rnd-outcome-view="success">✓ Success · ${successCount}</button>
-        <button type="button" class="rnd-outcome-label rnd-outcome-quarantined" data-rnd-outcome-view="quarantined">⚠ Quarantined · ${quarantinedCount}</button>
+        <button type="button" class="rnd-outcome-label rnd-outcome-all${inOutcome&&ok==='all'?' on':''}" data-rnd-outcome-view="all">Completed · ${completedCount}</button>
+        <button type="button" class="rnd-outcome-label rnd-outcome-success${inOutcome&&ok==='success'?' on':''}" data-rnd-outcome-view="success">✓ Success · ${successCount}</button>
+        <button type="button" class="rnd-outcome-label rnd-outcome-quarantined${inOutcome&&ok==='quarantined'?' on':''}" data-rnd-outcome-view="quarantined">⚠ Quarantined · ${quarantinedCount}</button>
+        ${unsetCount ? `<button type="button" class="rnd-outcome-label rnd-outcome-unset${inOutcome&&ok==='unset'?' on':''}" data-rnd-outcome-view="unset">Not set · ${unsetCount}</button>` : ''}
         ${canCreateRndProject() ? `<button class="btn btn-primary" id="btn-new-rnd">+ Add product</button>` : ''}
       </div>`}
   </div>
@@ -19614,12 +19624,18 @@ function renderRndPage(){
     </div>
     ${view!=='chemists' ? `
     <div class="rnd-mobile-stats">
+      <button type="button" class="rnd-stat-tile rnd-stat-tile-all${inOutcome&&ok==='all'?' on':''}" data-rnd-outcome-view="all">
+        <span class="rnd-stat-tile-num">${completedCount}</span><span class="rnd-stat-tile-label">Completed</span>
+      </button>
       <button type="button" class="rnd-stat-tile rnd-stat-tile-success" data-rnd-outcome-view="success">
         <span class="rnd-stat-tile-num">${successCount}</span><span class="rnd-stat-tile-label">✓ Success</span>
       </button>
       <button type="button" class="rnd-stat-tile rnd-stat-tile-quarantined" data-rnd-outcome-view="quarantined">
         <span class="rnd-stat-tile-num">${quarantinedCount}</span><span class="rnd-stat-tile-label">⚠ Quarantined</span>
       </button>
+      ${unsetCount ? `<button type="button" class="rnd-stat-tile rnd-stat-tile-unset${inOutcome&&ok==='unset'?' on':''}" data-rnd-outcome-view="unset">
+        <span class="rnd-stat-tile-num">${unsetCount}</span><span class="rnd-stat-tile-label">Not set</span>
+      </button>` : ''}
     </div>` : ''}
   </div>
   ${view==='chemists' ? renderRndChemistsTab()
@@ -19677,12 +19693,13 @@ function renderRndBoardMobile(){
 // its three dispositions (Success / Quarantined / Not set) are small clickable counts in the
 // toolbar, each opening this filtered card view.
 function renderRndOutcomeView(kind){
-  const labels = {success:'Success', quarantined:'Quarantined', unset:'Not set'};
+  const labels = {all:'Completed', success:'Success', quarantined:'Quarantined', unset:'Completed, outcome not set'};
   const label = labels[kind] || 'Completed';
-  const projects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1 && (kind==='unset' ? !p.outcome : p.outcome===kind))
+  const projects = state.rndProjects.filter(p=>p.stage===RND_STAGES.length-1 && (kind==='all' || !labels[kind] ? true : (kind==='unset' ? !p.outcome : p.outcome===kind)))
     .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   return `
   <div class="landing-section-title" style="margin-bottom:10px;">${esc(label)} <span class="hint">(${projects.length})</span></div>
+  ${(kind==='all'||kind==='unset') && projects.length ? `<div class="hint" style="margin-bottom:10px;">Open a product to set its outcome to Success or Quarantined.</div>` : ''}
   ${projects.length===0 ? `<div class="empty-col">None yet</div>` : `
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
     ${projects.map(p=>renderRndCard(p)).join('')}
@@ -19693,6 +19710,7 @@ function renderRndCard(p){
   return `
   <div class="card" draggable="${canMoveRnd()?'true':'false'}" data-rnd="${p.id}" ${canMoveRnd()?'style="cursor:grab;"':''}>
     <div class="top-row"><span class="customer">${esc(p.name)}</span></div>
+    ${p.stage===RND_STAGES.length-1 ? `<div style="margin-top:6px;"><span class="rnd-outcome-label ${p.outcome==='success'?'rnd-outcome-success':p.outcome==='quarantined'?'rnd-outcome-quarantined':''}">${p.outcome==='success'?'✓ Success':p.outcome==='quarantined'?'⚠ Quarantined':'Outcome not set'}</span></div>` : ''}
     ${p.outcome==='quarantined' && p.quarantineReason ? `<div class="hint" style="margin-top:4px;">${esc(p.quarantineReason)}</div>` : ''}
   </div>`;
 }

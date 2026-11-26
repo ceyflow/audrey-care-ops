@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Audrey Care — Operations</title>
-<meta name="app-build" content="20261126090000">
+<meta name="app-build" content="20261126110000">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
 /* Clickjacking defense, part 1: hide the whole page by default. The unhide-if-top-level
@@ -1375,7 +1375,7 @@ html{ visibility:hidden; }
     .oq{padding-bottom:calc(96px + env(safe-area-inset-bottom));}   /* the floating tab bar must not cover the last card */
     .oq{padding-bottom:96px;}
     .oq-top-tools{padding:8px 0 4px;}
-    .oq-ctl{position:sticky;top:var(--oq-top,0px);z-index:15;margin:0 -14px;padding:6px 14px 8px;background:var(--bg);box-shadow:0 8px 12px -10px rgba(19,32,30,.3);}
+    .oq-ctl{position:sticky;top:var(--oq-top,0px);z-index:15;margin:0 -14px;padding:8px 14px 8px;background:var(--bg);box-shadow:0 8px 12px -10px rgba(19,32,30,.3);}
     .oq-bar{display:flex;gap:8px;align-items:center;position:relative;}
     .oq-search{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 12px;border:1.5px solid var(--border);border-radius:14px;background:#fff;color:var(--muted);margin:0;}
     .oq-search svg{flex:none;}
@@ -1398,10 +1398,12 @@ html{ visibility:hidden; }
     .oq-stage.on .oq-stage-n{color:#fff;}
     .oq-hot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:#E5484D;box-shadow:0 0 0 2px #fff;}
     .oq-stage.on .oq-hot{box-shadow:0 0 0 2px var(--oq-fill);}
-    .oq-lines{display:flex;gap:6px;overflow-x:auto;padding:10px 0 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+    .oq-lines{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
     .oq-lines::-webkit-scrollbar{display:none;}
-    .oq-chip{flex:none;min-height:38px;padding:0 14px;border-radius:19px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap;}
+    .oq-chip{flex:1 0 auto;min-height:44px;padding:0 14px;border-radius:14px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:14.5px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
     .oq-chip.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+    .oq-chip-n{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--bg);color:var(--ink);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}
+    .oq-chip.on .oq-chip-n{background:rgba(255,255,255,.22);color:#fff;}
     .oq-sub{display:flex;justify-content:space-between;gap:8px;margin:12px 2px 8px;font-size:13px;line-height:18px;color:var(--muted);font-weight:500;}
     .oq-sub-r{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
     .oq-sub-hot{color:#A33F32;font-weight:700;}
@@ -1416,9 +1418,6 @@ html{ visibility:hidden; }
     .oq-fabwrap{position:fixed;right:18px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:24;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
     .oq-fab{display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 20px 0 16px;border:none;border-radius:26px;background:var(--oq-fill);color:#fff;font-size:15px;font-weight:700;box-shadow:0 10px 24px rgba(19,32,30,.3);}
     .oq-fab:active{filter:brightness(.88);transform:scale(.97);}
-    .oq-fabmenu{min-width:200px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(19,32,30,.2);padding:6px;}
-    .oq-fabmenu .oq-menu-item{width:100%;}
-    @media (prefers-reduced-motion:no-preference){.oq-fabmenu{animation:oq-fab-in .18s ease both;transform-origin:100% 100%;}@keyframes oq-fab-in{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}}
     .oq-list{display:flex;flex-direction:column;gap:10px;}
     .oq .oq-card{--pri:#E0A82E;position:relative;padding:11px 13px 12px 14px;border-radius:16px;border-left:5px solid var(--pri);overflow:hidden;}
     .oq .oq-pri-high{--pri:#E5484D;}
@@ -18615,7 +18614,8 @@ function renderOqCard(o, showLine){
 function renderOrdersMobileQueue(active, archived){
   const lines = state.deliveryLines.filter(l=>!l.hidden);
   const lineKeys = lines.map(l=>l.key);
-  const lineSel = (state._oqLine && lineKeys.includes(state._oqLine)) ? state._oqLine : 'all';
+  // The delivery line is chosen FIRST (owner, 2026-11-26: "first need to select a list ex - citypak, then received, processing etc."): no "All lines" any more, the first line is the default.
+  const lineSel = (state._oqLine && lineKeys.includes(state._oqLine)) ? state._oqLine : (lineKeys[0] || 'all');
   // Same set of orders the desktop board shows: only those sitting in a visible delivery line.
   const visible = active.filter(o=>lineKeys.includes(o.courierService||''));
   const scoped = lineSel==='all' ? visible : visible.filter(o=>(o.courierService||'')===lineSel);
@@ -18629,7 +18629,6 @@ function renderOrdersMobileQueue(active, archived){
   const canManageLists = !!(state.session && roleCan(state.session.role, 'orders_manage_lists'));
   const moreOpen = !!state._oqMoreOpen;
   const overdueCount = scoped.filter(o=>orderIsOverdue(o)).length;
-  const fabOpen = !!state._oqFabOpen && canCreate;
   const nextStage = stageIdx < STAGES.length-1 ? STAGE_TAB_LABELS[stageIdx+1] : '';
   return `
   <div class="oq">
@@ -18646,13 +18645,12 @@ function renderOrdersMobileQueue(active, archived){
           ${canManageLists ? `<button type="button" class="oq-menu-item" role="menuitem" data-oq-manage-lines><span>&#9881; Manage lists</span></button>` : ''}
         </div>` : ''}
       </div>
-      ${lines.length>1 ? `
-      <div class="oq-lines" role="group" aria-label="Delivery line">
-        <button type="button" class="oq-chip${lineSel==='all'?' on':''}" data-oq-line="all" aria-pressed="${lineSel==='all'?'true':'false'}">All lines &middot; ${stageOrders.length}</button>
-        ${lines.map(l=>`<button type="button" class="oq-chip${lineSel===l.key?' on':''}" data-oq-line="${escAttr(l.key)}" aria-pressed="${lineSel===l.key?'true':'false'}">${esc(l.label)} &middot; ${stageOrders.filter(o=>(o.courierService||'')===l.key).length}</button>`).join('')}
-      </div>` : ''}
     </div>
     <div class="oq-ctl">
+      ${lines.length>1 ? `
+      <div class="oq-lines" role="group" aria-label="Delivery line">
+        ${lines.map(l=>{ const open = visible.filter(o=>(o.courierService||'')===l.key && o.stage<STAGES.length-1).length; return `<button type="button" class="oq-chip${lineSel===l.key?' on':''}" data-oq-line="${escAttr(l.key)}" aria-pressed="${lineSel===l.key?'true':'false'}"><span class="oq-chip-t">${esc(l.label)}</span><span class="oq-chip-n">${open}</span></button>`; }).join('')}
+      </div>` : ''}
       <div class="oq-stages" role="group" aria-label="Order stage">
         ${STAGES.map((_,i)=>{
           const on = i===stageIdx;
@@ -18663,14 +18661,13 @@ function renderOrdersMobileQueue(active, archived){
         }).join('')}
       </div>
     </div>
-    <p class="oq-sub"><span>${q ? `${list.length} of ${inStage.length} match` : `${inStage.length} order${inStage.length===1?'':'s'} in ${esc(STAGE_TAB_LABELS[stageIdx])}`}</span><span class="oq-sub-r">${overdueCount?`<span class="oq-sub-hot">${overdueCount} overdue</span>`:''}${highCount?`<span class="oq-sub-hot">${highCount} high priority</span>`:''}</span></p>
+    <p class="oq-sub"><span>${q ? `${list.length} of ${inStage.length} match` : `${inStage.length} order${inStage.length===1?'':'s'} in ${esc(STAGE_TAB_LABELS[stageIdx])}${lines.length>1&&lineSel!=='all'?' &middot; '+esc((lines.find(l=>l.key===lineSel)||{}).label||''):''}`}</span><span class="oq-sub-r">${overdueCount?`<span class="oq-sub-hot">${overdueCount} overdue</span>`:''}${highCount?`<span class="oq-sub-hot">${highCount} high priority</span>`:''}</span></p>
     <div class="oq-list" id="oq-list">
-      ${list.length===0 ? `<div class="oq-empty">${OQ_ICON.box}<b>${q ? `No order matches &ldquo;${esc(q)}&rdquo;` : (stageIdx===0 ? 'All caught up' : `Nothing in ${esc(STAGE_TAB_LABELS[stageIdx])} right now`)}</b><span>${q ? 'Try another word or clear the search.' : (nextStage ? 'New orders will appear here. You can also swipe to another stage.' : 'Picked-up orders stay here for a while, then move to the Archive.')}</span></div>` : list.map(o=>renderOqCard(o, lineSel==='all' && lines.length>1)).join('')}
+      ${list.length===0 ? `<div class="oq-empty">${OQ_ICON.box}<b>${q ? `No order matches &ldquo;${esc(q)}&rdquo;` : (stageIdx===0 ? 'All caught up' : `Nothing in ${esc(STAGE_TAB_LABELS[stageIdx])} right now`)}</b><span>${q ? 'Try another word or clear the search.' : (nextStage ? 'New orders will appear here. You can also swipe to another stage.' : 'Picked-up orders stay here for a while, then move to the Archive.')}</span></div>` : list.map(o=>renderOqCard(o, false)).join('')}
     </div>
-    ${canCreate ? `
+    ${canCreate && lineKeys.length ? `
     <div class="oq-fabwrap">
-      ${fabOpen ? `<div class="oq-fabmenu" role="menu">${lines.map(l=>`<button type="button" class="oq-menu-item" role="menuitem" data-new-order-courier="${escAttr(l.key)}"><span>${esc(l.label)}</span></button>`).join('')}</div>` : ''}
-      <button type="button" class="oq-fab" id="btn-oq-fab" aria-label="New order" aria-expanded="${fabOpen?'true':'false'}"${lines.length===1?` data-new-order-courier="${escAttr(lines[0].key)}"`:''}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New order</span></button>
+      <button type="button" class="oq-fab" id="btn-oq-fab" aria-label="New order in ${escAttr((lines.find(l=>l.key===lineSel)||lines[0]).label)}" data-new-order-courier="${escAttr(lineSel==='all' ? lineKeys[0] : lineSel)}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New order</span></button>
     </div>` : ''}
   </div>`;
 }
@@ -29206,7 +29203,7 @@ function attachShellHandlers(){
 
   // Orders
   if(byIdEl('btn-new-order')) byIdEl('btn-new-order').onclick = ()=>openModal('order:new');
-  document.querySelectorAll('[data-new-order-courier]').forEach(b=>b.addEventListener('click', ()=>{ state._oqFabOpen = false; openModal('order:new:'+b.dataset.newOrderCourier); }));
+  document.querySelectorAll('[data-new-order-courier]').forEach(b=>b.addEventListener('click', ()=>{ openModal('order:new:'+b.dataset.newOrderCourier); }));
   document.querySelectorAll('[data-orders-view]').forEach(b=>b.addEventListener('click', ()=>{ state.ordersView = b.dataset.ordersView; render(); }));
   // Packing board: List view + Settings popover (see ordersLayout)
   document.querySelectorAll('[data-ol-fold]').forEach(b=>b.addEventListener('click', ()=>{ const c = ordersLayout(), k = b.dataset.olFold; c.collapsed[k] = !c.collapsed[k]; ordersLayoutSave(); render(); }));
@@ -29302,9 +29299,7 @@ function attachShellHandlers(){
     render();
   }));
   document.querySelectorAll('[data-oq-boxcount]').forEach(btn=>btn.addEventListener('click', ()=>{ state._oqMoreOpen = false; if(canUseBoxCount()) openModal('boxcount'); }));
-  // "+ New order" button: one delivery line = opens the form (the shared data-new-order-courier handler); several = a small list of lines first.
-  if(byIdEl('btn-oq-fab') && !byIdEl('btn-oq-fab').dataset.newOrderCourier) byIdEl('btn-oq-fab').onclick = ()=>{ state._oqFabOpen = !state._oqFabOpen; state._oqMoreOpen = false; render(); };
-  document.querySelectorAll('.oq-fabmenu [data-new-order-courier]').forEach(b=>b.addEventListener('click', ()=>{ state._oqFabOpen = false; }));
+  // "+ New order" opens the form for the delivery line chosen at the top (the shared data-new-order-courier handler).
   // Swipe sideways on the list to go to the next / previous stage (a clear, mostly horizontal move only, so scrolling is never hijacked).
   const oqListEl = byIdEl('oq-list');
   if(oqListEl){
@@ -29345,9 +29340,9 @@ function attachShellHandlers(){
     window.__oqAwayBound = true;
     // Tap anywhere outside the "..." menu to close it (bound once, not per render).
     document.addEventListener('click', e=>{
-      if(!state._oqMoreOpen && !state._oqFabOpen) return;
-      if(e.target.closest && (e.target.closest('.oq-menu') || e.target.closest('#btn-oq-more') || e.target.closest('.oq-fabwrap'))) return;
-      state._oqMoreOpen = false; state._oqFabOpen = false; render();
+      if(!state._oqMoreOpen) return;
+      if(e.target.closest && (e.target.closest('.oq-menu') || e.target.closest('#btn-oq-more'))) return;
+      state._oqMoreOpen = false; render();
     });
   }
   document.querySelectorAll('[data-rnd-mobile-tab-stage]').forEach(btn=>btn.addEventListener('click', ()=>{
